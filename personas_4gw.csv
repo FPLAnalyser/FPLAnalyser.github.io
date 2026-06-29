@@ -1,0 +1,842 @@
+element,web_name,team,position,gw_from_fixture,total_points_4gw,minutes_4gw,starts_last4,personas,flags,persona_count
+1,Raya,ARS,GKP,38,21.0,270.0,3,"Sweeper Keeper, Overperformer, Bonus Magnet",,3
+2,Arrizabalaga,ARS,GKP,38,2.0,90.0,1,None,Minutes Risk,0
+3,Hein,ARS,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+4,Setford,ARS,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+5,Gabriel,ARS,DEF,38,24.0,315.0,3,"Reliable Shieldwall, Scoring Defender, Bonus Magnet",,3
+6,Saliba,ARS,DEF,38,19.0,270.0,3,"Reliable Shieldwall, Attacking Defender, Emerging Contributor, Bonus Magnet",,4
+7,Calafiori,ARS,DEF,38,16.0,251.0,4,"Reliable Shieldwall, Scoring Defender, Bonus Magnet",,3
+8,J.Timber,ARS,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+9,Kiwior,ARS,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+10,Lewis-Skelly,ARS,DEF,38,15.0,287.0,3,"Reliable Shieldwall, Bonus Magnet",,2
+11,White,ARS,DEF,38,7.0,109.0,2,None,Minutes Risk,0
+12,Zinchenko,NFO,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+13,Clarke,ARS,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+14,Kacurri,ARS,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+15,Nichols,ARS,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+16,Saka,ARS,MID,38,23.0,214.0,3,"Creative Wizard, Captaincy King, Chaos Merchant, Bonus Magnet",,4
+17,Ødegaard,ARS,MID,38,7.0,113.0,1,None,Minutes Risk,0
+18,Madueke,ARS,MID,38,13.0,138.0,1,None,Minutes Risk,0
+19,Martinelli,ARS,MID,38,8.0,91.0,1,None,Minutes Risk,0
+20,Trossard,ARS,MID,38,18.0,270.0,3,"Captaincy King, Bonus Magnet",,2
+21,Rice,ARS,MID,38,13.0,243.0,3,"Defensive Contributor, Metronome",,2
+22,Merino,ARS,MID,38,1.0,28.0,0,None,Minutes Risk,0
+23,Fábio Vieira,ARS,MID,38,0.0,0.0,0,None,Minutes Risk,0
+24,Nørgaard,ARS,MID,38,1.0,45.0,1,None,Minutes Risk,0
+25,Nwaneri,ARS,MID,38,0.0,0.0,0,None,Minutes Risk,0
+26,Zubimendi,ARS,MID,38,5.0,156.0,1,None,Minutes Risk,0
+27,Nelson,BRE,MID,38,1.0,1.0,0,None,Minutes Risk,0
+28,Kabia,ARS,MID,38,0.0,0.0,0,None,Minutes Risk,0
+29,Sambi,ARS,MID,38,0.0,0.0,0,None,Minutes Risk,0
+30,Havertz,ARS,FWD,38,13.0,140.0,1,None,Minutes Risk,0
+31,G.Jesus,ARS,FWD,38,6.0,100.0,1,None,Minutes Risk,0
+32,Martinez,AVL,GKP,38,10.0,270.0,3,Liability,,1
+33,M.Bizot,AVL,GKP,38,2.0,90.0,1,None,Minutes Risk,0
+34,Gauci,AVL,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+35,Marschall,AVL,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+36,Cash,AVL,DEF,38,7.0,304.0,3,Emerging Contributor,,1
+37,Digne,AVL,DEF,38,5.0,106.0,1,None,Minutes Risk,0
+38,Konsa,AVL,DEF,38,2.0,180.0,2,None,Minutes Risk,0
+39,Maatsen,AVL,DEF,38,8.0,258.0,3,None,,0
+40,Mings,AVL,DEF,38,5.0,270.0,3,None,,0
+41,Pau,AVL,DEF,38,5.0,107.0,1,None,Minutes Risk,0
+42,A.García,AVL,DEF,38,1.0,45.0,1,None,Minutes Risk,0
+43,Alex Moreno,AVL,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+44,Bogarde,AVL,DEF,38,4.0,172.0,2,None,Minutes Risk,0
+45,Sousa,AVL,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+46,Yasin,AVL,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+47,Rogers,AVL,MID,38,15.0,270.0,3,"Emerging Contributor, Chaos Merchant, Bonus Magnet",,3
+48,Tielemans,AVL,MID,38,9.0,286.0,3,"Metronome, Bonus Magnet",,2
+49,Bailey,AVL,MID,38,7.0,100.0,1,None,Minutes Risk,0
+50,Buendía,AVL,MID,38,15.0,195.0,2,None,Minutes Risk,0
+51,Iling Jr,AVL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+52,J.Ramsey,NEW,MID,38,18.0,210.0,2,None,Minutes Risk,0
+53,Malen,AVL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+54,McGinn,AVL,MID,38,12.0,177.0,2,None,Minutes Risk,0
+55,Barkley,AVL,MID,38,16.0,293.0,3,Captaincy King,,1
+56,Barrenechea,AVL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+57,Dobbin,AVL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+58,Kamara,AVL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+59,Onana,AVL,MID,38,1.0,17.0,0,None,Minutes Risk,0
+60,Broggio,AVL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+61,Dendoncker,AVL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+62,Jimoh-Aloba,AVL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+63,Young,AVL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+64,Watkins,AVL,FWD,38,38.0,300.0,3,"Goal Machine, Clinical Finisher, Captaincy King, Chaos Merchant, Bonus Magnet",,5
+65,Redmond,AVL,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+66,Neto,BOU,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+67,Petrović,BOU,GKP,38,18.0,360.0,4,"Overperformer, Bonus Magnet",Minutes Monster,2
+68,Dennis,BOU,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+69,McKenna,BOU,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+70,Paulsen,BOU,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+71,Zabarnyi,BOU,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+72,Senesi,BOU,DEF,38,28.0,360.0,4,"Reliable Shieldwall, Defensive Workhorse, Bonus Magnet",Minutes Monster,3
+73,Smith,BOU,DEF,38,19.0,268.0,3,"Reliable Shieldwall, Budget Enabler, Bonus Magnet",,3
+74,Truffert,BOU,DEF,38,26.0,360.0,4,"Reliable Shieldwall, Attacking Defender, Bonus Magnet",Minutes Monster,3
+75,Akinmboni,BOU,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+76,Bevan,BOU,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+77,Hill,BOU,DEF,38,20.0,360.0,4,"Reliable Shieldwall, Defensive Workhorse, Budget Enabler, Bonus Magnet",Minutes Monster,4
+78,J.Araujo,BOU,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+79,Mepham,BOU,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+80,Soler,BOU,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+81,Kluivert,BOU,MID,38,1.0,31.0,0,None,Minutes Risk,0
+82,Semenyo,MCI,MID,38,19.0,292.0,4,"Clinical Finisher, Captaincy King, Bonus Magnet",,3
+83,O.Dango,BRE,MID,38,24.0,291.0,3,"Goal Machine, Captaincy King, Chaos Merchant, Bonus Magnet",,4
+84,Tavernier,BOU,MID,38,17.0,342.0,4,"Captaincy King, Bonus Magnet",Minutes Monster,2
+85,Adams,BOU,MID,38,11.0,295.0,3,"Defensive Contributor, Metronome",,2
+86,Brooks,BOU,MID,38,6.0,37.0,0,None,Minutes Risk,0
+87,Christie,BOU,MID,38,-1.0,62.0,1,None,Minutes Risk,0
+88,Cook,BOU,MID,38,2.0,2.0,0,None,Minutes Risk,0
+89,Philip,BOU,MID,38,0.0,0.0,0,None,Minutes Risk,0
+90,Scott,BOU,MID,38,11.0,270.0,3,"Defensive Contributor, Metronome",,2
+91,Sinisterra,BOU,MID,38,0.0,0.0,0,None,Minutes Risk,0
+92,Faivre,BOU,MID,38,0.0,0.0,0,None,Minutes Risk,0
+93,H.Traorè,BOU,MID,38,0.0,0.0,0,None,Minutes Risk,0
+94,Sadi,BOU,MID,38,0.0,0.0,0,None,Minutes Risk,0
+95,Silcott-Duberry,BOU,MID,38,0.0,0.0,0,None,Minutes Risk,0
+96,Winterburn,BOU,MID,38,0.0,0.0,0,None,Minutes Risk,0
+97,Evanilson,BOU,FWD,38,10.0,281.0,4,"Goal Machine, Wasteful Striker, Metronome",,3
+98,Enes Ünal,BOU,FWD,38,4.0,39.0,0,None,Minutes Risk,0
+99,Adu-Adjei,BOU,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+100,Kroupi.Jr,BOU,FWD,38,18.0,294.0,4,"Goal Machine, Captaincy King, Bonus Magnet",,3
+101,Kelleher,BRE,GKP,38,19.0,360.0,4,"Shot Stopper, Overperformer, Bonus Magnet",Minutes Monster,3
+102,Balcombe,BRE,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+103,Cox,BRE,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+104,Eyestone,BRE,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+105,Valdimarsson,BRE,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+106,Collins,BRE,DEF,38,13.0,360.0,4,"Defensive Workhorse, Bonus Magnet",Minutes Monster,2
+107,Lewis-Potter,BRE,DEF,38,18.0,358.0,4,Bonus Magnet,Minutes Monster,1
+108,Ajer,BRE,DEF,38,6.0,181.0,2,None,Minutes Risk,0
+109,Henry,BRE,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+110,Kayode,BRE,DEF,38,8.0,360.0,4,None,Minutes Monster,0
+111,Pinnock,BRE,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+112,Roerslev,BRE,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+113,Van den Berg,BRE,DEF,38,14.0,188.0,2,None,Minutes Risk,0
+114,Arthur,BRE,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+115,Fredrick,BRE,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+116,Hickey,BRE,DEF,38,4.0,91.0,1,None,Minutes Risk,0
+117,Ji-soo,BRE,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+118,Meghoma,BRE,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+119,Mbeumo,MUN,MID,38,19.0,241.0,3,"Goal Machine, Wasteful Striker, xGI Beast, Captaincy King, Bonus Magnet",,5
+120,Schade,BRE,MID,38,13.0,286.0,3,Goal Machine,,1
+121,Damsgaard,BRE,MID,38,18.0,255.0,3,"Creative Wizard, Captaincy King, Chaos Merchant, Bonus Magnet",,4
+122,Milambo,BRE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+123,Carvalho,BRE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+124,Henderson,BRE,MID,38,1.0,97.0,1,None,Minutes Risk,0
+125,Janelt,BRE,MID,38,4.0,181.0,2,None,Minutes Risk,0
+126,Jensen,BRE,MID,38,11.0,324.0,4,"Creative Wizard, Metronome, Bonus Magnet",,3
+127,Nunes,BRE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+128,Onyeka,BRE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+129,Yarmoliuk,BRE,MID,38,13.0,256.0,3,Bonus Magnet,,1
+130,Donovan,BRE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+131,Konak,BRE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+132,Maghoma,BRE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+133,Peart-Harris,BRE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+134,Trevitt,BRE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+135,Wissa,NEW,FWD,38,5.0,70.0,0,None,Minutes Risk,0
+136,Thiago,BRE,FWD,38,12.0,360.0,4,"Goal Machine, xGI Beast, Metronome",Minutes Monster,3
+137,Morgan,BRE,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+138,Steele,BHA,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+139,Verbruggen,BHA,GKP,38,12.0,360.0,4,Liability,Minutes Monster,1
+140,McGill,BHA,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+141,Rushworth,BHA,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+142,Scherpen,BHA,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+143,Boscagli,BHA,DEF,38,1.0,90.0,1,None,Minutes Risk,0
+144,Coppola,BHA,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+145,De Cuyper,BHA,DEF,38,18.0,231.0,3,"Attacking Defender, Budget Enabler, Bonus Magnet",,3
+146,Dunk,BHA,DEF,38,18.0,272.0,3,"Scoring Defender, Budget Enabler, Bonus Magnet",,3
+147,Estupiñan,BHA,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+148,F.Kadıoğlu,BHA,DEF,38,10.0,360.0,4,"Attacking Defender, Budget Enabler",Minutes Monster,2
+149,Igor,BHA,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+150,Lamptey,BHA,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+151,Van Hecke,BHA,DEF,38,11.0,360.0,4,Scoring Defender,Minutes Monster,1
+152,Veltman,BHA,DEF,38,8.0,158.0,1,None,Minutes Risk,0
+153,Webster,BHA,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+154,Cashin,BHA,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+155,Slater,BHA,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+156,Tasker,BHA,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+157,Mitoma,BHA,MID,38,1.0,147.0,2,None,Minutes Risk,0
+158,Georginio,BHA,MID,38,4.0,65.0,0,None,Minutes Risk,0
+159,March,BHA,MID,38,3.0,34.0,0,None,Minutes Risk,0
+160,Minteh,BHA,MID,38,15.0,315.0,3,Bonus Magnet,,1
+161,Enciso,BHA,MID,38,0.0,0.0,0,None,Minutes Risk,0
+162,Gruda,BHA,MID,38,0.0,0.0,0,None,Minutes Risk,0
+163,Hinshelwood,BHA,MID,38,20.0,328.0,4,"Goal Machine, Captaincy King, Bonus Magnet",,3
+164,O'Riley,BHA,MID,38,0.0,0.0,0,None,Minutes Risk,0
+165,Sima,BHA,MID,38,0.0,0.0,0,None,Minutes Risk,0
+166,Ayari,BHA,MID,38,2.0,22.0,0,None,Minutes Risk,0
+167,Baleba,BHA,MID,38,11.0,266.0,3,"Metronome, Bonus Magnet",,2
+168,Buonanotte,LEE,MID,38,1.0,12.0,0,None,Minutes Risk,0
+169,Gomez,BHA,MID,38,2.0,83.0,1,None,Minutes Risk,0
+170,Milner,BHA,MID,38,1.0,58.0,1,None,Minutes Risk,0
+171,Sarmiento,BHA,MID,38,0.0,0.0,0,None,Minutes Risk,0
+172,Watson,BHA,MID,38,0.0,0.0,0,None,Minutes Risk,0
+173,Wieffer,BHA,MID,38,3.0,107.0,2,None,Minutes Risk,0
+174,Yalcouye,BHA,MID,38,0.0,0.0,0,None,Minutes Risk,0
+175,Knight,BHA,MID,38,0.0,0.0,0,None,Minutes Risk,0
+176,Mazilu,BHA,MID,38,0.0,0.0,0,None,Minutes Risk,0
+177,Moran,BHA,MID,38,0.0,0.0,0,None,Minutes Risk,0
+178,Welbeck,BHA,FWD,38,10.0,277.0,4,Metronome,,1
+179,Ferguson,BHA,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+180,Tzimas,BHA,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+181,Kostoulas,BHA,FWD,38,4.0,51.0,0,None,Minutes Risk,0
+182,Trafford,MCI,GKP,38,2.0,90.0,1,None,Minutes Risk,0
+183,Weiss,BUR,GKP,38,7.0,270.0,3,None,,0
+184,Green,BUR,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+185,Hladký,BUR,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+186,Roberts,BUR,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+187,Walker,BUR,DEF,38,6.0,360.0,4,Emerging Contributor,Minutes Monster,1
+188,Delcroix,BUR,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+189,Dodgson,BUR,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+190,Ekdal,BUR,DEF,38,3.0,90.0,1,None,Minutes Risk,0
+191,Estève,BUR,DEF,38,8.0,261.0,3,Defensive Workhorse,,1
+192,Hartman,BUR,DEF,38,1.0,64.0,1,None,Minutes Risk,0
+193,Humphreys,BUR,DEF,38,3.0,173.0,2,None,Minutes Risk,0
+194,Jordan,BUR,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+195,Lucas Pires,BUR,DEF,38,5.0,295.0,3,None,,0
+196,Sambo,BUR,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+197,Sonne,BUR,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+198,Tuanzebe,BUR,DEF,38,7.0,270.0,3,None,,0
+199,Worrall,BUR,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+200,Anthony,BUR,MID,38,16.0,351.0,4,"Captaincy King, Metronome, Bonus Magnet",Minutes Monster,3
+201,Benson,BUR,MID,38,0.0,0.0,0,None,Minutes Risk,0
+202,Bruun Larsen,BUR,MID,38,3.0,16.0,0,None,Minutes Risk,0
+203,Boateng,BUR,MID,38,0.0,0.0,0,None,Minutes Risk,0
+204,Churlinov,BUR,MID,38,0.0,0.0,0,None,Minutes Risk,0
+205,Cullen,BUR,MID,38,0.0,0.0,0,None,Minutes Risk,0
+206,Edwards,BUR,MID,38,1.0,15.0,0,None,Minutes Risk,0
+207,Hannibal,BUR,MID,38,7.0,238.0,3,None,,0
+208,Koleosho,BUR,MID,38,0.0,0.0,0,None,Minutes Risk,0
+209,Laurent,BUR,MID,38,3.0,83.0,1,None,Minutes Risk,0
+210,Tchaouna,BUR,MID,38,17.0,335.0,4,"Captaincy King, Metronome, Bonus Magnet",,3
+211,A.Ramsey,BUR,MID,38,0.0,0.0,0,None,Minutes Risk,0
+212,Adewumi,BUR,MID,38,0.0,0.0,0,None,Minutes Risk,0
+213,Banel,BUR,MID,38,0.0,0.0,0,None,Minutes Risk,0
+214,Trésor,BUR,MID,38,0.0,0.0,0,None,Minutes Risk,0
+215,Flemming,BUR,FWD,38,17.0,328.0,4,"Goal Machine, Captaincy King, Bonus Magnet",,3
+216,Amdouni,BUR,FWD,38,4.0,69.0,0,None,Minutes Risk,0
+217,Foster,BUR,FWD,38,1.0,21.0,0,None,Minutes Risk,0
+218,Barnes,BUR,FWD,38,0.0,5.0,0,None,Minutes Risk,0
+219,Obafemi,BUR,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+220,Sánchez,CHE,GKP,38,5.0,246.0,3,None,,0
+221,Jörgensen,CHE,GKP,38,3.0,114.0,1,None,Minutes Risk,0
+222,Penders,CHE,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+223,Slonina,CHE,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+224,Cucurella,CHE,DEF,38,7.0,360.0,4,None,Minutes Monster,0
+225,James,CHE,DEF,38,2.0,65.0,0,None,Minutes Risk,0
+226,Chalobah,CHE,DEF,38,3.0,131.0,1,None,Minutes Risk,0
+227,Colwill,CHE,DEF,38,8.0,225.0,2,None,Minutes Risk,0
+228,Gusto,CHE,DEF,38,1.0,264.0,3,Attacking Defender,,1
+229,B.Badiashile,CHE,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+230,Fofana,CHE,DEF,38,5.0,231.0,3,Emerging Contributor,,1
+231,M.Sarr,CHE,DEF,38,1.0,9.0,0,None,Minutes Risk,0
+232,Tosin,CHE,DEF,38,0.0,45.0,1,None,Minutes Risk,0
+233,Acheampong,CHE,DEF,38,3.0,78.0,1,None,Minutes Risk,0
+234,Anselmino,CHE,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+235,Palmer,CHE,MID,38,12.0,358.0,4,"Goal Machine, xGI Beast",Minutes Monster,2
+236,Neto,CHE,MID,38,11.0,152.0,2,None,Minutes Risk,0
+237,Enzo,CHE,MID,38,24.0,360.0,4,"Clinical Finisher, Creative Wizard, Captaincy King, Chaos Merchant, Bonus Magnet",Minutes Monster,5
+238,Estêvão,CHE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+239,Gittens,CHE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+240,Nkunku,CHE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+241,Caicedo,CHE,MID,38,8.0,354.0,4,Bonus Magnet,Minutes Monster,1
+242,Dewsbury-Hall,EVE,MID,38,11.0,353.0,4,"Emerging Contributor, Metronome",Minutes Monster,2
+243,George,EVE,MID,38,3.0,55.0,0,None,Minutes Risk,0
+244,Lavia,CHE,MID,38,1.0,57.0,1,None,Minutes Risk,0
+245,Mudryk,CHE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+246,Andrey Santos,CHE,MID,38,13.0,184.0,2,None,Minutes Risk,0
+247,D.Essugo,CHE,MID,38,0.0,1.0,0,None,Minutes Risk,0
+248,Paez,CHE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+249,João Pedro,CHE,FWD,38,11.0,270.0,3,Goal Machine,,1
+250,Delap,CHE,FWD,38,2.0,138.0,1,None,Minutes Risk,0
+251,N.Jackson,CHE,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+252,Marc Guiu,CHE,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+253,Henderson,CRY,GKP,38,5.0,360.0,4,"Shot Stopper, Liability",Minutes Monster,2
+254,Benitez,CRY,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+255,Matthews,CRY,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+256,Muñoz,CRY,DEF,38,10.0,306.0,4,Attacking Defender,,1
+257,Lacroix,CRY,DEF,38,6.0,240.0,3,None,,0
+258,Mitchell,CRY,DEF,38,8.0,315.0,3,Scoring Defender,,1
+259,Sosa,CRY,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+260,Guéhi,MCI,DEF,38,17.0,270.0,3,"Reliable Shieldwall, Bonus Magnet",,2
+261,Richards,CRY,DEF,38,4.0,209.0,2,None,Minutes Risk,0
+262,Chadi Riad,CRY,DEF,38,5.0,163.0,2,None,Minutes Risk,0
+263,Clyne,CRY,DEF,38,2.0,98.0,1,None,Minutes Risk,0
+264,Holding,CRY,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+265,Kporha,CRY,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+266,Eze,ARS,MID,38,10.0,230.0,3,"Goal Machine, Wasteful Striker, Metronome",,3
+267,Sarr,CRY,MID,38,16.0,255.0,3,"Goal Machine, Captaincy King, Bonus Magnet",,3
+268,Doucouré,CRY,MID,38,0.0,0.0,0,None,Minutes Risk,0
+269,Esse,CRY,MID,38,0.0,0.0,0,None,Minutes Risk,0
+270,Hughes,CRY,MID,38,3.0,149.0,2,None,Minutes Risk,0
+271,Kamada,CRY,MID,38,7.0,240.0,3,Creative Wizard,,1
+272,Lerma,CRY,MID,38,7.0,206.0,2,None,Minutes Risk,0
+273,Wharton,CRY,MID,38,17.0,226.0,2,None,Minutes Risk,0
+274,Agbinone,CRY,MID,38,0.0,0.0,0,None,Minutes Risk,0
+275,Ahamada,CRY,MID,38,0.0,0.0,0,None,Minutes Risk,0
+276,Devenny,CRY,MID,38,2.0,90.0,1,None,Minutes Risk,0
+277,Ebiowei,CRY,MID,38,0.0,0.0,0,None,Minutes Risk,0
+278,J.Rak-Sakyi,CRY,MID,38,0.0,0.0,0,None,Minutes Risk,0
+279,M.França,CRY,MID,38,0.0,0.0,0,None,Minutes Risk,0
+280,Ozoh,CRY,MID,38,0.0,0.0,0,None,Minutes Risk,0
+281,Rodney,CRY,MID,38,0.0,0.0,0,None,Minutes Risk,0
+282,Umeh,CRY,MID,38,0.0,0.0,0,None,Minutes Risk,0
+283,Mateta,CRY,FWD,38,13.0,126.0,1,None,Minutes Risk,0
+284,Nketiah,CRY,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+285,Édouard,CRY,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+286,Marsh,CRY,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+287,Pickford,EVE,GKP,38,7.0,360.0,4,Liability,Minutes Monster,1
+288,Travers,EVE,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+289,Tyrer,EVE,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+290,Branthwaite,EVE,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+291,Tarkowski,EVE,DEF,38,21.0,360.0,4,"Attacking Defender, Defensive Workhorse",Minutes Monster,2
+292,Mykolenko,EVE,DEF,38,4.0,360.0,4,None,Minutes Monster,0
+293,O'Brien,EVE,DEF,38,8.0,328.0,4,Scoring Defender,,1
+294,Coleman,EVE,DEF,38,2.0,8.0,0,None,Minutes Risk,0
+295,Keane,EVE,DEF,38,11.0,360.0,4,Defensive Workhorse,Minutes Monster,1
+296,Patterson,EVE,DEF,38,1.0,1.0,0,None,Minutes Risk,0
+297,Dixon,EVE,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+298,Welch,EVE,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+299,Ndiaye,EVE,MID,38,8.0,360.0,4,"Goal Machine, Wasteful Striker",Minutes Monster,2
+300,McNeil,EVE,MID,38,1.0,2.0,0,None,Minutes Risk,0
+301,Alcaraz,EVE,MID,38,3.0,8.0,0,None,Minutes Risk,0
+302,Gana,EVE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+303,Garner,EVE,MID,38,11.0,360.0,4,"Creative Wizard, Metronome, Bonus Magnet",Minutes Monster,3
+304,Iroegbunam,EVE,MID,38,9.0,335.0,4,Metronome,,1
+305,Armstrong,EVE,MID,38,2.0,29.0,0,None,Minutes Risk,0
+306,Bates,EVE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+307,Ebere,EVE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+308,Heath,EVE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+309,Metcalfe,EVE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+310,Barry,EVE,FWD,38,15.0,146.0,1,None,Minutes Risk,0
+311,Beto,EVE,FWD,38,12.0,210.0,3,None,,0
+312,Y.Chermiti,EVE,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+313,Sherif,EVE,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+314,Leno,FUL,GKP,38,14.0,360.0,4,"Shot Stopper, Bonus Magnet",Minutes Monster,2
+315,Benda,FUL,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+316,Robinson,FUL,DEF,38,20.0,360.0,4,"Scoring Defender, Bonus Magnet",Minutes Monster,2
+317,Andersen,FUL,DEF,38,1.0,141.0,2,None,Minutes Risk,0
+318,Bassey,FUL,DEF,38,11.0,360.0,4,"Emerging Contributor, Budget Enabler, Bonus Magnet",Minutes Monster,3
+319,Castagne,FUL,DEF,38,16.0,352.0,4,"Attacking Defender, Budget Enabler, Bonus Magnet",Minutes Monster,3
+320,Diop,FUL,DEF,38,18.0,220.0,2,None,Minutes Risk,0
+321,J.Cuenca,FUL,DEF,38,0.0,4.0,0,None,Minutes Risk,0
+322,Tete,FUL,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+323,Amissah,FUL,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+324,Iwobi,FUL,MID,38,5.0,156.0,2,None,Minutes Risk,0
+325,Smith Rowe,FUL,MID,38,8.0,271.0,4,None,,0
+326,Adama,WHU,MID,38,1.0,16.0,0,None,Minutes Risk,0
+327,Andreas,FUL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+328,Sessegnon,FUL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+329,Wilson,FUL,MID,38,9.0,153.0,2,None,Minutes Risk,0
+330,Berge,FUL,MID,38,4.0,135.0,2,None,Minutes Risk,0
+331,Cairney,FUL,MID,38,9.0,131.0,1,None,Minutes Risk,0
+332,Lukić,FUL,MID,38,7.0,270.0,3,None,,0
+333,Godo,FUL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+334,Harris,FUL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+335,King,FUL,MID,38,3.0,81.0,0,None,Minutes Risk,0
+336,Reed,FUL,MID,38,2.0,63.0,1,None,Minutes Risk,0
+337,Raúl,FUL,FWD,38,4.0,113.0,1,None,Minutes Risk,0
+338,Muniz,FUL,FWD,38,6.0,244.0,3,"Goal Machine, Wasteful Striker",,2
+339,Meslier,LEE,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+340,Cairns,LEE,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+341,Darlow,LEE,GKP,38,17.0,360.0,4,"Shot Stopper, Overperformer, Bonus Magnet",Minutes Monster,3
+342,Bogle,LEE,DEF,38,7.0,167.0,2,None,Minutes Risk,0
+343,Struijk,LEE,DEF,38,3.0,235.0,3,None,,0
+344,Bijol,LEE,DEF,38,19.0,339.0,4,"Defensive Workhorse, Budget Enabler, Bonus Magnet",,3
+345,Bornauw,LEE,DEF,38,8.0,125.0,1,None,Minutes Risk,0
+346,Byram,LEE,DEF,38,1.0,1.0,0,None,Minutes Risk,0
+347,Gudmundsson,LEE,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+348,Rodon,LEE,DEF,38,9.0,360.0,4,"Emerging Contributor, Budget Enabler",Minutes Monster,2
+349,Schmidt,LEE,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+350,Aaronson,LEE,MID,38,5.0,229.0,3,None,,0
+351,Gnonto,LEE,MID,38,4.0,79.0,0,None,Minutes Risk,0
+352,Harrison,LEE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+353,James,LEE,MID,38,5.0,142.0,2,None,Minutes Risk,0
+354,Ampadu,LEE,MID,38,17.0,360.0,4,"Defensive Contributor, Captaincy King, Bonus Magnet",Minutes Monster,3
+355,Greenwood,LEE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+356,Gruev,LEE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+357,Ramazani,LEE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+358,Tanaka,LEE,MID,38,16.0,297.0,4,"Defensive Contributor, Captaincy King, Metronome, Bonus Magnet",,4
+359,Crew,LEE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+360,Gelhardt,LEE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+361,Gyabi,LEE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+362,Piroe,LEE,FWD,38,2.0,28.0,0,None,Minutes Risk,0
+363,Bamford,LEE,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+364,Mateo Joseph,LEE,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+365,Nmecha,LEE,FWD,38,5.0,172.0,1,None,Minutes Risk,0
+366,A.Becker,LIV,GKP,38,2.0,90.0,1,None,Minutes Risk,0
+367,Mamardashvili,LIV,GKP,38,3.0,180.0,2,None,Minutes Risk,0
+368,Pécsi,LIV,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+369,Woodman,LIV,GKP,38,2.0,90.0,1,None,Minutes Risk,0
+370,Frimpong,LIV,DEF,38,4.0,180.0,2,None,Minutes Risk,0
+371,Kerkez,LIV,DEF,38,4.0,218.0,2,None,Minutes Risk,0
+372,Robertson,LIV,DEF,38,2.0,140.0,2,None,Minutes Risk,0
+373,Virgil,LIV,DEF,38,19.0,360.0,4,"Scoring Defender, Bonus Magnet",Minutes Monster,2
+374,Konaté,LIV,DEF,38,4.0,340.0,4,None,Minutes Monster,0
+375,Bradley,LIV,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+376,Gomez,LIV,DEF,38,1.0,79.0,1,None,Minutes Risk,0
+377,Tsimikas,LIV,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+378,Nallo,LIV,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+379,R.Williams,LIV,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+380,Ramsay,LIV,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+381,M.Salah,LIV,MID,38,7.0,89.0,1,None,Minutes Risk,0
+382,Wirtz,LIV,MID,38,4.0,131.0,1,None,Minutes Risk,0
+383,Luis Díaz,LIV,MID,38,0.0,0.0,0,None,Minutes Risk,0
+384,Gakpo,LIV,MID,38,12.0,329.0,4,"Goal Machine, Metronome",,2
+385,Chiesa,LIV,MID,38,3.0,40.0,0,None,Minutes Risk,0
+386,Mac Allister,LIV,MID,38,8.0,360.0,4,None,Minutes Monster,0
+387,Szoboszlai,LIV,MID,38,26.0,360.0,4,"Creative Wizard, Emerging Contributor, Captaincy King, Chaos Merchant, Bonus Magnet",Minutes Monster,5
+388,C.Jones,LIV,MID,38,15.0,360.0,4,"Emerging Contributor, Bonus Magnet",Minutes Monster,2
+389,Elliott,AVL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+390,Gravenberch,LIV,MID,38,16.0,327.0,4,"Captaincy King, Bonus Magnet",,2
+391,Gannon-Doak,BOU,MID,38,2.0,37.0,0,None,Minutes Risk,0
+392,Endo,LIV,MID,38,0.0,0.0,0,None,Minutes Risk,0
+393,Bajcetic,LIV,MID,38,0.0,0.0,0,None,Minutes Risk,0
+394,McConnell,LIV,MID,38,0.0,0.0,0,None,Minutes Risk,0
+395,Morton,LIV,MID,38,0.0,0.0,0,None,Minutes Risk,0
+396,Nyoni,LIV,MID,38,1.0,7.0,0,None,Minutes Risk,0
+397,Darwin,LIV,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+398,Danns,LIV,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+399,Ederson M.,MCI,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+400,Ortega Moreno,NFO,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+401,Bettinelli,MCI,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+402,Aït-Nouri,MCI,DEF,38,7.0,103.0,1,None,Minutes Risk,0
+403,Gvardiol,MCI,DEF,38,2.0,69.0,1,None,Minutes Risk,0
+404,Akanji,MCI,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+405,Aké,MCI,DEF,38,8.0,198.0,2,None,Minutes Risk,0
+406,Khusanov,MCI,DEF,38,8.0,180.0,2,None,Minutes Risk,0
+407,Matheus N.,MCI,DEF,38,8.0,237.0,3,None,,0
+408,Rúben,MCI,DEF,38,1.0,90.0,1,None,Minutes Risk,0
+409,Stones,MCI,DEF,38,4.0,85.0,1,None,Minutes Risk,0
+410,Lewis,MCI,DEF,38,0.0,90.0,1,None,Minutes Risk,0
+411,O'Reilly,MCI,DEF,38,7.0,180.0,2,None,Minutes Risk,0
+412,Vitor Reis,MCI,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+413,Marmoush,MCI,MID,38,15.0,122.0,1,None,Minutes Risk,0
+414,Foden,MCI,MID,38,16.0,235.0,2,None,Minutes Risk,0
+415,Savinho,MCI,MID,38,13.0,215.0,2,None,Minutes Risk,0
+416,Bernardo,MCI,MID,38,9.0,281.0,4,Metronome,,1
+417,Cherki,MCI,MID,38,7.0,136.0,1,None,Minutes Risk,0
+418,Doku,MCI,MID,38,15.0,209.0,2,None,Minutes Risk,0
+419,Grealish,EVE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+420,Gündoğan,MCI,MID,38,0.0,0.0,0,None,Minutes Risk,0
+421,Rodrigo,MCI,MID,38,7.0,90.0,1,None,Minutes Risk,0
+422,Kovačić,MCI,MID,38,3.0,97.0,1,None,Minutes Risk,0
+423,N.Gonzalez,MCI,MID,38,4.0,90.0,1,None,Minutes Risk,0
+424,Bobb,FUL,MID,38,7.0,203.0,2,None,Minutes Risk,0
+425,Echeverri,MCI,MID,38,0.0,0.0,0,None,Minutes Risk,0
+426,McAtee,NFO,MID,38,8.0,115.0,1,None,Minutes Risk,0
+427,Reijnders,MCI,MID,38,6.0,135.0,2,None,Minutes Risk,0
+428,Nypan,MCI,MID,38,0.0,0.0,0,None,Minutes Risk,0
+429,Phillips,MCI,MID,38,0.0,0.0,0,None,Minutes Risk,0
+430,Haaland,MCI,FWD,38,20.0,180.0,2,None,Minutes Risk,0
+431,Bayindir,MUN,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+432,Onana,MUN,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+433,Harrison,MUN,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+434,Heaton,MUN,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+435,Mee,MUN,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+436,De Ligt,MUN,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+437,Martinez,MUN,DEF,38,15.0,270.0,3,"Reliable Shieldwall, Bonus Magnet",,2
+438,Mazraoui,MUN,DEF,38,17.0,163.0,2,None,Minutes Risk,0
+439,D.Leon,MUN,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+440,Dalot,MUN,DEF,38,2.0,180.0,2,None,Minutes Risk,0
+441,Dorgu,MUN,DEF,38,21.0,111.0,1,None,Minutes Risk,0
+442,Maguire,MUN,DEF,38,20.0,360.0,4,"Reliable Shieldwall, Defensive Workhorse, Budget Enabler, Bonus Magnet",Minutes Monster,4
+443,Shaw,MUN,DEF,38,20.0,351.0,4,"Reliable Shieldwall, Attacking Defender, Budget Enabler, Bonus Magnet",Minutes Monster,4
+444,Yoro,MUN,DEF,38,2.0,17.0,0,None,Minutes Risk,0
+445,Amass,MUN,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+446,Fredricson,MUN,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+447,Heaven,MUN,DEF,38,1.0,90.0,1,None,Minutes Risk,0
+448,Malacia,MUN,DEF,38,1.0,8.0,0,None,Minutes Risk,0
+449,B.Fernandes,MUN,MID,38,31.0,360.0,4,"Creative Wizard, Captaincy King, Chaos Merchant, Bonus Magnet",Minutes Monster,4
+450,Cunha,MUN,MID,38,18.0,255.0,3,"Clinical Finisher, Captaincy King, Bonus Magnet",,3
+451,Rashford,MUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+452,Amad,MUN,MID,38,13.0,299.0,3,"Creative Wizard, xGI Beast",,2
+453,Garnacho,CHE,MID,38,1.0,1.0,0,None,Minutes Risk,0
+454,Antony,MUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+455,Mount,MUN,MID,38,10.0,172.0,2,None,Minutes Risk,0
+456,Sancho,AVL,MID,38,3.0,85.0,1,None,Minutes Risk,0
+457,Casemiro,MUN,MID,38,5.0,170.0,2,None,Minutes Risk,0
+458,Mainoo,MUN,MID,38,20.0,360.0,4,"Defensive Contributor, Captaincy King, Bonus Magnet",Minutes Monster,3
+459,Ugarte,MUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+460,Collyer,MUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+461,Fitzgerald,MUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+462,J.Fletcher,MUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+463,Kone,MUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+464,Moorhouse,MUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+465,Højlund,MUN,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+466,Zirkzee,MUN,FWD,38,4.0,93.0,1,None,Minutes Risk,0
+467,Obi,MUN,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+468,Wheatley,MUN,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+469,Pope,NEW,GKP,38,12.0,360.0,4,"Shot Stopper, Bonus Magnet",Minutes Monster,2
+470,Dúbravka,BUR,GKP,38,2.0,90.0,1,None,Minutes Risk,0
+471,Gillespie,NEW,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+472,Odysseas,NEW,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+473,Hall,NEW,DEF,38,5.0,292.0,3,Emerging Contributor,,1
+474,Schär,NEW,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+475,Botman,NEW,DEF,38,15.0,360.0,4,"Defensive Workhorse, Bonus Magnet",Minutes Monster,2
+476,Burn,NEW,DEF,38,11.0,278.0,3,None,,0
+477,Livramento,NEW,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+478,Trippier,NEW,DEF,38,3.0,85.0,1,None,Minutes Risk,0
+479,Krafth,NEW,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+480,Lascelles,NEW,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+481,A.Murphy,NEW,DEF,38,1.0,6.0,0,None,Minutes Risk,0
+482,Ashby,NEW,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+483,Pivas,NEW,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+484,Targett,NEW,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+485,Gordon,NEW,MID,38,0.0,0.0,0,None,Minutes Risk,0
+486,Elanga,NEW,MID,38,2.0,29.0,0,None,Minutes Risk,0
+487,Barnes,NEW,MID,38,19.0,170.0,1,None,Minutes Risk,0
+488,Bruno G.,NEW,MID,38,17.0,335.0,4,"Creative Wizard, xGI Beast, Defensive Contributor, Captaincy King, Metronome, Bonus Magnet",,6
+489,J.Murphy,NEW,MID,38,13.0,187.0,3,None,,0
+490,Joelinton,NEW,MID,38,6.0,180.0,2,None,Minutes Risk,0
+491,Tonali,NEW,MID,38,4.0,232.0,3,Emerging Contributor,,1
+492,Antoñito C.,NEW,MID,38,0.0,0.0,0,None,Minutes Risk,0
+493,Longstaff,LEE,MID,38,3.0,49.0,0,None,Minutes Risk,0
+494,Willock,NEW,MID,38,8.0,194.0,2,None,Minutes Risk,0
+495,Hayden,NEW,MID,38,0.0,0.0,0,None,Minutes Risk,0
+496,Kuol,NEW,MID,38,0.0,0.0,0,None,Minutes Risk,0
+497,L.Miley,NEW,MID,38,2.0,90.0,1,None,Minutes Risk,0
+498,White,NEW,MID,38,0.0,0.0,0,None,Minutes Risk,0
+499,Isak,LIV,FWD,38,1.0,23.0,0,None,Minutes Risk,0
+500,Osula,NEW,FWD,38,26.0,286.0,4,"Goal Machine, Captaincy King, Chaos Merchant, Bonus Magnet",,4
+501,Neave,NEW,FWD,38,1.0,13.0,0,None,Minutes Risk,0
+502,Sels,NFO,GKP,38,16.0,360.0,4,"Shot Stopper, Overperformer, Bonus Magnet",Minutes Monster,3
+503,C.Miguel,NFO,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+504,Turner,NFO,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+505,Milenković,NFO,DEF,38,8.0,315.0,3,None,,0
+506,Murillo,NFO,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+507,Aina,NFO,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+508,N.Williams,NFO,DEF,38,6.0,315.0,3,Emerging Contributor,,1
+509,David Carmo,NFO,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+510,Jair Cunha,NFO,DEF,38,6.0,203.0,3,None,,0
+511,Morato,NFO,DEF,38,16.0,360.0,4,"Scoring Defender, Defensive Workhorse",Minutes Monster,2
+512,O.Richards,NFO,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+513,Abbott,NFO,DEF,38,1.0,45.0,1,None,Minutes Risk,0
+514,Boly,NFO,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+515,Gibbs-White,NFO,MID,38,20.0,200.0,2,None,Minutes Risk,0
+516,Hudson-Odoi,NFO,MID,38,0.0,0.0,0,None,Minutes Risk,0
+517,Anderson,NFO,MID,38,27.0,289.0,3,"Creative Wizard, Defensive Contributor, Captaincy King, Chaos Merchant, Bonus Magnet",,5
+518,Jota,NFO,MID,38,0.0,0.0,0,None,Minutes Risk,0
+519,Dominguez,NFO,MID,38,5.0,184.0,3,Emerging Contributor,,1
+520,O'Brien,NFO,MID,38,0.0,0.0,0,None,Minutes Risk,0
+521,Sangaré,NFO,MID,38,5.0,84.0,1,None,Minutes Risk,0
+522,Yates,NFO,MID,38,5.0,160.0,1,None,Minutes Risk,0
+523,Da Silva Moreira,NFO,MID,38,0.0,0.0,0,None,Minutes Risk,0
+524,Stamenic,NFO,MID,38,0.0,0.0,0,None,Minutes Risk,0
+525,Wood,NFO,FWD,38,6.0,171.0,2,None,Minutes Risk,0
+526,Igor Jesus,NFO,FWD,38,10.0,300.0,4,"Goal Machine, Metronome",,2
+527,Awoniyi,NFO,FWD,38,19.0,210.0,2,None,Minutes Risk,0
+528,Patterson,SUN,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+529,Moore,SUN,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+530,Nna Noukeu,SUN,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+531,Ballard,SUN,DEF,38,-2.0,23.0,1,None,Minutes Risk,0
+532,Hume,SUN,DEF,38,17.0,328.0,4,"Budget Enabler, Bonus Magnet",,2
+533,Alese,SUN,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+534,Anderson,SUN,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+535,Cirkin,SUN,DEF,38,0.0,18.0,0,None,Minutes Risk,0
+536,Hjelde,SUN,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+537,Huggins,SUN,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+538,Johnson,SUN,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+539,O'Nien,SUN,DEF,38,10.0,157.0,1,None,Minutes Risk,0
+540,Pembele,SUN,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+541,Reinildo,SUN,DEF,38,14.0,341.0,4,"Budget Enabler, Bonus Magnet",Minutes Monster,2
+542,Seelt,SUN,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+543,Adingra,SUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+544,Diarra,SUN,MID,38,5.0,60.0,0,None,Minutes Risk,0
+545,Roberts,SUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+546,Aleksić,SUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+547,E.Le Fée,SUN,MID,38,25.0,360.0,4,"Creative Wizard, Captaincy King, Chaos Merchant, Bonus Magnet",Minutes Monster,4
+548,Mundle,SUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+549,Neil,SUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+550,Poveda,SUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+551,Rigg,SUN,MID,38,5.0,14.0,0,None,Minutes Risk,0
+552,Sadiki,SUN,MID,38,10.0,327.0,4,Metronome,,1
+553,Talbi,SUN,MID,38,6.0,198.0,2,None,Minutes Risk,0
+554,Ba,SUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+555,Browne,SUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+556,Ekwah,SUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+557,H.Jones,SUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+558,Matete,SUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+559,Triantis,SUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+560,Isidor,SUN,FWD,38,7.0,60.0,0,None,Minutes Risk,0
+561,Mayenda,SUN,FWD,38,1.0,1.0,0,None,Minutes Risk,0
+562,Abdullahi,SUN,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+563,Luís Hemir,SUN,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+564,Rusyn,SUN,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+565,Vicario,TOT,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+566,Austin,TOT,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+567,Kinsky,TOT,GKP,38,11.0,360.0,4,"Sweeper Keeper, Liability",Minutes Monster,2
+568,Pedro Porro,TOT,DEF,38,15.0,360.0,4,"Attacking Defender, Defensive Workhorse, Bonus Magnet",Minutes Monster,3
+569,Romero,TOT,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+570,Danso,TOT,DEF,38,17.0,360.0,4,"Defensive Workhorse, Budget Enabler, Bonus Magnet",Minutes Monster,3
+571,Davies,TOT,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+572,Dragusin,TOT,DEF,38,1.0,1.0,0,None,Minutes Risk,0
+573,Spence,TOT,DEF,38,9.0,139.0,1,None,Minutes Risk,0
+574,Udogie,TOT,DEF,38,11.0,331.0,4,Budget Enabler,,1
+575,Van de Ven,TOT,DEF,38,10.0,360.0,4,"Budget Enabler, Bonus Magnet",Minutes Monster,2
+576,Phillips,TOT,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+577,Takai,TOT,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+578,Vuskovic,TOT,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+579,Son,TOT,MID,38,0.0,0.0,0,None,Minutes Risk,0
+580,Johnson,CRY,MID,38,5.0,198.0,2,None,Minutes Risk,0
+581,Maddison,TOT,MID,38,3.0,34.0,0,None,Minutes Risk,0
+582,Kudus,TOT,MID,38,0.0,0.0,0,None,Minutes Risk,0
+583,Kulusevski,TOT,MID,38,0.0,0.0,0,None,Minutes Risk,0
+584,Tel,TOT,MID,38,19.0,336.0,4,"Creative Wizard, Captaincy King, Bonus Magnet",,3
+585,Bentancur,TOT,MID,38,14.0,317.0,4,"Defensive Contributor, Metronome, Bonus Magnet",,3
+586,Bergvall,TOT,MID,38,2.0,10.0,0,None,Minutes Risk,0
+587,Bissouma,TOT,MID,38,1.0,23.0,0,None,Minutes Risk,0
+588,Odobert,TOT,MID,38,0.0,0.0,0,None,Minutes Risk,0
+589,Solomon,TOT,MID,38,0.0,0.0,0,None,Minutes Risk,0
+590,Bryan,TOT,MID,38,0.0,0.0,0,None,Minutes Risk,0
+591,Gray,TOT,MID,38,1.0,8.0,0,None,Minutes Risk,0
+592,Moore,TOT,MID,38,0.0,0.0,0,None,Minutes Risk,0
+593,P.M.Sarr,TOT,MID,38,5.0,39.0,0,None,Minutes Risk,0
+594,Min-hyeok,TOT,MID,38,0.0,0.0,0,None,Minutes Risk,0
+595,Olusesi,TOT,MID,38,0.0,0.0,0,None,Minutes Risk,0
+596,Solanke,TOT,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+597,Richarlison,TOT,FWD,38,20.0,342.0,4,"Goal Machine, xGI Beast, Captaincy King, Bonus Magnet",Minutes Monster,4
+598,Lankshear,TOT,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+599,Scarlett,TOT,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+600,Areola,WHU,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+601,Foderingham,WHU,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+602,Hegyi,WHU,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+603,Diouf,WHU,DEF,38,9.0,343.0,4,"Budget Enabler, Bonus Magnet",Minutes Monster,2
+604,Emerson,WHU,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+605,Kilman,WHU,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+606,Mavropanos,WHU,DEF,38,14.0,360.0,4,"Defensive Workhorse, Budget Enabler, Bonus Magnet",Minutes Monster,3
+607,N.Aguerd,WHU,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+608,Scarles,WHU,DEF,38,0.0,2.0,0,None,Minutes Risk,0
+609,Todibo,WHU,DEF,38,1.0,115.0,2,None,Minutes Risk,0
+610,Wan-Bissaka,WHU,DEF,38,4.0,177.0,2,None,Minutes Risk,0
+611,Casey,WHU,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+612,L.Paquetá,WHU,MID,38,0.0,0.0,0,None,Minutes Risk,0
+613,Souček,WHU,MID,38,8.0,332.0,4,Goal Machine,,1
+614,Ward-Prowse,BUR,MID,38,5.0,94.0,1,None,Minutes Risk,0
+615,Summerville,WHU,MID,38,10.0,357.0,4,"Metronome, Bonus Magnet",Minutes Monster,2
+616,Álvarez,WHU,MID,38,0.0,0.0,0,None,Minutes Risk,0
+617,Cornet,WHU,MID,38,0.0,0.0,0,None,Minutes Risk,0
+618,G.Rodriguez,WHU,MID,38,0.0,0.0,0,None,Minutes Risk,0
+619,L.Guilherme,WHU,MID,38,0.0,0.0,0,None,Minutes Risk,0
+620,Earthy,WHU,MID,38,0.0,0.0,0,None,Minutes Risk,0
+621,Irving,WHU,MID,38,0.0,0.0,0,None,Minutes Risk,0
+622,Orford,WHU,MID,38,0.0,0.0,0,None,Minutes Risk,0
+623,Potts,WHU,MID,38,0.0,0.0,0,None,Minutes Risk,0
+624,Bowen,WHU,FWD,38,18.0,357.0,4,"Captaincy King, Chaos Merchant, Bonus Magnet",Minutes Monster,3
+625,Füllkrug,WHU,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+626,Marshall,WHU,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+627,Johnstone,WOL,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+628,José Sá,WOL,GKP,38,9.0,180.0,2,None,Minutes Risk,0
+629,Bentley,WOL,GKP,38,4.0,180.0,2,None,Minutes Risk,0
+630,King,EVE,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+631,Agbadou,WOL,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+632,Doherty,WOL,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+633,H.Bueno,WOL,DEF,38,7.0,143.0,2,None,Minutes Risk,0
+634,Mosquera,WOL,DEF,38,10.0,360.0,4,"Scoring Defender, Defensive Workhorse",Minutes Monster,2
+635,R.Gomes,WOL,DEF,38,6.0,233.0,2,None,Minutes Risk,0
+636,S.Bueno,WOL,DEF,38,15.0,360.0,4,"Scoring Defender, Emerging Contributor",Minutes Monster,2
+637,Toti,WOL,DEF,38,8.0,204.0,2,None,Minutes Risk,0
+638,Hoever,WOL,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+639,Meupiyou,WOL,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+640,Pedro Lima,WOL,DEF,38,4.0,124.0,2,None,Minutes Risk,0
+641,Pond,WOL,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+642,Hee Chan,WOL,MID,38,7.0,256.0,3,Emerging Contributor,,1
+643,André,WOL,MID,38,10.0,360.0,4,"Defensive Contributor, Metronome",Minutes Monster,2
+644,Bellegarde,WOL,MID,38,2.0,34.0,0,None,Minutes Risk,0
+645,Fer López,WOL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+646,J.Gomes,WOL,MID,38,8.0,268.0,3,None,,0
+647,Guedes,WOL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+648,Munetsi,WOL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+649,B.Traore,WOL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+650,Chirewa,WOL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+651,Edozie,WOL,MID,38,1.0,1.0,0,None,Minutes Risk,0
+652,Gonzalez,WOL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+653,Hodge,WOL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+654,Strand Larsen,CRY,FWD,38,7.0,230.0,3,None,,0
+655,Fábio Silva,WOL,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+656,Kalajdžić,WOL,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+657,Chiwome,WOL,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+658,Fraser,WOL,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+659,Walker-Peters,WHU,DEF,38,7.0,154.0,2,None,Minutes Risk,0
+660,Stach,LEE,MID,38,15.0,234.0,3,Bonus Magnet,,1
+661,Ekitiké,LIV,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+662,Mosquera,ARS,DEF,38,11.0,232.0,2,None,Minutes Risk,0
+663,J.Arias,WOL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+664,Lecomte,FUL,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+665,Perri,LEE,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+666,Gyökeres,ARS,FWD,38,20.0,177.0,2,None,Minutes Risk,0
+667,Aznou,EVE,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+668,Xhaka,SUN,MID,38,17.0,360.0,4,"Creative Wizard, Defensive Contributor, Captaincy King, Bonus Magnet",Minutes Monster,4
+669,Ndoye,NFO,MID,38,0.0,0.0,0,None,Minutes Risk,0
+670,Roefs,SUN,GKP,38,14.0,360.0,4,"Shot Stopper, Overperformer, Bonus Magnet",Minutes Monster,3
+671,Wilson,WHU,FWD,38,9.0,165.0,1,None,Minutes Risk,0
+672,Hato,CHE,DEF,38,4.0,231.0,3,None,,0
+673,J.Palhinha,TOT,MID,38,21.0,338.0,4,"Defensive Contributor, Captaincy King, Chaos Merchant, Bonus Magnet",,4
+674,Ramsdale,NEW,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+675,Gunn,NFO,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+676,Ugochukwu,BUR,MID,38,9.0,222.0,3,Metronome,,1
+677,Guessand,CRY,MID,38,2.0,29.0,0,None,Minutes Risk,0
+678,Masuaku,SUN,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+679,Hermansen,WHU,GKP,38,16.0,360.0,4,Shot Stopper,Minutes Monster,1
+680,Broja,BUR,FWD,38,1.0,14.0,0,None,Minutes Risk,0
+681,Šeško,MUN,FWD,38,5.0,45.0,1,None,Minutes Risk,0
+682,Møller Wolfe,WOL,DEF,38,5.0,202.0,2,None,Minutes Risk,0
+683,Alderete,SUN,DEF,38,13.0,202.0,3,"Defensive Workhorse, Budget Enabler",,2
+684,Thiaw,NEW,DEF,38,7.0,360.0,4,"Scoring Defender, Emerging Contributor",Minutes Monster,2
+685,Diakité,BOU,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+686,Ngumoha,LIV,MID,38,11.0,243.0,3,Metronome,,1
+687,Rees-Dottin,BOU,MID,38,0.0,0.0,0,None,Minutes Risk,0
+688,Wright,AVL,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+689,Seung soo,NEW,MID,38,0.0,0.0,0,None,Minutes Risk,0
+690,Cardines,CRY,MID,38,2.0,90.0,1,None,Minutes Risk,0
+691,Calvert-Lewin,LEE,FWD,38,22.0,338.0,4,"Goal Machine, Clinical Finisher, Captaincy King, Metronome, Bonus Magnet",,5
+692,Leoni,LIV,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+693,Hutchinson,NFO,MID,38,9.0,182.0,2,None,Minutes Risk,0
+694,Mukiele,SUN,DEF,38,23.0,360.0,4,"Attacking Defender, Defensive Workhorse, Bonus Magnet",Minutes Monster,3
+695,Tchatchoua,WOL,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+696,Kalimuendo,NFO,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+697,Adli,BOU,MID,38,3.0,33.0,0,None,Minutes Risk,0
+698,Okafor,LEE,MID,38,10.0,64.0,1,None,Minutes Risk,0
+699,Douglas Luiz,AVL,MID,38,4.0,83.0,1,None,Minutes Risk,0
+700,Dowman,ARS,MID,38,4.0,73.0,1,None,Minutes Risk,0
+701,Rowe,AVL,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+702,Burrowes,AVL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+703,Proctor,AVL,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+704,Onyango,EVE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+705,Campbell,EVE,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+706,Justin,LEE,DEF,38,13.0,360.0,4,"Budget Enabler, Bonus Magnet",Minutes Monster,2
+707,Dibling,EVE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+708,M.Fernandes,WHU,MID,38,19.0,360.0,4,"Defensive Contributor, Captaincy King, Bonus Magnet",Minutes Monster,3
+709,Krejčí,WOL,DEF,38,8.0,155.0,2,None,Minutes Risk,0
+710,Patterson,AVL,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+711,Harriman-Annous,ARS,MID,38,0.0,0.0,0,None,Minutes Risk,0
+712,Yeremy,CRY,MID,38,6.0,149.0,2,None,Minutes Risk,0
+713,A.Jimenez,BOU,DEF,38,6.0,90.0,1,None,Minutes Risk,0
+714,Woltemade,NEW,FWD,38,12.0,211.0,3,Bonus Magnet,,1
+715,John,NFO,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+716,Savona,NFO,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+717,Xavi,TOT,MID,38,0.0,0.0,0,None,Minutes Risk,0
+718,S.Magassa,WHU,MID,38,1.0,2.0,0,None,Minutes Risk,0
+719,Lindelöf,AVL,DEF,38,5.0,280.0,4,None,,0
+720,Tolu,WOL,FWD,38,5.0,133.0,1,None,Minutes Risk,0
+721,Milosavljević,BOU,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+722,Florentino,BUR,MID,38,13.0,278.0,3,"Defensive Contributor, Metronome, Bonus Magnet",,3
+723,Canvot,CRY,DEF,38,7.0,270.0,3,Defensive Workhorse,,1
+724,Geertruida,SUN,DEF,38,9.0,270.0,3,Budget Enabler,,1
+725,Hincapie,ARS,DEF,38,3.0,108.0,1,None,Minutes Risk,0
+726,Kolo Muani,TOT,FWD,38,6.0,241.0,3,None,,0
+727,Chukwueze,FUL,MID,38,5.0,135.0,2,None,Minutes Risk,0
+728,Röhl,EVE,MID,38,18.0,317.0,4,Captaincy King,,1
+729,Cuiabano,NFO,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+730,Brobbey,SUN,FWD,38,15.0,297.0,4,"Goal Machine, xGI Beast",,2
+731,Kevin,FUL,MID,38,6.0,132.0,1,None,Minutes Risk,0
+732,Uche,CRY,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+733,Lammens,MUN,GKP,38,18.0,360.0,4,Bonus Magnet,Minutes Monster,1
+734,Bakwa,NFO,MID,38,11.0,162.0,2,None,Minutes Risk,0
+735,Traoré,SUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+736,Donnarumma,MCI,GKP,38,15.0,270.0,3,"Sweeper Keeper, Overperformer",,2
+737,Kusi-Asare,FUL,FWD,38,2.0,19.0,0,None,Minutes Risk,0
+738,Fabianski,WHU,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+739,Mukasa,MCI,MID,38,0.0,0.0,0,None,Minutes Risk,0
+740,Mfuni,MCI,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+741,Gray,LEE,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+742,McAidoo,MCI,MID,38,0.0,0.0,0,None,Minutes Risk,0
+743,Emenalo,CHE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+744,Oriola,BHA,MID,38,0.0,0.0,0,None,Minutes Risk,0
+745,Byfield,TOT,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+746,Morrison,LIV,MID,38,0.0,0.0,0,None,Minutes Risk,0
+747,Mayers,WHU,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+748,Dasilva,BRE,MID,38,2.0,2.0,0,None,Minutes Risk,0
+749,Mané,WOL,FWD,38,17.0,336.0,4,"Creative Wizard, Captaincy King, Chaos Merchant, Bonus Magnet",,4
+750,Rowswell,TOT,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+751,Akhamrich,TOT,MID,38,0.0,0.0,0,None,Minutes Risk,0
+752,Golambeckis,WHU,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+753,Ruddy,NEW,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+754,George Hemmings,AVL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+755,Lacey,MUN,MID,38,1.0,28.0,0,None,Minutes Risk,0
+756,DaCosta,BOU,MID,38,0.0,0.0,0,None,Minutes Risk,0
+757,Hollingshead,AVL,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+758,Mohamadou Kanté,WHU,MID,38,1.0,29.0,0,None,Minutes Risk,0
+759,Salmon,ARS,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+760,Lucky,LIV,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+761,Simmonds,BHA,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+762,Drakes-Thomas,CRY,MID,38,0.0,0.0,0,None,Minutes Risk,0
+763,Gray,MCI,MID,38,0.0,0.0,0,None,Minutes Risk,0
+764,Heskey,MCI,MID,38,0.0,0.0,0,None,Minutes Risk,0
+765,Shahar,NEW,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+766,Olagunju,WOL,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+767,Rawlings,WOL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+768,Leon Routh,AVL,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+769,Bendito Mantato,MUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+770,Ridgeon,FUL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+771,Fletcher,MUN,MID,38,1.0,16.0,0,None,Minutes Risk,0
+772,Alabi,NEW,MID,38,0.0,0.0,0,None,Minutes Risk,0
+773,Benamar,CRY,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+774,Jenson Jones,SUN,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+775,Tutierov,SUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+776,Pimlott,BUR,MID,38,0.0,0.0,0,None,Minutes Risk,0
+777,Ojinnaka,WOL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+778,Sutherland,WOL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+779,Graham,EVE,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+780,Casey,CRY,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+781,Carroll,AVL,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+782,Forster,BOU,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+783,Groß,BHA,MID,38,13.0,360.0,4,"Creative Wizard, Metronome, Bonus Magnet",Minutes Monster,3
+784,Brierley,BUR,MID,38,0.0,0.0,0,None,Minutes Risk,0
+785,Pablo,WHU,FWD,38,5.0,185.0,2,None,Minutes Risk,0
+786,McNally,FUL,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+787,Chambers,LEE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+788,Kukonki,MUN,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+789,Merrick,CHE,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+790,Williams-Barnett,TOT,MID,38,0.0,0.0,0,None,Minutes Risk,0
+791,Taty,WHU,FWD,38,16.0,281.0,3,"Goal Machine, Captaincy King, Bonus Magnet",,3
+792,Alysson,AVL,MID,38,0.0,0.0,0,None,Minutes Risk,0
+793,King,CRY,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+794,Alleyne,MCI,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+795,Howell,BHA,MID,38,0.0,0.0,0,None,Minutes Risk,0
+796,Gallagher,TOT,MID,38,16.0,351.0,4,"Emerging Contributor, Captaincy King, Bonus Magnet",Minutes Monster,3
+797,Furo,BRE,FWD,38,1.0,1.0,0,None,Minutes Risk,0
+798,Imray,CRY,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+799,Stevens,BOU,MID,38,0.0,0.0,0,None,Minutes Risk,0
+800,Jocelin.T,SUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+801,Tóth.A,BOU,MID,38,2.0,57.0,1,None,Minutes Risk,0
+802,Lamadrid,WHU,MID,38,0.0,0.0,0,None,Minutes Risk,0
+803,Sharman-Lowe,CHE,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+804,Souza,TOT,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+805,Lucca,NFO,FWD,38,1.0,7.0,0,None,Minutes Risk,0
+806,Mandas,BOU,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+807,Rayan,BOU,MID,38,22.0,318.0,4,"Goal Machine, Captaincy King, Bonus Magnet",,3
+808,Abraham,AVL,FWD,38,1.0,59.0,1,None,Minutes Risk,0
+809,Abbey,WOL,MID,38,1.0,16.0,0,None,Minutes Risk,0
+810,Bentt,BRE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+811,Kyerematen,TOT,MID,38,0.0,0.0,0,None,Minutes Risk,0
+812,Ellborg,SUN,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+813,Angulo,SUN,MID,38,4.0,147.0,2,None,Minutes Risk,0
+814,Netz,NFO,DEF,38,8.0,282.0,3,None,,0
+815,Disasi,WHU,DEF,38,10.0,354.0,4,Budget Enabler,Minutes Monster,1
+816,Angel,WOL,MID,38,4.0,78.0,1,None,Minutes Risk,0
+817,Armstrong,WOL,FWD,38,13.0,324.0,4,"Goal Machine, xGI Beast, Metronome",,3
+818,Wilson,TOT,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+819,Shield,BRE,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+820,McMahon-Brown,BUR,MID,38,0.0,0.0,0,None,Minutes Risk,0
+821,Whittaker,SUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+822,Jones,SUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+823,Stephenson,BRE,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+824,McManus,BRE,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+825,Herrick,WHU,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+826,Owen,BRE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+827,Thwaites,MUN,MID,38,0.0,0.0,0,None,Minutes Risk,0
+828,Brooks,WOL,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+829,Derry,CHE,MID,38,1.0,45.0,1,None,Minutes Risk,0
+830,Wright,LIV,FWD,38,0.0,0.0,0,None,Minutes Risk,0
+831,Gracey,WOL,GKP,38,0.0,0.0,0,None,Minutes Risk,0
+832,Ndiaye,LIV,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+833,Eboué,CHE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+834,Kavuma-McQueen,CHE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+835,Whitehall,NFO,MID,38,0.0,0.0,0,None,Minutes Risk,0
+836,Sinclair,NFO,MID,38,0.0,0.0,0,None,Minutes Risk,0
+837,Lienou,LEE,DEF,38,0.0,0.0,0,None,Minutes Risk,0
+838,Chadwick,LEE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+839,Cresswell,LEE,MID,38,0.0,0.0,0,None,Minutes Risk,0
+840,Mheuka,CHE,FWD,38,1.0,1.0,0,None,Minutes Risk,0
+841,Sillah,NFO,FWD,38,0.0,0.0,0,None,Minutes Risk,0

@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FPL Analyser</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0D1117;
+    --card: #161B22;
+    --border: #21262D;
+    --accent: #38D9A9;
+    --accent2: #F78166;
+    --text: #F8F9FA;
+    --text2: #8B949E;
+    --hot: #FF6B6B;
+    --cold: #4ECDC4;
+    --star: #FFD700;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ── Nav ── */
+  nav {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .nav-logo {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-right: 40px;
+    letter-spacing: -0.5px;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 8px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--text2);
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+
+  .nav-links a:hover, .nav-links a.active {
+    color: var(--text);
+    background: var(--border);
+  }
+
+  /* ── Main ── */
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── Search ── */
+  .search-wrap {
+    position: relative;
+    max-width: 500px;
+    margin-bottom: 32px;
+  }
+
+  .search-wrap input {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-wrap input:focus { border-color: var(--accent); }
+
+  .search-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 50;
+    display: none;
+  }
+
+  .search-dropdown.show { display: block; }
+
+  .dropdown-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  .dropdown-item:hover { background: var(--border); }
+  .dropdown-item:last-child { border-bottom: none; }
+
+  .dropdown-meta {
+    color: var(--text2);
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── Player Card ── */
+  .player-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .player-header {
+    padding: 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, var(--card) 0%, #1a2332 100%);
+  }
+
+  .player-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+  }
+
+  .player-info { flex: 1; }
+
+  .player-name {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .player-meta {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-pos { background: #1f3a5f; color: #58a6ff; }
+  .badge-team { background: var(--border); color: var(--text2); }
+  .badge-price { background: #1f3d2a; color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+
+  .streak-hot { color: var(--hot); font-size: 14px; font-weight: 600; }
+  .streak-cold { color: var(--cold); font-size: 14px; font-weight: 600; }
+
+  .player-ratings {
+    display: flex;
+    gap: 24px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+
+  .rating-block { text-align: center; }
+
+  .rating-label {
+    font-size: 10px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .rating-stars {
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+  }
+
+  .tab {
+    padding: 14px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.2s;
+  }
+
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .tab-content { display: none; padding: 24px; }
+  .tab-content.active { display: block; }
+
+  /* ── Stats Grid ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+  }
+
+  .stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Ratings Table ── */
+  .ratings-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .ratings-table th {
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 11px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .ratings-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+
+  .ratings-table tr:last-child td { border-bottom: none; }
+  .ratings-table tr:hover td { background: var(--bg); }
+
+  /* ── Personas ── */
+  .personas-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .persona-tag {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    background: #1f3a5f;
+    color: #58a6ff;
+    border: 1px solid #1f4a7f;
+  }
+
+  .flag-tag {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .flag-monster { background: #1f3d2a; color: var(--accent); border: 1px solid #2d5a3d; }
+  .flag-risk { background: #3d1f1f; color: var(--hot); border: 1px solid #5a2d2d; }
+
+  /* ── Section Headers ── */
+  .section-header {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    margin-top: 20px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-header:first-child { margin-top: 0; }
+
+  /* ── Rankings Table ── */
+  .rankings-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .rankings-table th {
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 11px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+
+  .rankings-table th:hover { color: var(--text); }
+
+  .rankings-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+
+  .rankings-table tr:hover td { background: var(--card); }
+  .rankings-table tr:last-child td { border-bottom: none; }
+
+  .rank-num {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text2);
+    font-size: 12px;
+    width: 32px;
+  }
+
+  .clickable-name {
+    color: var(--accent);
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .clickable-name:hover { text-decoration: underline; }
+
+  /* ── Page Title ── */
+  .page-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .page-subtitle {
+    color: var(--text2);
+    font-size: 14px;
+    margin-bottom: 32px;
+  }
+
+  /* ── Rankings Tabs ── */
+  .rankings-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .rankings-tab {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    transition: all 0.2s;
+    background: transparent;
+  }
+
+  .rankings-tab:hover { border-color: var(--accent); color: var(--text); }
+  .rankings-tab.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+  /* ── Team Card ── */
+  .team-header {
+    padding: 24px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, var(--card) 0%, #1a2332 100%);
+  }
+
+  .team-name {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .team-stats-row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .team-stat {
+    text-align: center;
+  }
+
+  .team-stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+  }
+
+  .team-stat-label {
+    font-size: 11px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Loading ── */
+  .loading {
+    text-align: center;
+    padding: 60px;
+    color: var(--text2);
+  }
+
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Empty State ── */
+  .empty-state {
+    text-align: center;
+    padding: 60px;
+    color: var(--text2);
+  }
+
+  .empty-icon { font-size: 48px; margin-bottom: 16px; }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    nav { padding: 0 16px; }
+    main { padding: 20px 16px; }
+    .player-header { flex-direction: column; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ── Position filter ── */
+  .pos-filter {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .pos-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    background: transparent;
+    transition: all 0.2s;
+  }
+
+  .pos-btn:hover { border-color: var(--accent); color: var(--text); }
+  .pos-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+  .form-section { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 600px) { .form-section { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">⚽ FPL Analyser</div>
+  <ul class="nav-links">
+    <li><a href="#" class="active" onclick="showPage('player', this)">Players</a></li>
+    <li><a href="#" onclick="showPage('teams', this)">Teams</a></li>
+    <li><a href="#" onclick="showPage('rankings', this)">Rankings</a></li>
+  </ul>
+</nav>
+
+<main>
+
+  <!-- ── PLAYER PAGE ── -->
+  <div id="page-player" class="page active">
+    <div class="page-title">Player Search</div>
+    <div class="page-subtitle">Search for any player to see their FPL Analyser ratings, stats and form</div>
+
+    <div class="search-wrap">
+      <input type="text" id="player-search" placeholder="Search player name..." autocomplete="off">
+      <div class="search-dropdown" id="player-dropdown"></div>
+    </div>
+
+    <div id="player-result">
+      <div class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <div>Search for a player to see their analysis</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TEAMS PAGE ── -->
+  <div id="page-teams" class="page">
+    <div class="page-title">Team Search</div>
+    <div class="page-subtitle">Search for a team to see their metrics and player ratings</div>
+
+    <div class="search-wrap">
+      <input type="text" id="team-search" placeholder="Search team name..." autocomplete="off">
+      <div class="search-dropdown" id="team-dropdown"></div>
+    </div>
+
+    <div id="team-result">
+      <div class="empty-state">
+        <div class="empty-icon">🏟️</div>
+        <div>Search for a team to see their analysis</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RANKINGS PAGE ── -->
+  <div id="page-rankings" class="page">
+    <div class="page-title">Rankings</div>
+    <div class="page-subtitle">Top players across all metrics</div>
+
+    <div class="rankings-tabs">
+      <button class="rankings-tab active" onclick="showRankingsTab('top-rated', this)">⭐ Top Rated</button>
+      <button class="rankings-tab" onclick="showRankingsTab('goal-threats', this)">⚽ Goal Threats</button>
+      <button class="rankings-tab" onclick="showRankingsTab('creators', this)">🎯 Creators</button>
+      <button class="rankings-tab" onclick="showRankingsTab('clean-sheets', this)">🛡️ Clean Sheets</button>
+      <button class="rankings-tab" onclick="showRankingsTab('value', this)">💰 Value Picks</button>
+      <button class="rankings-tab" onclick="showRankingsTab('form', this)">🔥 Form</button>
+    </div>
+
+    <div id="rankings-content">
+      <div class="loading"><div class="loading-spinner"></div>Loading rankings...</div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ── Data store ──────────────────────────────────────────────────────────────
+const BASE = 'https://raw.githubusercontent.com/stefcourt2004-png/fpl-analyser/main/';
+const data = { ratings: [], personas4: [], metrics: [], teamMetrics: [], seasonToDate: [], tierPerf: [] };
+let loaded = false;
+
+// ── Load all CSVs ────────────────────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+  return lines.slice(1).map(line => {
+    const vals = line.match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g) || [];
+    const obj = {};
+    headers.forEach((h, i) => {
+      let v = (vals[i] || '').replace(/"/g, '').trim();
+      obj[h] = isNaN(v) || v === '' ? v : Number(v);
+    });
+    return obj;
+  });
+}
+
+async function loadCSV(file) {
+  const r = await fetch(BASE + file);
+  const text = await r.text();
+  return parseCSV(text);
+}
+
+async function loadAll() {
+  try {
+    const [ratings, personas4, metrics, teamMetrics, std, tier] = await Promise.all([
+      loadCSV('fpl_analyser_ratings.csv'),
+      loadCSV('personas_4gw.csv'),
+      loadCSV('advanced_metrics.csv'),
+      loadCSV('team_metrics.csv'),
+      loadCSV('season_to_date_per90.csv'),
+      loadCSV('player_tier_performance.csv')
+    ]);
+    data.ratings = ratings;
+    data.personas4 = personas4;
+    data.metrics = metrics;
+    data.teamMetrics = teamMetrics;
+    data.seasonToDate = std;
+    data.tierPerf = tier;
+    loaded = true;
+    initSearch();
+    showRankingsTab('top-rated', document.querySelector('.rankings-tab'));
+  } catch(e) {
+    console.error('Load error:', e);
+  }
+}
+
+// ── Navigation ───────────────────────────────────────────────────────────────
+function showPage(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  if (el) el.classList.add('active');
+}
+
+// ── Player Search ────────────────────────────────────────────────────────────
+function initSearch() {
+  const input = document.getElementById('player-search');
+  const dropdown = document.getElementById('player-dropdown');
+
+  input.addEventListener('input', () => {
+    const q = input.value.toLowerCase().trim();
+    if (q.length < 2) { dropdown.classList.remove('show'); return; }
+
+    const matches = data.ratings
+      .filter(p => p.web_name && p.web_name.toLowerCase().includes(q))
+      .slice(0, 8);
+
+    if (matches.length === 0) { dropdown.classList.remove('show'); return; }
+
+    dropdown.innerHTML = matches.map(p => `
+      <div class="dropdown-item" onclick="showPlayer('${p.web_name}')">
+        <span>${p.web_name}</span>
+        <span class="dropdown-meta">${p.position} · ${p.team} · £${p.price}m</span>
+      </div>
+    `).join('');
+    dropdown.classList.add('show');
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.search-wrap')) dropdown.classList.remove('show');
+  });
+
+  // Team search
+  const teamInput = document.getElementById('team-search');
+  const teamDropdown = document.getElementById('team-dropdown');
+  const teams = [...new Set(data.teamMetrics.filter(t => t.window === 'season').map(t => t.team))].sort();
+
+  teamInput.addEventListener('input', () => {
+    const q = teamInput.value.toLowerCase().trim();
+    if (q.length < 1) { teamDropdown.classList.remove('show'); return; }
+
+    const matches = teams.filter(t => t.toLowerCase().includes(q)).slice(0, 8);
+    if (matches.length === 0) { teamDropdown.classList.remove('show'); return; }
+
+    teamDropdown.innerHTML = matches.map(t => `
+      <div class="dropdown-item" onclick="showTeam('${t}')">${t}</div>
+    `).join('');
+    teamDropdown.classList.add('show');
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#team-search') && !e.target.closest('#team-dropdown')) {
+      teamDropdown.classList.remove('show');
+    }
+  });
+}
+
+// ── Player Card ──────────────────────────────────────────────────────────────
+function showPlayer(name) {
+  document.getElementById('player-dropdown').classList.remove('show');
+  document.getElementById('player-search').value = name;
+
+  const r = data.ratings.find(p => p.web_name === name);
+  const p4 = data.personas4.find(p => p.web_name === name);
+  const m = data.metrics.find(p => p.web_name === name);
+  const std = data.seasonToDate.find(p => p.web_name === name);
+
+  if (!r) return;
+
+  const pos = r.position;
+  const isAtt = pos === 'MID' || pos === 'FWD';
+  const streak = std ? std.streak : '';
+  const streakHtml = streak === '🔥 Hot'
+    ? `<span class="streak-hot">🔥 Hot Streak</span>`
+    : streak === '🧊 Cold'
+    ? `<span class="streak-cold">🧊 Cold Streak</span>`
+    : '';
+
+  const personas = p4 ? p4.personas : '';
+  const flags = p4 ? p4.flags : '';
+
+  const personaHtml = personas && personas !== 'None'
+    ? personas.split(', ').map(p => `<span class="persona-tag">${p}</span>`).join('')
+    : '';
+
+  const flagHtml = flags
+    ? flags.split(', ').map(f => `<span class="flag-tag ${f.includes('Monster') ? 'flag-monster' : 'flag-risk'}">${f}</span>`).join('')
+    : '';
+
+  // Overall ratings
+  const seasonOverall = r.season_overall_rating || 'N/A';
+  const gw4Overall = r.gw4_overall_rating || 'N/A';
+  const attSeason = r.season_att_overall_rating || 'N/A';
+  const attGw4 = r.gw4_att_overall_rating || 'N/A';
+
+  // Dimension ratings by position
+  let dimRows = '';
+  if (pos === 'GKP') {
+    dimRows = buildDimRows([
+      ['Save', 'season_save_score_rating', 'gw4_save_score_rating'],
+      ['Clean Sheet', 'season_cs_score_rating', 'gw4_cs_score_rating'],
+      ['BPS / Bonus', 'season_bps_score_rating', 'gw4_bps_score_rating'],
+      ['Value', 'season_value_score_rating', 'gw4_value_score_rating'],
+      ['Reliability', 'season_reliability_score_rating', 'gw4_reliability_score_rating'],
+      ['90 Mins', 'season_mins90_score_rating', 'gw4_mins90_score_rating'],
+    ], r);
+  } else if (pos === 'DEF') {
+    dimRows = buildDimRows([
+      ['Clean Sheet', 'season_cs_score_rating', 'gw4_cs_score_rating'],
+      ['Def Contribution', 'season_dc_score_rating', 'gw4_dc_score_rating'],
+      ['Attacking', 'season_attacking_score_rating', 'gw4_attacking_score_rating'],
+      ['BPS / Bonus', 'season_bps_score_rating', 'gw4_bps_score_rating'],
+      ['Value', 'season_value_score_rating', 'gw4_value_score_rating'],
+      ['Reliability', 'season_reliability_score_rating', 'gw4_reliability_score_rating'],
+      ['90 Mins', 'season_mins90_score_rating', 'gw4_mins90_score_rating'],
+    ], r);
+  } else {
+    dimRows = buildDimRows([
+      ['Goal Threat', 'season_goal_score_rating', 'gw4_goal_score_rating'],
+      ['Creativity', 'season_creative_score_rating', 'gw4_creative_score_rating'],
+      ['Def Contribution', 'season_dc_score_rating', 'gw4_dc_score_rating'],
+      ['BPS / Bonus', 'season_bps_score_rating', 'gw4_bps_score_rating'],
+      ['Value', 'season_value_score_rating', 'gw4_value_score_rating'],
+      ['Reliability', 'season_reliability_score_rating', 'gw4_reliability_score_rating'],
+      ['90 Mins', 'season_mins90_score_rating', 'gw4_mins90_score_rating'],
+    ], r);
+  }
+
+  // Attacker combined ratings
+  const attDimRows = isAtt ? buildDimRows([
+    ['Goal Threat', 'season_att_goal_score_rating', 'gw4_att_goal_score_rating'],
+    ['Creativity', 'season_att_creative_score_rating', 'gw4_att_creative_score_rating'],
+    ['Def Contribution', 'season_att_dc_score_rating', 'gw4_att_dc_score_rating'],
+    ['BPS / Bonus', 'season_att_bps_score_rating', 'gw4_att_bps_score_rating'],
+    ['Value', 'season_att_value_score_rating', 'gw4_att_value_score_rating'],
+    ['Reliability', 'season_att_reliability_rating', 'gw4_att_reliability_rating'],
+    ['90 Mins', 'season_att_mins90_rating', 'gw4_att_mins90_rating'],
+  ], r) : '';
+
+  // Advanced metrics
+  const sharpe = m ? m.sharpe_4gw : 'N/A';
+  const alpha = m ? m.alpha_4gw : 'N/A';
+  const sortino = m ? m.sortino_4gw : 'N/A';
+  const consistency = m ? m.consistency_4gw : 'N/A';
+  const homeAvg = m ? m.home_avg_season : 'N/A';
+  const awayAvg = m ? m.away_avg_season : 'N/A';
+  const formDir = m ? m.form_direction : 'N/A';
+  const xgShare = m ? (m.xg_share_4gw ? (m.xg_share_4gw * 100).toFixed(1) + '%' : 'N/A') : 'N/A';
+  const xaShare = m ? (m.xa_share_4gw ? (m.xa_share_4gw * 100).toFixed(1) + '%' : 'N/A') : 'N/A';
+
+  // Per90 stats
+  const ptsPer90 = std ? std.pts_per90_season : 'N/A';
+  const xgPer90 = std ? std.xg_per90_season : 'N/A';
+  const xaPer90 = std ? std.xa_per90_season : 'N/A';
+  const ptsDelta = std ? std.pts_delta : 'N/A';
+
+  // Tier performance
+  const tierData = data.tierPerf.filter(t => t.web_name === name);
+  const tier1 = tierData.find(t => t.opponent_tier === 'Tier 1 - Top 6');
+  const tier2 = tierData.find(t => t.opponent_tier === 'Tier 2 - Mid Upper');
+  const tier3 = tierData.find(t => t.opponent_tier === 'Tier 3 - Rest');
+
+  document.getElementById('player-result').innerHTML = `
+    <div class="player-card">
+      <div class="player-header">
+        <div class="player-avatar">${getPositionEmoji(pos)}</div>
+        <div class="player-info">
+          <div class="player-name">${name}</div>
+          <div class="player-meta">
+            <span class="badge badge-pos">${pos}</span>
+            <span class="badge badge-team">${r.team}</span>
+            <span class="badge badge-price">£${r.price}m</span>
+            ${streakHtml}
+          </div>
+          <div class="player-ratings">
+            <div class="rating-block">
+              <div class="rating-label">Season (Position)</div>
+              <div class="rating-stars">${seasonOverall}</div>
+            </div>
+            <div class="rating-block">
+              <div class="rating-label">Last 4GW (Position)</div>
+              <div class="rating-stars">${gw4Overall}</div>
+            </div>
+            ${isAtt ? `
+            <div class="rating-block">
+              <div class="rating-label">Season (Attacker)</div>
+              <div class="rating-stars">${attSeason}</div>
+            </div>
+            <div class="rating-block">
+              <div class="rating-label">Last 4GW (Attacker)</div>
+              <div class="rating-stars">${attGw4}</div>
+            </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active" onclick="showTab(this, 'overview-${name.replace(/\s/g,'-')}')">Overview</div>
+        <div class="tab" onclick="showTab(this, 'ratings-${name.replace(/\s/g,'-')}')">Ratings</div>
+        <div class="tab" onclick="showTab(this, 'stats-${name.replace(/\s/g,'-')}')">Stats & Metrics</div>
+        <div class="tab" onclick="showTab(this, 'fixtures-${name.replace(/\s/g,'-')}')">Fixtures</div>
+      </div>
+
+      <!-- Overview Tab -->
+      <div id="overview-${name.replace(/\s/g,'-')}" class="tab-content active">
+        ${personaHtml || flagHtml ? `
+        <div class="section-header">Personas & Flags</div>
+        <div class="personas-wrap">${personaHtml}${flagHtml}</div>
+        ` : ''}
+
+        <div class="section-header">Key Stats (Season)</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${r.season_ppg ? r.season_ppg.toFixed(1) : 'N/A'}</div>
+            <div class="stat-label">Pts Per Game</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${ptsPer90 !== 'N/A' ? Number(ptsPer90).toFixed(2) : 'N/A'}</div>
+            <div class="stat-label">Pts Per 90</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${r.total_mins ? Math.round(r.total_mins) : 'N/A'}</div>
+            <div class="stat-label">Total Mins</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${r.season_start_rate ? (r.season_start_rate * 100).toFixed(0) + '%' : 'N/A'}</div>
+            <div class="stat-label">Start Rate</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${r.season_mins90_rate ? (r.season_mins90_rate * 100).toFixed(0) + '%' : 'N/A'}</div>
+            <div class="stat-label">90 Mins Rate</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${ptsDelta !== 'N/A' ? (ptsDelta > 0 ? '+' : '') + Number(ptsDelta).toFixed(2) : 'N/A'}</div>
+            <div class="stat-label">Form Delta</div>
+          </div>
+        </div>
+
+        ${isAtt ? `
+        <div class="section-header">Attacking Share (Last 4GW)</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${xgShare}</div>
+            <div class="stat-label">Team xG Share</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${xaShare}</div>
+            <div class="stat-label">Team xA Share</div>
+          </div>
+        </div>
+        ` : ''}
+      </div>
+
+      <!-- Ratings Tab -->
+      <div id="ratings-${name.replace(/\s/g,'-')}" class="tab-content">
+        <div class="section-header">Position Ratings — vs ${pos} players only</div>
+        <table class="ratings-table">
+          <thead><tr><th>Dimension</th><th>Season</th><th>Last 4GW</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Overall</strong></td>
+              <td>${seasonOverall}</td>
+              <td>${gw4Overall}</td>
+            </tr>
+            ${dimRows}
+          </tbody>
+        </table>
+
+        ${isAtt ? `
+        <div class="section-header" style="margin-top: 24px;">Attacker Ratings — vs all MID & FWD players</div>
+        <table class="ratings-table">
+          <thead><tr><th>Dimension</th><th>Season</th><th>Last 4GW</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Overall</strong></td>
+              <td>${attSeason}</td>
+              <td>${attGw4}</td>
+            </tr>
+            ${attDimRows}
+          </tbody>
+        </table>
+        ` : ''}
+      </div>
+
+      <!-- Stats Tab -->
+      <div id="stats-${name.replace(/\s/g,'-')}" class="tab-content">
+        <div class="section-header">Per 90 Stats (Season)</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${xgPer90 !== 'N/A' ? Number(xgPer90).toFixed(3) : 'N/A'}</div>
+            <div class="stat-label">xG per 90</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${xaPer90 !== 'N/A' ? Number(xaPer90).toFixed(3) : 'N/A'}</div>
+            <div class="stat-label">xA per 90</div>
+          </div>
+        </div>
+
+        <div class="section-header">Finance Metrics (Last 4GW)</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${alpha !== 'N/A' ? Number(alpha).toFixed(2) : 'N/A'}</div>
+            <div class="stat-label">Alpha</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${sharpe !== 'N/A' ? Number(sharpe).toFixed(2) : 'N/A'}</div>
+            <div class="stat-label">Sharpe</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${sortino !== 'N/A' ? Number(sortino).toFixed(2) : 'N/A'}</div>
+            <div class="stat-label">Sortino</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${consistency !== 'N/A' ? Number(consistency).toFixed(2) : 'N/A'}</div>
+            <div class="stat-label">Consistency</div>
+          </div>
+        </div>
+
+        <div class="section-header">Home vs Away (Season)</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${homeAvg !== 'N/A' ? Number(homeAvg).toFixed(1) : 'N/A'}</div>
+            <div class="stat-label">Home Avg Pts</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${awayAvg !== 'N/A' ? Number(awayAvg).toFixed(1) : 'N/A'}</div>
+            <div class="stat-label">Away Avg Pts</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${formDir}</div>
+            <div class="stat-label">Form Direction</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fixtures Tab -->
+      <div id="fixtures-${name.replace(/\s/g,'-')}" class="tab-content">
+        <div class="section-header">Performance by Opponent Tier</div>
+        <table class="ratings-table">
+          <thead>
+            <tr>
+              <th>Tier</th>
+              <th>Games</th>
+              <th>Avg Pts</th>
+              <th>Goals</th>
+              <th>Assists</th>
+              <th>Avg Bonus</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${buildTierRow('Tier 1 — Top 6', tier1)}
+            ${buildTierRow('Tier 2 — Mid Upper', tier2)}
+            ${buildTierRow('Tier 3 — Rest', tier3)}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function buildDimRows(dims, r) {
+  return dims.map(([label, sCol, gCol]) => {
+    const sVal = r[sCol] || 'N/A';
+    const gVal = r[gCol] || 'N/A';
+    return `<tr><td>${label}</td><td>${sVal}</td><td>${gVal}</td></tr>`;
+  }).join('');
+}
+
+function buildTierRow(label, tier) {
+  if (!tier) return `<tr><td>${label}</td><td colspan="5" style="color:var(--text2)">No data</td></tr>`;
+  return `<tr>
+    <td>${label}</td>
+    <td>${tier.games_played}</td>
+    <td style="color:var(--accent);font-family:'JetBrains Mono',monospace">${Number(tier.avg_pts).toFixed(1)}</td>
+    <td>${tier.total_goals}</td>
+    <td>${tier.total_assists}</td>
+    <td>${Number(tier.avg_bonus).toFixed(1)}</td>
+  </tr>`;
+}
+
+function getPositionEmoji(pos) {
+  return { GKP: '🧤', DEF: '🛡️', MID: '⚡', FWD: '⚽' }[pos] || '👤';
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function showTab(el, id) {
+  const card = el.closest('.player-card') || el.closest('.team-card');
+  card.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  card.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(id).classList.add('active');
+}
+
+// ── Team Page ─────────────────────────────────────────────────────────────────
+function showTeam(team) {
+  document.getElementById('team-dropdown').classList.remove('show');
+  document.getElementById('team-search').value = team;
+
+  const seasonData = data.teamMetrics.find(t => t.team === team && t.window === 'season');
+  const gw4Data = data.teamMetrics.find(t => t.team === team && t.window === '4gw');
+  const players = data.ratings.filter(p => p.team === team && p.season_ok);
+
+  if (!seasonData) return;
+
+  const teamPlayers = players.sort((a, b) => (b.season_overall_score || 0) - (a.season_overall_score || 0));
+
+  document.getElementById('team-result').innerHTML = `
+    <div class="player-card team-card">
+      <div class="team-header">
+        <div class="team-name">🏟️ ${team}</div>
+        <div class="team-stats-row">
+          <div class="team-stat">
+            <div class="team-stat-value">${Math.round(seasonData.total_pts)}</div>
+            <div class="team-stat-label">Season Pts</div>
+          </div>
+          <div class="team-stat">
+            <div class="team-stat-value">${(seasonData.cs_rate * 100).toFixed(0)}%</div>
+            <div class="team-stat-label">CS Rate</div>
+          </div>
+          <div class="team-stat">
+            <div class="team-stat-value">${seasonData.home_pts_per_gw}</div>
+            <div class="team-stat-label">Home PPG</div>
+          </div>
+          <div class="team-stat">
+            <div class="team-stat-value">${seasonData.away_pts_per_gw}</div>
+            <div class="team-stat-label">Away PPG</div>
+          </div>
+          <div class="team-stat">
+            <div class="team-stat-value">${seasonData.form_direction}</div>
+            <div class="team-stat-label">Form</div>
+          </div>
+          <div class="team-stat">
+            <div class="team-stat-value">${seasonData.top1_player}</div>
+            <div class="team-stat-label">Top Scorer</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active" onclick="showTab(this, 'team-overview-${team}')">Overview</div>
+        <div class="tab" onclick="showTab(this, 'team-players-${team}')">Players</div>
+        <div class="tab" onclick="showTab(this, 'team-breakdown-${team}')">Points Breakdown</div>
+      </div>
+
+      <div id="team-overview-${team}" class="tab-content active">
+        <div class="section-header">Season Points Breakdown</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${(seasonData.goal_pts_pct * 100).toFixed(0)}%</div>
+            <div class="stat-label">From Goals</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${(seasonData.assist_pts_pct * 100).toFixed(0)}%</div>
+            <div class="stat-label">From Assists</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${(seasonData.cs_pts_pct * 100).toFixed(0)}%</div>
+            <div class="stat-label">From Clean Sheets</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${(seasonData.bonus_pts_pct * 100).toFixed(0)}%</div>
+            <div class="stat-label">From Bonus</div>
+          </div>
+        </div>
+
+        <div class="section-header">Points by Position</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${(seasonData.gkp_pct * 100).toFixed(0)}%</div>
+            <div class="stat-label">GKP</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${(seasonData.def_pct * 100).toFixed(0)}%</div>
+            <div class="stat-label">DEF</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${(seasonData.mid_pct * 100).toFixed(0)}%</div>
+            <div class="stat-label">MID</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${(seasonData.fwd_pct * 100).toFixed(0)}%</div>
+            <div class="stat-label">FWD</div>
+          </div>
+        </div>
+
+        <div class="section-header">Concentration Risk</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${(seasonData.top1_share * 100).toFixed(0)}%</div>
+            <div class="stat-label">Top Player Share</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${(seasonData.top3_share * 100).toFixed(0)}%</div>
+            <div class="stat-label">Top 3 Share</div>
+          </div>
+        </div>
+
+        ${gw4Data ? `
+        <div class="section-header">Last 4GW Form</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${Math.round(gw4Data.total_pts)}</div>
+            <div class="stat-label">Total Pts</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${(gw4Data.cs_rate * 100).toFixed(0)}%</div>
+            <div class="stat-label">CS Rate</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${gw4Data.form_direction}</div>
+            <div class="stat-label">Form</div>
+          </div>
+        </div>
+        ` : ''}
+      </div>
+
+      <div id="team-players-${team}" class="tab-content">
+        <div class="section-header">Rated Players</div>
+        <table class="rankings-table">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th>Pos</th>
+              <th>Season Rating</th>
+              <th>4GW Rating</th>
+              <th>PPG</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${teamPlayers.map(p => `
+              <tr>
+                <td><span class="clickable-name" onclick="showPlayer('${p.web_name}')">${p.web_name}</span></td>
+                <td><span class="badge badge-pos">${p.position}</span></td>
+                <td>${p.season_overall_rating || 'N/A'}</td>
+                <td>${p.gw4_overall_rating || 'N/A'}</td>
+                <td style="font-family:'JetBrains Mono',monospace;color:var(--accent)">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <div id="team-breakdown-${team}" class="tab-content">
+        <div class="section-header">xG and xGC</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${seasonData.team_xg ? Number(seasonData.team_xg).toFixed(1) : 'N/A'}</div>
+            <div class="stat-label">Season xG</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${seasonData.team_xa ? Number(seasonData.team_xa).toFixed(1) : 'N/A'}</div>
+            <div class="stat-label">Season xA</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${seasonData.team_xgc ? Number(seasonData.team_xgc).toFixed(1) : 'N/A'}</div>
+            <div class="stat-label">Season xGC</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ── Rankings ──────────────────────────────────────────────────────────────────
+let currentRankingsTab = 'top-rated';
+let currentPos = 'ALL';
+
+function showRankingsTab(tab, el) {
+  currentRankingsTab = tab;
+  currentPos = 'ALL';
+  document.querySelectorAll('.rankings-tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderRankings();
+}
+
+function filterPos(pos, el) {
+  currentPos = pos;
+  document.querySelectorAll('.pos-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderRankings();
+}
+
+function renderRankings() {
+  if (!loaded) return;
+  const container = document.getElementById('rankings-content');
+
+  let players = data.ratings.filter(p => p.season_ok);
+  if (currentPos !== 'ALL') players = players.filter(p => p.position === currentPos);
+
+  const posFilter = `
+    <div class="pos-filter">
+      <button class="pos-btn ${currentPos === 'ALL' ? 'active' : ''}" onclick="filterPos('ALL', this)">All</button>
+      <button class="pos-btn ${currentPos === 'GKP' ? 'active' : ''}" onclick="filterPos('GKP', this)">GKP</button>
+      <button class="pos-btn ${currentPos === 'DEF' ? 'active' : ''}" onclick="filterPos('DEF', this)">DEF</button>
+      <button class="pos-btn ${currentPos === 'MID' ? 'active' : ''}" onclick="filterPos('MID', this)">MID</button>
+      <button class="pos-btn ${currentPos === 'FWD' ? 'active' : ''}" onclick="filterPos('FWD', this)">FWD</button>
+    </div>
+  `;
+
+  let rows = [];
+  let headers = [];
+
+  if (currentRankingsTab === 'top-rated') {
+    players.sort((a, b) => (b.season_overall_score || 0) - (a.season_overall_score || 0));
+    headers = ['#', 'Player', 'Pos', 'Team', 'Price', 'Season Rating', '4GW Rating', 'PPG'];
+    rows = players.slice(0, 30).map((p, i) => `
+      <tr>
+        <td class="rank-num">${i + 1}</td>
+        <td><span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')">${p.web_name}</span></td>
+        <td><span class="badge badge-pos">${p.position}</span></td>
+        <td style="color:var(--text2)">${p.team}</td>
+        <td style="font-family:'JetBrains Mono',monospace">£${p.price}m</td>
+        <td>${p.season_overall_rating || 'N/A'}</td>
+        <td>${p.gw4_overall_rating || 'N/A'}</td>
+        <td style="font-family:'JetBrains Mono',monospace;color:var(--accent)">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'}</td>
+      </tr>
+    `);
+  } else if (currentRankingsTab === 'goal-threats') {
+    const attPlayers = data.ratings.filter(p => p.season_ok && ['MID','FWD'].includes(p.position));
+    const filtered = currentPos !== 'ALL' && currentPos !== 'GKP' && currentPos !== 'DEF'
+      ? attPlayers.filter(p => p.position === currentPos)
+      : attPlayers;
+    filtered.sort((a, b) => (b.season_goal_score || 0) - (a.season_goal_score || 0));
+    headers = ['#', 'Player', 'Pos', 'Team', 'Goal Rating (Pos)', 'Goal Rating (ATT)', 'xG Share'];
+    rows = filtered.slice(0, 30).map((p, i) => `
+      <tr>
+        <td class="rank-num">${i + 1}</td>
+        <td><span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')">${p.web_name}</span></td>
+        <td><span class="badge badge-pos">${p.position}</span></td>
+        <td style="color:var(--text2)">${p.team}</td>
+        <td>${p.season_goal_score_rating || 'N/A'}</td>
+        <td>${p.season_att_goal_score_rating || 'N/A'}</td>
+        <td style="font-family:'JetBrains Mono',monospace">${p.xg_share_4gw ? (p.xg_share_4gw * 100).toFixed(1) + '%' : 'N/A'}</td>
+      </tr>
+    `);
+  } else if (currentRankingsTab === 'creators') {
+    const attPlayers = data.ratings.filter(p => p.season_ok && ['MID','FWD'].includes(p.position));
+    const filtered = currentPos !== 'ALL' && currentPos !== 'GKP' && currentPos !== 'DEF'
+      ? attPlayers.filter(p => p.position === currentPos)
+      : attPlayers;
+    filtered.sort((a, b) => (b.season_creative_score || 0) - (a.season_creative_score || 0));
+    headers = ['#', 'Player', 'Pos', 'Team', 'Creative Rating (Pos)', 'Creative Rating (ATT)', 'xA Share'];
+    rows = filtered.slice(0, 30).map((p, i) => `
+      <tr>
+        <td class="rank-num">${i + 1}</td>
+        <td><span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')">${p.web_name}</span></td>
+        <td><span class="badge badge-pos">${p.position}</span></td>
+        <td style="color:var(--text2)">${p.team}</td>
+        <td>${p.season_creative_score_rating || 'N/A'}</td>
+        <td>${p.season_att_creative_score_rating || 'N/A'}</td>
+        <td style="font-family:'JetBrains Mono',monospace">${p.xa_share_4gw ? (p.xa_share_4gw * 100).toFixed(1) + '%' : 'N/A'}</td>
+      </tr>
+    `);
+  } else if (currentRankingsTab === 'clean-sheets') {
+    const defPlayers = data.ratings.filter(p => p.season_ok && ['GKP','DEF'].includes(p.position));
+    const filtered = currentPos !== 'ALL' && ['GKP','DEF'].includes(currentPos)
+      ? defPlayers.filter(p => p.position === currentPos)
+      : defPlayers;
+    filtered.sort((a, b) => (b.season_cs_score || 0) - (a.season_cs_score || 0));
+    headers = ['#', 'Player', 'Pos', 'Team', 'CS Rating', 'Overall Rating'];
+    rows = filtered.slice(0, 30).map((p, i) => `
+      <tr>
+        <td class="rank-num">${i + 1}</td>
+        <td><span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')">${p.web_name}</span></td>
+        <td><span class="badge badge-pos">${p.position}</span></td>
+        <td style="color:var(--text2)">${p.team}</td>
+        <td>${p.season_cs_score_rating || 'N/A'}</td>
+        <td>${p.season_overall_rating || 'N/A'}</td>
+      </tr>
+    `);
+  } else if (currentRankingsTab === 'value') {
+    players.sort((a, b) => (b.season_value_score || 0) - (a.season_value_score || 0));
+    headers = ['#', 'Player', 'Pos', 'Team', 'Price', 'Value Rating', 'PPG'];
+    rows = players.slice(0, 30).map((p, i) => `
+      <tr>
+        <td class="rank-num">${i + 1}</td>
+        <td><span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')">${p.web_name}</span></td>
+        <td><span class="badge badge-pos">${p.position}</span></td>
+        <td style="color:var(--text2)">${p.team}</td>
+        <td style="font-family:'JetBrains Mono',monospace">£${p.price}m</td>
+        <td>${p.season_value_score_rating || 'N/A'}</td>
+        <td style="font-family:'JetBrains Mono',monospace;color:var(--accent)">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'}</td>
+      </tr>
+    `);
+  } else if (currentRankingsTab === 'form') {
+    const stdData = data.seasonToDate;
+    const hot = stdData.filter(p => p.streak === '🔥 Hot').sort((a,b) => b.pts_delta - a.pts_delta);
+    const cold = stdData.filter(p => p.streak === '🧊 Cold').sort((a,b) => a.pts_delta - b.pts_delta);
+
+    container.innerHTML = `
+      ${posFilter}
+      <div class="form-section">
+        <div>
+          <div class="section-header">🔥 Hot Streak Players</div>
+          <table class="rankings-table">
+            <thead><tr><th>Player</th><th>Pos</th><th>Season P90</th><th>4GW P90</th><th>Delta</th></tr></thead>
+            <tbody>
+              ${hot.filter(p => currentPos === 'ALL' || p.position === currentPos).slice(0,15).map(p => `
+                <tr>
+                  <td><span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')">${p.web_name}</span></td>
+                  <td><span class="badge badge-pos">${p.position}</span></td>
+                  <td style="font-family:'JetBrains Mono',monospace">${Number(p.pts_per90_season).toFixed(2)}</td>
+                  <td style="font-family:'JetBrains Mono',monospace">${Number(p.pts_per90_4gw).toFixed(2)}</td>
+                  <td style="color:var(--hot);font-family:'JetBrains Mono',monospace">+${Number(p.pts_delta).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <div class="section-header">🧊 Cold Streak Players</div>
+          <table class="rankings-table">
+            <thead><tr><th>Player</th><th>Pos</th><th>Season P90</th><th>4GW P90</th><th>Delta</th></tr></thead>
+            <tbody>
+              ${cold.filter(p => currentPos === 'ALL' || p.position === currentPos).slice(0,15).map(p => `
+                <tr>
+                  <td><span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')">${p.web_name}</span></td>
+                  <td><span class="badge badge-pos">${p.position}</span></td>
+                  <td style="font-family:'JetBrains Mono',monospace">${Number(p.pts_per90_season).toFixed(2)}</td>
+                  <td style="font-family:'JetBrains Mono',monospace">${Number(p.pts_per90_4gw).toFixed(2)}</td>
+                  <td style="color:var(--cold);font-family:'JetBrains Mono',monospace">${Number(p.pts_delta).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `
+    ${posFilter}
+    <table class="rankings-table">
+      <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+      <tbody>${rows.join('')}</tbody>
+    </table>
+  `;
+}
+
+function showPlayerFromRankings(name) {
+  showPage('player', document.querySelector('.nav-links a'));
+  document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+  document.querySelector('.nav-links a').classList.add('active');
+  showPlayer(name);
+  window.scrollTo(0, 0);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadAll();
+</script>
+</body>
+</html>
