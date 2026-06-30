@@ -682,17 +682,25 @@ function initSearch() {
   // Team search
   const teamInput = document.getElementById('team-search');
   const teamDropdown = document.getElementById('team-dropdown');
+    const teamFullNames = {
+    'ARS':'Arsenal','AVL':'Aston Villa','BOU':'Bournemouth','BRE':'Brentford','BHA':'Brighton',
+    'BUR':'Burnley','CHE':'Chelsea','CRY':'Crystal Palace','EVE':'Everton','FUL':'Fulham',
+    'LEE':'Leeds','LIV':'Liverpool','MCI':'Man City','MUN':'Man Utd','NEW':'Newcastle',
+    'NFO':"Nott'm Forest",'SUN':'Sunderland','TOT':'Spurs','WHU':'West Ham','WOL':'Wolves'
+  };
   const teams = [...new Set(data.teamMetrics.filter(t => t.window === 'season').map(t => t.team))].sort();
 
   teamInput.addEventListener('input', () => {
     const q = teamInput.value.toLowerCase().trim();
     if (q.length < 1) { teamDropdown.classList.remove('show'); return; }
 
-    const matches = teams.filter(t => t.toLowerCase().includes(q)).slice(0, 8);
+    const matches = teams.filter(t =>
+      t.toLowerCase().includes(q) || (teamFullNames[t] || '').toLowerCase().includes(q)
+    ).slice(0, 8);
     if (matches.length === 0) { teamDropdown.classList.remove('show'); return; }
 
     teamDropdown.innerHTML = matches.map(t => `
-      <div class="dropdown-item" onclick="showTeam('${t}')">${t}</div>
+      <div class="dropdown-item" onclick="showTeam('${t}')">${teamFullNames[t] || t} <span class="dropdown-meta">${t}</span></div>
     `).join('');
     teamDropdown.classList.add('show');
   });
@@ -1108,6 +1116,10 @@ function showTeam(team) {
             <div class="stat-label">From Clean Sheets</div>
           </div>
           <div class="stat-card">
+            <div class="stat-value">${seasonData.dc_pts ? (seasonData.dc_pts / seasonData.total_pts * 100).toFixed(0) : 0}%</div>
+            <div class="stat-label">From Def Contributions</div>
+          </div>
+          <div class="stat-card">
             <div class="stat-value">${(seasonData.bonus_pts_pct * 100).toFixed(0)}%</div>
             <div class="stat-label">From Bonus</div>
           </div>
@@ -1143,6 +1155,21 @@ function showTeam(team) {
             <div class="stat-value">${(seasonData.top3_share * 100).toFixed(0)}%</div>
             <div class="stat-label">Top 3 Share</div>
           </div>
+        </div>
+        <div style="margin-top:12px;">
+          ${(() => {
+            const teamPlayers = data.ratings
+              .filter(p => p.team === team && p.season_ok)
+              .sort((a,b) => (b.season_ppg||0) - (a.season_ppg||0));
+            return teamPlayers.slice(0,3).map((p,i) => `
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+                <span style="color:var(--text2);font-size:12px;">#${i+1}</span>
+                <span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')" style="flex:1;margin:0 12px">${p.web_name}</span>
+                <span style="font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:13px">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'} ppg</span>
+                <span style="margin-left:12px">${p.season_overall_rating || 'N/A'}</span>
+              </div>
+            `).join('');
+          })()}
         </div>
 
         ${gw4Data ? `
@@ -1272,7 +1299,10 @@ function renderRankings() {
       : attPlayers;
     filtered.sort((a, b) => (b.season_goal_score || 0) - (a.season_goal_score || 0));
     headers = ['#', 'Player', 'Pos', 'Team', 'Goal Rating (Pos)', 'Goal Rating (ATT)', 'xG Share'];
-    rows = filtered.slice(0, 30).map((p, i) => `
+    rows = filtered.slice(0, 30).map((p, i) => {
+      const m = data.metrics.find(x => x.web_name === p.web_name);
+      const xgShare = m && m.xg_share_4gw ? (m.xg_share_4gw * 100).toFixed(1) + '%' : 'N/A';
+      return `
       <tr>
         <td class="rank-num">${i + 1}</td>
         <td><span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')">${p.web_name}</span></td>
@@ -1280,9 +1310,9 @@ function renderRankings() {
         <td style="color:var(--text2)">${p.team}</td>
         <td>${p.season_goal_score_rating || 'N/A'}</td>
         <td>${p.season_att_goal_score_rating || 'N/A'}</td>
-        <td style="font-family:'JetBrains Mono',monospace">${p.xg_share_4gw ? (p.xg_share_4gw * 100).toFixed(1) + '%' : 'N/A'}</td>
+        <td style="font-family:'JetBrains Mono',monospace">${xgShare}</td>
       </tr>
-    `);
+    `});
   } else if (currentRankingsTab === 'creators') {
     const attPlayers = data.ratings.filter(p => p.season_ok && ['MID','FWD'].includes(p.position));
     const filtered = currentPos !== 'ALL' && currentPos !== 'GKP' && currentPos !== 'DEF'
@@ -1290,7 +1320,10 @@ function renderRankings() {
       : attPlayers;
     filtered.sort((a, b) => (b.season_creative_score || 0) - (a.season_creative_score || 0));
     headers = ['#', 'Player', 'Pos', 'Team', 'Creative Rating (Pos)', 'Creative Rating (ATT)', 'xA Share'];
-    rows = filtered.slice(0, 30).map((p, i) => `
+    rows = filtered.slice(0, 30).map((p, i) => {
+      const m = data.metrics.find(x => x.web_name === p.web_name);
+      const xaShare = m && m.xa_share_4gw ? (m.xa_share_4gw * 100).toFixed(1) + '%' : 'N/A';
+      return `
       <tr>
         <td class="rank-num">${i + 1}</td>
         <td><span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')">${p.web_name}</span></td>
@@ -1298,9 +1331,9 @@ function renderRankings() {
         <td style="color:var(--text2)">${p.team}</td>
         <td>${p.season_creative_score_rating || 'N/A'}</td>
         <td>${p.season_att_creative_score_rating || 'N/A'}</td>
-        <td style="font-family:'JetBrains Mono',monospace">${p.xa_share_4gw ? (p.xa_share_4gw * 100).toFixed(1) + '%' : 'N/A'}</td>
+        <td style="font-family:'JetBrains Mono',monospace">${xaShare}</td>
       </tr>
-    `);
+    `});
   } else if (currentRankingsTab === 'clean-sheets') {
     const defPlayers = data.ratings.filter(p => p.season_ok && ['GKP','DEF'].includes(p.position));
     const filtered = currentPos !== 'ALL' && ['GKP','DEF'].includes(currentPos)
