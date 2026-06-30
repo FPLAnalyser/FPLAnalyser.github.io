@@ -598,6 +598,13 @@ const BASE = 'https://raw.githubusercontent.com/stefcourt2004-png/fpl-analyser/m
 const data = { ratings: [], personas4: [], metrics: [], teamMetrics: [], seasonToDate: [], tierPerf: [] };
 let loaded = false;
 
+ const teamFullNames = {
+    'ARS':'Arsenal','AVL':'Aston Villa','BOU':'Bournemouth','BRE':'Brentford','BHA':'Brighton',
+    'BUR':'Burnley','CHE':'Chelsea','CRY':'Crystal Palace','EVE':'Everton','FUL':'Fulham',
+    'LEE':'Leeds','LIV':'Liverpool','MCI':'Man City','MUN':'Man Utd','NEW':'Newcastle',
+    'NFO':"Nott'm Forest",'SUN':'Sunderland','TOT':'Spurs','WHU':'West Ham','WOL':'Wolves'
+  };
+
 // ── Load all CSVs ────────────────────────────────────────────────────────────
 function parseCSV(text) {
   const lines = text.trim().split('\n');
@@ -682,12 +689,6 @@ function initSearch() {
   // Team search
   const teamInput = document.getElementById('team-search');
   const teamDropdown = document.getElementById('team-dropdown');
-    const teamFullNames = {
-    'ARS':'Arsenal','AVL':'Aston Villa','BOU':'Bournemouth','BRE':'Brentford','BHA':'Brighton',
-    'BUR':'Burnley','CHE':'Chelsea','CRY':'Crystal Palace','EVE':'Everton','FUL':'Fulham',
-    'LEE':'Leeds','LIV':'Liverpool','MCI':'Man City','MUN':'Man Utd','NEW':'Newcastle',
-    'NFO':"Nott'm Forest",'SUN':'Sunderland','TOT':'Spurs','WHU':'West Ham','WOL':'Wolves'
-  };
   const teams = [...new Set(data.teamMetrics.filter(t => t.window === 'season').map(t => t.team))].sort();
 
   teamInput.addEventListener('input', () => {
