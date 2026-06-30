@@ -1065,7 +1065,7 @@ function showTeam(team) {
   document.getElementById('team-result').innerHTML = `
     <div class="player-card team-card">
       <div class="team-header">
-        <div class="team-name">🏟️ ${team}</div>
+        <div class="team-name">🏟️ ${teamFullNames[team] || team}</div>
         <div class="team-stats-row">
           <div class="team-stat">
             <div class="team-stat-value">${Math.round(seasonData.total_pts)}</div>
@@ -1298,7 +1298,7 @@ function renderRankings() {
       ? attPlayers.filter(p => p.position === currentPos)
       : attPlayers;
     filtered.sort((a, b) => (b.season_goal_score || 0) - (a.season_goal_score || 0));
-    headers = ['#', 'Player', 'Pos', 'Team', 'Goal Rating (Pos)', 'Goal Rating (ATT)', 'xG Share'];
+    headers = ['#', 'Player', 'Pos', 'Team', 'Goal Rating (Pos)', 'Goal Rating (ATT)', 'xG Share (4GW)'];
     rows = filtered.slice(0, 30).map((p, i) => {
       const m = data.metrics.find(x => x.web_name === p.web_name);
       const xgShare = m && m.xg_share_4gw ? (m.xg_share_4gw * 100).toFixed(1) + '%' : 'N/A';
@@ -1319,7 +1319,7 @@ function renderRankings() {
       ? attPlayers.filter(p => p.position === currentPos)
       : attPlayers;
     filtered.sort((a, b) => (b.season_creative_score || 0) - (a.season_creative_score || 0));
-    headers = ['#', 'Player', 'Pos', 'Team', 'Creative Rating (Pos)', 'Creative Rating (ATT)', 'xA Share'];
+    headers = ['#', 'Player', 'Pos', 'Team', 'Creative Rating (Pos)', 'Creative Rating (ATT)', 'xA Share (4GW)'];
     rows = filtered.slice(0, 30).map((p, i) => {
       const m = data.metrics.find(x => x.web_name === p.web_name);
       const xaShare = m && m.xa_share_4gw ? (m.xa_share_4gw * 100).toFixed(1) + '%' : 'N/A';
