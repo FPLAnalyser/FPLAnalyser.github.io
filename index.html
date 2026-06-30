@@ -1161,14 +1161,20 @@ function showTeam(team) {
             const teamPlayers = data.ratings
               .filter(p => p.team === team && p.season_ok)
               .sort((a,b) => (b.season_ppg||0) - (a.season_ppg||0));
-            return teamPlayers.slice(0,3).map((p,i) => `
+            const totalPts = seasonData.total_pts;
+            return teamPlayers.slice(0,3).map((p,i) => {
+              const playerShare = p.season_ppg && p.total_mins
+                ? ((p.season_ppg * (p.total_mins/90)) / totalPts * 100).toFixed(1)
+                : 'N/A';
+              return `
               <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
-                <span style="color:var(--text2);font-size:12px;">#${i+1}</span>
+                <span style="color:var(--text2);font-size:12px;width:20px">#${i+1}</span>
                 <span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')" style="flex:1;margin:0 12px">${p.web_name}</span>
+                <span style="font-family:'JetBrains Mono',monospace;color:var(--text2);font-size:12px;margin-right:12px">${playerShare}% of team pts</span>
                 <span style="font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:13px">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'} ppg</span>
                 <span style="margin-left:12px">${p.season_overall_rating || 'N/A'}</span>
               </div>
-            `).join('');
+            `}).join('');
           })()}
         </div>
 
@@ -1310,7 +1316,8 @@ function renderRankings() {
         <td style="color:var(--text2)">${p.team}</td>
         <td>${p.season_goal_score_rating || 'N/A'}</td>
         <td>${p.season_att_goal_score_rating || 'N/A'}</td>
-        <td style="font-family:'JetBrains Mono',monospace">${xgShare}</td>
+        <td style="font-family:'JetBrains Mono',monospace">${xgShare4gw}</td>
+        <td style="font-family:'JetBrains Mono',monospace">${xgShareSeason}</td>
       </tr>
     `});
   } else if (currentRankingsTab === 'creators') {
@@ -1331,7 +1338,8 @@ function renderRankings() {
         <td style="color:var(--text2)">${p.team}</td>
         <td>${p.season_creative_score_rating || 'N/A'}</td>
         <td>${p.season_att_creative_score_rating || 'N/A'}</td>
-        <td style="font-family:'JetBrains Mono',monospace">${xaShare}</td>
+        <td style="font-family:'JetBrains Mono',monospace">${xaShare4gw}</td>
+        <td style="font-family:'JetBrains Mono',monospace">${xaShareSeason}</td>
       </tr>
     `});
   } else if (currentRankingsTab === 'clean-sheets') {
