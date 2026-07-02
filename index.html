@@ -158,14 +158,15 @@
 
   .player-avatar {
     width: 72px;
-    height: 72px;
-    border-radius: 50%;
+    height: 90px;
+    border-radius: 8px;
     background: var(--border);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 28px;
     flex-shrink: 0;
+    overflow: hidden;
   }
 
   .player-info { flex: 1; }
@@ -823,7 +824,15 @@ function showPlayer(name) {
   document.getElementById('player-result').innerHTML = `
     <div class="player-card">
       <div class="player-header">
-        <div class="player-avatar">${getPositionEmoji(pos)}</div>
+        <div class="player-avatar">
+          <img 
+            src="https://resources.premierleague.com/premierleague/photos/players/110x140/p${r.code}.png"
+            alt="${name}"
+            style="width:72px;height:90px;object-fit:cover;border-radius:8px;"
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+          >
+          <div style="display:none;width:72px;height:72px;border-radius:50%;background:var(--border);align-items:center;justify-content:center;font-size:28px;">${getPositionEmoji(pos)}</div>
+        </div>
         <div class="player-info">
           <div class="player-name">${name}</div>
           <div class="player-meta">
