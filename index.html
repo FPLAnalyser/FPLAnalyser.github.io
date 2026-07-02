@@ -211,8 +211,7 @@
   .rating-label {
     font-size: 10px;
     color: var(--text2);
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.3px;
     margin-bottom: 4px;
   }
 
@@ -272,8 +271,7 @@
   .stat-label {
     font-size: 11px;
     color: var(--text2);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
   }
 
   /* ── Ratings Table ── */
@@ -546,10 +544,7 @@
 
   .tooltip-box {
     display: none;
-    position: absolute;
-    bottom: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%);
+    position: fixed;
     background: #1c2433;
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -557,9 +552,16 @@
     font-size: 12px;
     line-height: 1.5;
     color: var(--text);
-    width: 260px;
-    z-index: 200;
+    width: 280px;
+    z-index: 999;
     box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    pointer-events: none;
+  }
+
+  .tooltip-wrap:hover .tooltip-box {
+    display: block;
+    top: auto;
+    bottom: auto;
   }
 
   .tooltip-wrap:hover .tooltip-box { display: block; }
@@ -1157,6 +1159,17 @@ function buildTierRow(label, tier) {
   </tr>`;
 }
 
+// Position tooltips to avoid screen edges
+document.addEventListener('mouseover', e => {
+  const wrap = e.target.closest('.tooltip-wrap');
+  if (!wrap) return;
+  const box = wrap.querySelector('.tooltip-box');
+  if (!box) return;
+  const rect = wrap.getBoundingClientRect();
+  box.style.top = (rect.bottom + 8) + 'px';
+  box.style.left = Math.min(rect.left, window.innerWidth - 300) + 'px';
+});
+
 function getPositionEmoji(pos) {
   return { GKP: '🧤', DEF: '🛡️', MID: '⚡', FWD: '⚽' }[pos] || '👤';
 }
@@ -1479,13 +1492,16 @@ function renderRankings() {
   let players = data.ratings.filter(p => p.season_ok);
   if (currentPos !== 'ALL') players = players.filter(p => p.position === currentPos);
 
+  const isDefOnly = currentRankingsTab === 'clean-sheets';
   const posFilter = `
     <div class="pos-filter">
       <button class="pos-btn ${currentPos === 'ALL' ? 'active' : ''}" onclick="filterPos('ALL', this)">All</button>
       <button class="pos-btn ${currentPos === 'GKP' ? 'active' : ''}" onclick="filterPos('GKP', this)">GKP</button>
       <button class="pos-btn ${currentPos === 'DEF' ? 'active' : ''}" onclick="filterPos('DEF', this)">DEF</button>
+      ${!isDefOnly ? `
       <button class="pos-btn ${currentPos === 'MID' ? 'active' : ''}" onclick="filterPos('MID', this)">MID</button>
       <button class="pos-btn ${currentPos === 'FWD' ? 'active' : ''}" onclick="filterPos('FWD', this)">FWD</button>
+      ` : ''}
     </div>
   `;
 
@@ -1507,18 +1523,18 @@ function renderRankings() {
         <td style="font-family:'JetBrains Mono',monospace;color:var(--accent)">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'}</td>
       </tr>
     `);
-  } else if (currentRankingsTab === 'goal-threats') {
+} else if (currentRankingsTab === 'goal-threats') {
     const attPlayers = data.ratings.filter(p => p.season_ok && ['MID','FWD'].includes(p.position));
     const filtered = currentPos !== 'ALL' && currentPos !== 'GKP' && currentPos !== 'DEF'
       ? attPlayers.filter(p => p.position === currentPos)
       : attPlayers;
     filtered.sort((a, b) => (b.season_goal_score || 0) - (a.season_goal_score || 0));
-    headers = ['#', 'Player', 'Pos', 'Team', 'Goal Rating (Pos)', 'Goal Rating (ATT)', 'xG Share (4GW)'];
+    headers = ['#', 'Player', 'Pos', 'Team', 'Goal Rating (Pos)', 'Goal Rating (ATT)', 'xG Share 4GW', 'xG Share Season'];
     rows = filtered.slice(0, 30).map((p, i) => {
       const m = data.metrics.find(x => x.web_name === p.web_name);
-      const xgShare = m && m.xg_share_4gw ? (m.xg_share_4gw * 100).toFixed(1) + '%' : 'N/A';
-      return `
-      <tr>
+      const xgShare4gw = m && m.xg_share_4gw ? (m.xg_share_4gw * 100).toFixed(1) + '%' : 'N/A';
+      const xgShareSeason = m && m.xg_share_season ? (m.xg_share_season * 100).toFixed(1) + '%' : 'N/A';
+      return `<tr>
         <td class="rank-num">${i + 1}</td>
         <td><span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')">${p.web_name}</span></td>
         <td><span class="badge badge-pos">${p.position}</span></td>
@@ -1527,20 +1543,20 @@ function renderRankings() {
         <td>${p.season_att_goal_score_rating || 'N/A'}</td>
         <td style="font-family:'JetBrains Mono',monospace">${xgShare4gw}</td>
         <td style="font-family:'JetBrains Mono',monospace">${xgShareSeason}</td>
-      </tr>
-    `});
+      </tr>`;
+    });
   } else if (currentRankingsTab === 'creators') {
     const attPlayers = data.ratings.filter(p => p.season_ok && ['MID','FWD'].includes(p.position));
     const filtered = currentPos !== 'ALL' && currentPos !== 'GKP' && currentPos !== 'DEF'
       ? attPlayers.filter(p => p.position === currentPos)
       : attPlayers;
     filtered.sort((a, b) => (b.season_creative_score || 0) - (a.season_creative_score || 0));
-    headers = ['#', 'Player', 'Pos', 'Team', 'Creative Rating (Pos)', 'Creative Rating (ATT)', 'xA Share (4GW)'];
+    headers = ['#', 'Player', 'Pos', 'Team', 'Creative Rating (Pos)', 'Creative Rating (ATT)', 'xA Share 4GW', 'xA Share Season'];
     rows = filtered.slice(0, 30).map((p, i) => {
       const m = data.metrics.find(x => x.web_name === p.web_name);
-      const xaShare = m && m.xa_share_4gw ? (m.xa_share_4gw * 100).toFixed(1) + '%' : 'N/A';
-      return `
-      <tr>
+      const xaShare4gw = m && m.xa_share_4gw ? (m.xa_share_4gw * 100).toFixed(1) + '%' : 'N/A';
+      const xaShareSeason = m && m.xa_share_season ? (m.xa_share_season * 100).toFixed(1) + '%' : 'N/A';
+      return `<tr>
         <td class="rank-num">${i + 1}</td>
         <td><span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')">${p.web_name}</span></td>
         <td><span class="badge badge-pos">${p.position}</span></td>
@@ -1549,9 +1565,16 @@ function renderRankings() {
         <td>${p.season_att_creative_score_rating || 'N/A'}</td>
         <td style="font-family:'JetBrains Mono',monospace">${xaShare4gw}</td>
         <td style="font-family:'JetBrains Mono',monospace">${xaShareSeason}</td>
-      </tr>
-    `});
+      </tr>`;
+    });
   } else if (currentRankingsTab === 'clean-sheets') {
+    // Reset position if MID or FWD selected
+    if (currentPos === 'MID' || currentPos === 'FWD') currentPos = 'ALL';
+    const defPlayers = data.ratings.filter(p => p.season_ok && ['GKP','DEF'].includes(p.position));
+    const filtered = currentPos !== 'ALL' && ['GKP','DEF'].includes(currentPos)
+      ? defPlayers.filter(p => p.position === currentPos)
+      : defPlayers;
+} else if (currentRankingsTab === 'clean-sheets') {
     const defPlayers = data.ratings.filter(p => p.season_ok && ['GKP','DEF'].includes(p.position));
     const filtered = currentPos !== 'ALL' && ['GKP','DEF'].includes(currentPos)
       ? defPlayers.filter(p => p.position === currentPos)
