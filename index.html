@@ -608,6 +608,17 @@ let loaded = false;
     'NFO':"Nott'm Forest",'SUN':'Sunderland','TOT':'Spurs','WHU':'West Ham','WOL':'Wolves'
   };
 
+  const teamCodes = {
+  'ARS':3,'AVL':7,'BUR':90,'BOU':91,'BRE':94,'BHA':36,'CHE':8,'CRY':31,
+  'EVE':11,'FUL':54,'LEE':2,'LIV':14,'MCI':43,'MUN':1,'NEW':4,'NFO':17,
+  'SUN':56,'TOT':6,'WHU':21,'WOL':39
+};
+
+function teamBadgeUrl(team) {
+  const code = teamCodes[team];
+  return code ? `https://resources.premierleague.com/premierleague/badges/t${code}.png` : null;
+}
+
 // ── Load all CSVs ────────────────────────────────────────────────────────────
 function parseCSV(text) {
   const lines = text.trim().split('\n');
@@ -837,7 +848,10 @@ function showPlayer(name) {
           <div class="player-name">${name}</div>
           <div class="player-meta">
             <span class="badge badge-pos">${pos}</span>
-            <span class="badge badge-team">${r.team}</span>
+            <span class="badge badge-team">
+              ${teamBadgeUrl(r.team) ? `<img src="${teamBadgeUrl(r.team)}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:4px;" onerror="this.style.display='none'">` : ''}
+              ${teamFullNames[r.team] || r.team}
+            </span>
             <span class="badge badge-price">£${r.price}m</span>
             ${streakHtml}
           </div>
@@ -1077,7 +1091,14 @@ function showTeam(team) {
   document.getElementById('team-result').innerHTML = `
     <div class="player-card team-card">
       <div class="team-header">
-        <div class="team-name">🏟️ ${teamFullNames[team] || team}</div>
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:8px;">
+        ${teamBadgeUrl(team) ? `
+          <img src="${teamBadgeUrl(team)}" alt="${team}" 
+            style="width:60px;height:60px;object-fit:contain;"
+            onerror="this.style.display='none'">
+        ` : ''}
+        <div class="team-name">${teamFullNames[team] || team}</div>
+      </div>
         <div class="team-stats-row">
           <div class="team-stat">
             <div class="team-stat-value">${Math.round(seasonData.total_pts)}</div>
