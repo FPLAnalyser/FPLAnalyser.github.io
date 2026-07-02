@@ -1566,14 +1566,9 @@ function renderRankings() {
         <td style="font-family:'JetBrains Mono',monospace">${xaShareSeason}</td>
       </tr>`;
     });
-  } else if (currentRankingsTab === 'clean-sheets') {
-    const defPlayers = data.ratings.filter(p => p.season_ok && ['GKP','DEF'].includes(p.position));
-    const filtered = currentPos === 'GKP' || currentPos === 'DEF'
-      ? defPlayers.filter(p => p.position === currentPos)
-      : defPlayers;
 } else if (currentRankingsTab === 'clean-sheets') {
     const defPlayers = data.ratings.filter(p => p.season_ok && ['GKP','DEF'].includes(p.position));
-    const filtered = currentPos !== 'ALL' && ['GKP','DEF'].includes(currentPos)
+    const filtered = currentPos === 'GKP' || currentPos === 'DEF'
       ? defPlayers.filter(p => p.position === currentPos)
       : defPlayers;
     filtered.sort((a, b) => (b.season_cs_score || 0) - (a.season_cs_score || 0));
