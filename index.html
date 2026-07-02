@@ -1493,15 +1493,14 @@ function renderRankings() {
   if (currentPos !== 'ALL') players = players.filter(p => p.position === currentPos);
 
   const isDefOnly = currentRankingsTab === 'clean-sheets';
+  const isAttOnly = currentRankingsTab === 'goal-threats' || currentRankingsTab === 'creators';
   const posFilter = `
     <div class="pos-filter">
       <button class="pos-btn ${currentPos === 'ALL' ? 'active' : ''}" onclick="filterPos('ALL', this)">All</button>
-      <button class="pos-btn ${currentPos === 'GKP' ? 'active' : ''}" onclick="filterPos('GKP', this)">GKP</button>
-      <button class="pos-btn ${currentPos === 'DEF' ? 'active' : ''}" onclick="filterPos('DEF', this)">DEF</button>
-      ${!isDefOnly ? `
-      <button class="pos-btn ${currentPos === 'MID' ? 'active' : ''}" onclick="filterPos('MID', this)">MID</button>
-      <button class="pos-btn ${currentPos === 'FWD' ? 'active' : ''}" onclick="filterPos('FWD', this)">FWD</button>
-      ` : ''}
+      ${!isAttOnly ? `<button class="pos-btn ${currentPos === 'GKP' ? 'active' : ''}" onclick="filterPos('GKP', this)">GKP</button>` : ''}
+      ${!isAttOnly ? `<button class="pos-btn ${currentPos === 'DEF' ? 'active' : ''}" onclick="filterPos('DEF', this)">DEF</button>` : ''}
+      ${!isDefOnly ? `<button class="pos-btn ${currentPos === 'MID' ? 'active' : ''}" onclick="filterPos('MID', this)">MID</button>` : ''}
+      ${!isDefOnly ? `<button class="pos-btn ${currentPos === 'FWD' ? 'active' : ''}" onclick="filterPos('FWD', this)">FWD</button>` : ''}
     </div>
   `;
 
@@ -1568,10 +1567,8 @@ function renderRankings() {
       </tr>`;
     });
   } else if (currentRankingsTab === 'clean-sheets') {
-    // Reset position if MID or FWD selected
-    if (currentPos === 'MID' || currentPos === 'FWD') currentPos = 'ALL';
     const defPlayers = data.ratings.filter(p => p.season_ok && ['GKP','DEF'].includes(p.position));
-    const filtered = currentPos !== 'ALL' && ['GKP','DEF'].includes(currentPos)
+    const filtered = currentPos === 'GKP' || currentPos === 'DEF'
       ? defPlayers.filter(p => p.position === currentPos)
       : defPlayers;
 } else if (currentRankingsTab === 'clean-sheets') {
