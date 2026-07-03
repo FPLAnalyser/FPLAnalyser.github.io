@@ -948,7 +948,6 @@ function renderHome() {
 
 function renderPlayersDefault() {
   const container = document.getElementById('player-result');
-  if (container.querySelector('.player-card')) return;
 
   const top25 = data.ratings
     .filter(p => p.season_ok && p.selected_by_percent)
@@ -978,7 +977,6 @@ function renderPlayersDefault() {
 
 function renderTeamsDefault() {
   const container = document.getElementById('team-result');
-  if (container.querySelector('table')) return;
 
   const teams = data.teamMetrics
     .filter(t => t.window === 'season')
