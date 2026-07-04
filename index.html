@@ -721,6 +721,117 @@
     color: var(--accent);
     font-family: 'JetBrains Mono', monospace;
   }
+
+  /* ── Load Your Team ── */
+  .team-id-input {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .team-id-input:focus { border-color: var(--accent); }
+
+  .btn-primary {
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .squad-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+
+  .squad-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    gap: 12px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .squad-card:hover { border-color: var(--accent); }
+  .squad-card.bench { opacity: 0.65; }
+
+  .squad-photo {
+    width: 48px;
+    height: 60px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+
+  .squad-info { flex: 1; min-width: 0; }
+
+  .squad-name {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .squad-meta {
+    font-size: 11px;
+    color: var(--text2);
+    margin-bottom: 8px;
+  }
+
+  .squad-ratings {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 8px;
+  }
+
+  .squad-rating-label {
+    font-size: 9px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .captain-badge, .vc-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 10px;
+  }
+
+  .captain-badge { background: var(--star); color: #1a1a1a; }
+  .vc-badge { background: var(--border); color: var(--text); }
+
+  .bench-tag {
+    font-size: 10px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
 </style>
 </head>
 <body>
@@ -733,6 +844,7 @@
     <li><a href="#" onclick="showPage('home', this)">Home</a></li>
     <li><a href="#" onclick="showPage('player', this)">Players</a></li>
     <li><a href="#" onclick="showPage('teams', this)">Teams</a></li>
+    <li><a href="#" onclick="showPage('loadteam', this)">Load Your Team</a></li>
     <li><a href="#" onclick="showPage('rankings', this)">Rankings</a></li>
   </ul>
 </nav>
@@ -781,6 +893,27 @@
       <div class="empty-state">
         <div class="empty-icon">🏟️</div>
         <div>Search for a team to see their analysis</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LOAD YOUR TEAM PAGE ── -->
+  <div id="page-loadteam" class="page">
+    <div class="page-title">Load Your Team</div>
+    <div class="page-subtitle">Enter your FPL Team ID to see your squad with FPL Analyser ratings</div>
+
+    <div style="display:flex;gap:8px;max-width:500px;margin-bottom:8px;">
+      <input type="text" id="team-id-input" class="team-id-input" placeholder="Enter your FPL Team ID..." autocomplete="off" inputmode="numeric" onkeydown="if(event.key==='Enter') loadMyTeam()">
+      <button class="btn-primary" onclick="loadMyTeam()">Load</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:32px;">
+      Find your Team ID in the URL when viewing your team on the official FPL site — e.g. fantasy.premierleague.com/entry/<strong>1234567</strong>/event/1
+    </div>
+
+    <div id="loadteam-result">
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <div>Enter your Team ID to load your squad</div>
       </div>
     </div>
   </div>
@@ -1930,6 +2063,188 @@ function renderRankings() {
       <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
       <tbody>${rows.join('')}</tbody>
     </table>
+  `;
+}
+
+// ── Load Your Team ───────────────────────────────────────────────────────────
+let bootstrapCache = null;
+
+// The FPL API doesn't send CORS headers for cross-origin browser requests,
+// so calls are routed through a public CORS proxy, with a fallback if the
+// first one is down.
+const CORS_PROXY_PRIMARY = 'https://corsproxy.io/?';
+const CORS_PROXY_FALLBACK = 'https://api.allorigins.win/raw?url=';
+
+async function fplFetch(url) {
+  try {
+    const res = await fetch(CORS_PROXY_PRIMARY + url);
+    if (!res.ok) throw new Error('corsproxy.io returned ' + res.status);
+    return res;
+  } catch (e) {
+    const res = await fetch(CORS_PROXY_FALLBACK + encodeURIComponent(url));
+    if (!res.ok) throw new Error('allorigins.win returned ' + res.status);
+    return res;
+  }
+}
+
+function starsToNum(s) {
+  if (!s || typeof s !== 'string') return null;
+  const stars = (s.match(/⭐/g) || []).length;
+  const half = s.includes('½') ? 0.5 : 0;
+  const total = stars + half;
+  return total > 0 ? total : null;
+}
+
+function avgRatingField(rows, field) {
+  const vals = rows.map(r => starsToNum(r[field])).filter(v => v !== null);
+  if (!vals.length) return null;
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+
+async function getCurrentGw() {
+  if (!bootstrapCache) {
+    const res = await fplFetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+    bootstrapCache = await res.json();
+  }
+  const events = bootstrapCache.events || [];
+  const current = events.find(e => e.is_current);
+  if (current) return current.id;
+  const finished = events.filter(e => e.finished);
+  if (finished.length) return Math.max(...finished.map(e => e.id));
+  return events.length ? events[0].id : 1;
+}
+
+async function loadMyTeam() {
+  const input = document.getElementById('team-id-input');
+  const teamId = input.value.trim();
+  const container = document.getElementById('loadteam-result');
+
+  if (!teamId || !/^\d+$/.test(teamId)) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div>Please enter a valid numeric Team ID</div></div>`;
+    return;
+  }
+
+  container.innerHTML = `<div class="loading"><div class="loading-spinner"></div>Loading your team...</div>`;
+
+  try {
+    const gw = await getCurrentGw();
+    const picksRes = await fplFetch(`https://fantasy.premierleague.com/api/entry/${teamId}/event/${gw}/picks/`);
+    const picksData = await picksRes.json();
+    renderMyTeam(picksData, gw);
+  } catch (e) {
+    console.error('Load team error:', e);
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <div>Could not load your team. Double-check the Team ID, or your browser/network may be blocking the request to the FPL API.</div>
+      </div>
+    `;
+  }
+}
+
+function renderMyTeam(picksData, gw) {
+  const container = document.getElementById('loadteam-result');
+  const picks = picksData.picks || [];
+  const entryHistory = picksData.entry_history || {};
+
+  if (!picks.length) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div>No squad data found for that Team ID / gameweek ${gw}.</div></div>`;
+    return;
+  }
+
+  const enriched = picks.map(pick => ({
+    pick,
+    r: data.ratings.find(x => x.element === pick.element),
+    p4: data.personas4.find(x => x.element === pick.element),
+    std: data.seasonToDate.find(x => x.element === pick.element)
+  }));
+
+  const startingXI = enriched.filter(e => e.pick.position <= 11).sort((a, b) => a.pick.position - b.pick.position);
+  const bench = enriched.filter(e => e.pick.position > 11).sort((a, b) => a.pick.position - b.pick.position);
+
+  const startingRated = startingXI.map(e => e.r).filter(Boolean);
+  const reliabilityAvg = avgRatingField(startingRated, 'season_reliability_score_rating');
+  const goalAvg = avgRatingField(startingRated.filter(r => ['MID', 'FWD'].includes(r.position)), 'season_goal_score_rating');
+  const csAvg = avgRatingField(startingRated.filter(r => ['GKP', 'DEF'].includes(r.position)), 'season_cs_score_rating');
+  const overallAvg = avgRatingField(startingRated, 'season_overall_rating');
+  const teamValue = entryHistory.value != null ? (entryHistory.value / 10).toFixed(1) : 'N/A';
+
+  function playerCard({ pick, r, p4, std }) {
+    const isBench = pick.position > 11;
+    if (!r) {
+      return `<div class="squad-card ${isBench ? 'bench' : ''}">
+        <div class="squad-info">
+          <div class="squad-name">Unknown player (ID ${pick.element})</div>
+        </div>
+      </div>`;
+    }
+
+    const photo = r.code ? `https://resources.premierleague.com/premierleague/photos/players/110x140/p${r.code}.png` : '';
+    const streak = std ? std.streak : '';
+    const streakHtml = streak === '🔥 Hot' ? `<span class="streak-hot" style="font-size:11px">🔥</span>`
+      : streak === '🧊 Cold' ? `<span class="streak-cold" style="font-size:11px">🧊</span>` : '';
+    const personas = p4 && p4.personas && p4.personas !== 'None' ? p4.personas.split(', ') : [];
+    const personaHtml = personas.map(p => `<span class="persona-tag" style="padding:2px 8px;font-size:10px">${p}</span>`).join('');
+
+    return `
+      <div class="squad-card ${isBench ? 'bench' : ''}" onclick="showPlayerFromRankings('${r.web_name}')">
+        <img class="squad-photo" src="${photo}" onerror="this.style.opacity='0'">
+        <div class="squad-info">
+          <div class="squad-name">
+            ${r.web_name} ${streakHtml}
+            ${pick.is_captain ? '<span class="captain-badge">C</span>' : ''}
+            ${pick.is_vice_captain ? '<span class="vc-badge">VC</span>' : ''}
+          </div>
+          <div class="squad-meta">
+            <span class="badge badge-pos" style="padding:1px 8px;font-size:10px">${r.position}</span>
+            ${teamFullNames[r.team] || r.team} · £${r.price}m${isBench ? ' · <span class="bench-tag">Bench</span>' : ''}
+          </div>
+          <div class="squad-ratings">
+            <div>
+              <div class="squad-rating-label">Season</div>
+              <div>${r.season_overall_rating || 'N/A'}</div>
+            </div>
+            <div>
+              <div class="squad-rating-label">4GW</div>
+              <div>${r.gw4_overall_rating || 'N/A'}</div>
+            </div>
+          </div>
+          ${personaHtml ? `<div class="personas-wrap" style="margin-bottom:0">${personaHtml}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  container.innerHTML = `
+    <div class="section-header">Starting XI — Gameweek ${gw}</div>
+    <div class="squad-grid">${startingXI.map(playerCard).join('')}</div>
+
+    <div class="section-header">Bench</div>
+    <div class="squad-grid">${bench.map(playerCard).join('')}</div>
+
+    <div class="section-header">Team Ratings</div>
+    <div class="team-stats-row" style="flex-wrap:wrap;gap:24px 32px;">
+      <div class="team-stat">
+        <div class="team-stat-value">${overallAvg !== null ? overallAvg.toFixed(1) + ' ★' : 'N/A'}</div>
+        <div class="team-stat-label">Avg Overall Rating</div>
+      </div>
+      <div class="team-stat">
+        <div class="team-stat-value">${reliabilityAvg !== null ? reliabilityAvg.toFixed(1) + ' ★' : 'N/A'}</div>
+        <div class="team-stat-label">Avg Reliability (XI)</div>
+      </div>
+      <div class="team-stat">
+        <div class="team-stat-value">${goalAvg !== null ? goalAvg.toFixed(1) + ' ★' : 'N/A'}</div>
+        <div class="team-stat-label">Avg Goal Threat (MID/FWD)</div>
+      </div>
+      <div class="team-stat">
+        <div class="team-stat-value">${csAvg !== null ? csAvg.toFixed(1) + ' ★' : 'N/A'}</div>
+        <div class="team-stat-label">Avg Clean Sheet (GKP/DEF)</div>
+      </div>
+      <div class="team-stat">
+        <div class="team-stat-value">£${teamValue}m</div>
+        <div class="team-stat-label">Total Team Value</div>
+      </div>
+    </div>
   `;
 }
 
