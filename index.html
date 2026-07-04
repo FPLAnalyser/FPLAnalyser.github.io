@@ -2153,14 +2153,21 @@ const CORS_PROXY_PRIMARY = 'https://corsproxy.io/?';
 const CORS_PROXY_FALLBACK = 'https://api.allorigins.win/raw?url=';
 
 async function fplFetch(url) {
+  let primaryError;
   try {
     const res = await fetch(CORS_PROXY_PRIMARY + url);
-    if (!res.ok) throw new Error('corsproxy.io returned ' + res.status);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res;
   } catch (e) {
+    primaryError = e.message || String(e);
+  }
+  try {
     const res = await fetch(CORS_PROXY_FALLBACK + encodeURIComponent(url));
-    if (!res.ok) throw new Error('allorigins.win returned ' + res.status);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res;
+  } catch (e) {
+    const fallbackError = e.message || String(e);
+    throw new Error(`corsproxy.io failed (${primaryError}); allorigins.win failed (${fallbackError})`);
   }
 }
 
@@ -2210,10 +2217,12 @@ async function loadMyTeam() {
     renderMyTeam(picksData, gw);
   } catch (e) {
     console.error('Load team error:', e);
+    const detail = (e && e.message ? e.message : String(e)).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
     container.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">⚠️</div>
         <div>Could not load your team. Double-check the Team ID, or your browser/network may be blocking the request to the FPL API.</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);margin-top:12px;word-break:break-word;">${detail}</div>
       </div>
     `;
   }
