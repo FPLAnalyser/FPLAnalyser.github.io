@@ -762,6 +762,15 @@
     margin-bottom: 32px;
   }
 
+  .formation-row-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin: 0 0 10px;
+  }
+
   .squad-card {
     background: var(--card);
     border: 1px solid var(--border);
@@ -2215,15 +2224,25 @@ function renderMyTeam(picksData, gw) {
     `;
   }
 
+  function positionGroup(label, rows) {
+    if (!rows.length) return '';
+    return `
+      <div class="formation-row-label">${label}</div>
+      <div class="squad-grid">${rows.map(playerCard).join('')}</div>
+    `;
+  }
+
+  const posGroups = [
+    ['Goalkeeper', startingXI.filter(e => e.r && e.r.position === 'GKP')],
+    ['Defence', startingXI.filter(e => e.r && e.r.position === 'DEF')],
+    ['Midfield', startingXI.filter(e => e.r && e.r.position === 'MID')],
+    ['Attack', startingXI.filter(e => e.r && e.r.position === 'FWD')],
+    ['Other', startingXI.filter(e => !e.r)],
+  ];
+
   container.innerHTML = `
-    <div class="section-header">Starting XI — Gameweek ${gw}</div>
-    <div class="squad-grid">${startingXI.map(playerCard).join('')}</div>
-
-    <div class="section-header">Bench</div>
-    <div class="squad-grid">${bench.map(playerCard).join('')}</div>
-
     <div class="section-header">Team Ratings</div>
-    <div class="team-stats-row" style="flex-wrap:wrap;gap:24px 32px;">
+    <div class="team-stats-row" style="flex-wrap:wrap;gap:24px 32px;margin-bottom:8px;">
       <div class="team-stat">
         <div class="team-stat-value">${overallAvg !== null ? overallAvg.toFixed(1) + ' ★' : 'N/A'}</div>
         <div class="team-stat-label">Avg Overall Rating</div>
@@ -2245,6 +2264,12 @@ function renderMyTeam(picksData, gw) {
         <div class="team-stat-label">Total Team Value</div>
       </div>
     </div>
+
+    <div class="section-header">Starting XI — Gameweek ${gw}</div>
+    ${posGroups.map(([label, rows]) => positionGroup(label, rows)).join('')}
+
+    <div class="section-header">Bench</div>
+    <div class="squad-grid">${bench.map(playerCard).join('')}</div>
   `;
 }
 
