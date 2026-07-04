@@ -721,6 +721,194 @@
     color: var(--accent);
     font-family: 'JetBrains Mono', monospace;
   }
+
+  /* ── Load Your Team ── */
+  .team-id-input {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .team-id-input:focus { border-color: var(--accent); }
+
+  .btn-primary {
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── Pitch formation view ── */
+  .pitch {
+    background: radial-gradient(ellipse at center, #2d7a4f 0%, #1e5a3a 55%, #164a2e 100%);
+    border-radius: 16px;
+    padding: 28px 12px 18px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pitch::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 4%; right: 4%;
+    border-top: 1px solid rgba(255,255,255,0.25);
+  }
+
+  .pitch::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 110px; height: 110px;
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .pitch-box {
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 44%;
+    height: 64px;
+    border: 1px solid rgba(255,255,255,0.25);
+    border-top: none;
+    pointer-events: none;
+  }
+
+  .pitch-row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 20px;
+  }
+
+  .pitch-row:last-child { margin-bottom: 0; }
+
+  .bench-strip {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 12px;
+    margin-bottom: 24px;
+  }
+
+  .bench-strip-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  .pitch-card {
+    width: 104px;
+    background: rgba(13, 17, 23, 0.92);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 8px;
+    overflow: hidden;
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.15s, border-color 0.15s;
+  }
+
+  .pitch-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .pitch-card.bench { opacity: 0.85; background: rgba(13, 17, 23, 0.5); border-color: var(--border); }
+
+  .pitch-card-name {
+    background: #161B22;
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pitch-card-photo {
+    width: 100%;
+    height: 66px;
+    object-fit: cover;
+    display: block;
+    background: var(--border);
+  }
+
+  .pitch-card-meta {
+    font-size: 9px;
+    color: var(--text2);
+    padding: 3px 4px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pitch-card-footer {
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    font-weight: 700;
+    padding: 3px 4px 6px;
+  }
+
+  .pitch-armband {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    background: #0d0d0d;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--star);
+    z-index: 2;
+  }
+
+  .pitch-armband.vc { border-color: var(--text2); }
+
+  .pitch-streak {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    font-size: 13px;
+    z-index: 2;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.7));
+  }
+
+  .pitch-card.tooltip-wrap {
+    display: block;
+    cursor: pointer;
+    gap: 0;
+    align-items: stretch;
+  }
 </style>
 </head>
 <body>
@@ -733,6 +921,7 @@
     <li><a href="#" onclick="showPage('home', this)">Home</a></li>
     <li><a href="#" onclick="showPage('player', this)">Players</a></li>
     <li><a href="#" onclick="showPage('teams', this)">Teams</a></li>
+    <li><a href="#" onclick="showPage('loadteam', this)">Load Your Team</a></li>
     <li><a href="#" onclick="showPage('rankings', this)">Rankings</a></li>
   </ul>
 </nav>
@@ -781,6 +970,27 @@
       <div class="empty-state">
         <div class="empty-icon">🏟️</div>
         <div>Search for a team to see their analysis</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LOAD YOUR TEAM PAGE ── -->
+  <div id="page-loadteam" class="page">
+    <div class="page-title">Load Your Team</div>
+    <div class="page-subtitle">Enter your FPL Team ID to see your squad with FPL Analyser ratings</div>
+
+    <div style="display:flex;gap:8px;max-width:500px;margin-bottom:8px;">
+      <input type="text" id="team-id-input" class="team-id-input" placeholder="Enter your FPL Team ID..." autocomplete="off" inputmode="numeric" onkeydown="if(event.key==='Enter') loadMyTeam()">
+      <button class="btn-primary" onclick="loadMyTeam()">Load</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:32px;">
+      Find your Team ID in the URL when viewing your team on the official FPL site — e.g. fantasy.premierleague.com/entry/<strong>1234567</strong>/event/1
+    </div>
+
+    <div id="loadteam-result">
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <div>Enter your Team ID to load your squad</div>
       </div>
     </div>
   </div>
@@ -1930,6 +2140,196 @@ function renderRankings() {
       <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
       <tbody>${rows.join('')}</tbody>
     </table>
+  `;
+}
+
+// ── Load Your Team ───────────────────────────────────────────────────────────
+let bootstrapCache = null;
+
+// The FPL API doesn't send CORS headers for cross-origin browser requests,
+// so calls are routed through a public CORS proxy, with a fallback if the
+// first one is down.
+const CORS_PROXY_PRIMARY = 'https://corsproxy.io/?';
+const CORS_PROXY_FALLBACK = 'https://api.allorigins.win/raw?url=';
+
+async function fplFetch(url) {
+  try {
+    const res = await fetch(CORS_PROXY_PRIMARY + url);
+    if (!res.ok) throw new Error('corsproxy.io returned ' + res.status);
+    return res;
+  } catch (e) {
+    const res = await fetch(CORS_PROXY_FALLBACK + encodeURIComponent(url));
+    if (!res.ok) throw new Error('allorigins.win returned ' + res.status);
+    return res;
+  }
+}
+
+function starsToNum(s) {
+  if (!s || typeof s !== 'string') return null;
+  const stars = (s.match(/⭐/g) || []).length;
+  const half = s.includes('½') ? 0.5 : 0;
+  const total = stars + half;
+  return total > 0 ? total : null;
+}
+
+function avgRatingField(rows, field) {
+  const vals = rows.map(r => starsToNum(r[field])).filter(v => v !== null);
+  if (!vals.length) return null;
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+
+async function getCurrentGw() {
+  if (!bootstrapCache) {
+    const res = await fplFetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+    bootstrapCache = await res.json();
+  }
+  const events = bootstrapCache.events || [];
+  const current = events.find(e => e.is_current);
+  if (current) return current.id;
+  const finished = events.filter(e => e.finished);
+  if (finished.length) return Math.max(...finished.map(e => e.id));
+  return events.length ? events[0].id : 1;
+}
+
+async function loadMyTeam() {
+  const input = document.getElementById('team-id-input');
+  const teamId = input.value.trim();
+  const container = document.getElementById('loadteam-result');
+
+  if (!teamId || !/^\d+$/.test(teamId)) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div>Please enter a valid numeric Team ID</div></div>`;
+    return;
+  }
+
+  container.innerHTML = `<div class="loading"><div class="loading-spinner"></div>Loading your team...</div>`;
+
+  try {
+    const gw = await getCurrentGw();
+    const picksRes = await fplFetch(`https://fantasy.premierleague.com/api/entry/${teamId}/event/${gw}/picks/`);
+    const picksData = await picksRes.json();
+    renderMyTeam(picksData, gw);
+  } catch (e) {
+    console.error('Load team error:', e);
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <div>Could not load your team. Double-check the Team ID, or your browser/network may be blocking the request to the FPL API.</div>
+      </div>
+    `;
+  }
+}
+
+function renderMyTeam(picksData, gw) {
+  const container = document.getElementById('loadteam-result');
+  const picks = picksData.picks || [];
+  const entryHistory = picksData.entry_history || {};
+
+  if (!picks.length) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div>No squad data found for that Team ID / gameweek ${gw}.</div></div>`;
+    return;
+  }
+
+  const enriched = picks.map(pick => ({
+    pick,
+    r: data.ratings.find(x => x.element === pick.element),
+    p4: data.personas4.find(x => x.element === pick.element),
+    std: data.seasonToDate.find(x => x.element === pick.element)
+  }));
+
+  const startingXI = enriched.filter(e => e.pick.position <= 11).sort((a, b) => a.pick.position - b.pick.position);
+  const bench = enriched.filter(e => e.pick.position > 11).sort((a, b) => a.pick.position - b.pick.position);
+
+  const startingRated = startingXI.map(e => e.r).filter(Boolean);
+  const reliabilityAvg = avgRatingField(startingRated, 'season_reliability_score_rating');
+  const goalAvg = avgRatingField(startingRated.filter(r => ['MID', 'FWD'].includes(r.position)), 'season_goal_score_rating');
+  const csAvg = avgRatingField(startingRated.filter(r => ['GKP', 'DEF'].includes(r.position)), 'season_cs_score_rating');
+  const overallAvg = avgRatingField(startingRated, 'season_overall_rating');
+  const teamValue = entryHistory.value != null ? (entryHistory.value / 10).toFixed(1) : 'N/A';
+
+  function pitchCard({ pick, r, p4, std }, isBench) {
+    if (!r) {
+      return `<div class="pitch-card ${isBench ? 'bench' : ''}">
+        <div class="pitch-card-name">Unknown (ID ${pick.element})</div>
+      </div>`;
+    }
+
+    const photo = r.code ? `https://resources.premierleague.com/premierleague/photos/players/110x140/p${r.code}.png` : '';
+    const streak = std ? std.streak : '';
+    const streakIcon = streak === '🔥 Hot' ? '🔥' : streak === '🧊 Cold' ? '🧊' : '';
+    const streakLabel = streak === '🔥 Hot' ? 'Hot Streak' : streak === '🧊 Cold' ? 'Cold Streak' : '';
+    const personas = p4 && p4.personas && p4.personas !== 'None' ? p4.personas.split(', ') : [];
+
+    const tooltip = `
+      <span class="tooltip-box">
+        <strong>${r.web_name}</strong> · ${r.position} · ${teamFullNames[r.team] || r.team} · £${r.price}m<br>
+        Season: ${r.season_overall_rating || 'N/A'} · 4GW: ${r.gw4_overall_rating || 'N/A'}
+        ${streakLabel ? ' · ' + streakLabel : ''}
+        ${personas.length ? '<br>' + personas.join(', ') : ''}
+      </span>
+    `;
+
+    return `
+      <div class="pitch-card tooltip-wrap ${isBench ? 'bench' : ''}" onclick="showPlayerFromRankings('${r.web_name}')">
+        ${pick.is_captain ? '<span class="pitch-armband">C</span>' : ''}
+        ${pick.is_vice_captain ? '<span class="pitch-armband vc">V</span>' : ''}
+        ${streakIcon ? `<span class="pitch-streak">${streakIcon}</span>` : ''}
+        <img class="pitch-card-photo" src="${photo}" onerror="this.style.opacity='0'">
+        <div class="pitch-card-name">${r.web_name}</div>
+        <div class="pitch-card-meta">${r.position} · £${r.price}m</div>
+        <div class="pitch-card-footer">${r.season_overall_rating || 'N/A'}</div>
+        ${tooltip}
+      </div>
+    `;
+  }
+
+  function pitchRow(rows, isBench) {
+    if (!rows.length) return '';
+    return `<div class="pitch-row">${rows.map(e => pitchCard(e, isBench)).join('')}</div>`;
+  }
+
+  const posGroups = [
+    startingXI.filter(e => e.r && e.r.position === 'GKP'),
+    startingXI.filter(e => e.r && e.r.position === 'DEF'),
+    startingXI.filter(e => e.r && e.r.position === 'MID'),
+    startingXI.filter(e => e.r && e.r.position === 'FWD'),
+    startingXI.filter(e => !e.r),
+  ];
+
+  container.innerHTML = `
+    <div class="section-header">Team Ratings</div>
+    <div class="team-stats-row" style="flex-wrap:wrap;gap:24px 32px;margin-bottom:8px;">
+      <div class="team-stat">
+        <div class="team-stat-value">${overallAvg !== null ? overallAvg.toFixed(1) + ' ★' : 'N/A'}</div>
+        <div class="team-stat-label">Avg Overall Rating</div>
+      </div>
+      <div class="team-stat">
+        <div class="team-stat-value">${reliabilityAvg !== null ? reliabilityAvg.toFixed(1) + ' ★' : 'N/A'}</div>
+        <div class="team-stat-label">Avg Reliability (XI)</div>
+      </div>
+      <div class="team-stat">
+        <div class="team-stat-value">${goalAvg !== null ? goalAvg.toFixed(1) + ' ★' : 'N/A'}</div>
+        <div class="team-stat-label">Avg Goal Threat (MID/FWD)</div>
+      </div>
+      <div class="team-stat">
+        <div class="team-stat-value">${csAvg !== null ? csAvg.toFixed(1) + ' ★' : 'N/A'}</div>
+        <div class="team-stat-label">Avg Clean Sheet (GKP/DEF)</div>
+      </div>
+      <div class="team-stat">
+        <div class="team-stat-value">£${teamValue}m</div>
+        <div class="team-stat-label">Total Team Value</div>
+      </div>
+    </div>
+
+    <div class="section-header">Starting XI — Gameweek ${gw}</div>
+    <div class="pitch">
+      <div class="pitch-box"></div>
+      ${posGroups.map(rows => pitchRow(rows, false)).join('')}
+    </div>
+
+    <div class="bench-strip">
+      <div class="bench-strip-label">Bench</div>
+      <div class="pitch-row">${bench.map(e => pitchCard(e, true)).join('')}</div>
+    </div>
   `;
 }
 
