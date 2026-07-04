@@ -755,91 +755,159 @@
   .btn-primary:hover { opacity: 0.85; }
   .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  .squad-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 14px;
-    margin-bottom: 32px;
+  /* ── Pitch formation view ── */
+  .pitch {
+    background: radial-gradient(ellipse at center, #2d7a4f 0%, #1e5a3a 55%, #164a2e 100%);
+    border-radius: 16px;
+    padding: 28px 12px 18px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
   }
 
-  .formation-row-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text2);
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    margin: 0 0 10px;
+  .pitch::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 4%; right: 4%;
+    border-top: 1px solid rgba(255,255,255,0.25);
   }
 
-  .squad-card {
+  .pitch::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 110px; height: 110px;
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .pitch-box {
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 44%;
+    height: 64px;
+    border: 1px solid rgba(255,255,255,0.25);
+    border-top: none;
+    pointer-events: none;
+  }
+
+  .pitch-row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 20px;
+  }
+
+  .pitch-row:last-child { margin-bottom: 0; }
+
+  .bench-strip {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px;
-    display: flex;
-    gap: 12px;
-    cursor: pointer;
-    transition: border-color 0.2s;
+    border-radius: 12px;
+    padding: 16px 12px;
+    margin-bottom: 24px;
   }
 
-  .squad-card:hover { border-color: var(--accent); }
-  .squad-card.bench { opacity: 0.65; }
-
-  .squad-photo {
-    width: 48px;
-    height: 60px;
-    border-radius: 6px;
-    object-fit: cover;
-    background: var(--border);
-    flex-shrink: 0;
-  }
-
-  .squad-info { flex: 1; min-width: 0; }
-
-  .squad-name {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 4px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
-
-  .squad-meta {
-    font-size: 11px;
-    color: var(--text2);
-    margin-bottom: 8px;
-  }
-
-  .squad-ratings {
-    display: flex;
-    gap: 14px;
-    margin-bottom: 8px;
-  }
-
-  .squad-rating-label {
-    font-size: 9px;
-    color: var(--text2);
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-  }
-
-  .captain-badge, .vc-badge {
+  .bench-strip-label {
     font-size: 10px;
     font-weight: 700;
-    padding: 1px 6px;
-    border-radius: 10px;
-  }
-
-  .captain-badge { background: var(--star); color: #1a1a1a; }
-  .vc-badge { background: var(--border); color: var(--text); }
-
-  .bench-tag {
-    font-size: 10px;
     color: var(--text2);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  .pitch-card {
+    width: 104px;
+    background: rgba(13, 17, 23, 0.92);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 8px;
+    overflow: hidden;
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.15s, border-color 0.15s;
+  }
+
+  .pitch-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .pitch-card.bench { opacity: 0.85; background: rgba(13, 17, 23, 0.5); border-color: var(--border); }
+
+  .pitch-card-name {
+    background: #161B22;
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pitch-card-photo {
+    width: 100%;
+    height: 66px;
+    object-fit: cover;
+    display: block;
+    background: var(--border);
+  }
+
+  .pitch-card-meta {
+    font-size: 9px;
+    color: var(--text2);
+    padding: 3px 4px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pitch-card-footer {
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    font-weight: 700;
+    padding: 3px 4px 6px;
+  }
+
+  .pitch-armband {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    background: #0d0d0d;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--star);
+    z-index: 2;
+  }
+
+  .pitch-armband.vc { border-color: var(--text2); }
+
+  .pitch-streak {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    font-size: 13px;
+    z-index: 2;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.7));
+  }
+
+  .pitch-card.tooltip-wrap {
+    display: block;
+    cursor: pointer;
+    gap: 0;
+    align-items: stretch;
   }
 </style>
 </head>
@@ -2178,66 +2246,53 @@ function renderMyTeam(picksData, gw) {
   const overallAvg = avgRatingField(startingRated, 'season_overall_rating');
   const teamValue = entryHistory.value != null ? (entryHistory.value / 10).toFixed(1) : 'N/A';
 
-  function playerCard({ pick, r, p4, std }) {
-    const isBench = pick.position > 11;
+  function pitchCard({ pick, r, p4, std }, isBench) {
     if (!r) {
-      return `<div class="squad-card ${isBench ? 'bench' : ''}">
-        <div class="squad-info">
-          <div class="squad-name">Unknown player (ID ${pick.element})</div>
-        </div>
+      return `<div class="pitch-card ${isBench ? 'bench' : ''}">
+        <div class="pitch-card-name">Unknown (ID ${pick.element})</div>
       </div>`;
     }
 
     const photo = r.code ? `https://resources.premierleague.com/premierleague/photos/players/110x140/p${r.code}.png` : '';
     const streak = std ? std.streak : '';
-    const streakHtml = streak === '🔥 Hot' ? `<span class="streak-hot" style="font-size:11px">🔥</span>`
-      : streak === '🧊 Cold' ? `<span class="streak-cold" style="font-size:11px">🧊</span>` : '';
+    const streakIcon = streak === '🔥 Hot' ? '🔥' : streak === '🧊 Cold' ? '🧊' : '';
+    const streakLabel = streak === '🔥 Hot' ? 'Hot Streak' : streak === '🧊 Cold' ? 'Cold Streak' : '';
     const personas = p4 && p4.personas && p4.personas !== 'None' ? p4.personas.split(', ') : [];
-    const personaHtml = personas.map(p => `<span class="persona-tag" style="padding:2px 8px;font-size:10px">${p}</span>`).join('');
+
+    const tooltip = `
+      <span class="tooltip-box">
+        <strong>${r.web_name}</strong> · ${r.position} · ${teamFullNames[r.team] || r.team} · £${r.price}m<br>
+        Season: ${r.season_overall_rating || 'N/A'} · 4GW: ${r.gw4_overall_rating || 'N/A'}
+        ${streakLabel ? ' · ' + streakLabel : ''}
+        ${personas.length ? '<br>' + personas.join(', ') : ''}
+      </span>
+    `;
 
     return `
-      <div class="squad-card ${isBench ? 'bench' : ''}" onclick="showPlayerFromRankings('${r.web_name}')">
-        <img class="squad-photo" src="${photo}" onerror="this.style.opacity='0'">
-        <div class="squad-info">
-          <div class="squad-name">
-            ${r.web_name} ${streakHtml}
-            ${pick.is_captain ? '<span class="captain-badge">C</span>' : ''}
-            ${pick.is_vice_captain ? '<span class="vc-badge">VC</span>' : ''}
-          </div>
-          <div class="squad-meta">
-            <span class="badge badge-pos" style="padding:1px 8px;font-size:10px">${r.position}</span>
-            ${teamFullNames[r.team] || r.team} · £${r.price}m${isBench ? ' · <span class="bench-tag">Bench</span>' : ''}
-          </div>
-          <div class="squad-ratings">
-            <div>
-              <div class="squad-rating-label">Season</div>
-              <div>${r.season_overall_rating || 'N/A'}</div>
-            </div>
-            <div>
-              <div class="squad-rating-label">4GW</div>
-              <div>${r.gw4_overall_rating || 'N/A'}</div>
-            </div>
-          </div>
-          ${personaHtml ? `<div class="personas-wrap" style="margin-bottom:0">${personaHtml}</div>` : ''}
-        </div>
+      <div class="pitch-card tooltip-wrap ${isBench ? 'bench' : ''}" onclick="showPlayerFromRankings('${r.web_name}')">
+        ${pick.is_captain ? '<span class="pitch-armband">C</span>' : ''}
+        ${pick.is_vice_captain ? '<span class="pitch-armband vc">V</span>' : ''}
+        ${streakIcon ? `<span class="pitch-streak">${streakIcon}</span>` : ''}
+        <img class="pitch-card-photo" src="${photo}" onerror="this.style.opacity='0'">
+        <div class="pitch-card-name">${r.web_name}</div>
+        <div class="pitch-card-meta">${r.position} · £${r.price}m</div>
+        <div class="pitch-card-footer">${r.season_overall_rating || 'N/A'}</div>
+        ${tooltip}
       </div>
     `;
   }
 
-  function positionGroup(label, rows) {
+  function pitchRow(rows, isBench) {
     if (!rows.length) return '';
-    return `
-      <div class="formation-row-label">${label}</div>
-      <div class="squad-grid">${rows.map(playerCard).join('')}</div>
-    `;
+    return `<div class="pitch-row">${rows.map(e => pitchCard(e, isBench)).join('')}</div>`;
   }
 
   const posGroups = [
-    ['Goalkeeper', startingXI.filter(e => e.r && e.r.position === 'GKP')],
-    ['Defence', startingXI.filter(e => e.r && e.r.position === 'DEF')],
-    ['Midfield', startingXI.filter(e => e.r && e.r.position === 'MID')],
-    ['Attack', startingXI.filter(e => e.r && e.r.position === 'FWD')],
-    ['Other', startingXI.filter(e => !e.r)],
+    startingXI.filter(e => e.r && e.r.position === 'GKP'),
+    startingXI.filter(e => e.r && e.r.position === 'DEF'),
+    startingXI.filter(e => e.r && e.r.position === 'MID'),
+    startingXI.filter(e => e.r && e.r.position === 'FWD'),
+    startingXI.filter(e => !e.r),
   ];
 
   container.innerHTML = `
@@ -2266,10 +2321,15 @@ function renderMyTeam(picksData, gw) {
     </div>
 
     <div class="section-header">Starting XI — Gameweek ${gw}</div>
-    ${posGroups.map(([label, rows]) => positionGroup(label, rows)).join('')}
+    <div class="pitch">
+      <div class="pitch-box"></div>
+      ${posGroups.map(rows => pitchRow(rows, false)).join('')}
+    </div>
 
-    <div class="section-header">Bench</div>
-    <div class="squad-grid">${bench.map(playerCard).join('')}</div>
+    <div class="bench-strip">
+      <div class="bench-strip-label">Bench</div>
+      <div class="pitch-row">${bench.map(e => pitchCard(e, true)).join('')}</div>
+    </div>
   `;
 }
 
