@@ -2185,7 +2185,12 @@ function avgRatingField(rows, field) {
   return vals.reduce((a, b) => a + b, 0) / vals.length;
 }
 
-async function getCurrentGw() {
+// bootstrap-static is several MB (every player, team and fixture), which
+// exceeds the response size cap on public CORS proxies. The entry endpoint
+// returns the manager's current gameweek directly in a tiny payload, so it's
+// used first; bootstrap-static is only a fallback for entries with no picks
+// yet (e.g. pre-season).
+async function getCurrentGwFallback() {
   if (!bootstrapCache) {
     const res = await fplFetch('https://fantasy.premierleague.com/api/bootstrap-static/');
     bootstrapCache = await res.json();
@@ -2196,6 +2201,13 @@ async function getCurrentGw() {
   const finished = events.filter(e => e.finished);
   if (finished.length) return Math.max(...finished.map(e => e.id));
   return events.length ? events[0].id : 1;
+}
+
+async function getGwForTeam(teamId) {
+  const entryRes = await fplFetch(`https://fantasy.premierleague.com/api/entry/${teamId}/`);
+  const entryData = await entryRes.json();
+  if (entryData.current_event) return entryData.current_event;
+  return getCurrentGwFallback();
 }
 
 async function loadMyTeam() {
@@ -2211,7 +2223,7 @@ async function loadMyTeam() {
   container.innerHTML = `<div class="loading"><div class="loading-spinner"></div>Loading your team...</div>`;
 
   try {
-    const gw = await getCurrentGw();
+    const gw = await getGwForTeam(teamId);
     const picksRes = await fplFetch(`https://fantasy.premierleague.com/api/entry/${teamId}/event/${gw}/picks/`);
     const picksData = await picksRes.json();
     renderMyTeam(picksData, gw);
