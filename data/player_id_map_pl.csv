@@ -1,0 +1,694 @@
+source,source_id,source_name,source_team,fpl_id,fpl_name,method,confidence,flagged
+pl,33231,Dominik Szoboszlai,LIV,387,Dominik Szoboszlai,override,1.0,False
+pl,63633,Alexis Mac Allister,LIV,386,Alexis Mac Allister,override,1.0,False
+pl,116665,Milos Kerkez,LIV,371,Milos Kerkez,override,1.0,False
+pl,32894,Cody Gakpo,LIV,384,Cody Gakpo,override,1.0,False
+pl,5178,Mohamed Salah,LIV,381,Mohamed Salah,override,1.0,False
+pl,19919,Jeremie Frimpong,LIV,370,Jeremie Frimpong,override,1.0,False
+pl,20559,Alisson Becker,LIV,366,Alisson Becker,override,1.0,False
+pl,75382,Florian Wirtz,LIV,382,Florian Wirtz,override,1.0,False
+pl,23593,Ibrahima Konaté,LIV,374,Ibrahima Konaté,override,1.0,False
+pl,81542,Hugo Ekitiké,LIV,661,Hugo Ekitiké,override,1.0,False
+pl,5140,Virgil van Dijk,LIV,373,Virgil van Dijk,override,1.0,False
+pl,130665,Trey Nyoni,LIV,396,Trey Nyoni,override,1.0,False
+pl,10458,Andy Robertson,LIV,372,Andrew Robertson,override,1.0,False
+pl,116496,Giorgi Mamardashvili,LIV,367,Giorgi Mamardashvili,override,1.0,False
+pl,43586,Wataru Endo,LIV,392,Endo Wataru,override,1.0,False
+pl,33185,Harvey Elliott,LIV,389,Harvey Elliott,override,1.0,False
+pl,10651,Joe Gomez,LIV,376,Joe Gomez,override,1.0,False
+pl,134796,Rio Ngumoha,LIV,686,Rio Ngumoha,override,1.0,False
+pl,23815,Curtis Jones,LIV,388,Curtis Jones,override,1.0,False
+pl,15802,Federico Chiesa,LIV,385,Federico Chiesa,override,1.0,False
+pl,74976,Alex Scott,BOU,90,Alex Scott,override,1.0,False
+pl,14846,Marcus Tavernier,BOU,84,Marcus Tavernier,override,1.0,False
+pl,42894,Tyler Adams,BOU,85,Tyler Adams,override,1.0,False
+pl,132285,Bafodé Diakité,BOU,685,Bafodé Diakité,override,1.0,False
+pl,54989,Marcos Senesi,BOU,72,Marcos Senesi Barón,override,1.0,False
+pl,3512,Adam Smith,BOU,73,Adam Smith,override,1.0,False
+pl,33032,Evanilson,BOU,97,Francisco Evanilson de Lima Barbosa,override,1.0,False
+pl,134403,Djordje Petrovic,BOU,67,Đorđe Petrović,override,1.0,False
+pl,74965,Adrien Truffert,BOU,74,Adrien Truffert,override,1.0,False
+pl,25474,Antoine Semenyo,BOU,82,Antoine Semenyo,override,1.0,False
+pl,13706,David Brooks,BOU,86,David Brooks,override,1.0,False
+pl,137832,Junior Kroupi,BOU,100,Junior Kroupi,override,1.0,False
+pl,302305,Julio Soler,BOU,80,Julio Soler Barreto,override,1.0,False
+pl,51942,James Hill,BOU,77,James Hill,override,1.0,False
+pl,63553,Hamed Traoré,BOU,93,Hamed Traorè,override,1.0,False
+pl,53093,Will Dennis,BOU,68,Will Dennis,override,1.0,False
+pl,133124,Remy Rees-Dottin,BOU,687,Remy Rees-Dottin,override,1.0,False
+pl,8882,Philip Billing,BOU,89,Philip Billing,override,1.0,False
+pl,64370,Julián Araujo,BOU,78,Julián Araujo Zúñiga,override,1.0,False
+pl,133123,Ben Winterburn,BOU,96,Ben Winterburn,override,1.0,False
+pl,108096,Amadou Onana,AVL,59,Amadou Onana,override,1.0,False
+pl,20473,Marco Bizot,AVL,33,Marco Bizot,override,1.0,False
+pl,51423,John McGinn,AVL,54,John McGinn,override,1.0,False
+pl,13344,Matty Cash,AVL,36,Matty Cash,override,1.0,False
+pl,25067,Boubacar Kamara,AVL,58,Boubacar Kamara,override,1.0,False
+pl,5758,Lucas Digne,AVL,37,Lucas Digne,override,1.0,False
+pl,23968,Morgan Rogers,AVL,47,Morgan Rogers,override,1.0,False
+pl,13274,Ezri Konsa,AVL,38,Ezri Konsa Ngoyo,override,1.0,False
+pl,8900,Tyrone Mings,AVL,40,Tyrone Mings,override,1.0,False
+pl,5865,Youri Tielemans,AVL,48,Youri Tielemans,override,1.0,False
+pl,8658,Ollie Watkins,AVL,64,Ollie Watkins,override,1.0,False
+pl,51223,Ian Maatsen,AVL,39,Ian Maatsen,override,1.0,False
+pl,21529,Pau Torres,AVL,41,Pau Torres,override,1.0,False
+pl,64521,Samuel Iling-Junior,AVL,51,Samuel Iling-Junior,override,1.0,False
+pl,72265,Evann Guessand,AVL,677,Evann Guessand,override,1.0,False
+pl,26408,Emiliano Buendía,AVL,50,Emiliano Buendía Stati,override,1.0,False
+pl,124181,Jamaldeen Jimoh-Aloba,AVL,62,Jamaldeen Jimoh-Aloba,override,1.0,False
+pl,107846,Lamare Bogarde,AVL,44,Lamare Bogarde,override,1.0,False
+pl,69397,James Wright,AVL,688,James Wright,override,1.0,False
+pl,14456,Donyell Malen,AVL,53,Donyell Malen,override,1.0,False
+pl,20607,Joelinton,NEW,490,Joelinton Cássio Apolinário de Lira,override,1.0,False
+pl,49495,Tino Livramento,NEW,477,Tino Livramento,override,1.0,False
+pl,14716,Harvey Barnes,NEW,487,Harvey Barnes,override,1.0,False
+pl,23747,Anthony Gordon,NEW,485,Anthony Gordon,override,1.0,False
+pl,5220,Fabian Schär,NEW,474,Fabian Schär,override,1.0,False
+pl,49259,Anthony Elanga,NEW,486,Anthony Elanga,override,1.0,False
+pl,71623,Sandro Tonali,NEW,491,Sandro Tonali,override,1.0,False
+pl,3905,Kieran Trippier,NEW,478,Kieran Trippier,override,1.0,False
+pl,10079,Nick Pope,NEW,469,Nick Pope,override,1.0,False
+pl,8707,Dan Burn,NEW,476,Dan Burn,override,1.0,False
+pl,74761,Bruno Guimarães,NEW,488,Bruno Guimarães Rodriguez Moura,override,1.0,False
+pl,114590,William Osula,NEW,500,William Osula,override,1.0,False
+pl,13703,Aaron Ramsdale,NEW,674,Aaron Ramsdale,override,1.0,False
+pl,108922,Lewis Hall,NEW,473,Lewis Hall,override,1.0,False
+pl,49908,Sven Botman,NEW,475,Sven Botman,override,1.0,False
+pl,304679,Park Seung-Soo,NEW,689,Seung-Soo Park,override,1.0,False
+pl,9662,Jacob Murphy,NEW,489,Jacob Murphy,override,1.0,False
+pl,117647,Lewis Miley,NEW,497,Lewis Miley,override,1.0,False
+pl,66494,Emil Krafth,NEW,479,Emil Krafth,override,1.0,False
+pl,124462,Malick Thiaw,NEW,684,Malick Thiaw,override,1.0,False
+pl,134333,Yasin Ayari,BHA,166,Yasin Ayari,override,1.0,False
+pl,51830,Georginio Rutter,BHA,158,Georginio Rutter,override,1.0,False
+pl,14671,Matt O'Riley,BHA,164,Matt O'Riley,override,1.0,False
+pl,76090,Jan Paul van Hecke,BHA,151,Jan Paul van Hecke,override,1.0,False
+pl,75709,Bart Verbruggen,BHA,139,Bart Verbruggen,override,1.0,False
+pl,124396,Carlos Baleba,BHA,167,Carlos Baleba,override,1.0,False
+pl,8163,Lewis Dunk,BHA,146,Lewis Dunk,override,1.0,False
+pl,72239,Mats Wieffer,BHA,173,Mats Wieffer,override,1.0,False
+pl,117732,Kaoru Mitoma,BHA,157,Mitoma Kaoru,override,1.0,False
+pl,136175,Yankuba Minteh,BHA,160,Yankuba Minteh,override,1.0,False
+pl,67928,Maxim De Cuyper,BHA,145,Maxim De Cuyper,override,1.0,False
+pl,3457,Jason Steele,BHA,138,Jason Steele,override,1.0,False
+pl,20505,Olivier Boscagli,BHA,143,Olivier Boscagli,override,1.0,False
+pl,303860,Diego Coppola,BHA,144,Diego Coppola,override,1.0,False
+pl,134176,Brajan Gruda,BHA,162,Brajan Gruda,override,1.0,False
+pl,4874,Joël Veltman,BHA,152,Joël Veltman,override,1.0,False
+pl,143240,Diego Gómez,BHA,169,Diego Gómez Amarilla,override,1.0,False
+pl,3452,Danny Welbeck,BHA,178,Danny Welbeck,override,1.0,False
+pl,2100,James Milner,BHA,170,James Milner,override,1.0,False
+pl,50727,Ferdi Kadioglu,BHA,148,Ferdi Kadıoğlu,override,1.0,False
+pl,21614,Sander Berge,FUL,330,Sander Berge,override,1.0,False
+pl,16044,Sasa Lukic,FUL,332,Saša Lukić,override,1.0,False
+pl,13961,Harry Wilson,FUL,329,Harry Wilson,override,1.0,False
+pl,4880,Kenny Tete,FUL,322,Kenny Tete,override,1.0,False
+pl,23793,Calvin Bassey,FUL,318,Calvin Bassey,override,1.0,False
+pl,35752,Jorge Cuenca,FUL,321,Jorge Cuenca Barreno,override,1.0,False
+pl,4717,Alex Iwobi,FUL,324,Alex Iwobi,override,1.0,False
+pl,128976,Josh King,FUL,335,Josh King,override,1.0,False
+pl,26151,Joachim Andersen,FUL,317,Joachim Andersen,override,1.0,False
+pl,11071,Raúl Jiménez,FUL,337,Raúl Jiménez Rodríguez,override,1.0,False
+pl,4985,Bernd Leno,FUL,314,Bernd Leno,override,1.0,False
+pl,4818,Harrison Reed,FUL,336,Harrison Reed,override,1.0,False
+pl,10476,Andreas Pereira,FUL,327,Andreas Hoelgebaum Pereira,override,1.0,False
+pl,49884,Issa Diop,FUL,320,Issa Diop,override,1.0,False
+pl,117286,Benjamin Lecomte,FUL,664,Benjamin Lecomte,override,1.0,False
+pl,117763,Rodrigo Muniz,FUL,338,Rodrigo Muniz Carvalho,override,1.0,False
+pl,4979,Adama Traoré,FUL,326,Adama Traoré Diarra,override,1.0,False
+pl,6712,Timothy Castagne,FUL,319,Timothy Castagne,override,1.0,False
+pl,3894,Tom Cairney,FUL,331,Tom Cairney,override,1.0,False
+pl,14445,Emile Smith Rowe,FUL,325,Emile Smith Rowe,override,1.0,False
+pl,16723,Matz Sels,NFO,502,Matz Sels,override,1.0,False
+pl,3756,Chris Wood,NFO,525,Chris Wood,override,1.0,False
+pl,108816,Ibrahim Sangaré,NFO,521,Ibrahim Sangaré,override,1.0,False
+pl,139648,Murillo,NFO,506,Murillo Costa dos Santos,override,1.0,False
+pl,51593,Elliot Anderson,NFO,517,Elliot Anderson,override,1.0,False
+pl,15259,Morgan Gibbs-White,NFO,515,Morgan Gibbs-White,override,1.0,False
+pl,23702,Callum Hudson-Odoi,NFO,516,Callum Hudson-Odoi,override,1.0,False
+pl,23811,Neco Williams,NFO,508,Neco Williams,override,1.0,False
+pl,50623,Dan Ndoye,NFO,669,Dan Ndoye,override,1.0,False
+pl,16035,Nikola Milenkovic,NFO,505,Nikola Milenković,override,1.0,False
+pl,10439,Ola Aina,NFO,507,Ola Aina,override,1.0,False
+pl,14238,Ryan Yates,NFO,522,Ryan Yates,override,1.0,False
+pl,133025,Jota Silva,NFO,518,João Pedro Ferreira da Silva,override,1.0,False
+pl,15340,Taiwo Awoniyi,NFO,527,Taiwo Awoniyi,override,1.0,False
+pl,16204,Willy Boly,NFO,514,Willy Boly,override,1.0,False
+pl,117754,Zach Abbott,NFO,513,Zach Abbott,override,1.0,False
+pl,304123,Igor Jesus,NFO,526,Igor Jesus Maciel da Cruz,override,1.0,False
+pl,304238,Jair Cunha,NFO,510,Jair Paula da Cunha Filho,override,1.0,False
+pl,15269,Angus Gunn,NFO,675,Angus Gunn,override,1.0,False
+pl,67510,Morato,NFO,511,Felipe Rodrigues da Silva,override,1.0,False
+pl,24369,Keane Lewis-Potter,BRE,107,Keane Lewis-Potter,override,1.0,False
+pl,65987,Sepp van den Berg,BRE,113,Sepp van den Berg,override,1.0,False
+pl,115336,Antoni Milambo,BRE,122,Antoni Milambo,override,1.0,False
+pl,133460,Michael Kayode,BRE,110,Michael Kayode,override,1.0,False
+pl,24659,Nathan Collins,BRE,106,Nathan Collins,override,1.0,False
+pl,32289,Fábio Carvalho,BRE,123,Fábio Freitas Gouveia Carvalho,override,1.0,False
+pl,14723,Caoimhín Kelleher,BRE,101,Caoimhín Kelleher,override,1.0,False
+pl,49726,Mathias Jensen,BRE,126,Mathias Jensen,override,1.0,False
+pl,10947,Rico Henry,BRE,109,Rico Henry,override,1.0,False
+pl,124052,Igor Thiago,BRE,136,Igor Thiago Nascimento Rodrigues,override,1.0,False
+pl,128891,Yehor Yarmoliuk,BRE,129,Yehor Yarmoliuk,override,1.0,False
+pl,127594,Kevin Schade,BRE,120,Kevin Schade,override,1.0,False
+pl,49494,Myles Peart-Harris,BRE,133,Myles Peart-Harris,override,1.0,False
+pl,115166,Aaron Hickey,BRE,116,Aaron Hickey,override,1.0,False
+pl,108612,Frank Onyeka,BRE,128,Frank Onyeka,override,1.0,False
+pl,3712,Jordan Henderson,BRE,124,Jordan Henderson,override,1.0,False
+pl,138109,Benjamin Arthur,BRE,114,Benjamin Arthur,override,1.0,False
+pl,20113,Kristoffer Ajer,BRE,108,Kristoffer Ajer,override,1.0,False
+pl,21297,Mads Roerslev,BRE,112,Mads Roerslev Rasmussen,override,1.0,False
+pl,144788,Hákon Valdimarsson,BRE,105,Hákon Rafn Valdimarsson,override,1.0,False
+pl,12136,Granit Xhaka,SUN,668,Granit Xhaka,override,1.0,False
+pl,122126,Trai Hume,SUN,532,Trai Hume,override,1.0,False
+pl,75692,Robin Roefs,SUN,670,Robin Roefs,override,1.0,False
+pl,63733,Reinildo Mandava,SUN,541,Reinildo Mandava,override,1.0,False
+pl,126920,Eliezer Mayenda,SUN,561,Eliezer Mayenda Dossou,override,1.0,False
+pl,19864,Dan Ballard,SUN,531,Daniel Ballard,override,1.0,False
+pl,110430,Jenson Seelt,SUN,542,Jenson Seelt,override,1.0,False
+pl,118633,Chemsdine Talbi,SUN,553,Chemsdine Talbi,override,1.0,False
+pl,126317,Simon Adingra,SUN,543,Simon Adingra,override,1.0,False
+pl,126110,Habib Diarra,SUN,544,Habib Diarra,override,1.0,False
+pl,124944,Noah Sadiki,SUN,552,Noah Sadiki,override,1.0,False
+pl,119614,Chris Rigg,SUN,551,Chris Rigg,override,1.0,False
+pl,52989,Wilson Isidor,SUN,560,Wilson Isidor,override,1.0,False
+pl,117521,Harrison Jones,SUN,557,Harrison Jones,override,1.0,False
+pl,66659,Omar Alderete,SUN,683,Omar Alderete,override,1.0,False
+pl,130068,Marc Guiu,SUN,252,Marc Guiu Paz,override,1.0,False
+pl,8710,Patrick Roberts,SUN,545,Patrick Roberts,override,1.0,False
+pl,23899,Anthony Patterson,SUN,528,Anthony Patterson,override,1.0,False
+pl,35731,Dan Neil,SUN,549,Dan Neil,override,1.0,False
+pl,138104,Enzo Le Fée,SUN,547,Enzo Le Fée,override,1.0,False
+pl,13522,Maximilian Kilman,WHU,605,Maximilian Kilman,override,1.0,False
+pl,4617,James Ward-Prowse,WHU,614,James Ward-Prowse,override,1.0,False
+pl,40159,Guido Rodríguez,WHU,618,Guido Rodríguez,override,1.0,False
+pl,55776,Lucas Paquetá,WHU,612,Lucas Tolentino Coelho de Lima,override,1.0,False
+pl,118083,Mads Hermansen,WHU,679,Mads Hermansen,override,1.0,False
+pl,108628,Nayef Aguerd,WHU,607,Nayef Aguerd,override,1.0,False
+pl,14164,Aaron Wan-Bissaka,WHU,610,Aaron Wan-Bissaka,override,1.0,False
+pl,145347,El Hadji Malick Diouf,WHU,603,El Hadji Malick Diouf,override,1.0,False
+pl,8868,Jarrod Bowen,WHU,624,Jarrod Bowen,override,1.0,False
+pl,42569,Niclas Füllkrug,WHU,625,Niclas Füllkrug,override,1.0,False
+pl,63656,Jean-Clair Todibo,WHU,609,Jean-Clair Todibo,override,1.0,False
+pl,13815,Kyle Walker-Peters,WHU,659,Kyle Walker-Peters,override,1.0,False
+pl,117579,Ollie Scarles,WHU,608,Ollie Scarles,override,1.0,False
+pl,25183,Tomás Soucek,WHU,613,Tomáš Souček,override,1.0,False
+pl,66560,Freddie Potts,WHU,623,Freddie Potts,override,1.0,False
+pl,8454,Callum Wilson,WHU,671,Callum Wilson,override,1.0,False
+pl,32638,Konstantinos Mavropanos,WHU,606,Konstantinos Mavropanos,override,1.0,False
+pl,5748,Alphonse Areola,WHU,600,Alphonse Areola,override,1.0,False
+pl,136505,Andy Irving,WHU,621,Andy Irving,override,1.0,False
+pl,40211,Edson Álvarez,WHU,616,Edson Álvarez Velázquez,override,1.0,False
+pl,51364,Mohammed Kudus,TOT,582,Mohammed Kudus,override,1.0,False
+pl,49374,Brennan Johnson,TOT,580,Brennan Johnson,override,1.0,False
+pl,133603,Lucas Bergvall,TOT,586,Lucas Bergvall,override,1.0,False
+pl,71923,Guglielmo Vicario,TOT,565,Guglielmo Vicario,override,1.0,False
+pl,24630,Richarlison,TOT,597,Richarlison de Andrade,override,1.0,False
+pl,32229,Pedro Porro,TOT,568,Pedro Porro Sauceda,override,1.0,False
+pl,117318,Pape Matar Sarr,TOT,593,Pape Matar Sarr,override,1.0,False
+pl,117596,Archie Gray,TOT,591,Archie Gray,override,1.0,False
+pl,75582,Micky van de Ven,TOT,575,Micky van de Ven,override,1.0,False
+pl,66635,Cristian Romero,TOT,569,Cristian Romero,override,1.0,False
+pl,23764,Djed Spence,TOT,573,Djed Spence,override,1.0,False
+pl,25892,Kevin Danso,TOT,570,Kevin Danso,override,1.0,False
+pl,4408,Ben Davies,TOT,571,Ben Davies,override,1.0,False
+pl,134632,Luka Vuskovic,TOT,578,Luka Vušković,override,1.0,False
+pl,19858,João Palhinha,TOT,673,João Maria Lobo Alves Palhares Costa Palhinha Gonçalves,override,1.0,False
+pl,10443,Dominic Solanke,TOT,596,Dominic Solanke-Mitchell,override,1.0,False
+pl,22802,Rodrigo Bentancur,TOT,585,Rodrigo Bentancur,override,1.0,False
+pl,118579,Wilson Odobert,TOT,588,Wilson Odobert,override,1.0,False
+pl,123998,Antonín Kinsky,TOT,567,Antonín Kinský,override,1.0,False
+pl,76614,Mathys Tel,TOT,584,Mathys Tel,override,1.0,False
+pl,128456,Hjalmar Ekdal,BUR,190,Hjalmar Ekdal,override,1.0,False
+pl,3955,Kyle Walker,BUR,187,Kyle Walker,override,1.0,False
+pl,124531,Maxime Estève,BUR,191,Maxime Estève,override,1.0,False
+pl,50460,Jaidon Anthony,BUR,200,Jaidon Anthony,override,1.0,False
+pl,10539,Josh Cullen,BUR,205,Josh Cullen,override,1.0,False
+pl,68593,Hannibal Mejbri,BUR,207,Hannibal Mejbri,override,1.0,False
+pl,6451,Martin Dúbravka,BUR,470,Martin Dúbravka,override,1.0,False
+pl,8127,Josh Laurent,BUR,209,Josh Laurent,override,1.0,False
+pl,127393,Quilindschy Hartman,BUR,192,Quilindschy Hartman,override,1.0,False
+pl,128643,Oliver Sonne,BUR,197,Oliver Sonne,override,1.0,False
+pl,64282,Lyle Foster,BUR,217,Lyle Foster,override,1.0,False
+pl,74960,Lesley Ugochukwu,BUR,676,Lesley Ugochukwu,override,1.0,False
+pl,19831,Jacob Bruun Larsen,BUR,202,Jacob Bruun Larsen,override,1.0,False
+pl,13622,Joe Worrall,BUR,199,Joe Worrall,override,1.0,False
+pl,74964,Loum Tchaouna,BUR,210,Loum Tchaouna,override,1.0,False
+pl,137462,Lucas Pires,BUR,195,Lucas Pires Silva,override,1.0,False
+pl,15139,Marcus Edwards,BUR,206,Marcus Edwards,override,1.0,False
+pl,48285,Aaron Ramsey,BUR,211,Aaron Ramsey,override,1.0,False
+pl,122056,Max Weiss,BUR,183,Max Weiß,override,1.0,False
+pl,75735,Zian Flemming,BUR,215,Zian Flemming,override,1.0,False
+pl,76310,Marshall Munetsi,WOL,648,Marshall Munetsi,override,1.0,False
+pl,143214,André,WOL,643,André Trindade da Costa Neto,override,1.0,False
+pl,136815,David Møller Wolfe,WOL,682,David Møller Wolfe,override,1.0,False
+pl,4229,Matt Doherty,WOL,632,Matt Doherty,override,1.0,False
+pl,35670,Jørgen Strand Larsen,WOL,654,Jørgen Strand Larsen,override,1.0,False
+pl,126108,Jean-Ricner Bellegarde,WOL,644,Jean-Ricner Bellegarde,override,1.0,False
+pl,52951,Ki-Jana Hoever,WOL,638,Ki-Jana Hoever,override,1.0,False
+pl,15715,José Sá,WOL,628,José Malheiro de Sá,override,1.0,False
+pl,133679,João Gomes,WOL,646,João Victor Gomes da Silva,override,1.0,False
+pl,110203,Emmanuel Agbadou,WOL,631,Emmanuel Agbadou,override,1.0,False
+pl,92635,Toti Gomes,WOL,637,Toti Gomes,override,1.0,False
+pl,43010,Santiago Bueno,WOL,636,Santiago Ignacio Bueno,override,1.0,False
+pl,143218,Jhon Arias,WOL,663,Jhon Arias,override,1.0,False
+pl,20337,Hwang Hee-Chan,WOL,642,Hwang Hee-chan,override,1.0,False
+pl,108319,Sasa Kalajdzic,WOL,656,Saša Kalajdžić,override,1.0,False
+pl,4331,Sam Johnstone,WOL,627,Sam Johnstone,override,1.0,False
+pl,303861,Fer López,WOL,645,Fer López González,override,1.0,False
+pl,115114,Yerson Mosquera,WOL,634,Yerson Mosquera Valdelamar,override,1.0,False
+pl,108947,Rodrigo Gomes,WOL,635,Rodrigo Martins Gomes,override,1.0,False
+pl,66692,Hugo Bueno,WOL,633,Hugo Bueno López,override,1.0,False
+pl,16431,Rúben Dias,MCI,408,Rúben dos Santos Gato Alves Dias,override,1.0,False
+pl,71432,Rayan Aït-Nouri,MCI,402,Rayan Aït-Nouri,override,1.0,False
+pl,5067,Bernardo Silva,MCI,416,Bernardo Mota Veiga de Carvalho e Silva,override,1.0,False
+pl,67849,Nico González,MCI,423,Nico González Iglesias,override,1.0,False
+pl,54156,Jérémy Doku,MCI,418,Jérémy Doku,override,1.0,False
+pl,32280,James Trafford,MCI,182,James Trafford,override,1.0,False
+pl,99281,Rico Lewis,MCI,410,Rico Lewis,override,1.0,False
+pl,66657,Oscar Bobb,MCI,424,Oscar Bobb,override,1.0,False
+pl,4505,John Stones,MCI,409,John Stones,override,1.0,False
+pl,26335,Tijjani Reijnders,MCI,427,Tijjani Reijnders,override,1.0,False
+pl,65970,Erling Haaland,MCI,430,Erling Haaland,override,1.0,False
+pl,4499,Nathan Aké,MCI,405,Nathan Aké,override,1.0,False
+pl,112948,Nico O'Reilly,MCI,411,Nico O'Reilly,override,1.0,False
+pl,15656,Manuel Akanji,MCI,404,Manuel Akanji,override,1.0,False
+pl,76204,Matheus Nunes,MCI,407,Matheus Nunes,override,1.0,False
+pl,5101,Ilkay Gündogan,MCI,420,İlkay Gündoğan,override,1.0,False
+pl,137371,Abdukodir Khusanov,MCI,406,Abdukodir Khusanov,override,1.0,False
+pl,76216,Omar Marmoush,MCI,413,Omar Marmoush,override,1.0,False
+pl,68150,Rayan Cherki,MCI,417,Rayan Cherki,override,1.0,False
+pl,47133,Stefan Ortega,MCI,400,Stefan Ortega Moreno,override,1.0,False
+pl,68583,Jamie Gittens,CHE,239,Jamie Bynoe-Gittens,override,1.0,False
+pl,27277,Marc Cucurella,CHE,224,Marc Cucurella Saseta,override,1.0,False
+pl,49293,Cole Palmer,CHE,235,Cole Palmer,override,1.0,False
+pl,14575,Trevoh Chalobah,CHE,226,Trevoh Chalobah,override,1.0,False
+pl,63741,Enzo Fernández,CHE,237,Enzo Fernández,override,1.0,False
+pl,125075,Josh Acheampong,CHE,233,Josh Acheampong,override,1.0,False
+pl,21998,Pedro Neto,CHE,236,Pedro Lomba Neto,override,1.0,False
+pl,72371,João Pedro,CHE,249,João Pedro Junqueira de Jesus,override,1.0,False
+pl,14538,Robert Sánchez,CHE,220,Robert Lynch Sánchez,override,1.0,False
+pl,14571,Reece James,CHE,225,Reece James,override,1.0,False
+pl,112203,Moisés Caicedo,CHE,241,Moisés Caicedo Corozo,override,1.0,False
+pl,115151,Dário Essugo,CHE,247,Dário Luís Essugo,override,1.0,False
+pl,68827,Malo Gusto,CHE,228,Malo Gusto,override,1.0,False
+pl,51813,Liam Delap,CHE,250,Liam Delap,override,1.0,False
+pl,66284,Wesley Fofana,CHE,230,Wesley Fofana,override,1.0,False
+pl,133245,Andrey Santos,CHE,246,Andrey Nascimento dos Santos,override,1.0,False
+pl,119041,Jorrel Hato,CHE,672,Jorrel Hato,override,1.0,False
+pl,118442,Tyrique George,CHE,243,Tyrique George,override,1.0,False
+pl,75989,Filip Jörgensen,CHE,221,Filip Jörgensen,override,1.0,False
+pl,304474,Estêvão,CHE,238,Estêvão Almeida de Oliveira Gonçalves,override,1.0,False
+pl,50842,Chris Richards,CRY,261,Chris Richards,override,1.0,False
+pl,76353,Daniel Muñoz,CRY,256,Daniel Muñoz Mejía,override,1.0,False
+pl,13988,Dean Henderson,CRY,253,Dean Henderson,override,1.0,False
+pl,8589,Will Hughes,CRY,270,Will Hughes,override,1.0,False
+pl,20874,Jean-Philippe Mateta,CRY,283,Jean-Philippe Mateta,override,1.0,False
+pl,69595,Adam Wharton,CRY,273,Adam Wharton,override,1.0,False
+pl,76104,Maxence Lacroix,CRY,257,Maxence Lacroix,override,1.0,False
+pl,49796,Ismaïla Sarr,CRY,267,Ismaïla Sarr,override,1.0,False
+pl,21584,Eberechi Eze,CRY,266,Eberechi Eze,override,1.0,False
+pl,14569,Marc Guéhi,CRY,260,Marc Guéhi,override,1.0,False
+pl,24334,Tyrick Mitchell,CRY,258,Tyrick Mitchell,override,1.0,False
+pl,20497,Walter Benítez,CRY,254,Walter Benítez,override,1.0,False
+pl,37776,Jefferson Lerma,CRY,272,Jefferson Lerma Solís,override,1.0,False
+pl,16788,Odsonne Édouard,CRY,285,Odsonne Édouard,override,1.0,False
+pl,133297,Romain Esse,CRY,269,Romain Esse,override,1.0,False
+pl,20118,Borna Sosa,CRY,259,Borna Sosa,override,1.0,False
+pl,49504,Jesurun Rak-Sakyi,CRY,278,Jesurun Rak-Sakyi,override,1.0,False
+pl,138981,Justin Devenny,CRY,276,Justin Devenny,override,1.0,False
+pl,127826,Rio Cardines,CRY,690,Rio Cardines,override,1.0,False
+pl,4604,Nathaniel Clyne,CRY,263,Nathaniel Clyne,override,1.0,False
+pl,4608,Luke Shaw,MUN,443,Luke Shaw,override,1.0,False
+pl,20226,Matthijs de Ligt,MUN,436,Matthijs de Ligt,override,1.0,False
+pl,23396,Bruno Fernandes,MUN,449,Bruno Borges Fernandes,override,1.0,False
+pl,51202,Matheus Cunha,MUN,450,Matheus Santos Carneiro da Cunha,override,1.0,False
+pl,14580,Mason Mount,MUN,455,Mason Mount,override,1.0,False
+pl,66360,Bryan Mbeumo,MUN,119,Bryan Mbeumo,override,1.0,False
+pl,24252,Diogo Dalot,MUN,440,Diogo Dalot Teixeira,override,1.0,False
+pl,5793,Casemiro,MUN,457,Carlos Henrique Casimiro,override,1.0,False
+pl,71744,Altay Bayindir,MUN,431,Altay Bayındır,override,1.0,False
+pl,146567,Patrick Dorgu,MUN,441,Patrick Dorgu,override,1.0,False
+pl,118591,Leny Yoro,MUN,444,Leny Yoro,override,1.0,False
+pl,133114,Ayden Heaven,MUN,447,Ayden Heaven,override,1.0,False
+pl,69176,Amad Diallo,MUN,452,Amad Diallo,override,1.0,False
+pl,66036,Benjamin Sesko,MUN,681,Benjamin Sesko,override,1.0,False
+pl,9566,Harry Maguire,MUN,442,Harry Maguire,override,1.0,False
+pl,108936,Kobbie Mainoo,MUN,458,Kobbie Mainoo,override,1.0,False
+pl,50848,Joshua Zirkzee,MUN,466,Joshua Zirkzee,override,1.0,False
+pl,2933,Tom Heaton,MUN,434,Tom Heaton,override,1.0,False
+pl,117564,Tyler Fredricson,MUN,446,Tyler Fredricson,override,1.0,False
+pl,118031,Manuel Ugarte,MUN,459,Manuel Ugarte Ribeiro,override,1.0,False
+pl,7975,David Raya,ARS,1,David Raya Martín,override,1.0,False
+pl,11419,Martin Ødegaard,ARS,17,Martin Ødegaard,override,1.0,False
+pl,69914,Riccardo Calafiori,ARS,7,Riccardo Calafiori,override,1.0,False
+pl,66104,Gabriel Martinelli,ARS,19,Gabriel Martinelli Silva,override,1.0,False
+pl,32728,Viktor Gyökeres,ARS,666,Viktor Gyökeres,override,1.0,False
+pl,14548,Ben White,ARS,11,Benjamin White,override,1.0,False
+pl,66204,William Saliba,ARS,6,William Saliba,override,1.0,False
+pl,15202,Declan Rice,ARS,21,Declan Rice,override,1.0,False
+pl,49481,Bukayo Saka,ARS,16,Bukayo Saka,override,1.0,False
+pl,50234,Gabriel Magalhães,ARS,5,Gabriel dos Santos Magalhães,override,1.0,False
+pl,64523,Martín Zubimendi,ARS,26,Martín Zubimendi Ibáñez,override,1.0,False
+pl,119476,Cristhian Mosquera,ARS,662,Cristhian Mosquera,override,1.0,False
+pl,20486,Leandro Trossard,ARS,20,Leandro Trossard,override,1.0,False
+pl,114564,Myles Lewis-Skelly,ARS,10,Myles Lewis-Skelly,override,1.0,False
+pl,11373,Kepa Arrizabalaga,ARS,2,Kepa Arrizabalaga Revuelta,override,1.0,False
+pl,19778,Mikel Merino,ARS,22,Mikel Merino Zazón,override,1.0,False
+pl,67407,Noni Madueke,ARS,18,Noni Madueke,override,1.0,False
+pl,20810,Kai Havertz,ARS,30,Kai Havertz,override,1.0,False
+pl,114566,Ethan Nwaneri,ARS,25,Ethan Nwaneri,override,1.0,False
+pl,67776,Jurriën Timber,ARS,8,Jurriën Timber,override,1.0,False
+pl,13796,Joe Rodon,LEE,348,Joe Rodon,override,1.0,False
+pl,50643,Joël Piroe,LEE,362,Joël Piroe,override,1.0,False
+pl,68676,Wilfried Gnonto,LEE,351,Wilfried Gnonto,override,1.0,False
+pl,33124,Pascal Struijk,LEE,343,Pascal Struijk,override,1.0,False
+pl,13797,Daniel James,LEE,353,Daniel James,override,1.0,False
+pl,116888,Anton Stach,LEE,660,Anton Stach,override,1.0,False
+pl,63634,Lucas Perri,LEE,665,Lucas Estella Perri,override,1.0,False
+pl,75543,Gabriel Gudmundsson,LEE,347,Gabriel Gudmundsson,override,1.0,False
+pl,14608,Jayden Bogle,LEE,342,Jayden Bogle,override,1.0,False
+pl,126426,Ao Tanaka,LEE,358,Tanaka Ao,override,1.0,False
+pl,19731,Ethan Ampadu,LEE,354,Ethan Ampadu,override,1.0,False
+pl,63289,Brenden Aaronson,LEE,350,Brenden Aaronson,override,1.0,False
+pl,8945,Sam Byram,LEE,346,Sam Byram,override,1.0,False
+pl,35718,Sebastiaan Bornauw,LEE,345,Sebastiaan Bornauw,override,1.0,False
+pl,115255,Ilia Gruev,LEE,356,Ilia Gruev,override,1.0,False
+pl,9251,Karl Darlow,LEE,341,Karl Darlow,override,1.0,False
+pl,25267,Largie Ramazani,LEE,357,Largie Ramazani,override,1.0,False
+pl,14807,Lukas Nmecha,LEE,365,Lukas Nmecha,override,1.0,False
+pl,33135,Jack Harrison,LEE,352,Jack Harrison,override,1.0,False
+pl,14897,Sean Longstaff,LEE,493,Sean Longstaff,override,1.0,False
+pl,4333,Michael Keane,EVE,295,Michael Keane,override,1.0,False
+pl,66538,Tim Iroegbunam,EVE,304,Tim Iroegbunam,override,1.0,False
+pl,133612,Charly Alcaraz,EVE,301,Carlos Alcaraz Durán,override,1.0,False
+pl,126789,Beto,EVE,311,Norberto Bercique Gomes Betuncal,override,1.0,False
+pl,31936,Iliman Ndiaye,EVE,299,Iliman Ndiaye,override,1.0,False
+pl,14706,Kiernan Dewsbury-Hall,EVE,242,Kiernan Dewsbury-Hall,override,1.0,False
+pl,12582,Idrissa Gueye,EVE,302,Idrissa Gana Gueye,override,1.0,False
+pl,4640,Jordan Pickford,EVE,287,Jordan Pickford,override,1.0,False
+pl,112589,Jake O'Brien,EVE,293,Jake O'Brien,override,1.0,False
+pl,23841,James Garner,EVE,303,James Garner,override,1.0,False
+pl,8143,James Tarkowski,EVE,291,James Tarkowski,override,1.0,False
+pl,51510,Tyler Onyango,EVE,704,Tyler Onyango,override,1.0,False
+pl,50453,Mark Travers,EVE,288,Mark Travers,override,1.0,False
+pl,43940,Harry Tyrer,EVE,289,Harry Tyrer,override,1.0,False
+pl,143922,Thierno Barry,EVE,310,Thierno Barry,override,1.0,False
+pl,4260,Jack Grealish,EVE,419,Jack Grealish,override,1.0,False
+pl,119034,Youssef Chermiti,EVE,312,Youssef Ramalho Chermiti,override,1.0,False
+pl,24797,Dwight McNeil,EVE,300,Dwight McNeil,override,1.0,False
+pl,134286,Harrison Armstrong,EVE,305,Harrison Armstrong,override,1.0,False
+pl,3600,Séamus Coleman,EVE,294,Séamus Coleman,override,1.0,False
+pl,109478,Jakub Kiwior,ARS,9,Jakub Kiwior,override,1.0,False
+pl,141181,Max Dowman,ARS,700,Max Dowman,override,1.0,False
+pl,50151,Jaka Bijol,LEE,344,Jaka Bijol,override,1.0,False
+pl,33162,Noah Okafor,LEE,698,Noah Okafor,override,1.0,False
+pl,21519,Justin Kluivert,BOU,81,Justin Kluivert,override,1.0,False
+pl,121972,Ben Gannon-Doak,BOU,391,Ben Gannon-Doak,override,1.0,False
+pl,15572,Ryan Christie,BOU,87,Ryan Christie,override,1.0,False
+pl,118080,Amine Adli,BOU,697,Amine Adli,override,1.0,False
+pl,111988,Jackson Tchatchoua,WOL,695,Jackson Tchatchoua,override,1.0,False
+pl,49731,Mikkel Damsgaard,BRE,121,Mikkel Damsgaard,override,1.0,False
+pl,133890,Dango Ouattara,BRE,83,Dango Ouattara,override,1.0,False
+pl,4245,Emiliano Martínez,AVL,32,Emiliano Martínez Romero,override,1.0,False
+pl,130670,Sam Proctor,AVL,703,Sam Proctor,override,1.0,False
+pl,124179,Triston Rowe,AVL,701,Triston Rowe,override,1.0,False
+pl,144213,Bradley Burrowes,AVL,702,Bradley Burrowes,override,1.0,False
+pl,11284,Arthur Masuaku,SUN,678,Arthur Masuaku,override,1.0,False
+pl,112449,Kaden Rodney,CRY,281,Kaden Rodney,override,1.0,False
+pl,10827,Remi Matthews,CRY,255,Remi Matthews,override,1.0,False
+pl,49270,James McAtee,NFO,426,James McAtee,override,1.0,False
+pl,98300,Omari Hutchinson,NFO,693,Omari Hutchinson,override,1.0,False
+pl,24626,Douglas Luiz,NFO,699,Douglas Luiz Soares de Paulo,override,1.0,False
+pl,68219,Arnaud Kalimuendo,NFO,696,Arnaud Kalimuendo,override,1.0,False
+pl,75105,Elijah Campbell,EVE,705,Elijah Campbell,override,1.0,False
+pl,112739,Jack Hinshelwood,BHA,163,Jack Hinshelwood,override,1.0,False
+pl,14656,Ryan Sessegnon,FUL,328,Ryan Sessegnon,override,1.0,False
+pl,14624,Antonee Robinson,FUL,316,Antonee Robinson,override,1.0,False
+pl,11026,André Onana,MUN,432,André Onana,override,1.0,False
+pl,16286,Rodri,MCI,421,Rodrigo 'Rodri' Hernandez Cascante,override,1.0,False
+pl,14805,Phil Foden,MCI,414,Phil Foden,override,1.0,False
+pl,12707,Ederson,MCI,399,Ederson Santana de Moraes,override,1.0,False
+pl,14446,Joe Willock,NEW,494,Joe Willock,override,1.0,False
+pl,19888,Jacob Ramsey,NEW,52,Jacob Ramsey,override,1.0,False
+pl,49909,Ryan Gravenberch,LIV,390,Ryan Gravenberch,override,1.0,False
+pl,149016,Giovanni Leoni,LIV,692,Giovanni Leoni,override,1.0,False
+pl,68582,Conor Bradley,LIV,375,Conor Bradley,override,1.0,False
+pl,122149,Callum Marshall,WHU,626,Callum Marshall,override,1.0,False
+pl,13549,Tosin Adarabioyo,CHE,232,Tosin Adarabioyo,override,1.0,False
+pl,64328,Gaga Slonina,CHE,223,Gabriel Słonina,override,1.0,False
+pl,114058,Travis Patterson,AVL,710,Travis Patterson,override,1.0,False
+pl,49759,Daichi Kamada,CRY,271,Daichi Kamada,override,1.0,False
+pl,109117,Yéremy Pino,CRY,712,Yéremy Pino Santos,override,1.0,False
+pl,13515,James Justin,LEE,706,James Justin,override,1.0,False
+pl,9576,Dominic Calvert-Lewin,LEE,691,Dominic Calvert-Lewin,override,1.0,False
+pl,9257,Jamaal Lascelles,NEW,480,Jamaal Lascelles,override,1.0,False
+pl,21584,Eberechi Eze,ARS,266,Eberechi Eze,override,1.0,False
+pl,145412,Andre Harriman-Annous,ARS,711,Andre Harriman-Annous,override,1.0,False
+pl,33245,Noussair Mazraoui,MUN,438,Noussair Mazraoui,override,1.0,False
+pl,119072,Mateus Fernandes,WHU,708,Mateus Gonçalo Espanha Fernandes,override,1.0,False
+pl,65961,Crysencio Summerville,WHU,615,Crysencio Summerville,override,1.0,False
+pl,51199,Nordi Mukiele,SUN,694,Nordi Mukiele,override,1.0,False
+pl,22043,Ethan Pinnock,BRE,111,Ethan Pinnock,override,1.0,False
+pl,62934,Manor Solomon,TOT,589,Manor Solomon,override,1.0,False
+pl,126824,Destiny Udogie,TOT,574,Destiny Udogie,override,1.0,False
+pl,32159,Romain Faivre,BOU,92,Romain Faivre,override,1.0,False
+pl,108877,Ladislav Krejcí,WOL,709,Ladislav Krejcí,override,1.0,False
+pl,24983,Vitalii Mykolenko,EVE,292,Vitalii Mykolenko,override,1.0,False
+pl,112917,Tyler Dibling,EVE,707,Tyler Dibling,override,1.0,False
+pl,118077,Piero Hincapié,ARS,725,Piero Hincapié,override,1.0,False
+pl,141639,John Victor,NFO,715,John Victor Maciel Furtado,override,1.0,False
+pl,138137,Dilane Bakwa,NFO,734,Dilane Bakwa,override,1.0,False
+pl,70249,Nicolò Savona,NFO,716,Nicolò Savona,override,1.0,False
+pl,140546,Veljko Milosavljevic,BOU,721,Veljko Milosavljevic,override,1.0,False
+pl,119381,Álex Jiménez,BOU,713,Álex Jiménez Sánchez,override,1.0,False
+pl,10766,Lewis Cook,BOU,88,Lewis Cook,override,1.0,False
+pl,117758,Tom Watson,BHA,172,Tom Watson,override,1.0,False
+pl,139930,Stefanos Tzimas,BHA,180,Stefanos Tzimas,override,1.0,False
+pl,14450,Reiss Nelson,BRE,27,Reiss Nelson,override,1.0,False
+pl,23194,Vitaly Janelt,BRE,125,Vitaly Janelt,override,1.0,False
+pl,133430,Facundo Buonanotte,CHE,168,Facundo Buonanotte,override,1.0,False
+pl,68987,Alejandro Garnacho,CHE,453,Alejandro Garnacho Ferreyra,override,1.0,False
+pl,31442,Armando Broja,BUR,680,Armando Broja,override,1.0,False
+pl,63851,Florentino,BUR,722,Florentino Ibrain Morris Luís,override,1.0,False
+pl,51498,Bashir Humphreys,BUR,193,Bashir Humphreys,override,1.0,False
+pl,146391,Christantus Uche,CRY,732,Christantus Uche,override,1.0,False
+pl,147312,Jaydee Canvot,CRY,723,Jaydee Canvot,override,1.0,False
+pl,67784,Brian Brobbey,SUN,730,Brian Brobbey,override,1.0,False
+pl,10394,Bertrand Traoré,SUN,735,Bertrand Traoré,override,1.0,False
+pl,25408,Lutsharel Geertruida,SUN,724,Lutsharel Geertruida,override,1.0,False
+pl,140024,Adam Aznou,EVE,667,Adam Aznou,override,1.0,False
+pl,128411,Merlin Röhl,EVE,728,Merlin Röhl,override,1.0,False
+pl,74585,Nathan Patterson,EVE,296,Nathan Patterson,override,1.0,False
+pl,14801,Jadon Sancho,AVL,456,Jadon Sancho,override,1.0,False
+pl,5066,Victor Lindelöf,AVL,719,Victor Lindelöf,override,1.0,False
+pl,33185,Harvey Elliott,AVL,389,Harvey Elliott,override,1.0,False
+pl,121610,Kevin,FUL,731,Kevin Santos Lopes de Macedo,override,1.0,False
+pl,66378,Illan Meslier,LEE,339,Illan Meslier,override,1.0,False
+pl,67178,Josko Gvardiol,MCI,403,Joško Gvardiol,override,1.0,False
+pl,22857,Gianluigi Donnarumma,MCI,736,Gianluigi Donnarumma,override,1.0,False
+pl,128136,Stephen Mfuni,MCI,740,Stephen Mfuni,override,1.0,False
+pl,126943,Savinho,MCI,415,Sávio Moreira de Oliveira,override,1.0,False
+pl,127852,Divine Mukasa,MCI,739,Divine Mukasa,override,1.0,False
+pl,304191,Diego León,MUN,439,Diego León Blanco,override,1.0,False
+pl,67910,Senne Lammens,MUN,733,Senne Lammens,override,1.0,False
+pl,115256,Nick Woltemade,NEW,714,Nick Woltemade,override,1.0,False
+pl,115371,Tolu Arokodare,WOL,720,Tolu Arokodare,override,1.0,False
+pl,9651,Dan Bentley,WOL,629,Daniel Bentley,override,1.0,False
+pl,146354,Luis Guilherme,WHU,619,Luis Guilherme Lira dos Santos,override,1.0,False
+pl,122005,Soungoutou Magassa,WHU,718,Soungoutou Magassa,override,1.0,False
+pl,21912,Igor Julio,WHU,149,Igor Julio dos Santos de Paulo,override,1.0,False
+pl,3309,Lukasz Fabianski,WHU,738,Lukasz Fabianski,override,1.0,False
+pl,69274,Xavi Simons,TOT,717,Xavi Simons,override,1.0,False
+pl,51185,Randal Kolo Muani,TOT,726,Randal Kolo Muani,override,1.0,False
+pl,42331,Christian Nørgaard,ARS,24,Christian Nørgaard,override,1.0,False
+pl,66570,Dane Scarlett,TOT,599,Dane Scarlett,override,1.0,False
+pl,8246,Ashley Barnes,BUR,218,Ashley Barnes,override,1.0,False
+pl,19620,Oleksandr Zinchenko,NFO,12,Oleksandr Zinchenko,override,1.0,False
+pl,53063,Samuel Chukwueze,FUL,727,Samuel Chukwueze,override,1.0,False
+pl,21737,Alexander Isak,LIV,499,Alexander Isak,override,1.0,False
+pl,130068,Marc Guiu,CHE,252,Marc Guiu Paz,override,1.0,False
+pl,14451,Eddie Nketiah,CRY,284,Eddie Nketiah,override,1.0,False
+pl,134789,Harry Gray,LEE,741,Harry Gray,override,1.0,False
+pl,53612,Benoît Badiashile,CHE,229,Benoît Badiashile Mukinayi,override,1.0,False
+pl,99282,Roméo Lavia,CHE,244,Roméo Lavia,override,1.0,False
+pl,12520,Mateo Kovacic,MCI,422,Mateo Kovačić,override,1.0,False
+pl,141186,Ryan McAidoo,MCI,742,Ryan McAidoo,override,1.0,False
+pl,115172,Nicolás Domínguez,NFO,519,Nicolás Domínguez,override,1.0,False
+pl,10361,Luke O'Nien,SUN,539,Luke O'Nien,override,1.0,False
+pl,4115,Ross Barkley,AVL,55,Ross Barkley,override,1.0,False
+pl,13559,Axel Tuanzebe,BUR,198,Axel Tuanzebe,override,1.0,False
+pl,144894,Jonah Kusi-Asare,FUL,737,Jonah Kusi-Asare,override,1.0,False
+pl,134782,Landon Emenalo,CHE,743,Landon Emenalo,override,1.0,False
+pl,10479,Freddie Woodman,LIV,369,Freddie Woodman,override,1.0,False
+pl,10801,Tom King,EVE,630,Tom King,override,1.0,False
+pl,145043,Charalampos Kostoulas,BHA,181,Charalampos Kostoulas,override,1.0,False
+pl,120049,Nehemiah Oriola,BHA,744,Nehemiah Oriola,override,1.0,False
+pl,146050,Jun'ai Byfield,TOT,745,Jun'ai Byfield,override,1.0,False
+pl,16582,Enes Ünal,BOU,98,Enes Ünal,override,1.0,False
+pl,129831,Kieran Morrison,LIV,746,Kieran Morrison,override,1.0,False
+pl,23581,Tyrell Malacia,MUN,448,Tyrell Malacia,override,1.0,False
+pl,128364,Samuel Amissah,FUL,323,Samuel Amissah,override,1.0,False
+pl,122944,Joe Knight,BHA,175,Joe Knight,override,1.0,False
+pl,303753,Ármin Pécsi,LIV,368,Ármin Pécsi,override,1.0,False
+pl,127888,Ben Broggio,AVL,60,Ben Broggio,override,1.0,False
+pl,131312,Ezra Mayers,WHU,747,Ezra Mayers,override,1.0,False
+pl,69766,Tawanda Chirewa,WOL,650,Tawanda Chirewa,override,1.0,False
+pl,145492,Mateus Mané,WOL,749,Mateus Mané,override,1.0,False
+pl,127847,Yusuf Akhamrich,TOT,751,Yusuf Akhamrich,override,1.0,False
+pl,124319,James Rowswell,TOT,750,James Rowswell,override,1.0,False
+pl,128366,Jack Fletcher,MUN,462,Jack Fletcher,override,1.0,False
+pl,143654,Airidas Golambeckis,WHU,752,Airidas Golambeckis,override,1.0,False
+pl,110117,George Earthy,WHU,620,George Earthy,override,1.0,False
+pl,124907,George Hemmings,AVL,754,George Hemmings,override,1.0,False
+pl,125829,Calvin Ramsay,LIV,380,Calvin Ramsay,override,1.0,False
+pl,67191,Lisandro Martínez,MUN,437,Lisandro Martínez,override,1.0,False
+pl,130151,Shea Lacey,MUN,755,Shea Lacey,override,1.0,False
+pl,2896,John Ruddy,NEW,753,John Ruddy,override,1.0,False
+pl,127659,Alex Murphy,NEW,481,Alex Murphy,override,1.0,False
+pl,130234,Sean Neave,NEW,501,Sean Neave,override,1.0,False
+pl,19680,Gabriel Jesus,ARS,31,Gabriel Fernando de Jesus,override,1.0,False
+pl,66578,Reece Welch,EVE,298,Reece Welch,override,1.0,False
+pl,51610,Romaine Mundle,SUN,548,Romaine Mundle,override,1.0,False
+pl,133097,Romelle Donovan,BRE,130,Romelle Donovan,override,1.0,False
+pl,256083,Malcom DaCosta,BOU,756,Malcom DaCosta,override,1.0,False
+pl,133169,Andrés García,AVL,42,Andrés García,override,1.0,False
+pl,108928,Ronnie Hollingshead,AVL,757,Ronnie Hollingshead,override,1.0,False
+pl,140223,Mohamadou Kanté,WHU,758,Mohamadou Kanté,override,1.0,False
+pl,147908,Marli Salmon,ARS,759,Marli Salmon,override,1.0,False
+pl,117497,Yoane Wissa,NEW,135,Yoane Wissa,override,1.0,False
+pl,75883,Mike Trésor,BUR,214,Mike Trésor Ndayishimiye,override,1.0,False
+pl,117584,Wellity Lucky,LIV,760,Wellity Lucky,override,1.0,False
+pl,147794,Leon Routh,AVL,768,Leon Routh,override,1.0,False
+pl,130150,Bendito Mantato,MUN,769,Bendito Mantato,override,1.0,False
+pl,135431,Freddie Simmonds,BHA,761,Freddie Simmonds,override,1.0,False
+pl,51609,Dennis Cirkin,SUN,535,Dennis Cirkin,override,1.0,False
+pl,112246,Leo Hjelde,SUN,536,Leo Fuhr Hjelde,override,1.0,False
+pl,138552,Seth Ridgeon,FUL,770,Seth Ridgeon,override,1.0,False
+pl,151538,Joél Drakes-Thomas,CRY,762,Joél Drakes-Thomas,override,1.0,False
+pl,128969,Reigan Heskey,MCI,764,Reigan Heskey,override,1.0,False
+pl,127537,Charlie Gray,MCI,763,Charlie Gray,override,1.0,False
+pl,119537,Leo Shahar,NEW,765,Leo Shahar,override,1.0,False
+pl,69070,Radu Dragusin,TOT,572,Radu Drăgușin,override,1.0,False
+pl,132169,Luke Rawlings,WOL,767,Luke Rawlings,override,1.0,False
+pl,108956,Alfie Pond,WOL,641,Alfie Pond,override,1.0,False
+pl,139644,Enso González,WOL,652,Enso González Medina,override,1.0,False
+pl,130672,Saheed Olagunju,WOL,766,Saheed Olagunju,override,1.0,False
+pl,148162,Gustavo Nunes,BRE,127,Gustavo Nunes Fernandes Gomes,override,1.0,False
+pl,144265,Yunus Konak,BRE,131,Yunus Emre Konak,override,1.0,False
+pl,147678,Dean Benamar,CRY,773,Dean Benamar,override,1.0,False
+pl,125524,Kota Takai,TOT,577,Takai Kōta,override,1.0,False
+pl,133650,Tyler Fletcher,MUN,771,Tyler Fletcher,override,1.0,False
+pl,313091,Sam Alabi,NEW,772,Sam Alabi,override,1.0,False
+pl,135764,Tymur Tutierov,SUN,775,Tymur Tutierov,override,1.0,False
+pl,20077,Jenson Jones,SUN,774,Jenson Jones,override,1.0,False
+pl,15114,Brandon Austin,TOT,566,Brandon Austin,override,1.0,False
+pl,127846,Callum Olusesi,TOT,595,Callum Olusesi,override,1.0,False
+pl,145134,Oliver Pimlott,BUR,776,Oliver Pimlott,override,1.0,False
+pl,119059,Jaydon Banel,BUR,213,Jaydon Banel,override,1.0,False
+pl,145550,Ben Casey,CRY,780,Ben Casey,override,1.0,False
+pl,129833,Chido Obi,MUN,467,Chido Obi,override,1.0,False
+pl,148984,Ethan Sutherland,WOL,778,Ethan Sutherland,override,1.0,False
+pl,107819,Temple Ojinnaka,WOL,777,Temple Ojinnaka,override,1.0,False
+pl,147692,Braiden Graham,EVE,779,Braiden Graham,override,1.0,False
+pl,124329,Callum Bates,EVE,306,Callum Bates,override,1.0,False
+pl,135746,TJ Carroll,AVL,781,TJ Carroll,override,1.0,False
+pl,3170,Fraser Forster,BOU,782,Fraser Forster,override,1.0,False
+pl,22542,Pascal Groß,BHA,783,Pascal Groß,override,1.0,False
+pl,304995,George Brierley,BUR,784,George Brierley,override,1.0,False
+pl,134487,Enock Agyei,BUR,203,Enock Agyei,override,1.0,False
+pl,75203,Alfie McNally,FUL,786,Alfie McNally,override,1.0,False
+pl,122289,Sam Chambers,LEE,787,Sam Chambers,override,1.0,False
+pl,140380,Godwill Kukonki,MUN,788,Godwill Kukonki,override,1.0,False
+pl,109707,Max Merrick,CHE,789,Max Merrick,override,1.0,False
+pl,49374,Brennan Johnson,CRY,580,Brennan Johnson,override,1.0,False
+pl,134791,Lucá Williams-Barnett,TOT,790,Lucá Williams-Barnett,override,1.0,False
+pl,304595,Pablo,WHU,785,Pablo Felipe Pereira de Jesus,override,1.0,False
+pl,134819,George King,CRY,793,George King,override,1.0,False
+pl,147032,Pedro Lima,WOL,640,Pedro Cardoso de Lima,override,1.0,False
+pl,111022,Max Alleyne,MCI,794,Max Alleyne,override,1.0,False
+pl,117644,Charlie Tasker,BHA,156,Charlie Tasker,override,1.0,False
+pl,129952,Harry Howell,BHA,795,Harry Howell,override,1.0,False
+pl,63257,Valentín Castellanos,WHU,791,Valentín Castellanos,override,1.0,False
+pl,156335,Charlie Stevens,BOU,799,Charlie Stevens,override,1.0,False
+pl,118436,Dominic Sadi,BOU,94,Dominic Sadi,override,1.0,False
+pl,129443,Kaye Furo,BRE,797,Kaye Furo,override,1.0,False
+pl,133430,Facundo Buonanotte,LEE,168,Facundo Buonanotte,override,1.0,False
+pl,25474,Antoine Semenyo,MCI,82,Antoine Semenyo,override,1.0,False
+pl,4511,Marcus Bettinelli,MCI,401,Marcus Bettinelli,override,1.0,False
+pl,110549,Chadi Riad,CRY,262,Chadi Riad Dnanou,override,1.0,False
+pl,112590,Danny Imray,CRY,798,Danny Imray,override,1.0,False
+pl,21887,Conor Gallagher,TOT,796,Conor Gallagher,override,1.0,False
+pl,50245,Yves Bissouma,TOT,587,Yves Bissouma,override,1.0,False
+pl,135304,Alex Tóth,BOU,801,Alex Tóth,override,1.0,False
+pl,70241,Teddy Sharman-Lowe,CHE,803,Teddy Sharman-Lowe,override,1.0,False
+pl,66318,Jarrad Branthwaite,EVE,290,Jarrad Branthwaite,override,1.0,False
+pl,14569,Marc Guéhi,MCI,260,Marc Guéhi,override,1.0,False
+pl,20489,Leon Bailey,AVL,49,Leon Bailey,override,1.0,False
+pl,13286,Tammy Abraham,AVL,808,Tammy Abraham,override,1.0,False
+pl,24626,Douglas Luiz,AVL,699,Douglas Luiz Soares de Paulo,override,1.0,False
+pl,303391,Luka Bentt,BRE,810,Luka Bentt,override,1.0,False
+pl,21912,Igor Julio,BHA,149,Igor Julio dos Santos de Paulo,override,1.0,False
+pl,4979,Adama Traoré,WHU,326,Adama Traoré Diarra,override,1.0,False
+pl,134820,Amara Nallo,LIV,378,Amara Nallo,override,1.0,False
+pl,127668,Lorenzo Lucca,NFO,805,Lorenzo Lucca,override,1.0,False
+pl,124846,Zach Marsh,CRY,286,Zach Marsh,override,1.0,False
+pl,4727,Simon Moore,SUN,529,Simon Moore,override,1.0,False
+pl,4617,James Ward-Prowse,BUR,614,James Ward-Prowse,override,1.0,False
+pl,114362,Rio Kyerematen,TOT,811,Rio Kyerematen,override,1.0,False
+pl,327705,Souza,TOT,804,João Victor de Souza Menezes,override,1.0,False
+pl,302807,Jerome Abbey,WOL,809,Jerome Abbey,override,1.0,False
+pl,139657,Christos Mandas,BOU,806,Christos Mandas,override,1.0,False
+pl,134234,Rayan,BOU,807,Rayan Vitor Simplício Rocha,override,1.0,False
+pl,115105,Nilson Angulo,SUN,813,Nilson Angulo,override,1.0,False
+pl,110958,Melker Ellborg,SUN,812,Melker Ellborg,override,1.0,False
+pl,35670,Jørgen Strand Larsen,CRY,654,Jørgen Strand Larsen,override,1.0,False
+pl,72265,Evann Guessand,CRY,677,Evann Guessand,override,1.0,False
+pl,54893,Axel Disasi,WHU,815,Axel Disasi,override,1.0,False
+pl,66657,Oscar Bobb,FUL,424,Oscar Bobb,override,1.0,False
+pl,118442,Tyrique George,EVE,243,Tyrique George,override,1.0,False
+pl,47133,Stefan Ortega,NFO,400,Stefan Ortega Moreno,override,1.0,False
+pl,76426,Luca Netz,NFO,814,Luca Netz,override,1.0,False
+pl,14830,Angel Gomes,WOL,816,Angel Gomes,override,1.0,False
+pl,9199,Adam Armstrong,WOL,817,Adam Armstrong,override,1.0,False
+pl,129740,Tom Edozie,WOL,651,Tom Edozie,override,1.0,False
+pl,132956,Mamadou Sarr,CHE,231,Mamadou Sarr,override,1.0,False
+pl,326089,Alysson Edward,AVL,792,Alysson Edward Franco da Rocha dos Santos,override,1.0,False
+pl,120175,Jack Moorhouse,MUN,464,Jack Moorhouse,override,1.0,False
+pl,327129,Djiamgone Jocelin Ta Bi,SUN,800,Djiamgone Jocelin Ta Bi,override,1.0,False
+pl,135941,James Wilson,TOT,818,James Wilson,override,1.0,False
+pl,148616,Milan Aleksic,SUN,546,Milan Aleksić,override,1.0,False
+pl,8171,Solly March,BHA,159,Solly March,override,1.0,False
+pl,149338,Ollie Shield,BRE,819,Ollie Shield,override,1.0,False
+pl,21317,Ellery Balcombe,BRE,102,Ellery Balcombe,override,1.0,False
+pl,305039,Kian McMahon-Brown,BUR,820,Kian McMahon-Brown,override,1.0,False
+pl,327693,Keiber Lamadrid,WHU,802,Keiber Lamadrid,override,1.0,False
+pl,145417,Jaydon Jones,SUN,822,Jaydon Jones,override,1.0,False
+pl,124383,Jack Whittaker,SUN,821,Jack Whittaker,override,1.0,False
+pl,119531,Finlay Herrick,WHU,825,Finlay Herrick,override,1.0,False
+pl,134463,Conor McManus,BRE,824,Conor McManus,override,1.0,False
+pl,287787,Joshua Stephenson,BRE,823,Joshua Stephenson,override,1.0,False
+pl,117557,Riley Owen,BRE,826,Riley Owen,override,1.0,False
+pl,140381,Jim Thwaites,MUN,827,Jim Thwaites,override,1.0,False
+pl,66728,Alfie Brooks,WOL,828,Alfie Brooks,override,1.0,False
+pl,8456,James Maddison,TOT,581,James Maddison,override,1.0,False
+pl,135830,Jesse Derry,CHE,829,Jesse Derry,override,1.0,False
+pl,301543,Will Wright,LIV,830,Will Wright,override,1.0,False
+pl,14457,Josh Dasilva,BRE,748,Josh Dasilva,override,1.0,False
+pl,51229,Levi Colwill,CHE,227,Levi Samuels Colwill,override,1.0,False
+pl,146394,Eric da Silva Moreira,NFO,523,Eric da Silva Moreira,override,1.0,False
+pl,128449,Zeki Amdouni,BUR,216,Zeki Amdouni,override,1.0,False
+pl,331630,Talla Ndiaye,LIV,832,Talla Ndiaye,override,1.0,False
+pl,147723,Josh Gracey,WOL,831,Josh Gracey,override,1.0,False
+pl,155030,Mathis Eboué,CHE,833,Mathis Eboué,override,1.0,False
+pl,145989,Ryan Kavuma-McQueen,CHE,834,Ryan Kavuma-McQueen,override,1.0,False
+pl,127854,Jimmy Sinclair,NFO,836,Jimmy Sinclair,override,1.0,False
+pl,123128,Archie Whitehall,NFO,835,Archie Whitehall,override,1.0,False
+pl,147695,Jayden Lienou,LEE,837,Jayden Lienou,override,1.0,False
+pl,125041,Rhys Chadwick,LEE,838,Rhys Chadwick,override,1.0,False
+pl,109138,James McConnell,LIV,394,James McConnell,override,1.0,False
+pl,122945,Shumaira Mheuka,CHE,840,Shumaira Mheuka,override,1.0,False
+pl,128977,Alfie Cresswell,LEE,839,Alfie Cresswell,override,1.0,False
+pl,13917,Connor Roberts,BUR,186,Connor Roberts,override,1.0,False
+pl,119036,Tommy Setford,ARS,4,Tommy Setford,override,1.0,False
+pl,304924,Lamin Sillah,NFO,841,Lamin Sillah,override,1.0,False

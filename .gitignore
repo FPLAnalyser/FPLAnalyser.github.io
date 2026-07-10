@@ -1,0 +1,9 @@
+.DS_Store
+cache/
+downloaded_files/
+logs/
+probe*.py
+diag*.py
+fotmob_debug_*.json
+verify_player.py
+README copy.md
