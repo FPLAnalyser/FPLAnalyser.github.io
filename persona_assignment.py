@@ -186,6 +186,7 @@ for element, group in gw_history.groupby("element"):
     row["pl_valid_mins_season"] = pl_valid.sum()
     for col in ["us_npxg", "us_xg_chain", "us_xg_buildup", "us_shots",
                 "us_shots_six_yard", "us_shots_penalty_area", "us_shots_out_of_box",
+                "us_shots_head",
                 "pl_touches_opp_box", "pl_crosses", "pl_corners_taken",
                 "pl_fk_crosses", "pl_fk_shots", "pl_chances_created", "xg_delta"]:
         row[f"{col}_season"] = group[col].sum(skipna=True) if group[col].notna().any() else np.nan
@@ -198,6 +199,7 @@ def add_season_per90(df):
     for col, src in [("us_npxg", "us"), ("us_xg_chain", "us"), ("us_xg_buildup", "us"),
                      ("us_shots", "us"), ("us_shots_six_yard", "us"),
                      ("us_shots_penalty_area", "us"), ("us_shots_out_of_box", "us"),
+                     ("us_shots_head", "us"),
                      ("pl_touches_opp_box", "pl"), ("pl_crosses", "pl"),
                      ("pl_corners_taken", "pl"), ("pl_fk_crosses", "pl"),
                      ("pl_fk_shots", "pl"), ("pl_chances_created", "pl")]:
@@ -289,6 +291,11 @@ def pct_thresholds(frame, wl):
         bad = [k for k, v in t.items() if pd.isna(v)]
         raise RuntimeError(f"GATE FAIL: percentile thresholds undefined for {wl}: {bad} "
                            f"(too few eligible players with valid source data)")
+    # NEW: headed-shot thresholds for Aerial Threat — added after the gate on
+    # purpose: NaN here just means the persona never fires for this window.
+    t["headed_p80"] = p(f"us_shots_head_per90_{sfx}", 0.80)
+    d_head = defs[f"us_shots_head_per90_{sfx}"] if f"us_shots_head_per90_{sfx}" in defs.columns else pd.Series(dtype=float)
+    t["def_headed_p80"] = q(d_head, 0.80)
     return t
 
 # ── Persona functions ─────────────────────────────────────────────────────────
@@ -349,6 +356,18 @@ def assign_set_piece_threat(row, t, sfx, is_def):
     if not pd.isna(touches) and touches >= touch_thr:
         score += 1
     return score >= 3  # taker + volume signal, or elite (P90) delivery volume
+
+def assign_aerial_threat(row, t, sfx, window, is_def):
+    """NEW persona — top-quintile headed-shot volume with a minimum count so a
+    single flicked header in a short window doesn't qualify."""
+    thr = t.get("def_headed_p80") if is_def else t.get("headed_p80")
+    if pd.isna(thr):
+        return False
+    head90 = nn(row, f"us_shots_head_per90_{sfx}")
+    head_ct = nn(row, f"us_shots_head_{sfx}")
+    min_ct = {4: 2, 6: 3}.get(window, 6 if is_def else 8)
+    return (not pd.isna(head90) and head90 >= thr
+            and not pd.isna(head_ct) and head_ct >= min_ct)
 
 def assign_gkp_personas(row, window):
     starts, mins = get_starts_mins(row, window)
@@ -445,6 +464,9 @@ def assign_def_personas(row, window, t):
         # NEW: Set Piece Threat (DEF)
         if assign_set_piece_threat(row, t, sfx, is_def=True):
             personas.append("Set Piece Threat")
+        # NEW: Aerial Threat (DEF) — headed-shot volume vs other defenders
+        if assign_aerial_threat(row, t, sfx, window, is_def=True):
+            personas.append("Aerial Threat")
         # NEW: Deep Lying Creator (ball-playing defenders qualify)
         cd = np.nansum([nn(row, f"us_xg_chain_per90_{sfx}"), nn(row, f"us_xg_buildup_per90_{sfx}")])
         npxg90 = nn(row, f"us_npxg_per90_{sfx}")
@@ -567,6 +589,10 @@ def assign_mf_personas(row, window, t):
         if assign_set_piece_threat(row, t, sfx, is_def=False):
             personas.append("Set Piece Threat")
 
+        # NEW: Aerial Threat — headed-shot volume vs other attackers
+        if assign_aerial_threat(row, t, sfx, window, is_def=False):
+            personas.append("Aerial Threat")
+
         # NEW: Deep Lying Creator — high chain/buildup, low direct goal threat
         if not pd.isna(creat_depth) and not pd.isna(npxg90):
             if creat_depth >= t["creat_depth_p80"] and npxg90 <= t["npxg_p40"]:
@@ -645,7 +671,7 @@ for pos in ["GKP", "DEF", "MID", "FWD"]:
         print(f"  {r['web_name']:<20} {r['personas']}{flags_str}")
 
 print("\n── NEW PERSONA COUNTS (4GW) ────────────────────────────────")
-for p in ["Volume Shooter", "Poacher", "Set Piece Threat", "Deep Lying Creator", "Differential"]:
+for p in ["Volume Shooter", "Poacher", "Set Piece Threat", "Aerial Threat", "Deep Lying Creator", "Differential"]:
     hits = personas_4gw[personas_4gw["personas"].str.contains(p, na=False)]
     names = ", ".join(hits["web_name"].head(8).tolist())
     print(f"  {p:<20} {len(hits):>3} players — {names}")

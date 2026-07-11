@@ -115,9 +115,33 @@ def minutes_scores(group):
     rotation_risk = (1 - start_rate) * 0.6 + early_subs * 0.4
     return round(start_rate, 3), round(mins_90_rate, 3), round(rotation_risk, 3)
 
-def calc_dimension_scores(group, position, mins):
+# Sustainability factor for goal threat: xG backed by shots in the box and
+# shots on target is repeatable; xG built on pot-shots from range is not.
+# Returns 1.0 (neutral) when Understat data is missing or shot volume too low.
+def goal_sustainability(group, min_shots):
+    shots = valid_sum(group, "us_shots")
+    if pd.isna(shots) or shots < min_shots:
+        return 1.0
+    box = valid_sum(group, "us_shots_six_yard")
+    pen = valid_sum(group, "us_shots_penalty_area")
+    sot = valid_sum(group, "us_sot")
+    box_share = ((box or 0) + (pen or 0)) / shots if not pd.isna(box) and not pd.isna(pen) else np.nan
+    sot_rate = sot / shots if not pd.isna(sot) else np.nan
+    if pd.isna(box_share) and pd.isna(sot_rate):
+        return 1.0
+    # Neutral profile (box_share ~0.62, sot_rate ~0.35) → factor ~1.0;
+    # elite box presence + accuracy → ~1.12; range-shooter profile → ~0.88
+    factor = 1.0
+    if not pd.isna(box_share):
+        factor += 0.20 * (box_share - 0.62)
+    if not pd.isna(sot_rate):
+        factor += 0.10 * (sot_rate - 0.35)
+    return round(min(max(factor, 0.85), 1.15), 4)
+
+def calc_dimension_scores(group, position, mins, window_key="season"):
     p = lambda col: per90(group, col, mins)
     dc = dc_hit_rate(group, position)
+    mv = MIN_VALID[window_key]
     scores = {}
 
     if position == "GKP":
@@ -135,12 +159,35 @@ def calc_dimension_scores(group, position, mins):
             (1 / (xgc + 0.1)) * 0.3 + max(0, xgc - gc) * 0.2)
         scores["dc_score"] = (dc * 0.5 + p("tackles") * 0.25 +
             p("clearances_blocks_interceptions") * 0.25)
-        scores["attacking_score"] = p("expected_assists") * 0.8 + p("expected_goals") * 0.2
+        # CHANGED: box presence and headed threat (set pieces) refine the xG/xA
+        # base when Understat data is available; falls back to the old formula.
+        att_base = p("expected_assists") * 0.8 + p("expected_goals") * 0.2
+        box90 = valid_per90(group, "us_shots_six_yard", mv)
+        pen90 = valid_per90(group, "us_shots_penalty_area", mv)
+        head90 = valid_per90(group, "us_shots_head", mv)
+        if not pd.isna(box90) and not pd.isna(pen90):
+            # ~0.10 xG per box shot, ~0.08 per headed shot: keeps units on the
+            # same scale as the xA/xG base before positional normalisation
+            bonus = (box90 + pen90) * 0.10 + (0 if pd.isna(head90) else head90 * 0.08)
+            att_base = att_base * 0.8 + bonus * 0.2
+        scores["attacking_score"] = att_base
         scores["bps_score"] = p("bps") * 0.6 + p("bonus") * 0.4
 
     elif position in ["MID", "FWD"]:
-        scores["goal_score"] = p("expected_goals") * 0.8 + p("goals_scored") * 0.2
-        scores["creative_score"] = p("expected_assists") * 0.8 + p("assists") * 0.2
+        # CHANGED: goal threat scaled by shot-profile sustainability — high xG
+        # backed by box shots / shots on target rates above the norm is
+        # boosted (max +15%), pot-shot-driven xG is trimmed (max −15%)
+        base_goal = p("expected_goals") * 0.8 + p("goals_scored") * 0.2
+        scores["goal_score"] = base_goal * goal_sustainability(group, MIN_SHOTS[window_key])
+        # CHANGED: chance creation volume/quality refines the xA base when PL
+        # data is available (chances ≈0.10 xA each, big chances ≈0.35).
+        creative = p("expected_assists") * 0.8 + p("assists") * 0.2
+        chances90 = valid_per90(group, "pl_chances_created", mv)
+        big90 = valid_per90(group, "pl_big_chances_created", mv)
+        if not pd.isna(chances90):
+            creation = chances90 * 0.10 + (0 if pd.isna(big90) else big90 * 0.35)
+            creative = creative * 0.7 + creation * 0.3
+        scores["creative_score"] = creative
         scores["dc_score"] = (dc * 0.5 + p("tackles") * 0.25 +
             p("clearances_blocks_interceptions") * 0.25)
         scores["bps_score"] = p("bps") * 0.6 + p("bonus") * 0.4
@@ -224,12 +271,12 @@ for element, group in gw.groupby("element"):
     if not season_ok and not gw4_ok:
         continue
 
-    season_dim = calc_dimension_scores(group, position, total_mins) if season_ok else {}
+    season_dim = calc_dimension_scores(group, position, total_mins, "season") if season_ok else {}
     season_start, season_mins90, season_rot = minutes_scores(group) if season_ok else (0, 0, 0)
     season_ppg = pts_per_game(group) if season_ok else 0
     season_value_score = season_ppg / price if price > 0 and season_ok else 0
 
-    gw4_dim = calc_dimension_scores(last4, position, last4_mins) if gw4_ok else {}
+    gw4_dim = calc_dimension_scores(last4, position, last4_mins, "gw4") if gw4_ok else {}
     gw4_start, gw4_mins90, gw4_rot = minutes_scores(last4) if gw4_ok else (0, 0, 0)
     gw4_ppg = pts_per_game(last4) if gw4_ok else 0
     gw4_value_score = gw4_ppg / price if price > 0 and gw4_ok else 0
@@ -409,6 +456,115 @@ for col in norm_cols:
 for prefix in ["season", "gw4"]:
     df[f"{prefix}_overall_rating"] = df[f"{prefix}_overall_score"].apply(score_to_stars)
     df[f"{prefix}_att_overall_rating"] = df[f"{prefix}_att_overall_score"].apply(score_to_stars)
+
+# ── NEW: Next-4-GW fixture-adjusted rating ───────────────────────────────────
+# Blends the player's own quality/form (season + last-4 overall scores) with
+# how attackable their next four gameweeks of opponents are. Opponent strength
+# comes from team_metrics.csv recent windows: xGC per game (how easy to attack)
+# and xG per game (how dangerous to defend against).
+print("Calculating next-4-GW fixture-adjusted ratings...")
+
+FIXTURES_FILE = os.path.join(DATA_DIR, "fixtures_enriched.csv")
+TEAM_METRICS_FILE = os.path.join(DATA_DIR, "team_metrics.csv")
+
+def build_next4():
+    if not (os.path.exists(FIXTURES_FILE) and os.path.exists(TEAM_METRICS_FILE)):
+        print("  SKIPPED: fixtures_enriched.csv / team_metrics.csv not found")
+        return
+    fixtures = pd.read_csv(FIXTURES_FILE)
+    tm = pd.read_csv(TEAM_METRICS_FILE)
+
+    # Opponent strength per game: blend last-4 and last-6 windows (recent form
+    # matters more than season aggregates for a forward-looking view)
+    def wblend(v4, v6, w4=0.6, w6=0.4):
+        vals = [(v, w) for v, w in [(v4, w4), (v6, w6)] if not pd.isna(v)]
+        if not vals:
+            return np.nan
+        return sum(v * w for v, w in vals) / sum(w for _, w in vals)
+
+    strength = {}
+    for team, sub in tm.groupby("team"):
+        w4 = sub[sub["window"] == "4gw"]
+        w6 = sub[sub["window"] == "6gw"]
+        xgc4 = w4["team_xgc"].iloc[0] / 4 if len(w4) else np.nan
+        xgc6 = w6["team_xgc"].iloc[0] / 6 if len(w6) else np.nan
+        xg4 = w4["team_xg"].iloc[0] / 4 if len(w4) else np.nan
+        xg6 = w6["team_xg"].iloc[0] / 6 if len(w6) else np.nan
+        strength[team] = {"xgc_pg": wblend(xgc4, xgc6), "xg_pg": wblend(xg4, xg6)}
+    league_xgc = np.nanmean([v["xgc_pg"] for v in strength.values()])
+    league_xg = np.nanmean([v["xg_pg"] for v in strength.values()])
+
+    upcoming = fixtures[fixtures["finished"].astype(str) != "True"].sort_values("gw")
+    if upcoming.empty:
+        print("  SKIPPED: no upcoming fixtures")
+        return
+    next4_gws = sorted(upcoming["gw"].unique())[:4]
+    window = upcoming[upcoming["gw"].isin(next4_gws)]
+
+    # Per-team fixture factors over the next 4 gameweeks. >1 = easier than the
+    # average run, <1 = harder. Home fixtures get a 5% boost, away a 5% cut.
+    # A blank GW just means fewer fixtures; a double GW counts both.
+    team_factors = {}
+    for team in strength:
+        att_f, def_f, n = [], [], 0
+        for _, f in window.iterrows():
+            if f["home_team"] == team or f["away_team"] == team:
+                home = f["home_team"] == team
+                opp = f["away_team"] if home else f["home_team"]
+                if opp not in strength:
+                    continue
+                ha = 1.05 if home else 0.95
+                att_f.append((strength[opp]["xgc_pg"] / league_xgc) * ha)
+                def_f.append((league_xg / strength[opp]["xg_pg"]) * ha)
+                n += 1
+        if n:
+            team_factors[team] = {
+                "att": float(np.mean(att_f)), "def": float(np.mean(def_f)), "n": n}
+
+    def player_factor(row):
+        tf = team_factors.get(row["team"])
+        if not tf:
+            return np.nan, 0
+        pos = row["position"]
+        if pos in ["MID", "FWD"]:
+            f = tf["att"]
+        elif pos == "DEF":
+            f = tf["def"] * 0.7 + tf["att"] * 0.3  # CS potential + attacking returns
+        else:
+            f = tf["def"]
+        return min(max(f, 0.75), 1.30), tf["n"]
+
+    factors, counts, raw = [], [], []
+    for _, row in df.iterrows():
+        f, n = player_factor(row)
+        factors.append(f)
+        counts.append(n)
+        season_s, gw4_s = row.get("season_overall_score"), row.get("gw4_overall_score")
+        if pd.isna(season_s) and pd.isna(gw4_s):
+            base = np.nan
+        elif pd.isna(gw4_s):
+            base = season_s
+        elif pd.isna(season_s):
+            base = gw4_s
+        else:
+            base = season_s * 0.55 + gw4_s * 0.45
+        raw.append(base * f if not pd.isna(base) and not pd.isna(f) else np.nan)
+
+    df["next4_fixture_factor"] = np.round(factors, 3)
+    df["next4_fixture_count"] = counts
+    df["next4_raw"] = raw
+
+    # Normalise 1-5 within position so the stars mean the same as other ratings
+    for pos in ["GKP", "DEF", "MID", "FWD"]:
+        valid = (df["position"] == pos) & df["next4_raw"].notna()
+        if valid.sum() > 1:
+            df.loc[valid, "next4_score"] = normalise_to_5(df.loc[valid, "next4_raw"])
+    df["next4_overall_rating"] = df["next4_score"].apply(score_to_stars) \
+        if "next4_score" in df.columns else "N/A"
+    print(f"  next4 ratings for {df['next4_raw'].notna().sum()} players "
+          f"over GWs {list(next4_gws)}")
+
+build_next4()
 
 # ── Save ──────────────────────────────────────────────────────────────────────
 # Merge photo codes and ownership

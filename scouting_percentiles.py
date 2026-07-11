@@ -46,6 +46,7 @@ ATTACKER_STATS = [
     ("sot", "Shots on Target", "us_sot", "us"),
     ("box_shots", "Shots in the Box", "__box_shots", "us"),
     ("headed_shots", "Headed Shots", "us_shots_head", "us"),
+    ("fk_shots", "Free Kick Shots", "pl_fk_shots", "pl"),
     ("touches_box", "Touches in Opponents Box", "pl_touches_opp_box", "pl"),
     # Creation
     ("assists", "Assists", "assists", None),
@@ -72,7 +73,7 @@ GKP_STATS = [
 ]
 
 GROUPS = [("Attacking", ["goals", "npxg", "xg_delta", "xgi", "xgi_delta", "shots",
-                         "sot", "box_shots", "headed_shots", "touches_box"]),
+                         "sot", "box_shots", "headed_shots", "fk_shots", "touches_box"]),
           ("Creation", ["assists", "xa", "xa_delta", "chances_created", "big_chances",
                         "xg_chain", "xg_buildup", "crosses", "sp_deliveries"]),
           ("Defending", ["tackles", "cbi", "recoveries", "def_contrib"])]

@@ -1112,6 +1112,7 @@
       <button class="rankings-tab" onclick="showRankingsTab('clean-sheets', this)">🛡️ Clean Sheets</button>
       <button class="rankings-tab" onclick="showRankingsTab('value', this)">💰 Value Picks</button>
       <button class="rankings-tab" onclick="showRankingsTab('form', this)">🔥 Form</button>
+      <button class="rankings-tab" onclick="showRankingsTab('next4', this)">📅 Next 4 GWs</button>
     </div>
 
     <div id="rankings-content">
@@ -1506,6 +1507,7 @@ function showPlayer(name) {
       ['Clean Sheet', 'season_cs_score_rating', 'gw4_cs_score_rating', 'cs'],
       ['Def Contribution', 'season_dc_score_rating', 'gw4_dc_score_rating', 'dc'],
       ['Attacking', 'season_attacking_score_rating', 'gw4_attacking_score_rating', 'attacking'],
+      ['Set Pieces', 'season_set_piece_score_rating', 'gw4_set_piece_score_rating', 'set_piece'],
       ['BPS / Bonus', 'season_bps_score_rating', 'gw4_bps_score_rating', 'bps'],
       ['Value', 'season_value_score_rating', 'gw4_value_score_rating', 'value'],
       ['Reliability', 'season_reliability_score_rating', 'gw4_reliability_score_rating', 'reliability'],
@@ -1514,7 +1516,11 @@ function showPlayer(name) {
   } else {
     dimRows = buildDimRows([
       ['Goal Threat', 'season_goal_score_rating', 'gw4_goal_score_rating', 'goal'],
+      ['Shot Quality', 'season_shot_quality_score_rating', 'gw4_shot_quality_score_rating', 'shot_quality'],
+      ['Finishing Skill', 'season_finishing_skill_score_rating', 'gw4_finishing_skill_score_rating', 'finishing_skill'],
       ['Creativity', 'season_creative_score_rating', 'gw4_creative_score_rating', 'creative'],
+      ['Creativity Depth', 'season_creativity_depth_score_rating', 'gw4_creativity_depth_score_rating', 'creativity_depth'],
+      ['Set Pieces', 'season_set_piece_score_rating', 'gw4_set_piece_score_rating', 'set_piece'],
       ['Def Contribution', 'season_dc_score_rating', 'gw4_dc_score_rating', 'dc'],
       ['BPS / Bonus', 'season_bps_score_rating', 'gw4_bps_score_rating', 'bps'],
       ['Value', 'season_value_score_rating', 'gw4_value_score_rating', 'value'],
@@ -1590,6 +1596,12 @@ function showPlayer(name) {
             <div class="rating-block">
               <div class="rating-label">Last 4GW (Position)</div>
               <div class="rating-stars">${gw4Overall}</div>
+            </div>
+            <div class="rating-block">
+              <div class="rating-label">
+                <span class="tooltip-wrap">Next 4GW (Fixtures)<span class="tooltip-icon">i</span><span class="tooltip-box">${TOOLTIPS.next4}</span></span>
+              </div>
+              <div class="rating-stars">${r.next4_overall_rating || 'N/A'}</div>
             </div>
             ${isAtt ? `
             <div class="rating-block">
@@ -1839,8 +1851,13 @@ const TOOLTIPS = {
   overall: 'Weighted composite of all dimension ratings. Reflects output, consistency and reliability combined into one score.',
   save: 'Based on saves per90 and frequency of earning save points (3+ saves per game). Higher = more active shot-stopper.',
   cs: 'Based on clean sheet rate, xGC per90 and goals conceded vs xGC. Higher = better defensive record.',
-  goal: 'Based on xG per90 and goals per90. Measures genuine goal threat regardless of actual goals scored.',
-  creative: 'Based on xA per90 and assists per90. Measures chance creation quality.',
+  goal: 'Based on xG per90 and goals per90, adjusted for shot-profile sustainability: xG backed by shots in the box and shots on target is boosted; xG built on long-range pot-shots is trimmed.',
+  creative: 'Based on xA per90 and assists per90, refined with chances created and big chances created per90 when opta data is available.',
+  shot_quality: 'Non-penalty xG per shot. High = takes high-quality chances (close range, good positions). Low = shoots from anywhere.',
+  finishing_skill: 'Sustained goals-minus-xG. Positive = converting above expectation (clinical); negative = leaving goals on the pitch.',
+  creativity_depth: 'xG Chain + xG Buildup per90 — involvement in moves that lead to shots, even without the final pass. Finds deep playmakers whose value xA misses.',
+  set_piece: 'Set piece delivery volume per90 (crosses, corners taken, free kick deliveries). Set piece takers have extra assist routes.',
+  next4: 'Fixture-adjusted forward rating: the player\'s quality and form (season + last 4 GW ratings) weighted by how attackable their next 4 gameweeks of opponents are, based on opponent recent xG conceded (for attackers) and xG created (for defenders/keepers), with home/away adjustment.',
   dc: 'Based on frequency of hitting the defensive contribution threshold and tackles/interceptions per90.',
   attacking: 'Based on xA and xG per90 for defenders. Identifies defenders who contribute offensively.',
   bps: 'Based on BPS and bonus per90. Players who consistently earn bonus points when they get any return.',
@@ -1876,7 +1893,12 @@ const TOOLTIPS = {
     'Differential': 'Low ownership but decent returns — could give you an edge over your rivals.',
     'Bonus Magnet': 'High BPS — virtually guaranteed bonus points when they get any return.',
     'Minutes Monster': 'Starts almost every game and plays the full 90. Completely nailed.',
-    'Minutes Risk': 'Not starting regularly in the last 4 games. Risky to own right now.'
+    'Minutes Risk': 'Not starting regularly in the last 4 games. Risky to own right now.',
+    'Volume Shooter': 'Lots of shots but poor shot quality — long-range efforts that rarely convert. xG may flatter.',
+    'Poacher': 'Shots concentrated in the six-yard box with little buildup involvement. Feeds off service.',
+    'Set Piece Threat': 'On set piece duty (corners/free kicks) with high delivery volume — extra assist and goal routes.',
+    'Aerial Threat': 'Top-quintile headed-shot volume for their position — dangerous from crosses and corners.',
+    'Deep Lying Creator': 'High xG chain/buildup with low direct goal threat — drives attacks from deep. Value that xA misses.'
   }
 };
 
@@ -2082,6 +2104,7 @@ function showTeam(team) {
               <th>Pos</th>
               <th>Season Rating</th>
               <th>4GW Rating</th>
+              <th>Next 4GW</th>
               <th>PPG</th>
             </tr>
           </thead>
@@ -2092,6 +2115,7 @@ function showTeam(team) {
                 <td><span class="badge badge-pos">${p.position}</span></td>
                 <td>${p.season_overall_rating || 'N/A'}</td>
                 <td>${p.gw4_overall_rating || 'N/A'}</td>
+                <td>${p.next4_overall_rating || 'N/A'}</td>
                 <td style="font-family:'JetBrains Mono',monospace;color:var(--accent)">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'}</td>
               </tr>
             `).join('')}
@@ -2235,6 +2259,27 @@ function renderRankings() {
         <td style="color:var(--text2)">${teamBadgeImg(p.team, 14)}${p.team}</td>
         <td>${p.season_cs_score_rating || 'N/A'}</td>
         <td>${p.season_overall_rating || 'N/A'}</td>
+      </tr>
+    `);
+  } else if (currentRankingsTab === 'next4') {
+    const rated = players.filter(p => p.next4_score);
+    if (!rated.length) {
+      container.innerHTML = `${posFilter}<div class="empty-state"><div class="empty-icon">📅</div>
+        <div>Next 4 GW ratings aren't available yet — they appear once upcoming fixtures exist for the season.</div></div>`;
+      return;
+    }
+    rated.sort((a, b) => (b.next4_score || 0) - (a.next4_score || 0));
+    headers = ['#', 'Player', 'Pos', 'Team', 'Next 4GW Rating', 'Fixture Ease', 'Season Rating', '4GW Rating'];
+    rows = rated.slice(0, 30).map((p, i) => `
+      <tr>
+        <td class="rank-num">${i + 1}</td>
+        <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
+        <td><span class="badge badge-pos">${p.position}</span></td>
+        <td style="color:var(--text2)">${teamBadgeImg(p.team, 14)}${p.team}</td>
+        <td>${p.next4_overall_rating || 'N/A'}</td>
+        <td style="font-family:'JetBrains Mono',monospace;color:${p.next4_fixture_factor >= 1 ? 'var(--accent)' : 'var(--hot)'}">${p.next4_fixture_factor ? '×' + Number(p.next4_fixture_factor).toFixed(2) : 'N/A'}</td>
+        <td>${p.season_overall_rating || 'N/A'}</td>
+        <td>${p.gw4_overall_rating || 'N/A'}</td>
       </tr>
     `);
   } else if (currentRankingsTab === 'value') {
@@ -2480,6 +2525,7 @@ function renderMyTeam(picksData, gw) {
         <div class="pitch-card-meta">${r.position} · £${r.price}m</div>
         ${nextFixturesHtml(r.team)}
         <div class="pitch-card-l4">L4: ${r.gw4_overall_rating || 'N/A'}</div>
+        <div class="pitch-card-l4">N4: ${r.next4_overall_rating || 'N/A'}</div>
         <div class="pitch-card-footer">${r.season_overall_rating || 'N/A'}</div>
         ${tooltip}
       </div>

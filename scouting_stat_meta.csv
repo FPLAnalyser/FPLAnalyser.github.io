@@ -8,6 +8,7 @@ shots,Shots Total,Attacking
 sot,Shots on Target,Attacking
 box_shots,Shots in the Box,Attacking
 headed_shots,Headed Shots,Attacking
+fk_shots,Free Kick Shots,Attacking
 touches_box,Touches in Opponents Box,Attacking
 assists,Assists,Creation
 xa,xA,Creation
