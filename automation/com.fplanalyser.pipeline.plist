@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  launchd job: runs the FPL pipeline every Tuesday and Friday at 07:30.
+  (Most GWs finish Sunday/Monday; Tuesday catches the full GW, Friday
+  catches midweek rounds and price changes before the weekend deadline.)
+
+  Install:
+    cp automation/com.fplanalyser.pipeline.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.fplanalyser.pipeline.plist
+
+  Check / uninstall:
+    launchctl list | grep fplanalyser
+    launchctl unload ~/Library/LaunchAgents/com.fplanalyser.pipeline.plist
+
+  NOTE: edit BOTH paths below if your repo is not at ~/Desktop/fpl-analyser
+  (launchd does not expand ~, so use the full /Users/<you>/... path).
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.fplanalyser.pipeline</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/YOUR_USERNAME/Desktop/fpl-analyser/automation/run_pipeline.sh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/YOUR_USERNAME/Desktop/fpl-analyser</string>
+
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict>
+      <key>Weekday</key><integer>2</integer>
+      <key>Hour</key><integer>7</integer>
+      <key>Minute</key><integer>30</integer>
+    </dict>
+    <dict>
+      <key>Weekday</key><integer>5</integer>
+      <key>Hour</key><integer>7</integer>
+      <key>Minute</key><integer>30</integer>
+    </dict>
+  </array>
+
+  <!-- if the Mac was asleep at the scheduled time, run on next wake -->
+  <key>StandardOutPath</key>
+  <string>/tmp/fplanalyser.pipeline.out</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/fplanalyser.pipeline.err</string>
+</dict>
+</plist>
