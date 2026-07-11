@@ -114,6 +114,10 @@ function renderScoutReport() {
     warnings.push(`No ${SCOUT_WINDOW_LABELS[scoutWindow]} data for ${missing.join(', ')} — not enough minutes in this window.`);
   }
 
+  if (shown.length >= 3 && window.innerWidth < 640) {
+    warnings.push('Tip: comparisons read best with 2 players on a phone.');
+  }
+
   if (warnings.length) {
     warn.textContent = warnings.join(' ');
     warn.style.display = 'block';

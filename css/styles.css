@@ -484,12 +484,32 @@
 
   .empty-icon { font-size: 48px; margin-bottom: 16px; }
 
+  /* ── Table scroll containers (phones) ── */
+  .tab-content, #rankings-content, #team-result {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   /* ── Responsive ── */
   @media (max-width: 600px) {
-    nav { padding: 0 16px; }
+    nav { padding: 0 12px; height: 56px; }
+    .nav-logo { margin-right: 12px; }
+    .nav-logo img { height: 34px !important; }
+    .nav-links {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      flex-wrap: nowrap;
+      white-space: nowrap;
+    }
+    .nav-links::-webkit-scrollbar { display: none; }
+    .nav-links a { padding: 8px 10px; font-size: 13px; flex-shrink: 0; }
     main { padding: 20px 16px; }
     .player-header { flex-direction: column; }
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    /* bigger touch targets */
+    .rankings-tab, .pos-btn { padding: 10px 16px; }
+    .tab { padding: 14px 14px; }
   }
 
   /* ── Position filter ── */
@@ -556,13 +576,8 @@
     pointer-events: none;
   }
 
-  .tooltip-wrap:hover .tooltip-box {
-    display: block;
-    top: auto;
-    bottom: auto;
-  }
-
-  .tooltip-wrap:hover .tooltip-box { display: block; }
+  .tooltip-wrap:hover .tooltip-box,
+  .tooltip-wrap.tooltip-open .tooltip-box { display: block; }
 
   /* ── Finance insight box ── */
   .finance-insight {
@@ -1005,3 +1020,55 @@
     .scout-cell { grid-template-columns: 44px 28px 1fr; padding-right: 10px; }
   }
   @media (prefers-reduced-motion: reduce) { .scout-bar i { transition: none; } }
+
+  /* ── Data staleness banner ── */
+  .stale-banner {
+    display: none;
+    background: #2a2110;
+    border-bottom: 1px solid #7c5c14;
+    color: #eab308;
+    font-size: 13px;
+    padding: 8px 24px;
+    text-align: center;
+  }
+  .stale-banner.show { display: block; }
+
+  /* ── Fixture chips (shared: Home ticker + pitch cards) ── */
+  .fixt-chip {
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    border-radius: 4px;
+    padding: 3px 6px;
+    white-space: nowrap;
+  }
+  .pitch-card-fixt .fixt-chip { flex: 1; font-size: 8px; padding: 2px 0; text-align: center; overflow: hidden; border-radius: 3px; }
+
+  /* ── Home: This Gameweek panel ── */
+  .gw-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .gw-panel-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .gw-panel-sub { font-size: 12px; color: var(--text2); margin-bottom: 16px; }
+  .gw-panel .dashboard-row { padding: 8px 0; }
+
+  /* ── Home: fixture ticker ── */
+  .ticker-table { width: 100%; border-collapse: collapse; }
+  .ticker-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .ticker-table tr:last-child td { border-bottom: none; }
+  .ticker-table tr:hover td { background: var(--bg); cursor: pointer; }
+  .ticker-team { font-weight: 600; }
+  .ticker-chips { display: flex; gap: 4px; }
+  .ticker-ease { font-family: 'JetBrains Mono', monospace; font-size: 12px; text-align: right; }
+
+  .home-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 700px) { .home-columns { grid-template-columns: 1fr; } }

@@ -1,6 +1,15 @@
 // teams.js — team list and team page
 import { data } from '../data.js';
 import { teamFullNames, teamCodes, teamBadgeUrl, teamBadgeImg, escQ } from '../util.js';
+import { showPage } from '../nav.js';
+
+// Navigate to the Teams page AND show a team (for links on other pages)
+function showTeamFromHome(team) {
+  const teamsLink = [...document.querySelectorAll('.nav-links a')].find(a => a.textContent === 'Teams');
+  showPage('teams', teamsLink);
+  showTeam(team);
+  window.scrollTo(0, 0);
+}
 
 function renderTeamsDefault() {
   const container = document.getElementById('team-result');
@@ -249,4 +258,5 @@ function showTeam(team) {
 }
 
 window.showTeam = showTeam;
+window.showTeamFromHome = showTeamFromHome;
 export { renderTeamsDefault, showTeam };

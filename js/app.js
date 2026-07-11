@@ -1,5 +1,5 @@
 // app.js — entry point: loads data, registers pages, wires global listeners
-import { loadAll, loaded } from './data.js';
+import { loadAll, loaded, data } from './data.js';
 import { registerPage } from './nav.js';
 import { renderHome } from './pages/home.js';
 import { renderPlayersDefault, initSearch } from './pages/players.js';
@@ -13,15 +13,43 @@ registerPage('player', renderPlayersDefault);
 registerPage('teams', renderTeamsDefault);
 
 // Position tooltips to avoid screen edges
-document.addEventListener('mouseover', e => {
-  const wrap = e.target.closest('.tooltip-wrap');
-  if (!wrap) return;
+function positionTooltip(wrap) {
   const box = wrap.querySelector('.tooltip-box');
   if (!box) return;
   const rect = wrap.getBoundingClientRect();
   box.style.top = (rect.bottom + 8) + 'px';
   box.style.left = Math.min(rect.left, window.innerWidth - 300) + 'px';
+}
+
+document.addEventListener('mouseover', e => {
+  const wrap = e.target.closest('.tooltip-wrap');
+  if (wrap) positionTooltip(wrap);
 });
+
+// Tap-to-toggle tooltips for touch screens (hover doesn't exist there)
+document.addEventListener('click', e => {
+  const wrap = e.target.closest('.tooltip-wrap');
+  document.querySelectorAll('.tooltip-wrap.tooltip-open').forEach(w => {
+    if (w !== wrap) w.classList.remove('tooltip-open');
+  });
+  if (wrap && wrap.querySelector('.tooltip-box')) {
+    wrap.classList.toggle('tooltip-open');
+    if (wrap.classList.contains('tooltip-open')) positionTooltip(wrap);
+  }
+});
+
+// ── Data staleness banner ─────────────────────────────────────────────────────
+function checkStaleness(meta) {
+  console.log('site data meta:', meta);
+  const banner = document.getElementById('stale-banner');
+  if (!banner || !meta || !meta.generated_at) return;
+  const ageDays = (Date.now() - new Date(meta.generated_at).getTime()) / 86400000;
+  if (ageDays > 8) {
+    const date = new Date(meta.generated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    banner.textContent = `⚠️ Data last updated ${date} (${Math.floor(ageDays)} days ago)`;
+    banner.classList.add('show');
+  }
+}
 
 // ── Sortable Tables ──────────────────────────────────────────────────────────
 document.addEventListener('click', (e) => {
@@ -84,6 +112,7 @@ document.addEventListener('click', (e) => {
 async function init() {
   await loadAll();
   if (!loaded) return;
+  checkStaleness(data.meta);
   initSearch();
   renderHome();
   showRankingsTab('top-rated', document.querySelector('#page-rankings .rankings-tab'));

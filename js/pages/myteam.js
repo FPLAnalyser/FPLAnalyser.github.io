@@ -1,6 +1,6 @@
 // myteam.js — Load Your Team page
 import { data } from '../data.js';
-import { teamFullNames, escQ, avgRatingField } from '../util.js';
+import { teamFullNames, escQ, avgRatingField, fixtureChips } from '../util.js';
 import { fplFetch, getGwForTeam } from '../api.js';
 
 async function loadMyTeam() {
@@ -60,19 +60,10 @@ function renderMyTeam(picksData, gw) {
   const overallAvg = avgRatingField(startingRated, 'season_overall_rating');
   const teamValue = entryHistory.value != null ? (entryHistory.value / 10).toFixed(1) : 'N/A';
 
-  // Next 3 fixtures for a team from the pre-computed fixture_ease table,
-  // with FPL-style FDR colouring
-  const FDR_COLORS = { 1: ['#375523','#fff'], 2: ['#01fc7a','#0D1117'], 3: ['#e7e7e7','#0D1117'], 4: ['#ff1751','#fff'], 5: ['#80072d','#fff'] };
+  // Next 3 fixtures for a team, FDR-coloured (shared helper in util.js)
   function nextFixturesHtml(team) {
-    const upcoming = (data.fixtureEase || [])
-      .filter(f => f.team === team)
-      .sort((a, b) => a.gw - b.gw)
-      .slice(0, 3);
-    if (!upcoming.length) return '';
-    return `<div class="pitch-card-fixt">${upcoming.map(f => {
-      const [bg, fg] = FDR_COLORS[f.fdr] || FDR_COLORS[3];
-      return `<span style="background:${bg};color:${fg}" title="GW${f.gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamFullNames[f.opponent] || f.opponent} (FDR ${f.fdr})">${f.opponent} (${f.venue})</span>`;
-    }).join('')}</div>`;
+    const chips = fixtureChips(data.fixtureEase, team, 3);
+    return chips ? `<div class="pitch-card-fixt">${chips}</div>` : '';
   }
 
   function pitchCard({ pick, r, p4, std }, isBench) {

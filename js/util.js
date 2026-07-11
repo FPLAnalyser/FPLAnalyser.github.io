@@ -113,5 +113,23 @@ function avgRatingField(rows, field) {
   return vals.reduce((a, b) => a + b, 0) / vals.length;
 }
 
+// FPL-style fixture difficulty colours: [background, text]
+const FDR_COLORS = { 1: ['#375523','#fff'], 2: ['#01fc7a','#0D1117'], 3: ['#e7e7e7','#0D1117'], 4: ['#ff1751','#fff'], 5: ['#80072d','#fff'] };
+
+// Next-n fixture chips for a team from the pre-computed fixture_ease rows.
+// Returns '' when no upcoming fixtures are known (e.g. between seasons).
+function fixtureChips(fixtureEase, team, n = 3) {
+  const upcoming = (fixtureEase || [])
+    .filter(f => f.team === team)
+    .sort((a, b) => a.gw - b.gw)
+    .slice(0, n);
+  if (!upcoming.length) return '';
+  return upcoming.map(f => {
+    const [bg, fg] = FDR_COLORS[f.fdr] || FDR_COLORS[3];
+    return `<span class="fixt-chip" style="background:${bg};color:${fg}" title="GW${f.gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamFullNames[f.opponent] || f.opponent} (FDR ${f.fdr})">${f.opponent} (${f.venue})</span>`;
+  }).join('');
+}
+
 export { teamFullNames, teamCodes, teamBadgeUrl, teamBadgeImg, norm, escQ,
-         getPositionEmoji, tip, TOOLTIPS, starsToNum, avgRatingField };
+         getPositionEmoji, tip, TOOLTIPS, starsToNum, avgRatingField,
+         FDR_COLORS, fixtureChips };
