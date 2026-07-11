@@ -1,7 +1,20 @@
-// myteam.js — Load Your Team page
+// myteam.js — Load Your Team page: squad view + the insight report
 import { data } from '../data.js';
 import { teamFullNames, escQ, avgRatingField, fixtureChips } from '../util.js';
-import { fplFetch, getGwForTeam } from '../api.js';
+import { fplFetch, getGwForTeam, fetchEntryHistory } from '../api.js';
+import { buildContext, runRules, SEVERITY_META } from '../insights/engine.js';
+import { RULES } from '../insights/rules.js';
+
+const TEAM_ID_KEY = 'fpl_team_id';
+
+// Prefill (and auto-load) the last-used team ID
+function initMyTeam() {
+  const saved = localStorage.getItem(TEAM_ID_KEY);
+  if (!saved) return;
+  const input = document.getElementById('team-id-input');
+  input.value = saved;
+  loadMyTeam();
+}
 
 async function loadMyTeam() {
   const input = document.getElementById('team-id-input');
@@ -17,9 +30,13 @@ async function loadMyTeam() {
 
   try {
     const gw = await getGwForTeam(teamId);
-    const picksRes = await fplFetch(`https://fantasy.premierleague.com/api/entry/${teamId}/event/${gw}/picks/`);
+    const [picksRes, historyData] = await Promise.all([
+      fplFetch(`https://fantasy.premierleague.com/api/entry/${teamId}/event/${gw}/picks/`),
+      fetchEntryHistory(teamId)
+    ]);
     const picksData = await picksRes.json();
-    renderMyTeam(picksData, gw);
+    localStorage.setItem(TEAM_ID_KEY, teamId);
+    renderMyTeam(picksData, gw, historyData);
   } catch (e) {
     console.error('Load team error:', e);
     const detail = (e && e.message ? e.message : String(e)).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
@@ -33,7 +50,52 @@ async function loadMyTeam() {
   }
 }
 
-function renderMyTeam(picksData, gw) {
+// Build the "Your Report" section by running the insight rules over the squad
+function buildReportHtml(picksData, historyData) {
+  const ctx = buildContext(picksData, historyData, {
+    ratings: data.ratings,
+    personas4: data.personas4,
+    seasonToDate: data.seasonToDate,
+    playerForm: data.playerForm,
+    priceRisk: data.priceRisk,
+    personaShifts: data.personaShifts,
+    teamMetrics: data.teamMetrics,
+    benchmarks: data.benchmarks,
+    replacementPool: data.replacementPool,
+    fixtureEase: data.fixtureEase,
+  });
+  const insights = runRules(RULES, ctx);
+
+  if (!insights.length) {
+    return `<div class="section-header">Your Report</div>
+      <div class="insight-card" style="--sev:#38D9A9">
+        <div class="insight-headline">No alerts this week — your squad looks healthy 🟢</div>
+        <div class="insight-body">Every starter is minutes-secure and every position group is holding up against the league benchmarks. Check back after the next gameweek.</div>
+      </div>`;
+  }
+
+  const suggestionCard = (s) => `
+    <div class="suggestion-card" onclick="event.stopPropagation();showPlayerFromRankings('${escQ(s.web_name)}')">
+      ${s.code ? `<img src="https://resources.premierleague.com/premierleague/photos/players/110x140/p${s.code}.png" onerror="this.style.opacity='0'">` : ''}
+      <div class="suggestion-info">
+        <div class="suggestion-name">${s.web_name} <span style="color:var(--text2);font-weight:400">£${Number(s.price).toFixed(1)}m · ${s.team}</span></div>
+        <div class="suggestion-reason">${s.reason}</div>
+      </div>
+    </div>`;
+
+  return `<div class="section-header">Your Report</div>
+    ${insights.map(i => {
+      const meta = SEVERITY_META[i.severity] || SEVERITY_META.info;
+      return `<div class="insight-card" style="--sev:${meta.color}">
+        <div class="insight-headline">${meta.icon} ${i.headline}</div>
+        <div class="insight-body">${i.body}</div>
+        <div class="insight-evidence">${i.evidence}</div>
+        ${i.suggestions && i.suggestions.length ? `<div class="suggestion-row">${i.suggestions.map(suggestionCard).join('')}</div>` : ''}
+      </div>`;
+    }).join('')}`;
+}
+
+function renderMyTeam(picksData, gw, historyData) {
   const container = document.getElementById('loadteam-result');
   const picks = picksData.picks || [];
   const entryHistory = picksData.entry_history || {};
@@ -143,6 +205,8 @@ function renderMyTeam(picksData, gw) {
       </div>
     </div>
 
+    ${buildReportHtml(picksData, historyData)}
+
     <div class="section-header">Starting XI — Gameweek ${gw}</div>
     <div class="pitch">
       <div class="pitch-box"></div>
@@ -157,4 +221,4 @@ function renderMyTeam(picksData, gw) {
 }
 
 window.loadMyTeam = loadMyTeam;
-export { loadMyTeam };
+export { loadMyTeam, initMyTeam };

@@ -52,4 +52,16 @@ async function getGwForTeam(teamId) {
   return getCurrentGwFallback();
 }
 
-export { fplFetch, getCurrentGwFallback, getGwForTeam };
+// Season history for a manager: per-GW points, bench points, chips used.
+// Non-fatal — the report just skips history-based insights if this fails.
+async function fetchEntryHistory(teamId) {
+  try {
+    const res = await fplFetch(`https://fantasy.premierleague.com/api/entry/${teamId}/history/`);
+    return await res.json();
+  } catch (e) {
+    console.warn('entry history unavailable:', e.message || e);
+    return null;
+  }
+}
+
+export { fplFetch, getCurrentGwFallback, getGwForTeam, fetchEntryHistory };

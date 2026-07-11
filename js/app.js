@@ -6,7 +6,7 @@ import { renderPlayersDefault, initSearch } from './pages/players.js';
 import { renderTeamsDefault } from './pages/teams.js';
 import { showRankingsTab } from './pages/rankings.js';
 import { loadScoutData } from './pages/scout.js';
-import './pages/myteam.js';
+import { initMyTeam } from './pages/myteam.js';
 
 registerPage('home', renderHome);
 registerPage('player', renderPlayersDefault);
@@ -117,5 +117,6 @@ async function init() {
   renderHome();
   showRankingsTab('top-rated', document.querySelector('#page-rankings .rankings-tab'));
   loadScoutData();
+  initMyTeam();
 }
 init();

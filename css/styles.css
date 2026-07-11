@@ -1072,3 +1072,42 @@
 
   .home-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   @media (max-width: 700px) { .home-columns { grid-template-columns: 1fr; } }
+
+  /* ── My Team: insight report ── */
+  .insight-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--sev, var(--accent));
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .insight-headline { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .insight-body { font-size: 13px; line-height: 1.55; color: var(--text); }
+  .insight-evidence {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text2);
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border);
+  }
+  .suggestion-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .suggestion-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px 8px 8px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    flex: 1 1 220px;
+    max-width: 320px;
+  }
+  .suggestion-card:hover { border-color: var(--accent); }
+  .suggestion-card img { width: 34px; height: 43px; border-radius: 4px; object-fit: cover; background: var(--border); flex-shrink: 0; }
+  .suggestion-info { min-width: 0; }
+  .suggestion-name { font-size: 13px; font-weight: 600; color: var(--accent); }
+  .suggestion-reason { font-size: 11px; color: var(--text2); margin-top: 2px; }

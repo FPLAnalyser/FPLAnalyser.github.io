@@ -160,6 +160,95 @@ else:
 row_counts["fixture_ease"] = write_json(
     "fixture_ease", [{k: v for k, v in r.items() if v is not None} for r in ease_rows])
 
+# ── Insight-engine tables (My Team report) ────────────────────────────────────
+print("Building insight tables...")
+
+ratings = pd.read_csv(os.path.join(DATA_DIR, "fpl_analyser_ratings.csv"))
+std = pd.read_csv(os.path.join(DATA_DIR, "season_to_date_per90.csv"))
+
+# benchmarks: per-position points-per-game distribution the report compares
+# a user's position groups against
+bench = {}
+for pos, sub in ratings.groupby("position"):
+    season = sub[sub["season_ok"] == True]["season_ppg"].dropna()
+    gw4 = sub[sub["gw4_ok"] == True]["gw4_ppg"].dropna()
+    xgi = std[std["position"] == pos]["xgi_per90_4gw"].dropna()
+    bench[pos] = {
+        "season_ppg_median": round(float(season.median()), 3) if len(season) else None,
+        "season_ppg_p25": round(float(season.quantile(0.25)), 3) if len(season) else None,
+        "season_ppg_p75": round(float(season.quantile(0.75)), 3) if len(season) else None,
+        "gw4_ppg_median": round(float(gw4.median()), 3) if len(gw4) else None,
+        "xgi_per90_4gw_median": round(float(xgi.median()), 3) if len(xgi) else None,
+    }
+write_json("benchmarks", bench)
+row_counts["benchmarks"] = len(bench)
+
+# replacement_pool: slim candidate rows; the browser filters by budget,
+# position, ownership and fixtures
+POOL_COLS = ["element", "web_name", "team", "position", "price", "code",
+             "selected_by_percent", "season_ppg", "gw4_ppg",
+             "season_overall_score", "season_overall_rating",
+             "gw4_overall_score", "gw4_overall_rating",
+             "next4_score", "next4_overall_rating", "next4_fixture_factor",
+             "season_start_rate", "gw4_start_rate"]
+pool = ratings[(ratings["season_ok"] == True) | (ratings["gw4_ok"] == True)]
+pool = pool[[c for c in POOL_COLS if c in pool.columns]]
+row_counts["replacement_pool"] = write_json("replacement_pool", df_to_records(pool))
+
+# persona_shifts: players whose 4GW personas differ from their season identity
+pS = pd.read_csv(os.path.join(DATA_DIR, "personas_season.csv"))
+p4 = pd.read_csv(os.path.join(DATA_DIR, "personas_4gw.csv"))
+def persona_set(v):
+    return set() if pd.isna(v) or v == "None" else set(str(v).split(", "))
+shifts = []
+merged = pS[["element", "web_name", "team", "position", "personas"]].merge(
+    p4[["element", "personas"]], on="element", suffixes=("_season", "_4gw"))
+for _, r in merged.iterrows():
+    season_set, gw4_set = persona_set(r["personas_season"]), persona_set(r["personas_4gw"])
+    gained, lost = sorted(gw4_set - season_set), sorted(season_set - gw4_set)
+    if gained or lost:
+        shifts.append({"element": int(r["element"]), "web_name": r["web_name"],
+                       "team": r["team"], "position": r["position"],
+                       "gained": gained, "lost": lost})
+row_counts["persona_shifts"] = write_json("persona_shifts", shifts)
+
+# price_risk: net-transfer velocity extremes (likely price movers)
+ENRICHED_FILE = os.environ.get("FPL_ENRICHED_FILE") or os.path.join(DATA_DIR, "player_gw_enriched.csv")
+gw_hist = pd.read_csv(ENRICHED_FILE, usecols=["element", "web_name", "team", "position",
+                                              "gw_from_fixture", "transfers_balance", "selected"])
+for c in ["transfers_balance", "selected"]:
+    gw_hist[c] = pd.to_numeric(gw_hist[c], errors="coerce").fillna(0)
+last_gw = gw_hist["gw_from_fixture"].max()
+recent = gw_hist[gw_hist["gw_from_fixture"] >= last_gw - 1]
+vel_rows = []
+for element, g in recent.groupby("element"):
+    g = g.sort_values("gw_from_fixture")
+    selected = g["selected"].iloc[-1]
+    if selected < 1000:  # ignore barely-owned players
+        continue
+    net = g["transfers_balance"].sum()
+    vel_rows.append({"element": int(element), "web_name": g["web_name"].iloc[-1],
+                     "team": g["team"].iloc[-1], "position": g["position"].iloc[-1],
+                     "net_transfers_2gw": int(net), "selected": int(selected),
+                     "velocity": round(net / selected, 4)})
+vel = pd.DataFrame(vel_rows)
+risk = []
+if len(vel) >= 20:
+    lo, hi = vel["velocity"].quantile(0.05), vel["velocity"].quantile(0.95)
+    flagged = vel[(vel["velocity"] <= lo) | (vel["velocity"] >= hi)].copy()
+    flagged["risk"] = np.where(flagged["velocity"] <= lo, "drop", "rise")
+    risk = df_to_records(flagged)
+row_counts["price_risk"] = write_json("price_risk", risk)
+
+# player_form: absolute last-4GW sums (final rolling snapshot per player)
+r4 = pd.read_csv(os.path.join(DATA_DIR, "rolling_4gw.csv"),
+                 usecols=["element", "gw_from_fixture", "goals_scored_4gw", "assists_4gw",
+                          "expected_goal_involvements_4gw", "total_points_4gw",
+                          "minutes_4gw", "starts_4gw"])
+form = r4.sort_values("gw_from_fixture").groupby("element").last().reset_index()
+form = form.drop(columns=["gw_from_fixture"])
+row_counts["player_form"] = write_json("player_form", df_to_records(form))
+
 # ── Meta manifest ─────────────────────────────────────────────────────────────
 finished = fixtures[fixtures["finished"].astype(str) == "True"]
 meta = {

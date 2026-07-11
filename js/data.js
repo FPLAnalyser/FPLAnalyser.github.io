@@ -41,7 +41,8 @@ async function loadTable(name, csvFile) {
 
 async function loadAll() {
   try {
-    const [ratings, personas4, metrics, teamMetrics, std, tier, fixtureEase, meta] = await Promise.all([
+    const [ratings, personas4, metrics, teamMetrics, std, tier, fixtureEase, meta,
+           benchmarks, replacementPool, personaShifts, priceRisk, playerForm] = await Promise.all([
       loadTable('ratings', 'fpl_analyser_ratings.csv'),
       loadTable('personas_4gw', 'personas_4gw.csv'),
       loadTable('advanced_metrics', 'advanced_metrics.csv'),
@@ -49,7 +50,13 @@ async function loadAll() {
       loadTable('season_to_date', 'season_to_date_per90.csv'),
       loadTable('player_tiers', 'player_tier_performance.csv'),
       loadTable('fixture_ease', null).catch(() => []),
-      loadTable('meta', null).catch(() => null)
+      loadTable('meta', null).catch(() => null),
+      // insight-engine tables — optional so an older data drop can't break the site
+      loadTable('benchmarks', null).catch(() => null),
+      loadTable('replacement_pool', null).catch(() => []),
+      loadTable('persona_shifts', null).catch(() => []),
+      loadTable('price_risk', null).catch(() => []),
+      loadTable('player_form', null).catch(() => [])
     ]);
     data.ratings = ratings;
     data.personas4 = personas4;
@@ -59,6 +66,11 @@ async function loadAll() {
     data.tierPerf = tier;
     data.fixtureEase = fixtureEase;
     data.meta = meta;
+    data.benchmarks = benchmarks;
+    data.replacementPool = replacementPool;
+    data.personaShifts = personaShifts;
+    data.priceRisk = priceRisk;
+    data.playerForm = playerForm;
     loaded = true;
   } catch(e) {
     console.error('Load error:', e);
