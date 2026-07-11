@@ -830,7 +830,7 @@
   }
 
   .pitch-card {
-    width: 104px;
+    width: 92px;
     background: rgba(13, 17, 23, 0.92);
     border: 1px solid rgba(255,255,255,0.14);
     border-radius: 8px;
@@ -857,10 +857,37 @@
 
   .pitch-card-photo {
     width: 100%;
-    height: 66px;
+    height: 46px;
     object-fit: cover;
+    object-position: top;
     display: block;
     background: var(--border);
+  }
+
+  .pitch-card-fixt {
+    display: flex;
+    gap: 2px;
+    padding: 3px 3px 0;
+  }
+
+  .pitch-card-fixt span {
+    flex: 1;
+    font-size: 8px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    border-radius: 3px;
+    padding: 2px 0;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .pitch-card-l4 {
+    font-size: 10px;
+    color: var(--text2);
+    padding: 2px 4px 0;
+    white-space: nowrap;
+    overflow: hidden;
   }
 
   .pitch-card-meta {
@@ -1085,6 +1112,7 @@
       <button class="rankings-tab" onclick="showRankingsTab('clean-sheets', this)">🛡️ Clean Sheets</button>
       <button class="rankings-tab" onclick="showRankingsTab('value', this)">💰 Value Picks</button>
       <button class="rankings-tab" onclick="showRankingsTab('form', this)">🔥 Form</button>
+      <button class="rankings-tab" onclick="showRankingsTab('next4', this)">📅 Next 4 GWs</button>
     </div>
 
     <div id="rankings-content">
@@ -1100,6 +1128,15 @@
     <div class="scout-picker">
       <input type="text" id="scout-search" placeholder="Search player… (up to 4)" autocomplete="off">
       <div class="scout-suggestions" id="scout-suggestions"></div>
+    </div>
+    <div class="rankings-tabs" id="scout-window-tabs" style="margin-bottom:12px">
+      <button class="rankings-tab active" onclick="setScoutWindow('season', this)">Season</button>
+      <button class="rankings-tab" onclick="setScoutWindow('l6', this)">Last 6 GWs</button>
+      <button class="rankings-tab" onclick="setScoutWindow('l4', this)">Last 4 GWs</button>
+    </div>
+    <div class="rankings-tabs" id="scout-peer-tabs" style="margin-bottom:16px">
+      <button class="rankings-tab active" onclick="setScoutPeer('pooled', this)">MID + FWD pooled</button>
+      <button class="rankings-tab" onclick="setScoutPeer('position', this)">By position</button>
     </div>
     <div class="scout-chips" id="scout-chips"></div>
     <div class="scout-warn" id="scout-warn"></div>
@@ -1136,6 +1173,22 @@ function teamBadgeUrl(team) {
   return code ? `https://resources.premierleague.com/premierleague/badges/t${code}.png` : null;
 }
 
+// Small inline team badge to sit next to any team name
+function teamBadgeImg(team, size = 14) {
+  const url = teamBadgeUrl(team);
+  return url ? `<img src="${url}" alt="" style="width:${size}px;height:${size}px;object-fit:contain;vertical-align:-2px;margin-right:4px;" onerror="this.style.display='none'">` : '';
+}
+
+// Accent-insensitive comparison ("Dubravka" matches "Dúbravka")
+function norm(s) {
+  return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+// Escape a name for use inside a single-quoted onclick attribute (O'Riley etc.)
+function escQ(s) {
+  return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
 // ── Load all CSVs ────────────────────────────────────────────────────────────
 function parseCSV(text) {
   const lines = text.trim().split('\n');
@@ -1159,13 +1212,14 @@ async function loadCSV(file) {
 
 async function loadAll() {
   try {
-    const [ratings, personas4, metrics, teamMetrics, std, tier] = await Promise.all([
+    const [ratings, personas4, metrics, teamMetrics, std, tier, fixtures] = await Promise.all([
       loadCSV('fpl_analyser_ratings.csv'),
       loadCSV('personas_4gw.csv'),
       loadCSV('advanced_metrics.csv'),
       loadCSV('team_metrics.csv'),
       loadCSV('season_to_date_per90.csv'),
-      loadCSV('player_tier_performance.csv')
+      loadCSV('player_tier_performance.csv'),
+      loadCSV('fixtures_enriched.csv').catch(() => [])
     ]);
     data.ratings = ratings;
     data.personas4 = personas4;
@@ -1173,6 +1227,7 @@ async function loadAll() {
     data.teamMetrics = teamMetrics;
     data.seasonToDate = std;
     data.tierPerf = tier;
+    data.fixtures = fixtures;
     loaded = true;
     initSearch();
     renderHome();
@@ -1238,7 +1293,7 @@ function renderHome() {
       <img class="dashboard-photo" src="${photo}" onerror="this.style.opacity='0'">
       <div class="dashboard-info">
         <div class="dashboard-name">${p.web_name}</div>
-        <div class="dashboard-meta">${pos} · ${teamFullNames[team] || team}</div>
+        <div class="dashboard-meta">${pos} · ${teamBadgeImg(team, 12)}${teamFullNames[team] || team}</div>
       </div>
       <span class="dashboard-value">${valueHtml}</span>
     </div>`;
@@ -1248,7 +1303,7 @@ function renderHome() {
     return `<div class="dashboard-card">
       <div class="dashboard-card-header">${icon} ${title}</div>
       <div class="dashboard-card-body">
-        ${players.map((p,i) => { p._rank = i+1; return dashRow(p, valueFn(p), `showPlayerFromRankings('${p.web_name}')`); }).join('')}
+        ${players.map((p,i) => { p._rank = i+1; return dashRow(p, valueFn(p), `showPlayerFromRankings('${escQ(p.web_name)}')`); }).join('')}
       </div>
     </div>`;
   }
@@ -1281,11 +1336,11 @@ function renderPlayersDefault() {
         const photo = p.code ? `https://resources.premierleague.com/premierleague/photos/players/110x140/p${p.code}.png` : '';
         const streak = data.seasonToDate.find(x => x.web_name === p.web_name);
         const streakIcon = streak && streak.streak === '🔥 Hot' ? '🔥' : streak && streak.streak === '🧊 Cold' ? '🧊' : '';
-        return `<div class="ownership-card" onclick="showPlayer('${p.web_name}')">
+        return `<div class="ownership-card" onclick="showPlayer('${escQ(p.web_name)}')">
           <img class="ownership-photo" src="${photo}" onerror="this.style.opacity='0'">
           <div class="ownership-info">
             <div class="ownership-name">${p.web_name} ${streakIcon}</div>
-            <div class="ownership-meta">${p.position} · ${teamFullNames[p.team] || p.team} · £${p.price}m</div>
+            <div class="ownership-meta">${p.position} · ${teamBadgeImg(p.team, 12)}${teamFullNames[p.team] || p.team} · £${p.price}m</div>
             <div class="ownership-pct">${p.selected_by_percent}% owned</div>
             <div style="font-size:11px;margin-top:2px">${p.season_overall_rating || 'N/A'}</div>
           </div>
@@ -1343,19 +1398,19 @@ function initSearch() {
   const dropdown = document.getElementById('player-dropdown');
 
   input.addEventListener('input', () => {
-    const q = input.value.toLowerCase().trim();
+    const q = norm(input.value.trim());
     if (q.length < 2) { dropdown.classList.remove('show'); return; }
 
     const matches = data.ratings
-      .filter(p => p.web_name && p.web_name.toLowerCase().includes(q))
+      .filter(p => p.web_name && norm(p.web_name).includes(q))
       .slice(0, 8);
 
     if (matches.length === 0) { dropdown.classList.remove('show'); return; }
 
     dropdown.innerHTML = matches.map(p => `
-      <div class="dropdown-item" onclick="showPlayer('${p.web_name}')">
+      <div class="dropdown-item" onclick="showPlayer('${escQ(p.web_name)}')">
         <span>${p.web_name}</span>
-        <span class="dropdown-meta">${p.position} · ${p.team} · £${p.price}m</span>
+        <span class="dropdown-meta">${p.position} · ${teamBadgeImg(p.team, 12)}${p.team} · £${p.price}m</span>
       </div>
     `).join('');
     dropdown.classList.add('show');
@@ -1371,16 +1426,16 @@ function initSearch() {
   const teams = [...new Set(data.teamMetrics.filter(t => t.window === 'season').map(t => t.team))].sort();
 
   teamInput.addEventListener('input', () => {
-    const q = teamInput.value.toLowerCase().trim();
+    const q = norm(teamInput.value.trim());
     if (q.length < 1) { teamDropdown.classList.remove('show'); return; }
 
     const matches = teams.filter(t =>
-      t.toLowerCase().includes(q) || (teamFullNames[t] || '').toLowerCase().includes(q)
+      norm(t).includes(q) || norm(teamFullNames[t] || '').includes(q)
     ).slice(0, 8);
     if (matches.length === 0) { teamDropdown.classList.remove('show'); return; }
 
     teamDropdown.innerHTML = matches.map(t => `
-      <div class="dropdown-item" onclick="showTeam('${t}')">${teamFullNames[t] || t} <span class="dropdown-meta">${t}</span></div>
+      <div class="dropdown-item" onclick="showTeam('${t}')">${teamBadgeImg(t, 16)}${teamFullNames[t] || t} <span class="dropdown-meta">${t}</span></div>
     `).join('');
     teamDropdown.classList.add('show');
   });
@@ -1452,6 +1507,7 @@ function showPlayer(name) {
       ['Clean Sheet', 'season_cs_score_rating', 'gw4_cs_score_rating', 'cs'],
       ['Def Contribution', 'season_dc_score_rating', 'gw4_dc_score_rating', 'dc'],
       ['Attacking', 'season_attacking_score_rating', 'gw4_attacking_score_rating', 'attacking'],
+      ['Set Pieces', 'season_set_piece_score_rating', 'gw4_set_piece_score_rating', 'set_piece'],
       ['BPS / Bonus', 'season_bps_score_rating', 'gw4_bps_score_rating', 'bps'],
       ['Value', 'season_value_score_rating', 'gw4_value_score_rating', 'value'],
       ['Reliability', 'season_reliability_score_rating', 'gw4_reliability_score_rating', 'reliability'],
@@ -1460,7 +1516,11 @@ function showPlayer(name) {
   } else {
     dimRows = buildDimRows([
       ['Goal Threat', 'season_goal_score_rating', 'gw4_goal_score_rating', 'goal'],
+      ['Shot Quality', 'season_shot_quality_score_rating', 'gw4_shot_quality_score_rating', 'shot_quality'],
+      ['Finishing Skill', 'season_finishing_skill_score_rating', 'gw4_finishing_skill_score_rating', 'finishing_skill'],
       ['Creativity', 'season_creative_score_rating', 'gw4_creative_score_rating', 'creative'],
+      ['Creativity Depth', 'season_creativity_depth_score_rating', 'gw4_creativity_depth_score_rating', 'creativity_depth'],
+      ['Set Pieces', 'season_set_piece_score_rating', 'gw4_set_piece_score_rating', 'set_piece'],
       ['Def Contribution', 'season_dc_score_rating', 'gw4_dc_score_rating', 'dc'],
       ['BPS / Bonus', 'season_bps_score_rating', 'gw4_bps_score_rating', 'bps'],
       ['Value', 'season_value_score_rating', 'gw4_value_score_rating', 'value'],
@@ -1536,6 +1596,12 @@ function showPlayer(name) {
             <div class="rating-block">
               <div class="rating-label">Last 4GW (Position)</div>
               <div class="rating-stars">${gw4Overall}</div>
+            </div>
+            <div class="rating-block">
+              <div class="rating-label">
+                <span class="tooltip-wrap">Next 4GW (Fixtures)<span class="tooltip-icon">i</span><span class="tooltip-box">${TOOLTIPS.next4}</span></span>
+              </div>
+              <div class="rating-stars">${r.next4_overall_rating || 'N/A'}</div>
             </div>
             ${isAtt ? `
             <div class="rating-block">
@@ -1785,8 +1851,13 @@ const TOOLTIPS = {
   overall: 'Weighted composite of all dimension ratings. Reflects output, consistency and reliability combined into one score.',
   save: 'Based on saves per90 and frequency of earning save points (3+ saves per game). Higher = more active shot-stopper.',
   cs: 'Based on clean sheet rate, xGC per90 and goals conceded vs xGC. Higher = better defensive record.',
-  goal: 'Based on xG per90 and goals per90. Measures genuine goal threat regardless of actual goals scored.',
-  creative: 'Based on xA per90 and assists per90. Measures chance creation quality.',
+  goal: 'Based on xG per90 and goals per90, adjusted for shot-profile sustainability: xG backed by shots in the box and shots on target is boosted; xG built on long-range pot-shots is trimmed.',
+  creative: 'Based on xA per90 and assists per90, refined with chances created and big chances created per90 when opta data is available.',
+  shot_quality: 'Non-penalty xG per shot. High = takes high-quality chances (close range, good positions). Low = shoots from anywhere.',
+  finishing_skill: 'Sustained goals-minus-xG. Positive = converting above expectation (clinical); negative = leaving goals on the pitch.',
+  creativity_depth: 'xG Chain + xG Buildup per90 — involvement in moves that lead to shots, even without the final pass. Finds deep playmakers whose value xA misses.',
+  set_piece: 'Set piece delivery volume per90 (crosses, corners taken, free kick deliveries). Set piece takers have extra assist routes.',
+  next4: 'Fixture-adjusted forward rating: the player\'s quality and form (season + last 4 GW ratings) weighted by how attackable their next 4 gameweeks of opponents are, based on opponent recent xG conceded (for attackers) and xG created (for defenders/keepers), with home/away adjustment.',
   dc: 'Based on frequency of hitting the defensive contribution threshold and tackles/interceptions per90.',
   attacking: 'Based on xA and xG per90 for defenders. Identifies defenders who contribute offensively.',
   bps: 'Based on BPS and bonus per90. Players who consistently earn bonus points when they get any return.',
@@ -1822,7 +1893,12 @@ const TOOLTIPS = {
     'Differential': 'Low ownership but decent returns — could give you an edge over your rivals.',
     'Bonus Magnet': 'High BPS — virtually guaranteed bonus points when they get any return.',
     'Minutes Monster': 'Starts almost every game and plays the full 90. Completely nailed.',
-    'Minutes Risk': 'Not starting regularly in the last 4 games. Risky to own right now.'
+    'Minutes Risk': 'Not starting regularly in the last 4 games. Risky to own right now.',
+    'Volume Shooter': 'Lots of shots but poor shot quality — long-range efforts that rarely convert. xG may flatter.',
+    'Poacher': 'Shots concentrated in the six-yard box with little buildup involvement. Feeds off service.',
+    'Set Piece Threat': 'On set piece duty (corners/free kicks) with high delivery volume — extra assist and goal routes.',
+    'Aerial Threat': 'Top-quintile headed-shot volume for their position — dangerous from crosses and corners.',
+    'Deep Lying Creator': 'High xG chain/buildup with low direct goal threat — drives attacks from deep. Value that xA misses.'
   }
 };
 
@@ -1991,7 +2067,7 @@ function showTeam(team) {
               return `
               <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
                 <span style="color:var(--text2);font-size:12px;width:20px">#${i+1}</span>
-                <span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')" style="flex:1;margin:0 12px">${p.web_name}</span>
+                <span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')" style="flex:1;margin:0 12px">${p.web_name}</span>
                 <span style="font-family:'JetBrains Mono',monospace;color:var(--text2);font-size:12px;margin-right:12px">${playerShare}% of team pts</span>
                 <span style="font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:13px">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'} ppg</span>
                 <span style="margin-left:12px">${p.season_overall_rating || 'N/A'}</span>
@@ -2028,16 +2104,18 @@ function showTeam(team) {
               <th>Pos</th>
               <th>Season Rating</th>
               <th>4GW Rating</th>
+              <th>Next 4GW</th>
               <th>PPG</th>
             </tr>
           </thead>
           <tbody>
             ${teamPlayers.map(p => `
               <tr>
-                <td><span class="clickable-name" onclick="showPlayer('${p.web_name}')">${p.web_name}</span></td>
+                <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
                 <td><span class="badge badge-pos">${p.position}</span></td>
                 <td>${p.season_overall_rating || 'N/A'}</td>
                 <td>${p.gw4_overall_rating || 'N/A'}</td>
+                <td>${p.next4_overall_rating || 'N/A'}</td>
                 <td style="font-family:'JetBrains Mono',monospace;color:var(--accent)">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'}</td>
               </tr>
             `).join('')}
@@ -2073,7 +2151,7 @@ let currentPos = 'ALL';
 function showRankingsTab(tab, el) {
   currentRankingsTab = tab;
   currentPos = 'ALL';
-  document.querySelectorAll('.rankings-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#page-rankings .rankings-tab').forEach(t => t.classList.remove('active'));
   if (el) el.classList.add('active');
   renderRankings();
 }
@@ -2113,9 +2191,9 @@ function renderRankings() {
     rows = players.slice(0, 30).map((p, i) => `
       <tr>
         <td class="rank-num">${i + 1}</td>
-        <td><span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')">${p.web_name}</span></td>
+        <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
         <td><span class="badge badge-pos">${p.position}</span></td>
-        <td style="color:var(--text2)">${p.team}</td>
+        <td style="color:var(--text2)">${teamBadgeImg(p.team, 14)}${p.team}</td>
         <td style="font-family:'JetBrains Mono',monospace">£${p.price}m</td>
         <td>${p.season_overall_rating || 'N/A'}</td>
         <td>${p.gw4_overall_rating || 'N/A'}</td>
@@ -2135,9 +2213,9 @@ function renderRankings() {
       const xgShareSeason = m && m.xg_share_season ? (m.xg_share_season * 100).toFixed(1) + '%' : 'N/A';
       return `<tr>
         <td class="rank-num">${i + 1}</td>
-        <td><span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')">${p.web_name}</span></td>
+        <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
         <td><span class="badge badge-pos">${p.position}</span></td>
-        <td style="color:var(--text2)">${p.team}</td>
+        <td style="color:var(--text2)">${teamBadgeImg(p.team, 14)}${p.team}</td>
         <td>${p.season_goal_score_rating || 'N/A'}</td>
         <td>${p.season_att_goal_score_rating || 'N/A'}</td>
         <td style="font-family:'JetBrains Mono',monospace">${xgShare4gw}</td>
@@ -2157,9 +2235,9 @@ function renderRankings() {
       const xaShareSeason = m && m.xa_share_season ? (m.xa_share_season * 100).toFixed(1) + '%' : 'N/A';
       return `<tr>
         <td class="rank-num">${i + 1}</td>
-        <td><span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')">${p.web_name}</span></td>
+        <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
         <td><span class="badge badge-pos">${p.position}</span></td>
-        <td style="color:var(--text2)">${p.team}</td>
+        <td style="color:var(--text2)">${teamBadgeImg(p.team, 14)}${p.team}</td>
         <td>${p.season_creative_score_rating || 'N/A'}</td>
         <td>${p.season_att_creative_score_rating || 'N/A'}</td>
         <td style="font-family:'JetBrains Mono',monospace">${xaShare4gw}</td>
@@ -2176,11 +2254,32 @@ function renderRankings() {
     rows = filtered.slice(0, 30).map((p, i) => `
       <tr>
         <td class="rank-num">${i + 1}</td>
-        <td><span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')">${p.web_name}</span></td>
+        <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
         <td><span class="badge badge-pos">${p.position}</span></td>
-        <td style="color:var(--text2)">${p.team}</td>
+        <td style="color:var(--text2)">${teamBadgeImg(p.team, 14)}${p.team}</td>
         <td>${p.season_cs_score_rating || 'N/A'}</td>
         <td>${p.season_overall_rating || 'N/A'}</td>
+      </tr>
+    `);
+  } else if (currentRankingsTab === 'next4') {
+    const rated = players.filter(p => p.next4_score);
+    if (!rated.length) {
+      container.innerHTML = `${posFilter}<div class="empty-state"><div class="empty-icon">📅</div>
+        <div>Next 4 GW ratings aren't available yet — they appear once upcoming fixtures exist for the season.</div></div>`;
+      return;
+    }
+    rated.sort((a, b) => (b.next4_score || 0) - (a.next4_score || 0));
+    headers = ['#', 'Player', 'Pos', 'Team', 'Next 4GW Rating', 'Fixture Ease', 'Season Rating', '4GW Rating'];
+    rows = rated.slice(0, 30).map((p, i) => `
+      <tr>
+        <td class="rank-num">${i + 1}</td>
+        <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
+        <td><span class="badge badge-pos">${p.position}</span></td>
+        <td style="color:var(--text2)">${teamBadgeImg(p.team, 14)}${p.team}</td>
+        <td>${p.next4_overall_rating || 'N/A'}</td>
+        <td style="font-family:'JetBrains Mono',monospace;color:${p.next4_fixture_factor >= 1 ? 'var(--accent)' : 'var(--hot)'}">${p.next4_fixture_factor ? '×' + Number(p.next4_fixture_factor).toFixed(2) : 'N/A'}</td>
+        <td>${p.season_overall_rating || 'N/A'}</td>
+        <td>${p.gw4_overall_rating || 'N/A'}</td>
       </tr>
     `);
   } else if (currentRankingsTab === 'value') {
@@ -2189,9 +2288,9 @@ function renderRankings() {
     rows = players.slice(0, 30).map((p, i) => `
       <tr>
         <td class="rank-num">${i + 1}</td>
-        <td><span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')">${p.web_name}</span></td>
+        <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
         <td><span class="badge badge-pos">${p.position}</span></td>
-        <td style="color:var(--text2)">${p.team}</td>
+        <td style="color:var(--text2)">${teamBadgeImg(p.team, 14)}${p.team}</td>
         <td style="font-family:'JetBrains Mono',monospace">£${p.price}m</td>
         <td>${p.season_value_score_rating || 'N/A'}</td>
         <td style="font-family:'JetBrains Mono',monospace;color:var(--accent)">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'}</td>
@@ -2212,7 +2311,7 @@ function renderRankings() {
             <tbody>
               ${hot.filter(p => currentPos === 'ALL' || p.position === currentPos).slice(0,15).map(p => `
                 <tr>
-                  <td><span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')">${p.web_name}</span></td>
+                  <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
                   <td><span class="badge badge-pos">${p.position}</span></td>
                   <td style="font-family:'JetBrains Mono',monospace">${Number(p.pts_per90_season).toFixed(2)}</td>
                   <td style="font-family:'JetBrains Mono',monospace">${Number(p.pts_per90_4gw).toFixed(2)}</td>
@@ -2229,7 +2328,7 @@ function renderRankings() {
             <tbody>
               ${cold.filter(p => currentPos === 'ALL' || p.position === currentPos).slice(0,15).map(p => `
                 <tr>
-                  <td><span class="clickable-name" onclick="showPlayerFromRankings('${p.web_name}')">${p.web_name}</span></td>
+                  <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
                   <td><span class="badge badge-pos">${p.position}</span></td>
                   <td style="font-family:'JetBrains Mono',monospace">${Number(p.pts_per90_season).toFixed(2)}</td>
                   <td style="font-family:'JetBrains Mono',monospace">${Number(p.pts_per90_4gw).toFixed(2)}</td>
@@ -2377,6 +2476,23 @@ function renderMyTeam(picksData, gw) {
   const overallAvg = avgRatingField(startingRated, 'season_overall_rating');
   const teamValue = entryHistory.value != null ? (entryHistory.value / 10).toFixed(1) : 'N/A';
 
+  // Next 3 fixtures for a team, with FPL-style FDR colouring
+  const FDR_COLORS = { 1: ['#375523','#fff'], 2: ['#01fc7a','#0D1117'], 3: ['#e7e7e7','#0D1117'], 4: ['#ff1751','#fff'], 5: ['#80072d','#fff'] };
+  function nextFixturesHtml(team) {
+    const upcoming = (data.fixtures || [])
+      .filter(f => String(f.finished) !== 'True' && (f.home_team === team || f.away_team === team))
+      .sort((a, b) => a.gw - b.gw)
+      .slice(0, 3);
+    if (!upcoming.length) return '';
+    return `<div class="pitch-card-fixt">${upcoming.map(f => {
+      const home = f.home_team === team;
+      const opp = home ? f.away_team : f.home_team;
+      const fdr = home ? f.home_fdr : f.away_fdr;
+      const [bg, fg] = FDR_COLORS[fdr] || FDR_COLORS[3];
+      return `<span style="background:${bg};color:${fg}" title="GW${f.gw} ${home ? 'vs' : 'at'} ${teamFullNames[opp] || opp} (FDR ${fdr})">${opp} (${home ? 'H' : 'A'})</span>`;
+    }).join('')}</div>`;
+  }
+
   function pitchCard({ pick, r, p4, std }, isBench) {
     if (!r) {
       return `<div class="pitch-card ${isBench ? 'bench' : ''}">
@@ -2400,13 +2516,16 @@ function renderMyTeam(picksData, gw) {
     `;
 
     return `
-      <div class="pitch-card tooltip-wrap ${isBench ? 'bench' : ''}" onclick="showPlayerFromRankings('${r.web_name}')">
+      <div class="pitch-card tooltip-wrap ${isBench ? 'bench' : ''}" onclick="showPlayerFromRankings('${escQ(r.web_name)}')">
         ${pick.is_captain ? '<span class="pitch-armband">C</span>' : ''}
         ${pick.is_vice_captain ? '<span class="pitch-armband vc">V</span>' : ''}
         ${streakIcon ? `<span class="pitch-streak">${streakIcon}</span>` : ''}
         <img class="pitch-card-photo" src="${photo}" onerror="this.style.opacity='0'">
         <div class="pitch-card-name">${r.web_name}</div>
         <div class="pitch-card-meta">${r.position} · £${r.price}m</div>
+        ${nextFixturesHtml(r.team)}
+        <div class="pitch-card-l4">L4: ${r.gw4_overall_rating || 'N/A'}</div>
+        <div class="pitch-card-l4">N4: ${r.next4_overall_rating || 'N/A'}</div>
         <div class="pitch-card-footer">${r.season_overall_rating || 'N/A'}</div>
         ${tooltip}
       </div>
@@ -2534,8 +2653,41 @@ loadAll();
 
 // ── Scouting Report ──────────────────────────────────────────────────────────
 const SCOUT_MAX = 4;
-const SCOUT_COLORS = ['#38D9A9', '#F78166', '#FFD700', '#4ECDC4'];
+const SCOUT_COLORS = ['#38D9A9', '#F78166', '#FFD700', '#B197FC'];
 let scoutSelected = [];
+let scoutWindow = 'season';   // 'season' | 'l6' | 'l4'
+let scoutPeer = 'pooled';     // 'pooled' (MID+FWD) | 'position'
+
+const SCOUT_WINDOW_LABELS = { season: 'season to date', l6: 'last 6 gameweeks', l4: 'last 4 gameweeks' };
+
+function setScoutWindow(w, el) {
+  scoutWindow = w;
+  document.querySelectorAll('#scout-window-tabs .rankings-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderScoutReport();
+}
+
+function setScoutPeer(p, el) {
+  scoutPeer = p;
+  document.querySelectorAll('#scout-peer-tabs .rankings-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderScoutReport();
+}
+
+// Rows for the current window; falls back to treating rows without a window
+// column as season data (older CSVs).
+function scoutRow(element) {
+  return data.scout.find(p => p.element === element && (p.window || 'season') === scoutWindow);
+}
+
+function scoutPct(row, key) {
+  if (scoutPeer === 'position' && row[key + '_pct_pos'] !== undefined) {
+    const v = row[key + '_pct_pos'];
+    return (v === '' || v == null) ? null : v;
+  }
+  const v = row[key + '_pct'];
+  return (v === '' || v == null) ? null : v;
+}
 
 // FBref-style percentile colour: red (poor) → grey → green (elite)
 function scoutPctColor(p) {
@@ -2554,7 +2706,7 @@ function renderScoutChips() {
   el.innerHTML = scoutSelected.map((p, i) => `
     <div class="scout-chip" style="--pc:${SCOUT_COLORS[i]}">
       ${p.code ? `<img src="https://resources.premierleague.com/premierleague/photos/players/110x140/p${p.code}.png" onerror="this.style.display='none'">` : ''}
-      <div><div class="nm">${p.web_name}</div><div class="tm">${teamFullNames[p.team] || p.team} · ${p.position} · ${p.minutes} mins</div></div>
+      <div><div class="nm">${p.web_name}</div><div class="tm">${teamBadgeImg(p.team, 12)}${teamFullNames[p.team] || p.team} · ${p.position} · ${p.minutes} mins</div></div>
       <button aria-label="Remove ${p.web_name}" onclick="removeScoutPlayer(${i})">×</button>
     </div>`).join('');
 }
@@ -2572,26 +2724,42 @@ function renderScoutReport() {
 
   if (scoutSelected.length === 0) {
     report.innerHTML = `<div class="scout-empty">Search for a player to build their scouting report.<br>
-      <span>Percentiles ranked within peer group (attackers pooled MID+FWD, min 600 minutes), season to date.</span></div>`;
+      <span>Percentiles ranked within peer group, ${SCOUT_WINDOW_LABELS[scoutWindow]}.</span></div>`;
     return;
   }
+
+  const warnings = [];
 
   // GKP percentiles are ranked vs keepers — mixing panels would mislead
   const hasGK = scoutSelected.some(p => p.position === 'GKP');
   const hasOut = scoutSelected.some(p => p.position !== 'GKP');
   if (hasGK && hasOut) {
-    warn.textContent = "Goalkeepers are ranked against other keepers, so they can't share bars with outfield players. Showing outfield players only.";
+    warnings.push("Goalkeepers are ranked against other keepers, so they can't share bars with outfield players. Showing outfield players only.");
+  }
+  const shownSel = (hasGK && hasOut) ? scoutSelected.filter(p => p.position !== 'GKP') : scoutSelected;
+
+  // Resolve each selected player's row for the active window (players can
+  // fall below the minutes floor in short windows).
+  const shown = shownSel.map(p => ({ sel: p, row: scoutRow(p.element) }));
+  const missing = shown.filter(s => !s.row).map(s => s.sel.web_name);
+  if (missing.length) {
+    warnings.push(`No ${SCOUT_WINDOW_LABELS[scoutWindow]} data for ${missing.join(', ')} — not enough minutes in this window.`);
+  }
+
+  if (warnings.length) {
+    warn.textContent = warnings.join(' ');
     warn.style.display = 'block';
   }
-  const shown = (hasGK && hasOut) ? scoutSelected.filter(p => p.position !== 'GKP') : scoutSelected;
-  const gkMode = shown.every(p => p.position === 'GKP');
+
+  const gkMode = shownSel.every(p => p.position === 'GKP');
   const rows = data.scoutMeta.filter(m => gkMode ? m.group === 'Goalkeeping' : m.group !== 'Goalkeeping');
+  const multi = shown.length > 1;
 
   let html = '';
-  if (shown.length > 1) {
+  if (multi) {
     html += `<div class="scout-colheads"><div></div><div class="scout-cells">`;
-    shown.forEach((p, i) => {
-      html += `<div class="who"><span class="scout-dot" style="background:${SCOUT_COLORS[i]}"></span>${p.web_name}&nbsp;<span style="color:var(--text2);font-size:11px;font-weight:400">${p.team} · ${p.position}</span></div>`;
+    shown.forEach((s, i) => {
+      html += `<div class="who"><span class="scout-dot" style="background:${SCOUT_COLORS[i]}"></span>${s.sel.web_name}&nbsp;<span style="color:var(--text2);font-size:11px;font-weight:400">${teamBadgeImg(s.sel.team, 12)}${s.sel.team} · ${s.sel.position}</span></div>`;
     });
     html += `</div></div>`;
   }
@@ -2603,16 +2771,19 @@ function renderScoutReport() {
       html += `<div class="scout-grp">${m.group}</div>`;
     }
     html += `<div class="scout-row"><div class="lbl">${m.label}</div><div class="scout-cells">`;
-    shown.forEach(p => {
-      const v = p[m.key + '_per90'], pc = p[m.key + '_pct'];
+    shown.forEach((s, i) => {
+      const v = s.row ? s.row[m.key + '_per90'] : null;
       if (v === '' || v == null) {
         html += `<div class="scout-cell na"><span class="v">—</span><span class="p">n/a</span><div class="scout-bar"></div></div>`;
       } else {
-        const pct = (pc === '' || pc == null) ? null : pc;
+        const pct = scoutPct(s.row, m.key);
+        // Single player keeps the red→green percentile scale; with 2+ players
+        // each player's bars take their own colour, matching the key above.
+        const barColor = multi ? SCOUT_COLORS[i] : scoutPctColor(pct);
         html += `<div class="scout-cell">
           <span class="v">${Number(v).toFixed(2)}</span>
           <span class="p">${pct ?? '—'}</span>
-          <div class="scout-bar"><i style="width:${pct ?? 0}%;background:${scoutPctColor(pct)}"></i></div>
+          <div class="scout-bar"><i style="width:${pct ?? 0}%;background:${barColor}"></i></div>
         </div>`;
       }
     });
@@ -2624,17 +2795,18 @@ function renderScoutReport() {
 function initScoutSearch() {
   const input = document.getElementById('scout-search');
   const sugg = document.getElementById('scout-suggestions');
-  input.placeholder = `Search ${data.scout.length} eligible players… (up to 4)`;
+  const pool = data.scout.filter(p => (p.window || 'season') === 'season');
+  input.placeholder = `Search ${pool.length} eligible players… (up to 4)`;
 
   input.addEventListener('input', () => {
-    const q = input.value.trim().toLowerCase();
+    const q = norm(input.value.trim());
     if (q.length < 2) { sugg.style.display = 'none'; return; }
-    const hits = data.scout.filter(p =>
-      String(p.web_name).toLowerCase().includes(q) &&
+    const hits = pool.filter(p =>
+      norm(p.web_name).includes(q) &&
       !scoutSelected.some(s => s.element === p.element)).slice(0, 8);
     if (!hits.length) { sugg.style.display = 'none'; return; }
     sugg.innerHTML = hits.map((p, i) =>
-      `<div data-si="${i}">${p.web_name}<span class="meta">${p.team} · ${p.position}</span></div>`).join('');
+      `<div data-si="${i}">${p.web_name}<span class="meta">${teamBadgeImg(p.team, 12)}${p.team} · ${p.position}</span></div>`).join('');
     sugg.style.display = 'block';
     sugg.querySelectorAll('[data-si]').forEach((d, i) => d.addEventListener('click', () => {
       if (scoutSelected.length >= SCOUT_MAX) return;

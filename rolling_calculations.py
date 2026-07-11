@@ -72,6 +72,7 @@ MIN_VALID_MINS = {4: 180, 6: 270}
 ENRICH_PER90 = [
     "us_npxg", "us_xg_chain", "us_xg_buildup", "us_shots", "us_sot",
     "us_shots_six_yard", "us_shots_penalty_area", "us_shots_out_of_box",
+    "us_shots_head",
     "pl_touches_opp_box", "pl_crosses", "pl_corners_taken",
     "pl_fk_crosses", "pl_fk_shots", "pl_chances_created", "pl_big_chances_created"
 ]
