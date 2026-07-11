@@ -17,8 +17,14 @@ ENRICHED_FILE = os.environ.get("FPL_ENRICHED_FILE") or os.path.expanduser(
 SEASON_SUMMARY_FILE = os.path.join(DATA_DIR, "season_summary.csv")
 OUTPUT_DIR = DATA_DIR
 
-MIN_FPL_MINS = 600      # eligibility floor for the peer group
-MIN_VALID_MINS = 450    # valid source minutes before a us_/pl_ stat is scored
+# Windows: full season plus rolling last-4 / last-6 gameweek views, each with
+# its own eligibility floor so short windows still have a usable peer group.
+# (min FPL minutes for eligibility, min valid source minutes for us_/pl_ stats)
+WINDOWS = {
+    "season": (None, 600, 450),
+    "l6": (6, 270, 270),
+    "l4": (4, 180, 180),
+}
 
 print("Loading data...")
 gw = pd.read_csv(ENRICHED_FILE)
@@ -33,13 +39,18 @@ ATTACKER_STATS = [
     # Attacking
     ("goals", "Goals", "goals_scored", None),
     ("npxg", "Non-Penalty xG", "us_npxg", "us"),
+    ("xg_delta", "xG Delta (Goals − xG)", "__xg_delta", None),
+    ("xgi", "xGI (xG + xA)", "__xgi", None),
+    ("xgi_delta", "xGI Delta (G+A − xGI)", "__xgi_delta", None),
     ("shots", "Shots Total", "us_shots", "us"),
     ("sot", "Shots on Target", "us_sot", "us"),
-    ("box_shots", "Box Shots", "__box_shots", "us"),
-    ("touches_box", "Touches (Att Pen)", "pl_touches_opp_box", "pl"),
+    ("box_shots", "Shots in the Box", "__box_shots", "us"),
+    ("headed_shots", "Headed Shots", "us_shots_head", "us"),
+    ("touches_box", "Touches in Opponents Box", "pl_touches_opp_box", "pl"),
     # Creation
     ("assists", "Assists", "assists", None),
     ("xa", "xA", "expected_assists", None),
+    ("xa_delta", "xA Delta (Assists − xA)", "__xa_delta", None),
     ("chances_created", "Chances Created", "pl_chances_created", "pl"),
     ("big_chances", "Big Chances Created", "pl_big_chances_created", "pl"),
     ("xg_chain", "xG Chain", "us_xg_chain", "us"),
@@ -60,8 +71,9 @@ GKP_STATS = [
     ("bps", "BPS", "bps", None),
 ]
 
-GROUPS = [("Attacking", ["goals", "npxg", "shots", "sot", "box_shots", "touches_box"]),
-          ("Creation", ["assists", "xa", "chances_created", "big_chances",
+GROUPS = [("Attacking", ["goals", "npxg", "xg_delta", "xgi", "xgi_delta", "shots",
+                         "sot", "box_shots", "headed_shots", "touches_box"]),
+          ("Creation", ["assists", "xa", "xa_delta", "chances_created", "big_chances",
                         "xg_chain", "xg_buildup", "crosses", "sp_deliveries"]),
           ("Defending", ["tackles", "cbi", "recoveries", "def_contrib"])]
 
@@ -72,66 +84,85 @@ def derive(group, col):
         return group["pl_corners_taken"] + group["pl_fk_crosses"] + group["pl_fk_shots"]
     if col == "__xgc_prevented":
         return group["expected_goals_conceded"] - group["goals_conceded"]
+    if col == "__xg_delta":
+        return group["goals_scored"] - group["expected_goals"]
+    if col == "__xa_delta":
+        return group["assists"] - group["expected_assists"]
+    if col == "__xgi":
+        return group["expected_goals"] + group["expected_assists"]
+    if col == "__xgi_delta":
+        return (group["goals_scored"] + group["assists"]) - \
+               (group["expected_goals"] + group["expected_assists"])
     return group[col]
 
 print("Computing per-90s...")
-rows = []
-for element, group in gw.groupby("element"):
-    group = group.sort_values("gw_from_fixture")
-    mins = group["minutes"].sum()
-    if mins < MIN_FPL_MINS:
-        continue
-    position = group["position"].iloc[-1]
-    stats = GKP_STATS if position == "GKP" else ATTACKER_STATS
+max_gw = gw["gw_from_fixture"].max()
+frames = []
+for window, (n_gws, min_fpl_mins, min_valid_mins) in WINDOWS.items():
+    wgw = gw if n_gws is None else gw[gw["gw_from_fixture"] > max_gw - n_gws]
+    rows = []
+    for element, group in wgw.groupby("element"):
+        group = group.sort_values("gw_from_fixture")
+        mins = group["minutes"].sum()
+        if mins < min_fpl_mins:
+            continue
+        position = group["position"].iloc[-1]
+        stats = GKP_STATS if position == "GKP" else ATTACKER_STATS
 
-    row = {
-        "element": element,
-        "web_name": group["web_name"].iloc[-1],
-        "team": group["team"].iloc[-1],
-        "position": position,
-        "minutes": int(mins),
-    }
-    for key, label, col, src in stats:
-        vals = derive(group, col)
-        if src is None:
-            row[f"{key}_per90"] = round(vals.sum() / mins * 90, 2)
-        else:
-            probe = "us_npxg" if src == "us" else "pl_touches_opp_box"
-            mask = group[probe].notna()
-            vmins = group.loc[mask, "minutes"].sum()
-            if vmins >= MIN_VALID_MINS:
-                row[f"{key}_per90"] = round(vals[mask].sum() / vmins * 90, 2)
+        row = {
+            "element": element,
+            "web_name": group["web_name"].iloc[-1],
+            "team": group["team"].iloc[-1],
+            "position": position,
+            "minutes": int(mins),
+            "window": window,
+        }
+        for key, label, col, src in stats:
+            vals = derive(group, col)
+            if src is None:
+                row[f"{key}_per90"] = round(vals.sum() / mins * 90, 2)
             else:
-                row[f"{key}_per90"] = np.nan  # insufficient source data — never 0
-    rows.append(row)
+                probe = "us_npxg" if src == "us" else "pl_touches_opp_box"
+                mask = group[probe].notna()
+                vmins = group.loc[mask, "minutes"].sum()
+                if vmins >= min_valid_mins:
+                    row[f"{key}_per90"] = round(vals[mask].sum() / vmins * 90, 2)
+                else:
+                    row[f"{key}_per90"] = np.nan  # insufficient source data — never 0
+        rows.append(row)
+    wdf = pd.DataFrame(rows)
+    print(f"  window {window}: {len(wdf)} eligible players (≥{min_fpl_mins} mins)")
+    frames.append(wdf)
 
-df = pd.DataFrame(rows)
-print(f"  {len(df)} eligible players (≥{MIN_FPL_MINS} mins)")
+df = pd.concat(frames, ignore_index=True)
 
 print("Ranking percentiles within peer groups...")
-# Peer groups: attackers pooled (MID+FWD, matching combined-attacker convention),
-# defenders, keepers. Percentile = rank among peers with valid data, 1-99.
+# Peer groups, ranked within each window: attackers pooled (MID+FWD, `_pct`)
+# plus a position-only ranking (`_pct_pos`, MID vs MID / FWD vs FWD) so the
+# site can toggle between the two. DEF and GKP are the same in both.
+# Percentile = rank among peers with valid data, 1-99.
 df["peer_group"] = np.where(df["position"].isin(["MID", "FWD"]), "ATT", df["position"])
 all_keys = {k for k, *_ in ATTACKER_STATS} | {k for k, *_ in GKP_STATS}
 for key in all_keys:
     col = f"{key}_per90"
     if col not in df.columns:
         continue
-    for pg, sub in df.groupby("peer_group"):
-        valid = sub[col].notna()
-        if valid.sum() < 10:
-            continue
-        pct = sub.loc[valid, col].rank(pct=True).mul(98).add(1).round()
-        df.loc[pct.index, f"{key}_pct"] = pct
+    for grouping, out_suffix in [("peer_group", "_pct"), ("position", "_pct_pos")]:
+        for (win, pg), sub in df.groupby(["window", grouping]):
+            valid = sub[col].notna()
+            if valid.sum() < 10:
+                continue
+            pct = sub.loc[valid, col].rank(pct=True).mul(98).add(1).round()
+            df.loc[pct.index, f"{key}{out_suffix}"] = pct
 
 # Integer percentiles (nullable Int64 → clean ints in the CSV, blanks for NaN)
-for c in [c for c in df.columns if c.endswith("_pct")]:
+for c in [c for c in df.columns if c.endswith("_pct") or c.endswith("_pct_pos")]:
     df[c] = df[c].astype("Int64")
 
 # GATES
 if df.empty:
     raise RuntimeError("GATE FAIL: no eligible players")
-att = df[df["peer_group"] == "ATT"]
+att = df[(df["peer_group"] == "ATT") & (df["window"] == "season")]
 for key in ["npxg", "chances_created", "goals"]:
     if att[f"{key}_pct"].notna().sum() < 50:
         raise RuntimeError(f"GATE FAIL: {key}_pct scored for <50 attackers — source join broken?")
@@ -157,7 +188,7 @@ print(f"  scouting_stat_meta.csv written ({len(meta)} stat definitions)")
 
 print("\n── VALIDATION: sample scouting lines ───────────────────────")
 for name in ["Haaland", "M.Salah", "Ward-Prowse", "Rice"]:
-    p = df[df["web_name"] == name]
+    p = df[(df["web_name"] == name) & (df["window"] == "season")]
     if p.empty:
         print(f"  {name}: not eligible"); continue
     r = p.iloc[0]

@@ -1,12 +1,17 @@
 key,label,group
 goals,Goals,Attacking
 npxg,Non-Penalty xG,Attacking
+xg_delta,xG Delta (Goals − xG),Attacking
+xgi,xGI (xG + xA),Attacking
+xgi_delta,xGI Delta (G+A − xGI),Attacking
 shots,Shots Total,Attacking
 sot,Shots on Target,Attacking
-box_shots,Box Shots,Attacking
-touches_box,Touches (Att Pen),Attacking
+box_shots,Shots in the Box,Attacking
+headed_shots,Headed Shots,Attacking
+touches_box,Touches in Opponents Box,Attacking
 assists,Assists,Creation
 xa,xA,Creation
+xa_delta,xA Delta (Assists − xA),Creation
 chances_created,Chances Created,Creation
 big_chances,Big Chances Created,Creation
 xg_chain,xG Chain,Creation
