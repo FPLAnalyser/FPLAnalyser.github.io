@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hogwarts N.E.W.T. Examination — For Becky</title>
+<style>
+  :root{
+    --house-primary:#740001;
+    --house-secondary:#eeba30;
+    --parchment:#f4e8ce;
+    --parchment-dark:#e4d3ac;
+    --ink:#2c1e12;
+    --night-top:#05060f;
+    --night-bottom:#131b3a;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family:'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(255,255,255,0.08), transparent 40%),
+      radial-gradient(ellipse at 80% 0%, rgba(255,255,255,0.06), transparent 35%),
+      linear-gradient(180deg, var(--night-top) 0%, var(--night-bottom) 60%, #1c1030 100%);
+    color:var(--parchment);
+    overflow-x:hidden;
+    position:relative;
+  }
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, #fff, transparent),
+      radial-gradient(1px 1px at 25% 60%, #fff, transparent),
+      radial-gradient(1px 1px at 40% 15%, #fff, transparent),
+      radial-gradient(1px 1px at 55% 80%, #fff, transparent),
+      radial-gradient(2px 2px at 70% 35%, #fff, transparent),
+      radial-gradient(1px 1px at 85% 55%, #fff, transparent),
+      radial-gradient(1px 1px at 92% 10%, #fff, transparent),
+      radial-gradient(1px 1px at 5% 75%, #fff, transparent),
+      radial-gradient(2px 2px at 60% 5%, #fff, transparent),
+      radial-gradient(1px 1px at 35% 90%, #fff, transparent);
+    opacity:0.5;
+    animation:twinkle 4s ease-in-out infinite alternate;
+  }
+  @keyframes twinkle{from{opacity:0.25;}to{opacity:0.7;}}
+
+  #app{
+    position:relative;
+    max-width:820px;
+    margin:0 auto;
+    padding:32px 18px 64px;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+
+  .crest{
+    font-size:52px;
+    line-height:1;
+    margin-bottom:6px;
+    filter:drop-shadow(0 0 10px rgba(238,186,48,0.5));
+  }
+  h1.title{
+    font-family:'Palatino Linotype', Georgia, 'Times New Roman', serif;
+    text-align:center;
+    font-size:clamp(24px,5vw,38px);
+    letter-spacing:2px;
+    margin:0 0 4px;
+    color:var(--house-secondary);
+    text-shadow:0 0 18px rgba(238,186,48,0.35);
+  }
+  .subtitle{
+    text-align:center;
+    font-style:italic;
+    opacity:0.85;
+    margin-bottom:28px;
+    font-size:15px;
+  }
+
+  .card{
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.02) 0 2px, transparent 2px 4px),
+      radial-gradient(ellipse at top left, #fbf3de, var(--parchment) 60%);
+    color:var(--ink);
+    border-radius:10px;
+    border:3px solid #7a5a30;
+    box-shadow:0 10px 30px rgba(0,0,0,0.45), inset 0 0 40px rgba(122,90,48,0.15);
+    padding:28px 26px;
+    width:100%;
+    position:relative;
+    animation:cardIn 0.45s ease;
+  }
+  @keyframes cardIn{
+    from{opacity:0; transform:translateY(14px) scale(0.98);}
+    to{opacity:1; transform:translateY(0) scale(1);}
+  }
+  .card h2{
+    font-family:'Palatino Linotype', Georgia, serif;
+    margin-top:0;
+    color:var(--house-primary);
+    border-bottom:2px solid var(--house-primary);
+    padding-bottom:10px;
+  }
+
+  .btn{
+    font-family:inherit;
+    font-size:16px;
+    padding:12px 20px;
+    border-radius:8px;
+    border:2px solid var(--house-primary);
+    background:var(--house-primary);
+    color:#fff8e7;
+    cursor:pointer;
+    font-weight:bold;
+    transition:transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+  }
+  .btn:hover{ transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,0.35);}
+  .btn:active{ transform:translateY(0); }
+  .btn.secondary{
+    background:transparent;
+    color:var(--house-primary);
+  }
+  .btn:disabled{ opacity:0.5; cursor:not-allowed; transform:none; box-shadow:none;}
+  .btn-row{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:18px; }
+
+  .field{ margin:16px 0; }
+  .field label{ display:block; margin-bottom:6px; font-weight:bold; }
+  .field input[type=text]{
+    width:100%;
+    padding:12px 14px;
+    font-size:16px;
+    border-radius:8px;
+    border:2px solid #7a5a30;
+    background:#fffaf0;
+    font-family:inherit;
+    color:var(--ink);
+  }
+
+  .house-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(140px,1fr));
+    gap:14px;
+    margin-top:18px;
+  }
+  .house-option{
+    border:3px solid transparent;
+    border-radius:10px;
+    padding:16px 10px;
+    text-align:center;
+    cursor:pointer;
+    font-weight:bold;
+    color:#fff;
+    transition:transform 0.15s ease, border-color 0.15s ease;
+    font-size:15px;
+  }
+  .house-option .emoji{ font-size:34px; display:block; margin-bottom:6px; }
+  .house-option:hover{ transform:translateY(-3px); }
+  .house-option.selected{ border-color:#fff; box-shadow:0 0 0 3px rgba(255,255,255,0.35); }
+  .house-gryffindor{ background:linear-gradient(160deg,#740001,#ae0001); }
+  .house-slytherin{ background:linear-gradient(160deg,#1a472a,#2a623d); }
+  .house-ravenclaw{ background:linear-gradient(160deg,#0e1a40,#222f5b); }
+  .house-hufflepuff{ background:linear-gradient(160deg,#ecb939,#d9a021); color:#372e29; }
+
+  .meta-row{
+    display:flex;
+    justify-content:space-between;
+    font-size:13px;
+    font-weight:bold;
+    color:#5a4324;
+    margin-bottom:10px;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+  }
+  .timer-track{
+    height:8px;
+    background:#d8c69a;
+    border-radius:6px;
+    overflow:hidden;
+    margin-bottom:20px;
+  }
+  .timer-fill{
+    height:100%;
+    background:var(--house-primary);
+    width:100%;
+    transition:width 1s linear;
+  }
+  .timer-fill.danger{ background:#b8232a; }
+
+  .question-text{
+    font-size:19px;
+    font-weight:bold;
+    margin-bottom:18px;
+    line-height:1.4;
+  }
+  .options{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .option{
+    text-align:left;
+    padding:12px 16px;
+    border:2px solid #7a5a30;
+    border-radius:8px;
+    background:#fffaf0;
+    cursor:pointer;
+    font-family:inherit;
+    font-size:15px;
+    color:var(--ink);
+    transition:background 0.15s ease, transform 0.1s ease;
+  }
+  .option:hover:not(:disabled){ background:#f0e2bd; transform:translateX(2px); }
+  .option:disabled{ cursor:default; }
+  .option.correct{ background:#c9e6b8; border-color:#3f7d20; }
+  .option.incorrect{ background:#f0b8b8; border-color:#a12b2b; }
+
+  .feedback{
+    margin-top:16px;
+    padding:12px 14px;
+    border-radius:8px;
+    background:rgba(0,0,0,0.06);
+    font-style:italic;
+    min-height:20px;
+  }
+
+  .professor-tag{
+    display:inline-block;
+    font-size:12px;
+    font-weight:bold;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    background:var(--house-primary);
+    color:#fff8e7;
+    padding:4px 10px;
+    border-radius:20px;
+    margin-bottom:12px;
+  }
+
+  .score-strip{
+    display:flex;
+    justify-content:space-between;
+    width:100%;
+    font-size:13px;
+    opacity:0.85;
+    margin-bottom:10px;
+    padding:0 4px;
+  }
+
+  .grade-badge{
+    font-size:64px;
+    font-weight:bold;
+    text-align:center;
+    font-family:Georgia, serif;
+    margin:10px 0;
+    color:var(--house-primary);
+    text-shadow:1px 1px 0 rgba(0,0,0,0.15);
+  }
+  .grade-name{
+    text-align:center;
+    font-size:22px;
+    font-weight:bold;
+    margin-bottom:4px;
+  }
+  .subject-breakdown{
+    list-style:none;
+    padding:0;
+    margin:18px 0;
+  }
+  .subject-breakdown li{
+    display:flex;
+    justify-content:space-between;
+    padding:8px 0;
+    border-bottom:1px dashed #b79a5f;
+  }
+  .subject-breakdown li:last-child{ border-bottom:none; }
+
+  .footer-note{
+    margin-top:26px;
+    text-align:center;
+    font-size:12.5px;
+    opacity:0.6;
+  }
+
+  .sparkle{
+    position:fixed;
+    pointer-events:none;
+    font-size:20px;
+    animation:sparkleFloat 1.4s ease-out forwards;
+    z-index:50;
+  }
+  @keyframes sparkleFloat{
+    0%{ transform:translateY(0) scale(0.6); opacity:1; }
+    100%{ transform:translateY(-90px) scale(1.3); opacity:0; }
+  }
+
+  @media (max-width:480px){
+    .card{ padding:20px 16px; }
+    .grade-badge{ font-size:52px; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function(){
+
+  var HOUSES = {
+    gryffindor:{ name:"Gryffindor", emoji:"🦁", primary:"#740001", secondary:"#eeba30" },
+    slytherin:{ name:"Slytherin", emoji:"🐍", primary:"#1a472a", secondary:"#aaaaaa" },
+    ravenclaw:{ name:"Ravenclaw", emoji:"🦅", primary:"#0e1a40", secondary:"#946b2d" },
+    hufflepuff:{ name:"Hufflepuff", emoji:"🦡", primary:"#ecb939", secondary:"#372e29" }
+  };
+
+  var SUBJECTS = [
+    {
+      key:"potions",
+      name:"Potions",
+      professor:"Professor Snape",
+      icon:"🧪",
+      intro:"Silence. Wands away. Today you will prove whether you have the subtlety and exact art required to brew, or whether you belong in Professor Slughorn's remedial class instead.",
+      correctLines:["Obviously.","Ten points... to whichever house needs them least, I'm sure.","Adequate. Barely.","Hmph. Correct."],
+      wrongLines:["Pathetic.","I expected nothing less. Disappointing.","Did you even open the textbook?","Five points from... well, from you."],
+      questions:[
+        {q:"In Chamber of Secrets, which three ingredients — besides a piece of the person to become — did Hermione steal from Snape's private store for Polyjuice Potion?",
+         options:["Boomslang skin, lacewing flies, and knotgrass","Doxy eggs, shrivelfig, and newt spleen","Flobberworm mucus, dried nettles, and horned slug","Bicorn horn, fluxweed, and leech juice"], correct:0},
+        {q:"According to the Half-Blood Prince's handwritten notes, what should be done to sopophorous beans instead of cutting them, to release their juice more effectively?",
+         options:["Freeze them, then shatter with a hammer","Crush them with the flat side of a silver dagger","Boil them whole for ten minutes","Add them to the cauldron unpeeled"], correct:1},
+        {q:"Which potion, according to the books, has a scent that differs for each person who smells it, and reminds Harry of freshly mown grass, new parchment, and something that turns out to be connected to Ginny?",
+         options:["Felix Felicis","Amortentia","Veritaserum","The Draught of Living Death"], correct:1},
+        {q:"What exactly is a bezoar, as Snape demands Harry recite in his very first Potions lesson?",
+         options:["A stone taken from the stomach of a goat, which counteracts most poisons","A crystallised phoenix tear","A dried scarab beetle husk","A drop of unicorn blood"], correct:0},
+        {q:"Which potion did Merope Gaunt most likely use to make Tom Riddle Sr. fall in love with her, before he abandoned her once its use stopped?",
+         options:["Felix Felicis","Polyjuice Potion","Amortentia","The Draught of Peace"], correct:2},
+        {q:"\"Wolfsbane\" is the common name for which plant, essential to the Wolfsbane Potion Snape brews for Lupin?",
+         options:["Monkshood, also called Aconite","Belladonna","Mandrake root","Gillyweed"], correct:0}
+      ]
+    },
+    {
+      key:"dada",
+      name:"Defence Against the Dark Arts",
+      professor:"Whichever Professor Survives The Year",
+      icon:"🛡️",
+      intro:"You never know who will be standing at this podium come June, but the curriculum endures. Defend yourselves. Properly, this time.",
+      correctLines:["Very good. CONSTANT VIGILANCE rewarded.","Excellent instinct.","Yes! Precisely right.","Well defended."],
+      wrongLines:["That would have gotten you killed.","Sloppy. Try again next war.","No, no — pay attention!","You'd have lost your wand for that answer."],
+      questions:[
+        {q:"In what order does 'Mad-Eye' Moody (secretly Barty Crouch Jr.) demonstrate the three Unforgivable Curses to his fourth-year class?",
+         options:["Imperius, Cruciatus, Avada Kedavra","Avada Kedavra, Imperius, Cruciatus","Cruciatus, Imperius, Avada Kedavra","Imperius, Avada Kedavra, Cruciatus"], correct:0},
+        {q:"Severus Snape's Patronus takes the same form as which character's — a fact only revealed at the very end of the series?",
+         options:["James Potter's","Lily Potter's","Narcissa Malfoy's","Harry Potter's"], correct:1},
+        {q:"Which spell, invented by Snape himself and discovered scrawled in the Half-Blood Prince's old textbook, very nearly kills Draco Malfoy?",
+         options:["Sectumsempra","Levicorpus","Confringo","Langlock"], correct:0},
+        {q:"When Neville Longbottom faces the Boggart in Lupin's third-year class, what does it transform into?",
+         options:["A giant spider","Professor Snape, dressed in his grandmother's clothes","A Dementor","Lord Voldemort"], correct:1},
+        {q:"According to Lupin, what precisely does the Dementor's Kiss do to its victim?",
+         options:["Kills them instantly","Erases their memory permanently","Sucks out the victim's soul, leaving the body alive but empty","Turns the victim into an Inferius"], correct:2},
+        {q:"What creature must a witch or wizard think of a truly happy memory to repel, using the incantation 'Expecto Patronum'?",
+         options:["A Lethifold","A Dementor","A Boggart","A Dugbog"], correct:1}
+      ]
+    },
+    {
+      key:"charms",
+      name:"Charms",
+      professor:"Professor Flitwick",
+      icon:"✨",
+      intro:"Wand movement is EVERYTHING. Swish and flick, if you please! Let's see who's been practising and who's simply been waving their wand about like a fool.",
+      correctLines:["Splendid! Simply splendid!","Oh, well done indeed!","Marvellous work!","Ten points, without question!"],
+      wrongLines:["Oh dear, not quite.","A common mistake — but a mistake nonetheless.","Do mind the wrist movement next time.","Hmm, not this year's top marks, I'm afraid."],
+      questions:[
+        {q:"According to Gilderoy Lockhart's (thoroughly exaggerated) memoirs, which charm did he claim to have used to cure a werewolf?",
+         options:["The Homorphus Charm","The Patronus Charm","The Animagus Reversal Spell","The Lycanthrope's Draught"], correct:0},
+        {q:"What is the incantation for the charm that locks a door — the opposite of Alohomora — which Hermione uses to seal a classroom door against Death Eaters in Order of the Phoenix?",
+         options:["Colloportus","Obstructo","Claudio","Serratura"], correct:0},
+        {q:"What does the Protean Charm do, which Hermione teaches herself from a library book to enchant the Dumbledore's Army coins?",
+         options:["Duplicates an object exactly once","Turns an object invisible","Links objects so that a change to the master item appears on all the linked copies","Turns an object to stone"], correct:2},
+        {q:"In the books (a detail cut from the films entirely), which spell does Hermione use to mend Harry's broken glasses on the Hogwarts Express in Philosopher's Stone?",
+         options:["Reparo","Oculus Reparo","Episkey","Emendo Vitrum"], correct:1},
+        {q:"What is the incantation for the Summoning Charm, which Harry uses to call his Firebolt during the Triwizard Tournament's first task?",
+         options:["Accio","Depulso","Geminio","Duro"], correct:0},
+        {q:"What does the Cheering Charm risk causing if overused, as referenced in the series?",
+         options:["Uncontrollable, excessive fits of laughter","Permanent memory loss","Sudden hair loss","Temporary blindness"], correct:0}
+      ]
+    },
+    {
+      key:"transfiguration",
+      name:"Transfiguration",
+      professor:"Professor McGonagall",
+      icon:"🐈",
+      intro:"Transfiguration is some of the most complex and dangerous magic you will learn. Anyone messing around in my class will leave and not come back. You have been warned.",
+      correctLines:["Precisely.","Well reasoned, ten points.","Exactly right.","Good. Focus like that will serve you well."],
+      wrongLines:["Concentrate.","I expect better focus in this classroom.","No. Try to think it through properly.","We shall try that again — carefully, this time."],
+      questions:[
+        {q:"What is Professor McGonagall's Animagus form?",
+         options:["A black cat","A tabby cat with distinctive square markings around the eyes","A tortoiseshell cat","A lioness"], correct:1},
+        {q:"According to Gamp's Law of Elemental Transfiguration, which of the following is famously one of the five exceptions — meaning it cannot simply be conjured from nothing?",
+         options:["Food","Gold","Parchment","Water"], correct:0},
+        {q:"When 'Mad-Eye' Moody transfigures Draco Malfoy into a ferret and bounces him around the courtyard, how does McGonagall respond?",
+         options:["She praises the punishment as well deserved","She scolds him furiously, saying Transfiguration is never, ever used as a punishment","She reports him to Dumbledore for being too lenient","She turns Malfoy back into a ferret herself as a joke"], correct:1},
+        {q:"What is the incantation for the Vanishing Spell, which Draco Malfoy is tasked by Voldemort with mastering in order to smuggle Death Eaters into Hogwarts?",
+         options:["Evanesco","Deletrius","Finite Incantatem","Absento"], correct:0},
+        {q:"To become a legal Animagus, a witch or wizard must do what, according to Ministry law?",
+         options:["Register with the Ministry's Improper Use of Magic Office","Obtain a licence from Gringotts","Seek approval from the Wizengamot only","Swear a blood oath before the Minister"], correct:0},
+        {q:"What are the Animagus forms of James Potter, Sirius Black, and Peter Pettigrew, respectively?",
+         options:["Stag, dog, rat","Wolf, stag, dog","Stag, rat, dog","Dog, stag, rat"], correct:0}
+      ]
+    },
+    {
+      key:"history",
+      name:"History of Magic",
+      professor:"Professor Binns",
+      icon:"📜",
+      intro:"...as I was saying before the bell interrupted... today's lecture concerns matters of the utmost historical importance. Do try to stay awake.",
+      correctLines:["Indeed, indeed. Quite right.","...correct, yes... now, moving on...","Precisely as the records state.","Quite right. Quite right."],
+      wrongLines:["No, no. Do read the assigned chapters.","...that is not at all what happened...","Incorrect, I'm afraid. As I explained... at some point...","Hmm. Perhaps revisit 'Hogwarts: A History'."],
+      questions:[
+        {q:"In which year was the International Statute of Wizarding Secrecy established, forcing the magical world into hiding from Muggles?",
+         options:["1215","1689","1692","1750"], correct:2},
+        {q:"According to legend, who founded the Chamber of Secrets beneath Hogwarts, and why?",
+         options:["Salazar Slytherin, who believed only pure-blood students should be taught magic","Godric Gryffindor, to hide his sword from thieves","Rowena Ravenclaw, to conceal her diadem","Helga Hufflepuff, to protect Muggle-born students"], correct:0},
+        {q:"According to Griphook, how do goblins traditionally believe true ownership of a magical object should be determined?",
+         options:["By whoever paid the highest price","By the maker of the object, not merely its purchaser","By whoever currently holds it","By the original commissioner alone, forever"], correct:1},
+        {q:"Which historical Dark wizard was defeated by Albus Dumbledore in a legendary duel in 1945?",
+         options:["Lord Voldemort","Gellert Grindelwald","Bellatrix Lestrange","Vindictus Viridian"], correct:1},
+        {q:"Rowena Ravenclaw is credited with creating which magical object, later turned into one of Voldemort's Horcruxes?",
+         options:["A silver chalice","Her wand","The Diadem, inscribed 'Wit beyond measure is man's greatest treasure'","A hand mirror"], correct:2},
+        {q:"Roughly when was Hogwarts School of Witchcraft and Wizardry founded, according to canon lore?",
+         options:["Around 990 AD, over a thousand years before Harry's time","1492","1066","793 AD"], correct:0}
+      ]
+    },
+    {
+      key:"herbology",
+      name:"Herbology",
+      professor:"Professor Sprout",
+      icon:"🌿",
+      intro:"Mind the Venomous Tentacula, don't squeeze the Bubotubers without gloves, and for heaven's sake keep your earmuffs on around the Mandrakes. Let's begin.",
+      correctLines:["Lovely work!","Green thumb, that one!","Excellent — you've clearly been in the greenhouses.","Wonderful. Truly blooming today."],
+      wrongLines:["Mind the thorns next time.","Not quite blooming yet, dear.","Careful — that's how people end up in the Hospital Wing.","We'll go over that again next lesson."],
+      questions:[
+        {q:"Whose cry is fatal to anyone who hears it without proper protection, requiring students to wear earmuffs while repotting them?",
+         options:["Mandrakes","Devil's Snare","Venomous Tentacula","Screechsnap"], correct:0},
+        {q:"How does one safely escape the grip of Devil's Snare?",
+         options:["Struggle against it as hard as possible","Relax completely — it recoils from sunlight and warmth/fire","Cast Wingardium Leviosa on yourself","Speak to it in Parseltongue"], correct:1},
+        {q:"What effect does Gillyweed have on the person who eats it?",
+         options:["It cures boils instantly","It grows gills and webbed hands and feet for underwater breathing","It regrows bones (like Skele-Gro)","It repels Doxies"], correct:1},
+        {q:"What is the name of the tree that violently guards the tunnel entrance to the Shrieking Shack, planted by Dumbledore for Lupin's use?",
+         options:["The Whomping Willow","The Screaming Shrub","The Devil's Hedge","The Forbidden Oak"], correct:0},
+        {q:"Which plant did second-year students repot in Herbology, whose pods secrete a foul-smelling pus that causes acne if it touches the skin?",
+         options:["Bubotuber","Mandrake","Fanged Geranium","Puffapod"], correct:0},
+        {q:"What is the primary magical property of Dittany, an essence often used in emergency healing?",
+         options:["It closes wounds and heals cuts remarkably quickly","It cures all poisons on contact","It is the base ingredient of most love potions","It is used as a truth serum"], correct:0}
+      ]
+    },
+    {
+      key:"comc",
+      name:"Care of Magical Creatures",
+      professor:"Hagrid",
+      icon:"🐾",
+      intro:"Right then! Gather round, mind yer fingers, and don't go runnin' off — some o' these beasts bite. Today we're lookin' at some real beauties.",
+      correctLines:["Yeh know yer stuff, that's brilliant!","Spot on, that is!","Knew you had it in yeh!","Couldn't have said it better meself!"],
+      wrongLines:["Ah, don' worry 'bout it, have another go.","Close, but not quite.","Nah, that's not quite right, but yer learnin'.","We'll go over it again, don' fret."],
+      questions:[
+        {q:"What is the name of Hagrid's enormous three-headed dog, first met guarding a trapdoor in Philosopher's Stone?",
+         options:["Fang","Fluffy","Norbert","Aragog"], correct:1},
+        {q:"How should a student safely approach a proud creature like the Hippogriff Buckbeak?",
+         options:["Bow first, then wait for it to bow back before approaching","Offer it raw meat immediately without hesitation","Avoid eye contact entirely and back away","Speak softly in French, as Hippogriffs prefer"], correct:0},
+        {q:"What creature did Hagrid illegally hatch and raise in his hut during first year, which was eventually smuggled away to Romania?",
+         options:["A Basilisk","A Norwegian Ridgeback dragon named Norbert","A Chimaera","A Manticore"], correct:1},
+        {q:"What are Blast-Ended Skrewts, Hagrid's controversial fourth-year breeding project, actually a cross between?",
+         options:["A Manticore and a Fire Crab","A Niffler and a Crup","A Crup and a Kneazle","A Puffskein and a Flobberworm"], correct:0},
+        {q:"What is a Thestral, and who is able to see them?",
+         options:["Invisible horses visible only to purebloods","Skeletal winged horses, visible only to those who have witnessed and truly understood death","Small dragon-like pets visible only at night","Ghost horses that only First Years can see"], correct:1},
+        {q:"What is Aragog, and where does he make his home?",
+         options:["A Basilisk living in the Chamber of Secrets","A giant Acromantula living deep in the Forbidden Forest","A dragon living beneath Gringotts Bank","A Sphinx living in the Triwizard maze"], correct:1}
+      ]
+    }
+  ];
+
+  var BONUS = {
+    title:"Special N.E.W.T. Distinction Round",
+    professor:"The Board of Governors",
+    icon:"🏆",
+    intro:"Only those seeking a truly Outstanding mark need attempt this final round. Each question here is worth double points — and shows no mercy.",
+    correctLines:["Extraordinary. A true Outstanding.","Remarkable knowledge.","Flawless.","The Board is genuinely impressed."],
+    wrongLines:["Even our finest scholars miss this one.","A valiant attempt, nonetheless.","Close — but N.E.W.T. standard demands more.","Do revisit your notes on this one."],
+    questions:[
+      {q:"What is inscribed above the Mirror of Erised — and what does it actually say when read correctly (it's written in mirror-image)?",
+       options:["'Erised stra ehru oyt ube cafru oyt on wohsi' — 'I show not your face but your heart's desire'","'Only the worthy shall see truth reflected here'","'Desire is the beginning of all sorrow, wizard'","'Look not too long, for the heart may break'"], correct:0},
+      {q:"What are the exact phrases used to reveal and then conceal the Marauder's Map?",
+       options:["'Show yourself' to reveal, 'Begone' to conceal","'I solemnly swear that I am up to no good' to reveal, 'Mischief managed' to conceal","'Reveal your secrets' to reveal, 'Secrets kept' to conceal","'Marauders unite' to reveal, 'Marauders rest' to conceal"], correct:1},
+      {q:"In the Tale of the Three Brothers, which Hallow does each brother receive, and in what order (eldest to youngest)?",
+       options:["Eldest: Invisibility Cloak, Middle: Elder Wand, Youngest: Resurrection Stone","Eldest: Resurrection Stone, Middle: Invisibility Cloak, Youngest: Elder Wand","Eldest: Elder Wand, Middle: Resurrection Stone, Youngest: Invisibility Cloak","Eldest: Elder Wand, Middle: Invisibility Cloak, Youngest: Resurrection Stone"], correct:2},
+      {q:"How does Sybill Trelawney's real prophecy about Harry and Voldemort begin?",
+       options:["'The Dark Lord shall rise again, more powerful than before...'","'The one with the power to vanquish the Dark Lord approaches... born as the seventh month dies...'","'Neither can live while the other survives, for it was written in the stars...'","'A child born of thrice-defiance shall bring the darkness low...'"], correct:1}
+    ]
+  };
+
+  var GRADES = [
+    {min:0.90, label:"Outstanding", letter:"O"},
+    {min:0.75, label:"Exceeds Expectations", letter:"E"},
+    {min:0.60, label:"Acceptable", letter:"A"},
+    {min:0.40, label:"Poor", letter:"P"},
+    {min:0.20, label:"Dreadful", letter:"D"},
+    {min:0, label:"Troll", letter:"T"}
+  ];
+
+  var QUESTION_SECONDS = 25;
+  var BONUS_SECONDS = 35;
+
+  var state = {
+    name:"Becky",
+    house:"gryffindor",
+    subjectIndex:0,
+    questionIndex:0,
+    inBonus:false,
+    score:0,
+    maxScore:0,
+    perSubjectScore:{},
+    timeLeft:0,
+    timerHandle:null,
+    locked:false
+  };
+
+  var app = document.getElementById("app");
+
+  function applyHouseTheme(){
+    var h = HOUSES[state.house];
+    document.documentElement.style.setProperty("--house-primary", h.primary);
+    document.documentElement.style.setProperty("--house-secondary", h.secondary);
+  }
+
+  function clearTimer(){
+    if(state.timerHandle){ clearInterval(state.timerHandle); state.timerHandle = null; }
+  }
+
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+  function render(html){
+    app.innerHTML = html;
+  }
+
+  function header(sub){
+    return '<div class="crest">🏰</div>' +
+      '<h1 class="title">HOGWARTS SCHOOL<br>OF WITCHCRAFT AND WIZARDRY</h1>' +
+      '<div class="subtitle">' + sub + '</div>';
+  }
+
+  function renderIntro(){
+    applyHouseTheme();
+    render(
+      header("N.E.W.T. Examination &mdash; Special Sitting, By Order of the Headmaster") +
+      '<div class="card">' +
+        '<h2>Welcome, Witch or Wizard</h2>' +
+        '<p>You have been summoned for a most rigorous examination, covering seven years of magical education across seven subjects, culminating in a special Distinction Round reserved for only the finest minds.</p>' +
+        '<p>This examination shows <strong>no mercy</strong>. Answer swiftly &mdash; the clock is always watching &mdash; and answer truly.</p>' +
+        '<div class="field">' +
+          '<label for="nameInput">Enter your name for the record:</label>' +
+          '<input type="text" id="nameInput" value="' + state.name + '">' +
+        '</div>' +
+        '<div class="btn-row"><button class="btn" id="toSortingBtn">Proceed to the Sorting</button></div>' +
+      '</div>' +
+      '<div class="footer-note">A very tough quiz, conjured especially for Becky &mdash; resident Hogwarts expert.</div>'
+    );
+    document.getElementById("toSortingBtn").addEventListener("click", function(){
+      var val = document.getElementById("nameInput").value.trim();
+      state.name = val.length ? val : "Becky";
+      renderSorting();
+    });
+  }
+
+  function renderSorting(){
+    var housesHtml = Object.keys(HOUSES).map(function(key){
+      var h = HOUSES[key];
+      var sel = state.house === key ? " selected" : "";
+      return '<div class="house-option house-' + key + sel + '" data-house="' + key + '">' +
+        '<span class="emoji">' + h.emoji + '</span>' + h.name + '</div>';
+    }).join("");
+
+    render(
+      header("The Sorting Hat Ceremony") +
+      '<div class="card">' +
+        '<h2>Choose Your House, ' + escapeHtml(state.name) + '</h2>' +
+        '<p>"Difficult. Very difficult. Plenty of courage, I see, and not a bad mind either..." Choose the house whose colours will fly for you today.</p>' +
+        '<div class="house-grid">' + housesHtml + '</div>' +
+        '<div class="btn-row"><button class="btn" id="beginExamBtn">Begin the Examination</button></div>' +
+      '</div>'
+    );
+
+    Array.prototype.forEach.call(document.querySelectorAll(".house-option"), function(el){
+      el.addEventListener("click", function(){
+        state.house = el.getAttribute("data-house");
+        applyHouseTheme();
+        renderSorting();
+      });
+    });
+
+    document.getElementById("beginExamBtn").addEventListener("click", function(){
+      state.subjectIndex = 0;
+      state.questionIndex = 0;
+      state.score = 0;
+      state.maxScore = 0;
+      state.perSubjectScore = {};
+      state.inBonus = false;
+      renderSubjectIntro();
+    });
+  }
+
+  function currentSubject(){
+    return SUBJECTS[state.subjectIndex];
+  }
+
+  function renderSubjectIntro(){
+    applyHouseTheme();
+    var subj = currentSubject();
+    render(
+      header(state.house ? (HOUSES[state.house].name + " &mdash; " + state.name) : "") +
+      '<div class="card">' +
+        '<div class="professor-tag">' + subj.professor + '</div>' +
+        '<h2>' + subj.icon + ' ' + subj.name + '</h2>' +
+        '<p><em>"' + subj.intro + '"</em></p>' +
+        '<p>' + subj.questions.length + ' questions await. You have ' + QUESTION_SECONDS + ' seconds per question.</p>' +
+        '<div class="btn-row"><button class="btn" id="enterClassBtn">Enter the Classroom</button></div>' +
+      '</div>'
+    );
+    document.getElementById("enterClassBtn").addEventListener("click", function(){
+      state.questionIndex = 0;
+      renderQuestion();
+    });
+  }
+
+  function totalProgress(){
+    var totalSubjectQ = SUBJECTS.reduce(function(sum, s){ return sum + s.questions.length; }, 0);
+    var doneQ = 0;
+    for(var i=0;i<state.subjectIndex;i++){ doneQ += SUBJECTS[i].questions.length; }
+    doneQ += state.questionIndex;
+    return { done:doneQ, total:totalSubjectQ };
+  }
+
+  function renderQuestion(){
+    clearTimer();
+    state.locked = false;
+    applyHouseTheme();
+    var subj = currentSubject();
+    var q = subj.questions[state.questionIndex];
+    var prog = totalProgress();
+
+    var optionsHtml = q.options.map(function(opt, idx){
+      return '<button class="option" data-idx="' + idx + '">' +
+        String.fromCharCode(65+idx) + '.  ' + opt + '</button>';
+    }).join("");
+
+    render(
+      header(HOUSES[state.house].name + " &mdash; " + state.name) +
+      '<div class="score-strip"><span>Score: ' + state.score + ' / ' + state.maxScore + '</span>' +
+      '<span>Question ' + (prog.done+1) + ' of ' + prog.total + '</span></div>' +
+      '<div class="card">' +
+        '<div class="professor-tag">' + subj.professor + ' &middot; ' + subj.name + '</div>' +
+        '<div class="meta-row"><span>Subject ' + (state.subjectIndex+1) + '/' + SUBJECTS.length + '</span><span id="timeLabel">' + QUESTION_SECONDS + 's</span></div>' +
+        '<div class="timer-track"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>' +
+        '<div class="question-text">' + q.q + '</div>' +
+        '<div class="options" id="optionsWrap">' + optionsHtml + '</div>' +
+        '<div class="feedback" id="feedback"></div>' +
+        '<div class="btn-row" id="nextBtnWrap" style="display:none;"><button class="btn" id="nextBtn">Next</button></div>' +
+      '</div>'
+    );
+
+    state.maxScore += 1;
+
+    Array.prototype.forEach.call(document.querySelectorAll(".option"), function(el){
+      el.addEventListener("click", function(){
+        handleAnswer(parseInt(el.getAttribute("data-idx"), 10), q, subj, 1);
+      });
+    });
+
+    startTimer(QUESTION_SECONDS, function(){
+      handleAnswer(-1, q, subj, 1);
+    });
+  }
+
+  function renderBonusQuestion(){
+    clearTimer();
+    state.locked = false;
+    applyHouseTheme();
+    var q = BONUS.questions[state.questionIndex];
+
+    var optionsHtml = q.options.map(function(opt, idx){
+      return '<button class="option" data-idx="' + idx + '">' +
+        String.fromCharCode(65+idx) + '.  ' + opt + '</button>';
+    }).join("");
+
+    render(
+      header(HOUSES[state.house].name + " &mdash; " + state.name) +
+      '<div class="score-strip"><span>Score: ' + state.score + ' / ' + state.maxScore + '</span>' +
+      '<span>Bonus ' + (state.questionIndex+1) + ' of ' + BONUS.questions.length + '</span></div>' +
+      '<div class="card">' +
+        '<div class="professor-tag">' + BONUS.professor + ' &middot; ' + BONUS.title + ' (worth 2 points)</div>' +
+        '<div class="meta-row"><span>Distinction Round</span><span id="timeLabel">' + BONUS_SECONDS + 's</span></div>' +
+        '<div class="timer-track"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>' +
+        '<div class="question-text">' + q.q + '</div>' +
+        '<div class="options" id="optionsWrap">' + optionsHtml + '</div>' +
+        '<div class="feedback" id="feedback"></div>' +
+        '<div class="btn-row" id="nextBtnWrap" style="display:none;"><button class="btn" id="nextBtn">Next</button></div>' +
+      '</div>'
+    );
+
+    state.maxScore += 2;
+
+    Array.prototype.forEach.call(document.querySelectorAll(".option"), function(el){
+      el.addEventListener("click", function(){
+        handleAnswer(parseInt(el.getAttribute("data-idx"), 10), q, BONUS, 2);
+      });
+    });
+
+    startTimer(BONUS_SECONDS, function(){
+      handleAnswer(-1, q, BONUS, 2);
+    });
+  }
+
+  function startTimer(seconds, onTimeout){
+    state.timeLeft = seconds;
+    var fill = document.getElementById("timerFill");
+    var label = document.getElementById("timeLabel");
+    state.timerHandle = setInterval(function(){
+      state.timeLeft -= 1;
+      if(fill){
+        var pct = Math.max(0, (state.timeLeft/seconds)*100);
+        fill.style.width = pct + "%";
+        if(pct < 30) fill.classList.add("danger");
+      }
+      if(label) label.textContent = Math.max(0, state.timeLeft) + "s";
+      if(state.timeLeft <= 0){
+        clearInterval(state.timerHandle);
+        state.timerHandle = null;
+        if(!state.locked) onTimeout();
+      }
+    }, 1000);
+  }
+
+  function handleAnswer(selectedIdx, q, subjectLike, points){
+    if(state.locked) return;
+    state.locked = true;
+    clearTimer();
+
+    var isCorrect = selectedIdx === q.correct;
+    var subjKey = subjectLike.key || "bonus";
+    if(!state.perSubjectScore[subjKey]) state.perSubjectScore[subjKey] = {score:0, max:0};
+    state.perSubjectScore[subjKey].max += points;
+
+    if(isCorrect){
+      state.score += points;
+      state.perSubjectScore[subjKey].score += points;
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll(".option"), function(el, idx){
+      el.disabled = true;
+      if(idx === q.correct) el.classList.add("correct");
+      else if(idx === selectedIdx) el.classList.add("incorrect");
+    });
+
+    var feedback = document.getElementById("feedback");
+    var lines = isCorrect ? subjectLike.correctLines : subjectLike.wrongLines;
+    var msg = pick(lines);
+    if(selectedIdx === -1){
+      msg = "Time's up! " + msg;
+    }
+    feedback.textContent = msg + (isCorrect ? "" : " The correct answer was: " + q.options[q.correct]);
+
+    if(isCorrect) burstSparkles();
+
+    document.getElementById("nextBtnWrap").style.display = "flex";
+    document.getElementById("nextBtn").addEventListener("click", advance);
+  }
+
+  function advance(){
+    if(state.inBonus){
+      state.questionIndex += 1;
+      if(state.questionIndex >= BONUS.questions.length){
+        renderFinal();
+      } else {
+        renderBonusQuestion();
+      }
+      return;
+    }
+
+    var subj = currentSubject();
+    state.questionIndex += 1;
+    if(state.questionIndex >= subj.questions.length){
+      state.subjectIndex += 1;
+      if(state.subjectIndex >= SUBJECTS.length){
+        renderBonusIntro();
+      } else {
+        renderSubjectIntro();
+      }
+    } else {
+      renderQuestion();
+    }
+  }
+
+  function renderBonusIntro(){
+    applyHouseTheme();
+    render(
+      header(HOUSES[state.house].name + " &mdash; " + state.name) +
+      '<div class="card">' +
+        '<div class="professor-tag">' + BONUS.professor + '</div>' +
+        '<h2>' + BONUS.icon + ' ' + BONUS.title + '</h2>' +
+        '<p><em>"' + BONUS.intro + '"</em></p>' +
+        '<p>Current score: ' + state.score + ' / ' + state.maxScore + '</p>' +
+        '<div class="btn-row">' +
+          '<button class="btn secondary" id="skipBonusBtn">Skip to Results</button>' +
+          '<button class="btn" id="startBonusBtn">Attempt the Distinction Round</button>' +
+        '</div>' +
+      '</div>'
+    );
+    document.getElementById("startBonusBtn").addEventListener("click", function(){
+      state.inBonus = true;
+      state.questionIndex = 0;
+      renderBonusQuestion();
+    });
+    document.getElementById("skipBonusBtn").addEventListener("click", renderFinal);
+  }
+
+  function gradeFor(pct){
+    for(var i=0;i<GRADES.length;i++){
+      if(pct >= GRADES[i].min) return GRADES[i];
+    }
+    return GRADES[GRADES.length-1];
+  }
+
+  function renderFinal(){
+    clearTimer();
+    applyHouseTheme();
+    var pct = state.maxScore ? (state.score/state.maxScore) : 0;
+    var grade = gradeFor(pct);
+    var housePoints = state.score * 10;
+
+    var breakdown = SUBJECTS.map(function(s){
+      var rec = state.perSubjectScore[s.key] || {score:0, max:0};
+      return '<li><span>' + s.icon + ' ' + s.name + '</span><span>' + rec.score + ' / ' + rec.max + '</span></li>';
+    }).join("");
+
+    var bonusRec = state.perSubjectScore["bonus"];
+    var bonusHtml = bonusRec ? '<li><span>' + BONUS.icon + ' ' + BONUS.title + '</span><span>' + bonusRec.score + ' / ' + bonusRec.max + '</span></li>' : '';
+
+    var perfect = pct === 1;
+
+    render(
+      header("Official Examination Results") +
+      '<div class="card">' +
+        '<h2>Results for ' + escapeHtml(state.name) + ', ' + HOUSES[state.house].name + '</h2>' +
+        '<div class="grade-badge">' + grade.letter + '</div>' +
+        '<div class="grade-name">' + grade.label + '</div>' +
+        '<p style="text-align:center;">Final Score: <strong>' + state.score + ' / ' + state.maxScore + '</strong> (' + Math.round(pct*100) + '%)</p>' +
+        '<p style="text-align:center;">' + HOUSES[state.house].emoji + ' ' + housePoints + ' house points awarded to ' + HOUSES[state.house].name + '!</p>' +
+        (perfect ? '<p style="text-align:center;"><strong>A perfect score. Even Hermione Granger would be impressed. The Order of Merlin, First Class, is hereby considered.</strong></p>' : '') +
+        '<ul class="subject-breakdown">' + breakdown + bonusHtml + '</ul>' +
+        '<p style="text-align:center; font-style:italic;">"It matters not what one is born, but what one grows to be." Well sat, ' + escapeHtml(state.name) + '.</p>' +
+        '<div class="btn-row"><button class="btn" id="restartBtn">Sit The Exam Again</button></div>' +
+      '</div>' +
+      '<div class="footer-note">Made with love (and a lot of Butterbeer) for Becky.</div>'
+    );
+
+    document.getElementById("restartBtn").addEventListener("click", renderIntro);
+
+    if(perfect){
+      for(var i=0;i<24;i++){
+        setTimeout(function(){ burstSparkles(); }, i*80);
+      }
+    }
+  }
+
+  function burstSparkles(){
+    var symbols = ["✨","⭐","🌟"];
+    for(var i=0;i<6;i++){
+      (function(){
+        var s = document.createElement("div");
+        s.className = "sparkle";
+        s.textContent = pick(symbols);
+        s.style.left = (10 + Math.random()*80) + "vw";
+        s.style.top = (30 + Math.random()*40) + "vh";
+        document.body.appendChild(s);
+        setTimeout(function(){ s.remove(); }, 1500);
+      })();
+    }
+  }
+
+  function escapeHtml(str){
+    var div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  renderIntro();
+})();
+</script>
+</body>
+</html>
