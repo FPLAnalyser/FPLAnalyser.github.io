@@ -1221,18 +1221,19 @@
     transform: translate(-50%, -50%);
     text-align: center;
     pointer-events: none;
+    line-height: 1.25;
   }
   .shotmap-zone-name {
-    font-size: 10px;
+    font-size: 9px;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
     color: rgba(255,255,255,0.75);
     margin-bottom: 2px;
   }
-  .shotmap-zone-xg { font-size: 20px; font-weight: 700; color: var(--text); font-family: 'JetBrains Mono', monospace; }
-  .shotmap-zone-xg span { font-size: 11px; font-weight: 400; color: rgba(255,255,255,0.7); }
-  .shotmap-zone-sub { font-size: 11px; color: rgba(255,255,255,0.75); margin-top: 2px; }
-  .shotmap-zone-goals { color: var(--shotmap-goal); font-weight: 600; }
+  .shotmap-zone-xg { font-size: 17px; font-weight: 700; color: var(--text); font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
+  .shotmap-zone-xg span { font-size: 10px; font-weight: 400; color: rgba(255,255,255,0.7); }
+  .shotmap-zone-sub { font-size: 10px; color: rgba(255,255,255,0.75); margin-top: 2px; }
+  .shotmap-zone-goals { font-size: 10px; color: var(--shotmap-goal); font-weight: 600; }
 
   .shotmap-tooltip {
     position: absolute;

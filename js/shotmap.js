@@ -160,11 +160,15 @@ function zoneLabels(zones) {
     const agg = zones[key];
     const left = (p.cx / 68 * 100).toFixed(1);
     const top = (p.cy / 52.5 * 100).toFixed(1);
+    // Box thirds are narrow (~1/5 of pitch width each) — cap label width so a
+    // high-volume middle zone can't spill its text into its neighbours.
+    const maxWidth = key === 'outside' ? '55%' : '18%';
     return `
-      <div class="shotmap-zone-label" data-zone="${key}" style="left:${left}%;top:${top}%">
+      <div class="shotmap-zone-label" data-zone="${key}" style="left:${left}%;top:${top}%;max-width:${maxWidth}">
         <div class="shotmap-zone-name">${ZONE_LABEL[key]}</div>
         <div class="shotmap-zone-xg">${agg.xg.toFixed(1)} <span>xG</span></div>
-        <div class="shotmap-zone-sub">${agg.shots} shots${agg.goals ? ` · <span class="shotmap-zone-goals">${agg.goals} goal${agg.goals === 1 ? '' : 's'}</span>` : ''}</div>
+        <div class="shotmap-zone-sub">${agg.shots} shot${agg.shots === 1 ? '' : 's'}</div>
+        ${agg.goals ? `<div class="shotmap-zone-goals">${agg.goals} goal${agg.goals === 1 ? '' : 's'}</div>` : ''}
       </div>`;
   }).join('');
 }
