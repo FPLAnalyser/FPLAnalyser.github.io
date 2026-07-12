@@ -9,13 +9,11 @@
     --hot: #FF6B6B;
     --cold: #4ECDC4;
     --star: #FFD700;
-    /* Shot map — status colors (fixed, validated for contrast + CVD against
-       the dark pitch surface, not the theme categorical palette) */
+    /* Shot map — pitch surface + the one reserved status color (goals
+       conceded is always the "critical" red, validated for contrast against
+       the dark pitch surface below) */
     --shotmap-surface: #0f2e1e;
     --shotmap-goal: #d03b3b;
-    --shotmap-saved: #fab219;
-    --shotmap-blocked: #ec835a;
-    --shotmap-off: #0ca30c;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1171,9 +1169,11 @@
   }
   .modal-cta { width: 100%; }
 
-  /* ── Shot map (team page — shots conceded) ────────────────────────────── */
+  /* ── Shot map (team page — shots conceded, zone view) ─────────────────── */
   .shotmap-summary { margin-bottom: 14px; }
-  .shotmap-filters { display: flex; gap: 8px; margin-bottom: 12px; }
+
+  .shotmap-controls { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 14px; }
+  .shotmap-filters { display: flex; gap: 8px; }
   .shotmap-filter {
     background: transparent;
     border: 1px solid var(--border);
@@ -1186,6 +1186,23 @@
   .shotmap-filter:hover { border-color: var(--accent); color: var(--text); }
   .shotmap-filter.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
 
+  .shotmap-narrative {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .shotmap-narrative li {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text);
+    padding-left: 14px;
+    position: relative;
+  }
+  .shotmap-narrative li::before { content: '›'; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+
   .shotmap-wrap { position: relative; max-width: 460px; margin: 0 auto; }
   .shotmap-pitch {
     width: 100%;
@@ -1193,16 +1210,29 @@
     background: radial-gradient(ellipse at 50% 0%, #163a26 0%, var(--shotmap-surface) 65%, #0b2417 100%);
     border-radius: 10px;
   }
-  .shotmap-turf { fill: transparent; }
   .shotmap-line { fill: none; stroke: rgba(255,255,255,0.28); stroke-width: 0.3; }
   .shotmap-spot { fill: rgba(255,255,255,0.28); }
+  .shotmap-zone { cursor: pointer; transition: fill-opacity 0.15s; }
+  .shotmap-zone:hover { fill-opacity: 0.75 !important; }
 
-  .shotmap-dot { stroke: var(--shotmap-surface); stroke-width: 0.4; }
-  .shotmap-dot.goal { fill: var(--shotmap-goal); }
-  .shotmap-dot.saved { fill: var(--shotmap-saved); }
-  .shotmap-dot.blocked { fill: var(--shotmap-blocked); }
-  .shotmap-dot.off { fill: var(--shotmap-off); }
-  .shotmap-hit { fill: transparent; cursor: pointer; }
+  .shotmap-zone-labels { position: absolute; inset: 0; pointer-events: none; }
+  .shotmap-zone-label {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+  }
+  .shotmap-zone-name {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgba(255,255,255,0.75);
+    margin-bottom: 2px;
+  }
+  .shotmap-zone-xg { font-size: 20px; font-weight: 700; color: var(--text); font-family: 'JetBrains Mono', monospace; }
+  .shotmap-zone-xg span { font-size: 11px; font-weight: 400; color: rgba(255,255,255,0.7); }
+  .shotmap-zone-sub { font-size: 11px; color: rgba(255,255,255,0.75); margin-top: 2px; }
+  .shotmap-zone-goals { color: var(--shotmap-goal); font-weight: 600; }
 
   .shotmap-tooltip {
     position: absolute;
@@ -1215,25 +1245,10 @@
     font-size: 12px;
     line-height: 1.5;
     color: var(--text2);
-    max-width: 200px;
+    max-width: 230px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.4);
   }
   .shotmap-tooltip-title { color: var(--text); font-weight: 600; margin-bottom: 2px; }
   .shotmap-tooltip-meta { color: var(--text2); }
 
-  .shotmap-legend {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 14px;
-    margin-top: 14px;
-    font-size: 12px;
-    color: var(--text2);
-  }
-  .shotmap-legend-item { display: flex; align-items: center; gap: 6px; }
-  .shotmap-swatch { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-  .shotmap-swatch.goal { background: var(--shotmap-goal); }
-  .shotmap-swatch.saved { background: var(--shotmap-saved); }
-  .shotmap-swatch.blocked { background: var(--shotmap-blocked); }
-  .shotmap-swatch.off { background: var(--shotmap-off); }
-  .shotmap-legend-note { margin-left: auto; color: var(--text2); font-style: italic; }
+  .shotmap-legend-note { margin-top: 10px; font-size: 12px; color: var(--text2); font-style: italic; text-align: center; }
