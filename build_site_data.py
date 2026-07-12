@@ -7,6 +7,11 @@ consumes as JSON under site_data/, plus:
   fixture_ease.json  per team x upcoming GW (next 6): opponent, venue, FDR,
                      attack-ease and defence-ease factors from recent team
                      xGC / xG form (same blend as the next-4 rating)
+  shots_conceded.json  per team: every Understat shot faced this season
+                     (x, y, xG, result) for the team page's shot map.
+                     Sourced from data/understat_shots.csv, which is a repo-
+                     relative raw pull (not under DATA_DIR) — same convention
+                     as understat_player_match.csv.
 
 JSON records drop null values, so the NaN-heavy enrichment columns cost
 nothing on the wire. CSVs remain the human-inspection format — this step
@@ -159,6 +164,29 @@ else:
           "(expected between seasons; populates when the new fixture list lands)")
 row_counts["fixture_ease"] = write_json(
     "fixture_ease", [{k: v for k, v in r.items() if v is not None} for r in ease_rows])
+
+# ── Shots conceded (team shot map) ────────────────────────────────────────────
+# Raw per-shot pulls live in the repo's own data/ folder (like
+# understat_player_match.csv), not DATA_DIR — pull_understat_data.py always
+# writes there regardless of which season's Google Drive folder is active.
+SHOTS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                          "data", "understat_shots.csv")
+SHOTS_JSON_COLS = ["x", "y", "xg", "result", "situation", "shot_type",
+                   "team", "player", "minute", "venue", "kickoff_date"]
+
+if os.path.exists(SHOTS_FILE):
+    print("Building shots-conceded map data...")
+    shots = pd.read_csv(SHOTS_FILE)
+    conceded = {
+        team: df_to_records(sub[SHOTS_JSON_COLS])
+        for team, sub in shots.groupby("conceded_by")
+    }
+    write_json("shots_conceded", conceded)
+    row_counts["shots_conceded"] = sum(len(v) for v in conceded.values())
+    print(f"  {row_counts['shots_conceded']} shots across {len(conceded)} teams")
+else:
+    print("  data/understat_shots.csv not found — skipping shots_conceded.json "
+          "(run pull_understat_data.py to generate it)")
 
 # ── Insight-engine tables (My Team report) ────────────────────────────────────
 print("Building insight tables...")

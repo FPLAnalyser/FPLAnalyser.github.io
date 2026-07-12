@@ -9,6 +9,8 @@ Data taken from Understat (and nothing else):
   - xGChain, xGBuildup per player per match
   - shots: zone (six-yard / penalty area / out of box, from X/Y coords),
     type (foot / head), on-target
+  - per-shot rows (x, y, xG, result, situation) tagged with both the
+    shooting team and the conceding team, for shot-map visualisations
 
 Caching: one JSON per match under cache/understat/matches/{match_id}.json
 plus manifest.json. Completed matches never change -> never re-fetched.
@@ -37,6 +39,7 @@ CACHE = Path("cache/understat")
 MATCH_CACHE = CACHE / "matches"
 MANIFEST = CACHE / "manifest.json"
 OUT = Path("data/understat_player_match.csv")
+SHOTS_OUT = Path("data/understat_shots.csv")
 THROTTLE_S = 1.5
 
 HEADERS = {
@@ -206,6 +209,44 @@ def parse_match(match_id: str, meta: dict, payload: dict):
     return out
 
 
+def parse_match_shots(match_id: str, meta: dict, payload: dict):
+    """-> list of per-shot rows, one per shot, tagged with both the
+    shooting team and the conceding team (powers shot-map visualisations).
+
+    Understat's X is always normalised to the shooting side's attacking
+    direction (X=1 is the target goal), so every row here is already in the
+    conceding team's own defensive frame regardless of home/away.
+    """
+    home = resolve_team(meta["h"]["title"])
+    away = resolve_team(meta["a"]["title"])
+    kickoff = str(meta["datetime"])[:10]
+    team_of = {"h": home, "a": away}
+    conceded_by_of = {"h": away, "a": home}
+    conceding_venue_of = {"h": "A", "a": "H"}  # venue of the CONCEDING team
+
+    rows = []
+    for side in ("h", "a"):
+        for s in payload["shots"][side]:
+            x, y = float(s["X"]), float(s["Y"])
+            rows.append({
+                "understat_match_id": match_id,
+                "kickoff_date": kickoff,
+                "venue": conceding_venue_of[side],
+                "minute": int(s.get("minute", 0) or 0),
+                "team": team_of[side],
+                "conceded_by": conceded_by_of[side],
+                "player": s.get("player", ""),
+                "understat_id": str(s.get("player_id", "")),
+                "x": round(x, 4), "y": round(y, 4),
+                "zone": classify_zone(x, y),
+                "xg": round(float(s.get("xG", 0) or 0), 4),
+                "result": s.get("result", ""),
+                "situation": s.get("situation", ""),
+                "shot_type": s.get("shotType", ""),
+            })
+    return rows
+
+
 # --------------------------------- main ---------------------------------- #
 def main():
     ap = argparse.ArgumentParser()
@@ -238,9 +279,11 @@ def main():
 
     # parse everything from cache
     all_rows = []
+    all_shots = []
     for f in sorted(MATCH_CACHE.glob("*.json")):
         blob = json.loads(f.read_text())
         all_rows.extend(parse_match(f.stem, blob["meta"], blob["payload"]))
+        all_shots.extend(parse_match_shots(f.stem, blob["meta"], blob["payload"]))
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     if all_rows:
@@ -250,12 +293,26 @@ def main():
             w.writerows(all_rows)
     print(f"Wrote {len(all_rows)} player-match rows -> {OUT}")
 
+    SHOTS_OUT.parent.mkdir(parents=True, exist_ok=True)
+    if all_shots:
+        with open(SHOTS_OUT, "w", newline="", encoding="utf-8") as fh:
+            w = csv.DictWriter(fh, fieldnames=list(all_shots[0].keys()))
+            w.writeheader()
+            w.writerows(all_shots)
+    print(f"Wrote {len(all_shots)} shot rows -> {SHOTS_OUT}")
+
     # validation gate: fail loudly rather than write silently-partial data
     if all_rows:
         matches = {r["understat_match_id"] for r in all_rows}
         per_match = len(all_rows) / max(len(matches), 1)
         assert 22 <= per_match <= 40, \
             f"Suspicious players-per-match average ({per_match:.1f}) — parser drift?"
+
+    if all_shots:
+        matches = {r["understat_match_id"] for r in all_shots}
+        per_match_shots = len(all_shots) / max(len(matches), 1)
+        assert 10 <= per_match_shots <= 60, \
+            f"Suspicious shots-per-match average ({per_match_shots:.1f}) — parser drift?"
 
 
 if __name__ == "__main__":

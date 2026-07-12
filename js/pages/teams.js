@@ -2,6 +2,7 @@
 import { data } from '../data.js';
 import { teamFullNames, teamCodes, teamBadgeUrl, teamBadgeImg, escQ } from '../util.js';
 import { showPage } from '../nav.js';
+import { renderShotMap } from '../shotmap.js';
 
 // Navigate to the Teams page AND show a team (for links on other pages)
 function showTeamFromHome(team) {
@@ -109,6 +110,7 @@ function showTeam(team) {
         <div class="tab active" onclick="showTab(this, 'team-overview-${team}')">Overview</div>
         <div class="tab" onclick="showTab(this, 'team-players-${team}')">Players</div>
         <div class="tab" onclick="showTab(this, 'team-breakdown-${team}')">Points Breakdown</div>
+        <div class="tab" onclick="showTab(this, 'team-defence-${team}')">Shots Conceded</div>
       </div>
 
       <div id="team-overview-${team}" class="tab-content active">
@@ -253,8 +255,15 @@ function showTeam(team) {
           </div>
         </div>
       </div>
+
+      <div id="team-defence-${team}" class="tab-content">
+        <div class="section-header">Shots Conceded Map</div>
+        <div id="shotmap-root-${team}"></div>
+      </div>
     </div>
   `;
+
+  renderShotMap(team, document.getElementById(`shotmap-root-${team}`));
 }
 
 window.showTeam = showTeam;
