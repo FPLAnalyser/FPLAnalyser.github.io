@@ -73,7 +73,7 @@ function renderScoutChips() {
   const el = document.getElementById('scout-chips');
   el.innerHTML = scoutSelected.map((p, i) => `
     <div class="scout-chip" style="--pc:${SCOUT_COLORS[i]}">
-      ${p.code ? `<img src="https://resources.premierleague.com/premierleague/photos/players/110x140/p${p.code}.png" onerror="this.style.display='none'">` : ''}
+      ${p.code ? `<img loading="lazy" src="https://resources.premierleague.com/premierleague/photos/players/110x140/p${p.code}.png" onerror="this.style.display='none'">` : ''}
       <div><div class="nm">${p.web_name}</div><div class="tm">${teamBadgeImg(p.team, 12)}${teamFullNames[p.team] || p.team} · ${p.position} · ${p.minutes} mins</div></div>
       <button aria-label="Remove ${p.web_name}" onclick="removeScoutPlayer(${i})">×</button>
     </div>`).join('');

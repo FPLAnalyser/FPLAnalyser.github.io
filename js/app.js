@@ -7,10 +7,22 @@ import { renderTeamsDefault } from './pages/teams.js';
 import { showRankingsTab } from './pages/rankings.js';
 import { loadScoutData } from './pages/scout.js';
 import { initMyTeam } from './pages/myteam.js';
+import { initOnboarding } from './onboarding.js';
 
 registerPage('home', renderHome);
 registerPage('player', renderPlayersDefault);
 registerPage('teams', renderTeamsDefault);
+
+// Scouting data (the largest file) loads lazily on first visit to the page,
+// so managers who never open Scouting never download it.
+let scoutLoaded = false;
+registerPage('scout', () => {
+  if (scoutLoaded) return;
+  scoutLoaded = true;
+  const input = document.getElementById('scout-search');
+  if (input) input.placeholder = 'Loading scouting data…';  // initScoutSearch overwrites when ready
+  loadScoutData();
+});
 
 // Position tooltips to avoid screen edges
 function positionTooltip(wrap) {
@@ -110,13 +122,22 @@ document.addEventListener('click', (e) => {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
+  initOnboarding();          // show the welcome modal immediately on first visit
   await loadAll();
   if (!loaded) return;
   checkStaleness(data.meta);
   initSearch();
   renderHome();
   showRankingsTab('top-rated', document.querySelector('#page-rankings .rankings-tab'));
-  loadScoutData();
   initMyTeam();
 }
 init();
+
+// ── PWA: register the service worker (offline + installable) ──────────────────
+// Relative path so it works under the /fpl-analyser/ project-pages sub-path.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js')
+      .catch((e) => console.warn('Service worker registration failed:', e));
+  });
+}

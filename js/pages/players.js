@@ -20,7 +20,7 @@ function renderPlayersDefault() {
         const streak = data.seasonToDate.find(x => x.web_name === p.web_name);
         const streakIcon = streak && streak.streak === '🔥 Hot' ? '🔥' : streak && streak.streak === '🧊 Cold' ? '🧊' : '';
         return `<div class="ownership-card" onclick="showPlayer('${escQ(p.web_name)}')">
-          <img class="ownership-photo" src="${photo}" onerror="this.style.opacity='0'">
+          <img loading="lazy" class="ownership-photo" src="${photo}" onerror="this.style.opacity='0'">
           <div class="ownership-info">
             <div class="ownership-name">${p.web_name} ${streakIcon}</div>
             <div class="ownership-meta">${p.position} · ${teamBadgeImg(p.team, 12)}${teamFullNames[p.team] || p.team} · £${p.price}m</div>
@@ -209,7 +209,7 @@ function showPlayer(name) {
       <div class="player-header">
         <div class="player-avatar">
           <img 
-            src="https://resources.premierleague.com/premierleague/photos/players/110x140/p${r.code}.png"
+            loading="lazy" src="https://resources.premierleague.com/premierleague/photos/players/110x140/p${r.code}.png"
             alt="${name}"
             style="width:72px;height:90px;object-fit:cover;border-radius:8px;"
             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
@@ -221,7 +221,7 @@ function showPlayer(name) {
           <div class="player-meta">
             <span class="badge badge-pos">${pos}</span>
             <span class="badge badge-team">
-              ${teamBadgeUrl(r.team) ? `<img src="${teamBadgeUrl(r.team)}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:4px;" onerror="this.style.display='none'">` : ''}
+              ${teamBadgeUrl(r.team) ? `<img loading="lazy" src="${teamBadgeUrl(r.team)}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:4px;" onerror="this.style.display='none'">` : ''}
               ${teamFullNames[r.team] || r.team}
             </span>
             <span class="badge badge-price">£${r.price}m</span>

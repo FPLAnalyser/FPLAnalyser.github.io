@@ -17,7 +17,7 @@ function dashRow(p, valueHtml) {
   const team = r.team || p.team || '';
   return `<div class="dashboard-row" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">
     <span class="dashboard-rank">#${p._rank}</span>
-    <img class="dashboard-photo" src="${photo}" onerror="this.style.opacity='0'">
+    <img loading="lazy" class="dashboard-photo" src="${photo}" onerror="this.style.opacity='0'">
     <div class="dashboard-info">
       <div class="dashboard-name">${p.web_name}</div>
       <div class="dashboard-meta">${pos} · ${teamBadgeImg(team, 12)}${teamFullNames[team] || team}</div>

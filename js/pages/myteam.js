@@ -79,7 +79,7 @@ function buildReportHtml(picksData, historyData) {
 
   const suggestionCard = (s) => `
     <div class="suggestion-card" onclick="event.stopPropagation();showPlayerFromRankings('${escQ(s.web_name)}')">
-      ${s.code ? `<img src="https://resources.premierleague.com/premierleague/photos/players/110x140/p${s.code}.png" onerror="this.style.opacity='0'">` : ''}
+      ${s.code ? `<img loading="lazy" src="https://resources.premierleague.com/premierleague/photos/players/110x140/p${s.code}.png" onerror="this.style.opacity='0'">` : ''}
       <div class="suggestion-info">
         <div class="suggestion-name">${s.web_name} <span style="color:var(--text2);font-weight:400">£${Number(s.price).toFixed(1)}m · ${s.team}</span></div>
         <div class="suggestion-reason">${s.reason}</div>
@@ -158,7 +158,7 @@ function renderMyTeam(picksData, gw, historyData, entryData, teamId) {
         ${pick.is_captain ? '<span class="pitch-armband">C</span>' : ''}
         ${pick.is_vice_captain ? '<span class="pitch-armband vc">V</span>' : ''}
         ${streakIcon ? `<span class="pitch-streak">${streakIcon}</span>` : ''}
-        <img class="pitch-card-photo" src="${photo}" onerror="this.style.opacity='0'">
+        <img loading="lazy" class="pitch-card-photo" src="${photo}" onerror="this.style.opacity='0'">
         <div class="pitch-card-name">${r.web_name}</div>
         <div class="pitch-card-meta">${r.position} · £${r.price}m</div>
         ${nextFixturesHtml(r.team)}

@@ -37,7 +37,7 @@ function renderTeamsDefault() {
         ${teams.map(t => `
           <tr onclick="showTeam('${t.team}')" style="cursor:pointer">
             <td>
-              ${teamCodes[t.team] ? `<img src="https://resources.premierleague.com/premierleague/badges/t${teamCodes[t.team]}.png" style="width:24px;height:24px;object-fit:contain;vertical-align:middle;">` : ''}
+              ${teamCodes[t.team] ? `<img loading="lazy" src="https://resources.premierleague.com/premierleague/badges/t${teamCodes[t.team]}.png" style="width:24px;height:24px;object-fit:contain;vertical-align:middle;">` : ''}
             </td>
             <td><span class="clickable-name">${teamFullNames[t.team] || t.team}</span></td>
             <td style="font-size:12px">${t.form_direction}</td>
@@ -71,7 +71,7 @@ function showTeam(team) {
       <div class="team-header">
         <div style="display:flex;align-items:center;gap:16px;margin-bottom:8px;">
         ${teamBadgeUrl(team) ? `
-          <img src="${teamBadgeUrl(team)}" alt="${team}" 
+          <img loading="lazy" src="${teamBadgeUrl(team)}" alt="${team}" 
             style="width:60px;height:60px;object-fit:contain;"
             onerror="this.style.display='none'">
         ` : ''}

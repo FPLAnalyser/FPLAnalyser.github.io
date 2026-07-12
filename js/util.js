@@ -20,7 +20,7 @@ function teamBadgeUrl(team) {
 // Small inline team badge to sit next to any team name
 function teamBadgeImg(team, size = 14) {
   const url = teamBadgeUrl(team);
-  return url ? `<img src="${url}" alt="" style="width:${size}px;height:${size}px;object-fit:contain;vertical-align:-2px;margin-right:4px;" onerror="this.style.display='none'">` : '';
+  return url ? `<img loading="lazy" src="${url}" alt="" style="width:${size}px;height:${size}px;object-fit:contain;vertical-align:-2px;margin-right:4px;" onerror="this.style.display='none'">` : '';
 }
 
 // Accent-insensitive comparison ("Dubravka" matches "Dúbravka")
