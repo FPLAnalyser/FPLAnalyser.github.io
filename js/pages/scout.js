@@ -27,7 +27,11 @@ function loadScoutData() {
 
 // ── Scouting Report ──────────────────────────────────────────────────────────
 const SCOUT_MAX = 4;
-const SCOUT_COLORS = ['#38D9A9', '#F78166', '#FFD700', '#B197FC'];
+// Deliberately excludes every hue used by the single-player percentile scale
+// (scoutPctColor: red -> grey -> green) so a multi-player bar's colour is
+// never mistaken for a percentile reading. Validated for CVD separation and
+// contrast against the card surface (dataviz skill's categorical checks).
+const SCOUT_COLORS = ['#3987e5', '#c98500', '#d55181', '#5b4fc4'];
 let scoutSelected = [];
 let scoutWindow = 'season';   // 'season' | 'l6' | 'l4'
 let scoutPeer = 'pooled';     // 'pooled' (MID+FWD) | 'position'

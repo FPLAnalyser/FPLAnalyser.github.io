@@ -26,12 +26,19 @@ function loadShots(mode) {
 
 const YD_PER_M = 1.09361;
 
-// Box + grid geometry in meters on the 68 x 52.5 half-pitch viewBox (goal at y=0)
+// Box + grid geometry in meters on the 68 x 52.5 half-pitch (goal at y=0).
+// viewBox extends above y=0 (VIEW_Y_MIN) so the goal frame isn't clipped.
 const BOX_L = 13.84, BOX_R = 54.16;
 const THIRD = (BOX_R - BOX_L) / 3;
 const T1 = BOX_L + THIRD, T2 = BOX_L + 2 * THIRD;
 const DEPTH = { d0: 0, d1: 6, d2: 16.5, d3: 24, d4: 52.5 };
+const VIEW_Y_MIN = -5, VIEW_H = DEPTH.d4 - VIEW_Y_MIN, VIEW_W = 68;
 
+// 12 zones: six-yard thirds, box thirds + bylines, one edge-of-box band,
+// long-range thirds. Wide-of-the-box shots between the six-yard line and
+// the edge-of-box line fold into the long-range byline columns (b4-wl/wr,
+// which start at d2 instead of d3) — there's no separate "wide, edge of
+// box" zone, matching how sparse that specific pocket actually is.
 const ZONE_META = {
   'b1-l': { name: 'Left Six-Yard', narrative: 'the left of the six-yard box' },
   'b1-m': { name: 'Six-Yard Box', narrative: 'right in the six-yard box' },
@@ -41,9 +48,7 @@ const ZONE_META = {
   'b2-m': { name: 'Middle of Box', narrative: 'the middle of the box' },
   'b2-r': { name: 'Right of Box', narrative: 'the right side of the box' },
   'b2-wr': { name: 'Right Byline', narrative: 'the right byline' },
-  'b3-wl': { name: 'Left Edge of Box', narrative: 'the left edge of the box' },
   'b3-c': { name: 'Edge of Box', narrative: 'the edge of the box' },
-  'b3-wr': { name: 'Right Edge of Box', narrative: 'the right edge of the box' },
   'b4-wl': { name: 'Long Range, Left', narrative: 'long range on the left' },
   'b4-c': { name: 'Long Range, Central', narrative: 'long range, centrally' },
   'b4-wr': { name: 'Long Range, Right', narrative: 'long range on the right' },
@@ -58,12 +63,16 @@ const ZONE_SHAPES = {
   'b2-m': { x: T1, y: DEPTH.d1, w: THIRD, h: DEPTH.d2 - DEPTH.d1 },
   'b2-r': { x: T2, y: DEPTH.d1, w: THIRD, h: DEPTH.d2 - DEPTH.d1 },
   'b2-wr': { x: BOX_R, y: DEPTH.d1, w: 68 - BOX_R, h: DEPTH.d2 - DEPTH.d1 },
-  'b3-wl': { x: 0, y: DEPTH.d2, w: BOX_L, h: DEPTH.d3 - DEPTH.d2 },
   'b3-c': { x: BOX_L, y: DEPTH.d2, w: BOX_R - BOX_L, h: DEPTH.d3 - DEPTH.d2 },
-  'b3-wr': { x: BOX_R, y: DEPTH.d2, w: 68 - BOX_R, h: DEPTH.d3 - DEPTH.d2 },
-  'b4-wl': { x: 0, y: DEPTH.d3, w: BOX_L, h: DEPTH.d4 - DEPTH.d3 },
+  'b4-wl': { x: 0, y: DEPTH.d2, w: BOX_L, h: DEPTH.d4 - DEPTH.d2 },
   'b4-c': { x: BOX_L, y: DEPTH.d3, w: BOX_R - BOX_L, h: DEPTH.d4 - DEPTH.d3 },
-  'b4-wr': { x: BOX_R, y: DEPTH.d3, w: 68 - BOX_R, h: DEPTH.d4 - DEPTH.d3 },
+  'b4-wr': { x: BOX_R, y: DEPTH.d2, w: 68 - BOX_R, h: DEPTH.d4 - DEPTH.d2 },
+};
+
+const METRIC_META = {
+  xg: { label: 'xG', zoneKey: 'xg', totalKey: 'totalXg', unit: 'xG', fmt: v => v.toFixed(1), noun: 'non-penalty xG' },
+  goals: { label: 'Goals', zoneKey: 'goals', totalKey: 'totalGoals', unit: 'goals', fmt: v => String(v), noun: 'non-penalty goals' },
+  shots: { label: 'Shots', zoneKey: 'shots', totalKey: 'totalShots', unit: 'shots', fmt: v => String(v), noun: 'shots' },
 };
 
 // x,y are Understat's raw (unclamped) fractions — used for true distance.
@@ -94,8 +103,8 @@ function classifyZone(cx, cy) {
     if (!inBoxWidth) return `b2-${wide}`;
     return cx < T1 ? 'b2-l' : cx < T2 ? 'b2-m' : 'b2-r';
   }
-  if (cy <= DEPTH.d3) return `b3-${wide || 'c'}`;
-  return `b4-${wide || 'c'}`;
+  if (!inBoxWidth) return `b4-${wide}`;
+  return cy <= DEPTH.d3 ? 'b3-c' : 'b4-c';
 }
 
 function emptyAgg() {
@@ -160,26 +169,30 @@ function summaryRow(a, mode) {
   `;
 }
 
-function buildNarrative(a, team, mode) {
+function buildNarrative(a, team, mode, metric) {
   if (!a.totalShots) return [];
   const teamName = teamFullNames[team] || team;
   const entries = Object.entries(a.zones).filter(([, z]) => z.shots > 0);
   if (!entries.length) return [];
-
+  const mm = METRIC_META[metric];
+  const total = a[mm.totalKey];
   const verb = mode === 'for' ? 'create' : 'concede';
   const noun = mode === 'for' ? 'their shots' : 'shots faced';
   const lines = [];
 
-  const [topXgKey, topXgAgg] = entries.slice().sort((x, y) => y[1].xg - x[1].xg)[0];
-  if (topXgAgg.xg > 0) {
-    const pct = Math.round(topXgAgg.xg / a.totalXg * 100);
-    lines.push(`${teamName} ${verb} the most non-penalty xG from ${ZONE_META[topXgKey].narrative} — ${topXgAgg.xg.toFixed(1)} xG (${pct}% of the total).`);
+  const [topKey, topAgg] = entries.slice().sort((x, y) => y[1][mm.zoneKey] - x[1][mm.zoneKey])[0];
+  if (topAgg[mm.zoneKey] > 0 && total > 0) {
+    const pct = Math.round(topAgg[mm.zoneKey] / total * 100);
+    lines.push(`${teamName} ${verb} the most ${mm.noun} from ${ZONE_META[topKey].narrative} — ${mm.fmt(topAgg[mm.zoneKey])} ${mm.unit} (${pct}% of the total).`);
   }
 
-  const [topGoalKey, topGoalAgg] = entries.slice().sort((x, y) => y[1].goals - x[1].goals)[0];
-  if (topGoalAgg.goals > 0 && topGoalKey !== topXgKey) {
-    const verbGoal = mode === 'for' ? 'scored' : 'conceded';
-    lines.push(`Most non-penalty goals ${verbGoal} have come from ${ZONE_META[topGoalKey].narrative} (${topGoalAgg.goals} of ${a.totalGoals}).`);
+  // Skip when the metric toggle is already "Goals" — this would just repeat the line above.
+  if (metric !== 'goals' && a.totalGoals > 0) {
+    const [topGoalKey, topGoalAgg] = entries.slice().sort((x, y) => y[1].goals - x[1].goals)[0];
+    if (topGoalKey !== topKey) {
+      const verbGoal = mode === 'for' ? 'scored' : 'conceded';
+      lines.push(`Most non-penalty goals ${verbGoal} have come from ${ZONE_META[topGoalKey].narrative} (${topGoalAgg.goals} of ${a.totalGoals}).`);
+    }
   }
 
   const totalCorners = entries.reduce((sum, [, z]) => sum + z.corners, 0);
@@ -191,8 +204,8 @@ function buildNarrative(a, team, mode) {
   return lines;
 }
 
-function narrativeBlock(a, team, mode) {
-  const lines = buildNarrative(a, team, mode);
+function narrativeBlock(a, team, mode, metric) {
+  const lines = buildNarrative(a, team, mode, metric);
   if (!lines.length) return '';
   return `<ul class="shotmap-narrative">${lines.map(l => `<li>${l}</li>`).join('')}</ul>`;
 }
@@ -201,11 +214,25 @@ function pitchMarkings() {
   return `
     <line class="shotmap-line" x1="0" y1="52.5" x2="68" y2="52.5"></line>
     <path class="shotmap-line" d="M 24.85 52.5 A 9.15 9.15 0 0 1 43.15 52.5"></path>
-    <rect class="shotmap-line" x="13.84" y="0" width="40.32" height="16.5"></rect>
-    <rect class="shotmap-line" x="24.84" y="0" width="18.32" height="5.5"></rect>
-    <rect class="shotmap-line" x="30.34" y="-2" width="7.32" height="2"></rect>
+    <rect class="shotmap-line shotmap-box" x="13.84" y="0" width="40.32" height="16.5"></rect>
+    <rect class="shotmap-line shotmap-box" x="24.84" y="0" width="18.32" height="5.5"></rect>
     <circle class="shotmap-spot" cx="34" cy="11" r="0.35"></circle>
     <path class="shotmap-line" d="M 26.7 16.5 A 9.15 9.15 0 0 0 41.3 16.5"></path>
+  `;
+}
+
+// Open goal frame (no back line — it opens into the six-yard box) with a
+// light net hatch, drawn above y=0 in the viewBox's extended top margin.
+function goalFrame() {
+  const gl = 30.34, gr = 37.66, gt = -3.6;
+  const netCols = [1, 2, 3, 4, 5, 6].map(i => gl + (gr - gl) * i / 7);
+  const netRows = [-1.2, -2.4];
+  return `
+    <g class="shotmap-goal">
+      ${netCols.map(x => `<line class="shotmap-net" x1="${x.toFixed(2)}" y1="0" x2="${x.toFixed(2)}" y2="${gt}"></line>`).join('')}
+      ${netRows.map(y => `<line class="shotmap-net" x1="${gl}" y1="${y}" x2="${gr}" y2="${y}"></line>`).join('')}
+      <path class="shotmap-goal-frame" d="M ${gl} 0 L ${gl} ${gt} L ${gr} ${gt} L ${gr} 0"></path>
+    </g>
   `;
 }
 
@@ -226,24 +253,26 @@ function cellOutlines() {
     .join('');
 }
 
-function zoneFills(zones) {
-  const maxXg = Math.max(...Object.values(zones).map(z => z.xg), 0.0001);
+function zoneFills(zones, metric) {
+  const mk = METRIC_META[metric].zoneKey;
+  const max = Math.max(...Object.values(zones).map(z => z[mk]), 0.0001);
   return Object.entries(ZONE_SHAPES).map(([key, s]) => {
     const agg = zones[key];
     if (!agg || agg.shots === 0) return '';
-    const share = agg.xg / maxXg;
+    const share = agg[mk] / max;
     const opacity = (0.14 + share * 0.6).toFixed(2);
     return `<rect class="shotmap-zone" data-zone="${key}" x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" style="fill:var(--accent);fill-opacity:${opacity}"></rect>`;
   }).join('');
 }
 
-function zoneLabels(zones, totalXg) {
+function zoneLabels(zones, total, metric) {
+  const mk = METRIC_META[metric].zoneKey;
   return Object.entries(ZONE_SHAPES).map(([key, s]) => {
     const agg = zones[key];
     if (!agg || agg.shots === 0) return '';
-    const pct = totalXg > 0 ? Math.round(agg.xg / totalXg * 100) : 0;
-    const left = ((s.x + s.w / 2) / 68 * 100).toFixed(1);
-    const top = ((s.y + s.h / 2) / 52.5 * 100).toFixed(1);
+    const pct = total > 0 ? Math.round(agg[mk] / total * 100) : 0;
+    const left = ((s.x + s.w / 2) / VIEW_W * 100).toFixed(1);
+    const top = ((s.y + s.h / 2 - VIEW_Y_MIN) / VIEW_H * 100).toFixed(1);
     return `<div class="shotmap-zone-label" data-zone="${key}" style="left:${left}%;top:${top}%">${pct}%</div>`;
   }).join('');
 }
@@ -254,6 +283,11 @@ function controlsRow() {
       <div class="shotmap-filters shotmap-mode" data-group="mode">
         <button class="shotmap-filter active" data-mode="against">Defence</button>
         <button class="shotmap-filter" data-mode="for">Attack</button>
+      </div>
+      <div class="shotmap-filters" data-group="metric">
+        <button class="shotmap-filter active" data-metric="xg">xG</button>
+        <button class="shotmap-filter" data-metric="goals">Goals</button>
+        <button class="shotmap-filter" data-metric="shots">Shots</button>
       </div>
       <div class="shotmap-filters" data-group="window">
         <button class="shotmap-filter active" data-window="season">Season</button>
@@ -290,17 +324,20 @@ function currentSlice(root) {
 function rerender(root, team) {
   const shots = currentSlice(root);
   const a = analyse(shots, root._mode);
+  const mm = METRIC_META[root._metric];
   root._analysis = a;
   root.querySelector('.shotmap-summary').outerHTML = `<div class="shotmap-summary">${summaryRow(a, root._mode)}</div>`;
-  root.querySelector('.shotmap-narrative-wrap').innerHTML = narrativeBlock(a, team, root._mode);
+  root.querySelector('.shotmap-narrative-wrap').innerHTML = narrativeBlock(a, team, root._mode, root._metric);
   root.querySelector('.shotmap-scatter-layer').innerHTML = scatterDots(shots, root._mode);
-  root.querySelector('.shotmap-zones').innerHTML = zoneFills(a.zones);
-  root.querySelector('.shotmap-zone-labels').innerHTML = zoneLabels(a.zones, a.totalXg);
+  root.querySelector('.shotmap-zones').innerHTML = zoneFills(a.zones, root._metric);
+  root.querySelector('.shotmap-zone-labels').innerHTML = zoneLabels(a.zones, a[mm.totalKey], root._metric);
+  root.querySelector('.shotmap-legend-note').textContent =
+    `% = share of ${mm.noun} by zone · shading follows the same share`;
   root.querySelector('.shotmap-tooltip').style.display = 'none';
 }
 
 function bindHover(root) {
-  const wrap = root.querySelector('.shotmap-wrap');
+  const wrap = root.querySelector('.shotmap-pitch-col');
   const tooltip = root.querySelector('.shotmap-tooltip');
 
   wrap.addEventListener('pointermove', e => {
@@ -342,6 +379,7 @@ function bindControls(root, team) {
         btn.classList.add('active');
         if (btn.dataset.window) root._window = btn.dataset.window;
         if (btn.dataset.venue) root._venue = btn.dataset.venue;
+        if (btn.dataset.metric) root._metric = btn.dataset.metric;
         if (btn.dataset.mode) {
           root._mode = btn.dataset.mode;
           await ensureMode(root, root._mode);
@@ -350,6 +388,18 @@ function bindControls(root, team) {
       });
     });
   });
+}
+
+function orientationArrow() {
+  return `
+    <div class="shotmap-orientation">
+      <svg class="shotmap-arrow-icon" viewBox="0 0 20 70" preserveAspectRatio="xMidYMid meet">
+        <line x1="10" y1="68" x2="10" y2="14"></line>
+        <path d="M 2 20 L 10 4 L 18 20 Z"></path>
+      </svg>
+      <span class="shotmap-orientation-label">Attack</span>
+    </div>
+  `;
 }
 
 async function renderShotMap(team, container) {
@@ -368,22 +418,27 @@ async function renderShotMap(team, container) {
     ${controlsRow()}
     <div class="shotmap-narrative-wrap"></div>
     <div class="shotmap-wrap">
-      <svg class="shotmap-pitch" viewBox="0 0 68 52.5" preserveAspectRatio="xMidYMid meet">
-        <g class="shotmap-scatter-layer"></g>
-        <g class="shotmap-zones"></g>
-        <g class="shotmap-outlines">${cellOutlines()}</g>
-        ${pitchMarkings()}
-      </svg>
-      <div class="shotmap-zone-labels"></div>
-      <div class="shotmap-tooltip" style="display:none"></div>
+      ${orientationArrow()}
+      <div class="shotmap-pitch-col">
+        <svg class="shotmap-pitch" viewBox="0 ${VIEW_Y_MIN} ${VIEW_W} ${VIEW_H}" preserveAspectRatio="xMidYMid meet">
+          <g class="shotmap-scatter-layer"></g>
+          <g class="shotmap-zones"></g>
+          <g class="shotmap-outlines">${cellOutlines()}</g>
+          ${pitchMarkings()}
+          ${goalFrame()}
+        </svg>
+        <div class="shotmap-zone-labels"></div>
+        <div class="shotmap-tooltip" style="display:none"></div>
+      </div>
     </div>
-    <div class="shotmap-legend-note">% = share of non-penalty xG by zone · shading follows the same share</div>
+    <div class="shotmap-legend-note"></div>
   `;
   container._team = team;
   container._allShots = { against: shots };
   container._mode = 'against';
   container._window = 'season';
   container._venue = 'all';
+  container._metric = 'xg';
   rerender(container, team);
   bindHover(container);
   bindControls(container, team);

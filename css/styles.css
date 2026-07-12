@@ -1204,17 +1204,47 @@
   }
   .shotmap-narrative li::before { content: '›'; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
 
-  .shotmap-wrap { position: relative; max-width: 460px; margin: 0 auto; }
+  .shotmap-wrap { display: flex; align-items: stretch; gap: 6px; max-width: 500px; margin: 0 auto; }
+
+  .shotmap-orientation {
+    flex: 0 0 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--text2);
+  }
+  .shotmap-arrow-icon { width: 14px; height: 70px; }
+  .shotmap-arrow-icon line { stroke: var(--text2); stroke-width: 1.5; }
+  .shotmap-arrow-icon path { fill: var(--text2); }
+  .shotmap-orientation-label {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text2);
+  }
+
+  .shotmap-pitch-col { position: relative; flex: 1 1 auto; min-width: 0; }
   .shotmap-pitch {
     width: 100%;
     display: block;
     background: radial-gradient(ellipse at 50% 0%, #163a26 0%, var(--shotmap-surface) 65%, #0b2417 100%);
     border-radius: 10px;
   }
-  .shotmap-line { fill: none; stroke: rgba(255,255,255,0.28); stroke-width: 0.3; }
-  .shotmap-spot { fill: rgba(255,255,255,0.28); }
+  /* Real pitch markings read as structure — bold and solid. */
+  /* Decorative marks never intercept hover — only .shotmap-zone should. */
+  .shotmap-line, .shotmap-spot, .shotmap-goal-frame, .shotmap-net, .shotmap-scatter { pointer-events: none; }
+  .shotmap-line { fill: none; stroke: rgba(255,255,255,0.62); stroke-width: 0.3; }
+  .shotmap-box { stroke-width: 0.4; }
+  .shotmap-spot { fill: rgba(255,255,255,0.62); }
+  .shotmap-goal-frame { fill: none; stroke: #fff; stroke-width: 0.5; stroke-linejoin: miter; }
+  .shotmap-net { stroke: rgba(255,255,255,0.35); stroke-width: 0.1; }
   .shotmap-scatter { fill: none; stroke: rgba(255,255,255,0.3); stroke-width: 0.12; }
-  .shotmap-cell-outline { fill: none; stroke: rgba(255,255,255,0.45); stroke-width: 0.25; stroke-dasharray: 0.7 0.7; }
+  /* Zone grid reads as an overlay — thin and dashed, secondary to the pitch. */
+  .shotmap-cell-outline { fill: none; stroke: rgba(255,255,255,0.3); stroke-width: 0.18; stroke-dasharray: 0.6 0.6; pointer-events: none; }
   .shotmap-zone { cursor: pointer; transition: fill-opacity 0.15s; }
   .shotmap-zone:hover { fill-opacity: 0.8 !important; }
 
