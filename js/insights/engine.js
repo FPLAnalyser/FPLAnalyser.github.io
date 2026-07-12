@@ -12,7 +12,7 @@ const SEVERITY_META = {
   info: { icon: '🔵', label: 'Worth knowing', color: '#58a6ff' },
   good: { icon: '🟢', label: 'Good news', color: '#38D9A9' },
 };
-const MAX_PER_SEVERITY = 4;
+const MAX_PER_SEVERITY = 5;
 
 // league: { ratings, personas4, seasonToDate, playerForm, priceRisk,
 //           personaShifts, teamMetrics, benchmarks, replacementPool, fixtureEase }
@@ -32,6 +32,7 @@ function buildContext(picksData, historyData, league) {
     form: byEl(league.playerForm),
     priceRisk: byEl(league.priceRisk),
     shifts: byEl(league.personaShifts),
+    metrics: byEl(league.metrics),
   };
 
   const squad = picks.map(pick => ({
@@ -43,6 +44,7 @@ function buildContext(picksData, historyData, league) {
     form: maps.form.get(pick.element) || null,
     priceRisk: maps.priceRisk.get(pick.element) || null,
     shift: maps.shifts.get(pick.element) || null,
+    m: maps.metrics.get(pick.element) || null,
   }));
 
   const positionGroups = {};
@@ -83,6 +85,7 @@ function buildContext(picksData, historyData, league) {
     teamMetrics: league.teamMetrics || [],
     replacementPool: league.replacementPool || [],
     fixtureEase: league.fixtureEase || [],
+    league,   // full league tables for rules that scan beyond the squad
     teamEase,
     teamFixtureList,
     ownedElements: new Set(picks.map(p => p.element)),

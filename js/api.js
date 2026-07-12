@@ -45,11 +45,36 @@ async function getCurrentGwFallback() {
   return events.length ? events[0].id : 1;
 }
 
-async function getGwForTeam(teamId) {
+// Full entry payload: manager name, current GW, classic league memberships
+async function fetchEntry(teamId) {
   const entryRes = await fplFetch(`https://fantasy.premierleague.com/api/entry/${teamId}/`);
-  const entryData = await entryRes.json();
+  return entryRes.json();
+}
+
+async function getGwForTeam(teamId) {
+  const entryData = await fetchEntry(teamId);
   if (entryData.current_event) return entryData.current_event;
   return getCurrentGwFallback();
+}
+
+// Classic league standings (first page: top 50)
+async function fetchLeagueStandings(leagueId) {
+  const res = await fplFetch(`https://fantasy.premierleague.com/api/leagues-classic/${leagueId}/standings/`);
+  return res.json();
+}
+
+// A manager's picks for a GW, cached in sessionStorage (rival squads don't
+// change mid-GW, and public CORS proxies rate-limit quickly)
+async function fetchPicksCached(teamId, gw) {
+  const key = `fpl_picks_${teamId}_${gw}`;
+  try {
+    const hit = sessionStorage.getItem(key);
+    if (hit) return JSON.parse(hit);
+  } catch (e) { /* storage unavailable — fetch fresh */ }
+  const res = await fplFetch(`https://fantasy.premierleague.com/api/entry/${teamId}/event/${gw}/picks/`);
+  const json = await res.json();
+  try { sessionStorage.setItem(key, JSON.stringify(json)); } catch (e) { /* quota — fine */ }
+  return json;
 }
 
 // Season history for a manager: per-GW points, bench points, chips used.
@@ -64,4 +89,5 @@ async function fetchEntryHistory(teamId) {
   }
 }
 
-export { fplFetch, getCurrentGwFallback, getGwForTeam, fetchEntryHistory };
+export { fplFetch, getCurrentGwFallback, getGwForTeam, fetchEntryHistory,
+         fetchEntry, fetchLeagueStandings, fetchPicksCached };

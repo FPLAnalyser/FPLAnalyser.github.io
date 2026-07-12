@@ -1,9 +1,10 @@
 // myteam.js — Load Your Team page: squad view + the insight report
 import { data } from '../data.js';
 import { teamFullNames, escQ, avgRatingField, fixtureChips } from '../util.js';
-import { fplFetch, getGwForTeam, fetchEntryHistory } from '../api.js';
+import { fplFetch, getCurrentGwFallback, fetchEntry, fetchEntryHistory } from '../api.js';
 import { buildContext, runRules, SEVERITY_META } from '../insights/engine.js';
 import { RULES } from '../insights/rules.js';
+import { miniLeagueSectionHtml } from './minileague.js';
 
 const TEAM_ID_KEY = 'fpl_team_id';
 
@@ -29,14 +30,15 @@ async function loadMyTeam() {
   container.innerHTML = `<div class="loading"><div class="loading-spinner"></div>Loading your team...</div>`;
 
   try {
-    const gw = await getGwForTeam(teamId);
+    const entryData = await fetchEntry(teamId);
+    const gw = entryData.current_event || await getCurrentGwFallback();
     const [picksRes, historyData] = await Promise.all([
       fplFetch(`https://fantasy.premierleague.com/api/entry/${teamId}/event/${gw}/picks/`),
       fetchEntryHistory(teamId)
     ]);
     const picksData = await picksRes.json();
     localStorage.setItem(TEAM_ID_KEY, teamId);
-    renderMyTeam(picksData, gw, historyData);
+    renderMyTeam(picksData, gw, historyData, entryData, teamId);
   } catch (e) {
     console.error('Load team error:', e);
     const detail = (e && e.message ? e.message : String(e)).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
@@ -56,6 +58,7 @@ function buildReportHtml(picksData, historyData) {
     ratings: data.ratings,
     personas4: data.personas4,
     seasonToDate: data.seasonToDate,
+    metrics: data.metrics,
     playerForm: data.playerForm,
     priceRisk: data.priceRisk,
     personaShifts: data.personaShifts,
@@ -95,7 +98,7 @@ function buildReportHtml(picksData, historyData) {
     }).join('')}`;
 }
 
-function renderMyTeam(picksData, gw, historyData) {
+function renderMyTeam(picksData, gw, historyData, entryData, teamId) {
   const container = document.getElementById('loadteam-result');
   const picks = picksData.picks || [];
   const entryHistory = picksData.entry_history || {};
@@ -217,6 +220,8 @@ function renderMyTeam(picksData, gw, historyData) {
       <div class="bench-strip-label">Bench</div>
       <div class="pitch-row">${bench.map(e => pitchCard(e, true)).join('')}</div>
     </div>
+
+    ${miniLeagueSectionHtml(entryData, teamId, gw, new Set(picks.map(p => p.element)))}
   `;
 }
 

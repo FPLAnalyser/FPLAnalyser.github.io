@@ -207,6 +207,8 @@ const RULES = [
         const near = ctx.teamEase(team, 0, 3);
         const later = ctx.teamEase(team, 3, 3);
         if (near == null) continue;
+        // 3+ players in a bad run is the team_exposure rule's story — don't duplicate
+        if (names.length >= 3 && near <= 0.9) continue;
         if (near <= 0.85) {
           out.push({
             headline: `${team} are in a brutal run right now`,
@@ -255,6 +257,218 @@ const RULES = [
           body: `Your starting ${pos} group averages ${avg.toFixed(1)} points per game against a league median of ${benchPpg.toFixed(1)}. ${worst.r.web_name} (${blendedPpg(worst.r).toFixed(1)} ppg) is the weakest link${suggestions.length ? ` — options at your ~£${budget.toFixed(1)}m budget below` : ''}.`,
           evidence: `${pos} starters avg ${avg.toFixed(2)} ppg vs league median ${benchPpg.toFixed(2)} (blend of season + last 4 GWs)`,
           suggestions,
+        });
+      }
+      return out;
+    },
+  },
+  // 10 — differentials worth knowing about (low ownership, high form)
+  {
+    id: 'differential_opportunity',
+    severity: 'info',
+    run(ctx) {
+      const picks = (ctx.replacementPool || [])
+        .filter(p => !ctx.ownedElements.has(p.element) &&
+          num(p.selected_by_percent) != null && p.selected_by_percent < 5 &&
+          starsToNum(p.gw4_overall_rating) >= 4 &&
+          ((num(p.gw4_start_rate) ?? num(p.season_start_rate) ?? 0) >= 0.7) &&
+          (num(p.next4_fixture_factor) == null || p.next4_fixture_factor >= 1.0))
+        .sort((a, b) => (blendedScore(b) ?? 0) - (blendedScore(a) ?? 0))
+        .slice(0, 3);
+      if (!picks.length) return null;
+      return {
+        headline: `Differential watch: ${picks.map(p => p.web_name).join(', ')}`,
+        body: `Under 5% owned, in ${picks.length > 1 ? '4-star-plus form' : '4-star-plus form'} and minutes-secure. Low-owned players outperforming their price are how you gain ground on your rivals.`,
+        evidence: picks.map(p => `${p.web_name} ${p.selected_by_percent}% owned · ${p.gw4_overall_rating} last 4`).join(' · '),
+      };
+    },
+  },
+
+  // 11 — owned players being sold fast (price-drop risk)
+  {
+    id: 'price_drop_risk',
+    severity: 'warn',
+    run(ctx) {
+      const droppers = ctx.squad.filter(s => s.r && s.priceRisk && s.priceRisk.risk === 'drop');
+      if (!droppers.length) return null;
+      const names = droppers.map(s => s.r.web_name);
+      return {
+        headline: `${names.join(' and ')} ${names.length > 1 ? 'are' : 'is'} being sold fast — price drop likely`,
+        body: `Heavy net transfers out this week. If you were planning to sell anyway, move before the drop to protect your budget; if you're holding, a 0.1 dip is rarely worth panicking over.`,
+        evidence: droppers.map(s => `${s.r.web_name}: ${s.priceRisk.net_transfers_2gw.toLocaleString()} net transfers (2 GWs)`).join(' · '),
+      };
+    },
+  },
+
+  // 12 — premium player not justifying the price tag
+  {
+    id: 'premium_not_delivering',
+    severity: 'warn',
+    run(ctx) {
+      return ctx.starters
+        .filter(s => s.r && num(s.r.price) >= 9.0 &&
+          starsToNum(s.r.season_value_score_rating) != null &&
+          starsToNum(s.r.season_value_score_rating) <= 2 &&
+          s.m && num(s.m.alpha_4gw) != null && s.m.alpha_4gw < 0)
+        .slice(0, 2)
+        .map(s => ({
+          headline: `${s.r.web_name} at £${Number(s.r.price).toFixed(1)}m isn't paying their way`,
+          body: `A premium price with a ${s.r.season_value_score_rating} value rating and returns below the ${s.r.position} benchmark over the last month. That's a big slice of budget underperforming — the strongest case for a transfer is usually here.`,
+          evidence: `£${Number(s.r.price).toFixed(1)}m · value ${s.r.season_value_score_rating} · alpha (4GW) ${Number(s.m.alpha_4gw).toFixed(2)}`,
+        }));
+    },
+  },
+
+  // 13 — goal threat built on a shaky shot profile
+  {
+    id: 'unsustainable_goal_threat',
+    severity: 'warn',
+    run(ctx) {
+      return ctx.starters
+        .filter(s => s.r && ['MID', 'FWD'].includes(s.r.position) &&
+          starsToNum(s.r.season_goal_score_rating) >= 4 &&
+          ((starsToNum(s.r.season_shot_quality_score_rating) != null &&
+            starsToNum(s.r.season_shot_quality_score_rating) <= 2) ||
+           String(s.p4 && s.p4.personas || '').includes('Volume Shooter')))
+        .slice(0, 2)
+        .map(s => ({
+          headline: `${s.r.web_name}'s goal threat may not stick`,
+          body: `The headline goal-threat rating is strong, but the shot profile behind it is poor quality${String(s.p4 && s.p4.personas || '').includes('Volume Shooter') ? ' — flagged as a Volume Shooter (long-range efforts that rarely convert)' : ''}. Don't pay for the xG without checking where the shots come from.`,
+          evidence: `Goal threat ${s.r.season_goal_score_rating} vs shot quality ${s.r.season_shot_quality_score_rating || 'N/A'}`,
+        }));
+    },
+  },
+
+  // 14 — scoring above the underlying numbers: regression coming
+  {
+    id: 'regression_warning',
+    severity: 'info',
+    run(ctx) {
+      return ctx.starters
+        .filter(s => s.r && ['MID', 'FWD'].includes(s.r.position) &&
+          num(s.r.season_finishing_skill_score) != null && s.r.season_finishing_skill_score >= 3 &&
+          starsToNum(s.r.season_shot_quality_score_rating) != null &&
+          starsToNum(s.r.season_shot_quality_score_rating) <= 2)
+        .slice(0, 2)
+        .map(s => ({
+          headline: `${s.r.web_name} is scoring above their chances — enjoy it, expect regression`,
+          body: `${Number(s.r.season_finishing_skill_score).toFixed(1)} goals more than the chances merit, from a low-quality shot profile. Hot finishing runs end; don't extrapolate the recent scoring rate when deciding whether to keep or captain them.`,
+          evidence: `Goals − xG: +${Number(s.r.season_finishing_skill_score).toFixed(1)} · shot quality ${s.r.season_shot_quality_score_rating}`,
+        }));
+    },
+  },
+
+  // 15 — keeper profile: save-points machine vs clean-sheet keeper
+  {
+    id: 'keeper_profile',
+    severity: 'info',
+    run(ctx) {
+      const gk = (ctx.positionGroups.GKP || [])[0];
+      if (!gk || !gk.r) return null;
+      const save = starsToNum(gk.r.season_save_score_rating);
+      const cs = starsToNum(gk.r.season_cs_score_rating);
+      if (save == null || cs == null) return null;
+      if (save >= 4 && cs <= 2) {
+        const alt = (ctx.replacementPool || [])
+          .filter(p => p.position === 'GKP' && !ctx.ownedElements.has(p.element) &&
+            num(p.price) != null && p.price <= (num(gk.r.price) ?? 5) + (ctx.bank ?? 0))
+          .sort((a, b) => (blendedScore(b) ?? 0) - (blendedScore(a) ?? 0))[0];
+        return {
+          headline: `${gk.r.web_name} earns points from saves, not clean sheets`,
+          body: `Elite shot-stopping numbers behind a leaky defence. That's fine while the saves flow, but the ceiling is capped without clean sheets${alt ? ` — ${alt.web_name} (£${Number(alt.price).toFixed(1)}m) offers more CS upside at your budget` : ''}.`,
+          evidence: `Save rating ${gk.r.season_save_score_rating} vs clean sheet rating ${gk.r.season_cs_score_rating}`,
+        };
+      }
+      return null;
+    },
+  },
+
+  // 16 — heavy exposure to one club entering a bad run
+  {
+    id: 'team_exposure',
+    severity: 'warn',
+    run(ctx) {
+      const counts = new Map();
+      ctx.squad.filter(s => s.r).forEach(s => {
+        (counts.get(s.r.team) || counts.set(s.r.team, []).get(s.r.team)).push(s.r.web_name);
+      });
+      const out = [];
+      for (const [team, names] of counts) {
+        if (names.length < 3) continue;
+        const ease = ctx.teamEase(team, 0, 3);
+        if (ease != null && ease <= 0.9) {
+          out.push({
+            headline: `Heavy ${team} exposure into a tough run`,
+            body: `${names.length} of your squad (${names.join(', ')}) depend on ${team}, whose next fixtures are well below league-average ease: ${ctx.teamFixtureList(team, 3)}. One bad month hits ${Math.round(names.length / 15 * 100)}% of your squad at once.`,
+            evidence: `${names.length} players · next-3 attack ease ×${ease.toFixed(2)}`,
+          });
+        }
+      }
+      return out;
+    },
+  },
+
+  // 17 — captaincy advisor: risk-adjusted form × fixture
+  {
+    id: 'captaincy_advisor',
+    severity: 'good',
+    run(ctx) {
+      const nextGw = ctx.fixtureEase.length ? Math.min(...ctx.fixtureEase.map(f => f.gw)) : null;
+      const candidates = ctx.starters
+        .filter(s => s.r && ['MID', 'FWD'].includes(s.r.position) && s.m && num(s.m.alpha_4gw) != null)
+        .map(s => {
+          const fixt = nextGw != null
+            ? ctx.fixtureEase.find(f => f.team === s.r.team && f.gw === nextGw)
+            : null;
+          const ease = fixt ? (fixt.att_ease || 1) : 1;
+          const consistency = num(s.m.consistency_4gw);
+          // alpha × fixture ease, nudged by predictability (low variance = safer armband)
+          const score = s.m.alpha_4gw * ease * (consistency != null && consistency < 0.45 ? 1.1 : 1);
+          return { s, fixt, ease, score };
+        })
+        .filter(c => c.score > 0)
+        .sort((a, b) => b.score - a.score);
+      if (candidates.length < 2) return null;
+      const top = candidates[0];
+      const isCurrent = ctx.captain && ctx.captain.pick.element === top.s.pick.element;
+      const fixtStr = top.fixt ? ` — ${top.fixt.opponent} (${top.fixt.venue}) is ×${top.ease.toFixed(2)} ease` : '';
+      return {
+        headline: isCurrent
+          ? `Armband check: ${top.s.r.web_name} is the right call`
+          : `Armband case: ${top.s.r.web_name} over ${ctx.captain && ctx.captain.r ? ctx.captain.r.web_name : 'your current pick'}`,
+        body: `Best risk-adjusted captaincy option in your XI: ${top.s.r.web_name} leads on points above the positional benchmark${fixtStr}. ${candidates[1] ? `Next best: ${candidates[1].s.r.web_name}.` : ''}`,
+        evidence: candidates.slice(0, 3).map(c =>
+          `${c.s.r.web_name} α${Number(c.s.m.alpha_4gw).toFixed(1)}${c.fixt ? ` ×${c.ease.toFixed(2)}` : ''}`).join(' · '),
+      };
+    },
+  },
+
+  // 18 — the form players you're missing / the cold ones you own
+  {
+    id: 'streak_mismatch',
+    severity: 'info',
+    run(ctx) {
+      const out = [];
+      const std = ctx.league.seasonToDate || [];
+      const hotMissed = std
+        .filter(p => p.streak === '🔥 Hot' && !ctx.ownedElements.has(p.element))
+        .sort((a, b) => (b.pts_delta || 0) - (a.pts_delta || 0))
+        .slice(0, 3);
+      if (hotMissed.length) {
+        out.push({
+          headline: `Form players you don't own: ${hotMissed.map(p => p.web_name).join(', ')}`,
+          body: `The league's hottest players right now, all outside your squad. Worth a look before their prices rise and everyone else catches on.`,
+          evidence: hotMissed.map(p => `${p.web_name} +${Number(p.pts_delta).toFixed(1)} pts/90 vs baseline`).join(' · '),
+        });
+      }
+      const coldOwned = ctx.starters
+        .filter(s => s.std && s.std.streak === '🧊 Cold' && num(s.std.pts_delta) != null && s.std.pts_delta <= -2);
+      if (coldOwned.length) {
+        out.push({
+          severity: 'warn',
+          headline: `${coldOwned.map(s => s.r ? s.r.web_name : s.std.web_name).join(' and ')} ${coldOwned.length > 1 ? 'are' : 'is'} ice cold`,
+          body: `Well below their season baseline over the last month. Cold streaks end — but check the underlying numbers (minutes, xGI) before deciding whether this is variance or decline.`,
+          evidence: coldOwned.map(s => `${s.r ? s.r.web_name : ''} ${Number(s.std.pts_delta).toFixed(1)} pts/90 vs baseline`).join(' · '),
         });
       }
       return out;
