@@ -1169,7 +1169,7 @@
   }
   .modal-cta { width: 100%; }
 
-  /* ── Shot map (team page — shots conceded, zone view) ─────────────────── */
+  /* ── Shot map (team page — attack + defence grid view) ─────────────────── */
   .shotmap-summary { margin-bottom: 14px; }
 
   .shotmap-controls { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 14px; }
@@ -1185,6 +1185,7 @@
   }
   .shotmap-filter:hover { border-color: var(--accent); color: var(--text); }
   .shotmap-filter.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .shotmap-mode .shotmap-filter { font-weight: 600; padding: 6px 16px; }
 
   .shotmap-narrative {
     list-style: none;
@@ -1212,8 +1213,10 @@
   }
   .shotmap-line { fill: none; stroke: rgba(255,255,255,0.28); stroke-width: 0.3; }
   .shotmap-spot { fill: rgba(255,255,255,0.28); }
+  .shotmap-scatter { fill: none; stroke: rgba(255,255,255,0.3); stroke-width: 0.12; }
+  .shotmap-cell-outline { fill: none; stroke: rgba(255,255,255,0.45); stroke-width: 0.25; stroke-dasharray: 0.7 0.7; }
   .shotmap-zone { cursor: pointer; transition: fill-opacity 0.15s; }
-  .shotmap-zone:hover { fill-opacity: 0.75 !important; }
+  .shotmap-zone:hover { fill-opacity: 0.8 !important; }
 
   .shotmap-zone-labels { position: absolute; inset: 0; pointer-events: none; }
   .shotmap-zone-label {
@@ -1221,19 +1224,12 @@
     transform: translate(-50%, -50%);
     text-align: center;
     pointer-events: none;
-    line-height: 1.25;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
   }
-  .shotmap-zone-name {
-    font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-    color: rgba(255,255,255,0.75);
-    margin-bottom: 2px;
-  }
-  .shotmap-zone-xg { font-size: 17px; font-weight: 700; color: var(--text); font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
-  .shotmap-zone-xg span { font-size: 10px; font-weight: 400; color: rgba(255,255,255,0.7); }
-  .shotmap-zone-sub { font-size: 10px; color: rgba(255,255,255,0.75); margin-top: 2px; }
-  .shotmap-zone-goals { font-size: 10px; color: var(--shotmap-goal); font-weight: 600; }
 
   .shotmap-tooltip {
     position: absolute;

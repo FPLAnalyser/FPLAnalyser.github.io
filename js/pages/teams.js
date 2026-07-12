@@ -110,7 +110,7 @@ function showTeam(team) {
         <div class="tab active" onclick="showTab(this, 'team-overview-${team}')">Overview</div>
         <div class="tab" onclick="showTab(this, 'team-players-${team}')">Players</div>
         <div class="tab" onclick="showTab(this, 'team-breakdown-${team}')">Points Breakdown</div>
-        <div class="tab" onclick="showTab(this, 'team-defence-${team}')">Shots Conceded</div>
+        <div class="tab" onclick="showTab(this, 'team-defence-${team}')">Shots</div>
       </div>
 
       <div id="team-overview-${team}" class="tab-content active">
@@ -257,7 +257,7 @@ function showTeam(team) {
       </div>
 
       <div id="team-defence-${team}" class="tab-content">
-        <div class="section-header">Shots Conceded Map</div>
+        <div class="section-header">Shot Map</div>
         <div id="shotmap-root-${team}"></div>
       </div>
     </div>

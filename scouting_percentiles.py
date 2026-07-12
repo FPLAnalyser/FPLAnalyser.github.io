@@ -73,7 +73,8 @@ GKP_STATS = [
 ]
 
 GROUPS = [("Attacking", ["goals", "npxg", "xg_delta", "xgi", "xgi_delta", "shots",
-                         "sot", "box_shots", "headed_shots", "fk_shots", "touches_box"]),
+                         "sot", "box_shots", "headed_shots", "fk_shots", "touches_box",
+                         "avg_shot_distance"]),
           ("Creation", ["assists", "xa", "xa_delta", "chances_created", "big_chances",
                         "xg_chain", "xg_buildup", "crosses", "sp_deliveries"]),
           ("Defending", ["tackles", "cbi", "recoveries", "def_contrib"])]
@@ -156,6 +157,39 @@ for key in all_keys:
             pct = sub.loc[valid, col].rank(pct=True).mul(98).add(1).round()
             df.loc[pct.index, f"{key}{out_suffix}"] = pct
 
+# Average non-penalty shot distance (yards) — how close a player gets before
+# shooting. Season-only: it's a mean over individual shots, not a per-90 rate,
+# so it can't reuse the windowed sum/minutes loop above. Stored under the
+# same `_per90`/`_pct` column-naming convention the scouting page already
+# reads generically, even though it isn't really a per-90 figure. Lower is
+# better (closer to goal), so the percentile rank is inverted.
+print("Computing average non-penalty shot distance...")
+REPO_DIR = os.path.dirname(os.path.abspath(__file__))
+SHOTS_FILE = os.path.join(REPO_DIR, "data", "understat_shots.csv")
+ID_MAP_FILE = os.path.join(REPO_DIR, "data", "player_id_map_understat.csv")
+if os.path.exists(SHOTS_FILE) and os.path.exists(ID_MAP_FILE):
+    shots = pd.read_csv(SHOTS_FILE)
+    shots = shots[shots["situation"] != "Penalty"].copy()
+    depth_m = (1 - shots["x"]) * 105
+    width_offset_m = (shots["y"] - 0.5) * 68
+    shots["dist_yd"] = np.sqrt(depth_m ** 2 + width_offset_m ** 2) * 1.09361
+    by_player = shots.groupby("understat_id")["dist_yd"].mean().round(1)
+
+    id_map = pd.read_csv(ID_MAP_FILE)
+    id_map = id_map[id_map["source"] == "understat"].set_index("source_id")["fpl_id"]
+    by_element = by_player.rename(index=id_map.to_dict())
+
+    season_mask = df["window"] == "season"
+    df.loc[season_mask, "avg_shot_distance_per90"] = df.loc[season_mask, "element"].map(by_element)
+
+    sub = df[season_mask & (df["peer_group"] == "ATT") & df["avg_shot_distance_per90"].notna()]
+    if len(sub) >= 10:
+        pct = (1 - sub["avg_shot_distance_per90"].rank(pct=True)).mul(98).add(1).round()
+        df.loc[pct.index, "avg_shot_distance_pct"] = pct
+    print(f"  {sub.shape[0]} attackers with a shot-distance percentile")
+else:
+    print("  data/understat_shots.csv or player_id_map_understat.csv not found — skipping")
+
 # Integer percentiles (nullable Int64 → clean ints in the CSV, blanks for NaN)
 for c in [c for c in df.columns if c.endswith("_pct") or c.endswith("_pct_pos")]:
     df[c] = df[c].astype("Int64")
@@ -174,6 +208,7 @@ df = df.merge(photo, on="element", how="left")
 
 # Stat labels + grouping metadata for the front end (single source of truth)
 labels = {k: lbl for k, lbl, *_ in ATTACKER_STATS + GKP_STATS}
+labels["avg_shot_distance"] = "Avg. Shot Distance (yd)"
 meta = []
 for gname, keys in GROUPS:
     for k in keys:

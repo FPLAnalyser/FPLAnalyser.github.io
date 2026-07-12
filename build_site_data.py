@@ -8,7 +8,10 @@ consumes as JSON under site_data/, plus:
                      attack-ease and defence-ease factors from recent team
                      xGC / xG form (same blend as the next-4 rating)
   shots_conceded.json  per team: every Understat shot faced this season
-                     (x, y, xG, result) for the team page's shot map.
+  shots_for.json       per team: every Understat shot taken this season
+                     (x, y, xG, result) for the team page's shot map, one
+                     grouped by the conceding team and one by the shooting
+                     team (same rows, different key + venue flipped).
                      Sourced from data/understat_shots.csv, which is a repo-
                      relative raw pull (not under DATA_DIR) — same convention
                      as understat_player_match.csv.
@@ -175,17 +178,31 @@ SHOTS_JSON_COLS = ["x", "y", "xg", "result", "situation", "shot_type",
                    "team", "player", "minute", "venue", "kickoff_date"]
 
 if os.path.exists(SHOTS_FILE):
-    print("Building shots-conceded map data...")
+    print("Building shot map data...")
     shots = pd.read_csv(SHOTS_FILE)
+
     conceded = {
         team: df_to_records(sub[SHOTS_JSON_COLS])
         for team, sub in shots.groupby("conceded_by")
     }
     write_json("shots_conceded", conceded)
     row_counts["shots_conceded"] = sum(len(v) for v in conceded.values())
-    print(f"  {row_counts['shots_conceded']} shots across {len(conceded)} teams")
+    print(f"  shots_conceded: {row_counts['shots_conceded']} shots across {len(conceded)} teams")
+
+    # shots_for: the same rows grouped by the shooting team instead. "venue"
+    # on each row is the CONCEDING team's venue (see pull_understat_data.py),
+    # so it's flipped here to read as the shooting team's own venue.
+    taken = shots.copy()
+    taken["venue"] = taken["venue"].map({"H": "A", "A": "H"})
+    shots_for = {
+        team: df_to_records(sub[SHOTS_JSON_COLS])
+        for team, sub in taken.groupby("team")
+    }
+    write_json("shots_for", shots_for)
+    row_counts["shots_for"] = sum(len(v) for v in shots_for.values())
+    print(f"  shots_for: {row_counts['shots_for']} shots across {len(shots_for)} teams")
 else:
-    print("  data/understat_shots.csv not found — skipping shots_conceded.json "
+    print("  data/understat_shots.csv not found — skipping shot map JSON "
           "(run pull_understat_data.py to generate it)")
 
 # ── Insight-engine tables (My Team report) ────────────────────────────────────
