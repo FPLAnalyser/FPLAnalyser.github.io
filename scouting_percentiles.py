@@ -123,6 +123,7 @@ for window, (n_gws, min_fpl_mins, min_valid_mins) in WINDOWS.items():
             vals = derive(group, col)
             if src is None:
                 row[f"{key}_per90"] = round(vals.sum() / mins * 90, 2)
+                row[f"{key}_total"] = int(round(vals.sum()))
             else:
                 probe = "us_npxg" if src == "us" else "pl_touches_opp_box"
                 mask = group[probe].notna()

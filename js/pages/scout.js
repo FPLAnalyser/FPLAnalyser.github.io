@@ -2,6 +2,12 @@
 import { data, loadTable } from '../data.js';
 import { teamFullNames, teamBadgeImg, norm } from '../util.js';
 
+// Goals/assists read oddly as a per-90 decimal ("0.82 goals") — show the
+// whole-number total for the window instead. Percentiles still rank the
+// per-90 rate underneath (fair across different minutes played); only the
+// displayed figure changes.
+const WHOLE_NUMBER_KEYS = new Set(['goals', 'assists']);
+
 // Scouting data loads separately so a missing file never breaks the site
 function loadScoutData() {
   Promise.all([loadTable('scouting', 'scouting_percentiles.csv'),
@@ -152,8 +158,10 @@ function renderScoutReport() {
         // Single player keeps the red→green percentile scale; with 2+ players
         // each player's bars take their own colour, matching the key above.
         const barColor = multi ? SCOUT_COLORS[i] : scoutPctColor(pct);
+        const isWhole = WHOLE_NUMBER_KEYS.has(m.key) && s.row[m.key + '_total'] != null;
+        const displayVal = isWhole ? Math.round(s.row[m.key + '_total']) : Number(v).toFixed(2);
         html += `<div class="scout-cell">
-          <span class="v">${Number(v).toFixed(2)}</span>
+          <span class="v">${displayVal}</span>
           <span class="p">${pct ?? '—'}</span>
           <div class="scout-bar"><i style="width:${pct ?? 0}%;background:${barColor}"></i></div>
         </div>`;
