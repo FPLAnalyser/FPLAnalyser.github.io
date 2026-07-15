@@ -9,6 +9,8 @@ consumes as JSON under site_data/, plus:
                      xGC / xG form (same blend as the next-4 rating)
   shots_conceded.json  per team: every Understat shot faced this season
   shots_for.json       per team: every Understat shot taken this season
+  player_shots.json    per player (FPL element id): every shot they took,
+                     for the per-player shot map
                      (x, y, xG, result) for the team page's shot map, one
                      grouped by the conceding team and one by the shooting
                      team (same rows, different key + venue flipped).
@@ -201,6 +203,36 @@ if os.path.exists(SHOTS_FILE):
     write_json("shots_for", shots_for)
     row_counts["shots_for"] = sum(len(v) for v in shots_for.values())
     print(f"  shots_for: {row_counts['shots_for']} shots across {len(shots_for)} teams")
+
+    # player_shots: every shot a player took, keyed by FPL element id, for the
+    # per-player shot map. Understat ids are joined to FPL element ids via the
+    # persisted map (same map enrich_player_gw.py uses); shots whose shooter
+    # never joined to an FPL player (fringe/loaned names) are dropped. `opp` is
+    # the conceding team, for the shot's hover tooltip. Kept lean (no team /
+    # venue / player name — the element already identifies the player).
+    ID_MAP_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               "data", "player_id_map_understat.csv")
+    if os.path.exists(ID_MAP_FILE):
+        idmap = pd.read_csv(ID_MAP_FILE)
+        idmap = idmap[idmap["source"] == "understat"]
+        us_to_fpl = dict(zip(idmap["source_id"].astype(str), idmap["fpl_id"]))
+        ps = shots.copy()
+        ps["element"] = ps["understat_id"].astype(str).map(us_to_fpl)
+        ps = ps.dropna(subset=["element"])
+        ps["element"] = ps["element"].astype(int)
+        ps["opp"] = ps["conceded_by"]
+        PS_COLS = ["x", "y", "xg", "result", "situation", "minute",
+                   "kickoff_date", "opp"]
+        player_shots = {
+            str(int(el)): df_to_records(sub[PS_COLS])
+            for el, sub in ps.groupby("element")
+        }
+        write_json("player_shots", player_shots)
+        row_counts["player_shots"] = sum(len(v) for v in player_shots.values())
+        print(f"  player_shots: {row_counts['player_shots']} shots across "
+              f"{len(player_shots)} players")
+    else:
+        print("  player_id_map_understat.csv not found — skipping player_shots.json")
 else:
     print("  data/understat_shots.csv not found — skipping shot map JSON "
           "(run pull_understat_data.py to generate it)")

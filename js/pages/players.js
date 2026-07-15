@@ -3,6 +3,7 @@ import { data } from '../data.js';
 import { teamFullNames, teamBadgeUrl, teamBadgeImg, norm, escQ,
          getPositionEmoji, tip, TOOLTIPS } from '../util.js';
 import { showPage } from '../nav.js';
+import { renderPlayerShotMap } from '../playershotmap.js';
 
 function renderPlayersDefault() {
   const container = document.getElementById('player-result');
@@ -263,6 +264,7 @@ function showPlayer(name) {
         <div class="tab" onclick="showTab(this, 'ratings-${name.replace(/\s/g,'-')}')">Ratings</div>
         <div class="tab" onclick="showTab(this, 'stats-${name.replace(/\s/g,'-')}')">Stats & Metrics</div>
         <div class="tab" onclick="showTab(this, 'fixtures-${name.replace(/\s/g,'-')}')">Fixtures</div>
+        ${pos !== 'GKP' ? `<div class="tab" onclick="showTab(this, 'shots-${name.replace(/\s/g,'-')}')">Shots</div>` : ''}
       </div>
 
       <!-- Overview Tab -->
@@ -441,8 +443,19 @@ function showPlayer(name) {
           </tbody>
         </table>
       </div>
+
+      ${pos !== 'GKP' ? `
+      <div id="shots-${name.replace(/\s/g,'-')}" class="tab-content">
+        <div class="section-header">Shot Map</div>
+        <div id="pshotmap-${r.element}"></div>
+      </div>
+      ` : ''}
     </div>
   `;
+
+  if (pos !== 'GKP') {
+    renderPlayerShotMap(r.element, document.getElementById(`pshotmap-${r.element}`));
+  }
 }
 
 function buildDimRows(dims, r) {
