@@ -55,12 +55,14 @@
   <img src="logo.png" alt="FPL Analyser" style="height:48px;vertical-align:middle;margin-right:8px;">
 </div>
   <ul class="nav-links">
-    <li><a href="#" onclick="showPage('home', this)">Home</a></li>
-    <li><a href="#" onclick="showPage('player', this)">Players</a></li>
-    <li><a href="#" onclick="showPage('teams', this)">Teams</a></li>
-    <li><a href="#" onclick="showPage('loadteam', this)">Load Your Team</a></li>
-    <li><a href="#" onclick="showPage('rankings', this)">Rankings</a></li>
-    <li><a href="#" onclick="showPage('scout', this)">Scouting</a></li>
+    <li class="nav-kicker" aria-hidden="true">Analytics</li>
+    <li><a href="#home" class="active" onclick="showPage('home', this)">Briefing</a></li>
+    <li><a href="#player" onclick="showPage('player', this)">Players</a></li>
+    <li><a href="#teams" onclick="showPage('teams', this)">Teams</a></li>
+    <li><a href="#rankings" onclick="showPage('rankings', this)">Rankings</a></li>
+    <li class="nav-kicker" aria-hidden="true">Tools</li>
+    <li><a href="#loadteam" onclick="showPage('loadteam', this)">My Team</a></li>
+    <li><a href="#scout" onclick="showPage('scout', this)">Scouting</a></li>
     <li><a href="#" id="nav-help" class="nav-help" title="How it works" aria-label="How it works"><svg class="icon" width="16" height="16"><use href="#i-info"/></svg></a></li>
   </ul>
 </nav>
@@ -123,8 +125,8 @@
 
   <!-- ── LOAD YOUR TEAM PAGE ── -->
   <div id="page-loadteam" class="page">
-    <div class="page-title">Load Your Team</div>
-    <div class="page-subtitle">Enter your FPL Team ID to see your squad with FPL Analyser ratings</div>
+    <div class="page-title">My Team</div>
+    <div class="page-subtitle">Enter your FPL Team ID for your squad, ratings and a personalised weekly report</div>
 
     <div style="display:flex;gap:8px;max-width:500px;margin-bottom:8px;">
       <input type="text" id="team-id-input" class="team-id-input" placeholder="Enter your FPL Team ID..." autocomplete="off" inputmode="numeric" onkeydown="if(event.key==='Enter') loadMyTeam()">

@@ -7,8 +7,7 @@ import { renderShotMap } from '../shotmap.js';
 
 // Navigate to the Teams page AND show a team (for links on other pages)
 function showTeamFromHome(team) {
-  const teamsLink = [...document.querySelectorAll('.nav-links a')].find(a => a.textContent === 'Teams');
-  showPage('teams', teamsLink);
+  showPage('teams');
   showTeam(team);
   window.scrollTo(0, 0);
 }

@@ -483,9 +483,7 @@ function buildTierRow(label, tier) {
 }
 
 function showPlayerFromRankings(name) {
-  showPage('player', document.querySelector('.nav-links a'));
-  document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
-  document.querySelector('.nav-links a').classList.add('active');
+  showPage('player');
   showPlayer(name);
   window.scrollTo(0, 0);
 }

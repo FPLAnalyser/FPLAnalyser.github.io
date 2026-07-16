@@ -11,9 +11,10 @@ const CONTENT = `
       </div>
     </div>
     <ul class="modal-list">
-      <li><strong>Load Your Team</strong> — enter your FPL team ID for a personalised weekly report: weak spots, form and fixture swings, price risks, captaincy, and concrete transfer suggestions at your budget.</li>
-      <li><strong>Player &amp; team ratings</strong> — every player scored out of 5 within their position, plus personas ("Poacher", "Set Piece Threat") and finance-style metrics (alpha, consistency, Sharpe).</li>
-      <li><strong>Scouting report</strong> — compare up to four players on per-90 percentiles versus their peers, over the season or the last few gameweeks.</li>
+      <li><strong>The Briefing</strong> — the story of the week on the home page: captaincy verdicts, fixture swings and form that's backed by the underlying numbers, told in plain language.</li>
+      <li><strong>My Team</strong> — enter your FPL team ID for a personalised weekly report: weak spots, fixture swings, price risks, captaincy, and concrete transfer suggestions at your budget.</li>
+      <li><strong>Analytics</strong> — every player rated out of 5 within their position, with a plain-language verdict, personas ("Poacher", "Set Piece Threat"), shot maps and rankings.</li>
+      <li><strong>Scouting</strong> — compare up to four players on per-90 percentiles versus their peers, with an automatic head-to-head verdict.</li>
     </ul>
     <div class="modal-tip">Tip: on your phone, tap the ⓘ icons to see what any rating or metric means. Add the site to your home screen for an app-like experience.</div>
     <button class="btn-primary modal-cta" id="modal-cta">Get started</button>
