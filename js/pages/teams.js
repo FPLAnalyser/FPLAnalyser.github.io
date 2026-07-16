@@ -1,13 +1,13 @@
 // teams.js — team list and team page
 import { data } from '../data.js';
-import { teamFullNames, teamCodes, teamBadgeUrl, teamBadgeImg, escQ } from '../util.js';
+import { teamFullNames, teamCodes, teamBadgeUrl, teamBadgeImg, escQ, renderStars } from '../util.js';
+import { animateCounters } from '../fx.js';
 import { showPage } from '../nav.js';
 import { renderShotMap } from '../shotmap.js';
 
 // Navigate to the Teams page AND show a team (for links on other pages)
 function showTeamFromHome(team) {
-  const teamsLink = [...document.querySelectorAll('.nav-links a')].find(a => a.textContent === 'Teams');
-  showPage('teams', teamsLink);
+  showPage('teams');
   showTeam(team);
   window.scrollTo(0, 0);
 }
@@ -42,11 +42,11 @@ function renderTeamsDefault() {
             </td>
             <td><span class="clickable-name">${teamFullNames[t.team] || t.team}</span></td>
             <td style="font-size:12px">${t.form_direction}</td>
-            <td style="font-family:'JetBrains Mono',monospace">${(t.cs_rate*100).toFixed(0)}%</td>
-            <td style="font-family:'JetBrains Mono',monospace">${t.home_pts_per_gw}</td>
-            <td style="font-family:'JetBrains Mono',monospace">${t.away_pts_per_gw}</td>
-            <td style="color:var(--accent);font-size:13px">${t.top1_player || 'N/A'}</td>
-            <td style="font-family:'JetBrains Mono',monospace;color:var(--accent)">${Math.round(t.total_pts)}</td>
+            <td class="num">${(t.cs_rate*100).toFixed(0)}%</td>
+            <td class="num">${t.home_pts_per_gw}</td>
+            <td class="num">${t.away_pts_per_gw}</td>
+            <td class="t-brand" style="font-size:13px">${t.top1_player || 'N/A'}</td>
+            <td class="num t-brand">${Math.round(t.total_pts)}</td>
           </tr>
         `).join('')}
       </tbody>
@@ -80,11 +80,11 @@ function showTeam(team) {
       </div>
         <div class="team-stats-row">
           <div class="team-stat">
-            <div class="team-stat-value">${Math.round(seasonData.total_pts)}</div>
+            <div class="team-stat-value"><span data-count="${Math.round(seasonData.total_pts)}">0</span></div>
             <div class="team-stat-label">Season Pts</div>
           </div>
           <div class="team-stat">
-            <div class="team-stat-value">${(seasonData.cs_rate * 100).toFixed(0)}%</div>
+            <div class="team-stat-value"><span data-count="${seasonData.cs_rate * 100}" data-count-suffix="%">0</span></div>
             <div class="team-stat-label">CS Rate</div>
           </div>
           <div class="team-stat">
@@ -181,11 +181,11 @@ function showTeam(team) {
                 : 'N/A';
               return `
               <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
-                <span style="color:var(--text2);font-size:12px;width:20px">#${i+1}</span>
+                <span class="t2" style="font-size:12px;width:20px">#${i+1}</span>
                 <span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')" style="flex:1;margin:0 12px">${p.web_name}</span>
-                <span style="font-family:'JetBrains Mono',monospace;color:var(--text2);font-size:12px;margin-right:12px">${playerShare}% of team pts</span>
-                <span style="font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:13px">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'} ppg</span>
-                <span style="margin-left:12px">${p.season_overall_rating || 'N/A'}</span>
+                <span class="num t2" style="font-size:12px;margin-right:12px">${playerShare}% of team pts</span>
+                <span class="num t-brand" style="font-size:13px">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'} ppg</span>
+                <span style="margin-left:12px">${renderStars(p.season_overall_rating, { size: 11, showNum: false })}</span>
               </div>
             `}).join('');
           })()}
@@ -228,10 +228,10 @@ function showTeam(team) {
               <tr>
                 <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
                 <td><span class="badge badge-pos">${p.position}</span></td>
-                <td>${p.season_overall_rating || 'N/A'}</td>
-                <td>${p.gw4_overall_rating || 'N/A'}</td>
-                <td>${p.next4_overall_rating || 'N/A'}</td>
-                <td style="font-family:'JetBrains Mono',monospace;color:var(--accent)">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'}</td>
+                <td>${renderStars(p.season_overall_rating)}</td>
+                <td>${renderStars(p.gw4_overall_rating)}</td>
+                <td>${renderStars(p.next4_overall_rating)}</td>
+                <td class="num t-brand">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -264,6 +264,7 @@ function showTeam(team) {
   `;
 
   renderShotMap(team, document.getElementById(`shotmap-root-${team}`));
+  animateCounters(document.getElementById('team-result'));
 }
 
 window.showTeam = showTeam;

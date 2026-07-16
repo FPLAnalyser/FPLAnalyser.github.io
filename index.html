@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FPL Analyser | Data Driven FPL</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#0D1117">
+<meta name="theme-color" content="#07090C">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -17,19 +17,53 @@
 </head>
 <body>
 
+<!-- Icon sprite (Lucide-style, stroke inherits currentColor via .icon) + shared gradient defs -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="grad-brand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#34E0AD"/>
+      <stop offset="100%" stop-color="#24B8D6"/>
+    </linearGradient>
+  </defs>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+  <symbol id="i-snow" viewBox="0 0 24 24"><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/><path d="m20 16-4-4 4-4"/><path d="m4 8 4 4-4 4"/><path d="m16 4-4 4-4-4"/><path d="m8 20 4-4 4 4"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2.5l2.94 5.95 6.57.96-4.76 4.63 1.13 6.54L12 17.5l-5.88 3.08 1.13-6.54-4.76-4.63 6.57-.96z"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></symbol>
+  <symbol id="i-ball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 7.5l4.28 3.11-1.63 5.03H9.35l-1.63-5.03z"/><path d="M12 2v5.5M16.28 10.61 22 8.5M14.65 15.64l3.35 4.86M9.35 15.64 6 20.5M7.72 10.61 2 8.5"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+  <symbol id="i-trend-up" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></symbol>
+  <symbol id="i-trend-down" viewBox="0 0 24 24"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-pitch" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="12" y1="5" x2="12" y2="19"/><circle cx="12" cy="12" r="2.5"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></symbol>
+  <symbol id="i-crown" viewBox="0 0 24 24"><path d="M2 6.5l4.3 3.7a1 1 0 0 0 1.52-.29L12 3.5l4.18 6.41a1 1 0 0 0 1.52.29L22 6.5l-2.5 11a1 1 0 0 1-.98.78H5.48a1 1 0 0 1-.98-.78z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+</svg>
 
 <nav>
   <div class="nav-logo">
   <img src="logo.png" alt="FPL Analyser" style="height:48px;vertical-align:middle;margin-right:8px;">
 </div>
   <ul class="nav-links">
-    <li><a href="#" onclick="showPage('home', this)">Home</a></li>
-    <li><a href="#" onclick="showPage('player', this)">Players</a></li>
-    <li><a href="#" onclick="showPage('teams', this)">Teams</a></li>
-    <li><a href="#" onclick="showPage('loadteam', this)">Load Your Team</a></li>
-    <li><a href="#" onclick="showPage('rankings', this)">Rankings</a></li>
-    <li><a href="#" onclick="showPage('scout', this)">Scouting</a></li>
-    <li><a href="#" id="nav-help" class="nav-help" title="How it works" aria-label="How it works">ⓘ</a></li>
+    <li class="nav-kicker" aria-hidden="true">Analytics</li>
+    <li><a href="#home" class="active" onclick="showPage('home', this)">Briefing</a></li>
+    <li><a href="#player" onclick="showPage('player', this)">Players</a></li>
+    <li><a href="#teams" onclick="showPage('teams', this)">Teams</a></li>
+    <li><a href="#rankings" onclick="showPage('rankings', this)">Rankings</a></li>
+    <li class="nav-kicker" aria-hidden="true">Tools</li>
+    <li><a href="#loadteam" onclick="showPage('loadteam', this)">My Team</a></li>
+    <li><a href="#scout" onclick="showPage('scout', this)">Scouting</a></li>
+    <li><a href="#" id="nav-help" class="nav-help" title="How it works" aria-label="How it works"><svg class="icon" width="16" height="16"><use href="#i-info"/></svg></a></li>
   </ul>
 </nav>
 
@@ -43,7 +77,13 @@
     <div class="page-subtitle">What matters this week — fixtures, form and captaincy, driven by the data</div>
 
     <div id="home-content">
-      <div class="loading"><div class="loading-spinner"></div>Loading dashboard...</div>
+      <div class="skel-card"><div class="skel-block">
+        <div class="skel" style="height:20px;width:38%"></div>
+        <div class="skel" style="height:12px;width:60%"></div>
+        <div class="skel" style="height:48px"></div>
+        <div class="skel" style="height:48px"></div>
+        <div class="skel" style="height:48px"></div>
+      </div></div>
     </div>
   </div>
 
@@ -59,7 +99,7 @@
 
     <div id="player-result">
       <div class="empty-state">
-        <div class="empty-icon">🔍</div>
+        <div class="empty-icon"><svg class="icon" width="44" height="44"><use href="#i-search"/></svg></div>
         <div>Search for a player to see their analysis</div>
       </div>
     </div>
@@ -77,7 +117,7 @@
 
     <div id="team-result">
       <div class="empty-state">
-        <div class="empty-icon">🏟️</div>
+        <div class="empty-icon"><svg class="icon" width="44" height="44"><use href="#i-pitch"/></svg></div>
         <div>Search for a team to see their analysis</div>
       </div>
     </div>
@@ -85,8 +125,8 @@
 
   <!-- ── LOAD YOUR TEAM PAGE ── -->
   <div id="page-loadteam" class="page">
-    <div class="page-title">Load Your Team</div>
-    <div class="page-subtitle">Enter your FPL Team ID to see your squad with FPL Analyser ratings</div>
+    <div class="page-title">My Team</div>
+    <div class="page-subtitle">Enter your FPL Team ID for your squad, ratings and a personalised weekly report</div>
 
     <div style="display:flex;gap:8px;max-width:500px;margin-bottom:8px;">
       <input type="text" id="team-id-input" class="team-id-input" placeholder="Enter your FPL Team ID..." autocomplete="off" inputmode="numeric" onkeydown="if(event.key==='Enter') loadMyTeam()">
@@ -98,7 +138,7 @@
 
     <div id="loadteam-result">
       <div class="empty-state">
-        <div class="empty-icon">📋</div>
+        <div class="empty-icon"><svg class="icon" width="44" height="44"><use href="#i-users"/></svg></div>
         <div>Enter your Team ID to load your squad</div>
       </div>
     </div>
@@ -110,17 +150,24 @@
     <div class="page-subtitle">Top players across all metrics</div>
 
     <div class="rankings-tabs">
-      <button class="rankings-tab active" onclick="showRankingsTab('top-rated', this)">⭐ Top Rated</button>
-      <button class="rankings-tab" onclick="showRankingsTab('goal-threats', this)">⚽ Goal Threats</button>
-      <button class="rankings-tab" onclick="showRankingsTab('creators', this)">🎯 Creators</button>
-      <button class="rankings-tab" onclick="showRankingsTab('clean-sheets', this)">🛡️ Clean Sheets</button>
-      <button class="rankings-tab" onclick="showRankingsTab('value', this)">💰 Value Picks</button>
-      <button class="rankings-tab" onclick="showRankingsTab('form', this)">🔥 Form</button>
-      <button class="rankings-tab" onclick="showRankingsTab('next4', this)">📅 Next 4 GWs</button>
+      <button class="rankings-tab active" onclick="showRankingsTab('top-rated', this)"><svg class="icon" width="13" height="13"><use href="#i-star"/></svg> Top Rated</button>
+      <button class="rankings-tab" onclick="showRankingsTab('goal-threats', this)"><svg class="icon" width="13" height="13"><use href="#i-target"/></svg> Goal Threats</button>
+      <button class="rankings-tab" onclick="showRankingsTab('creators', this)"><svg class="icon" width="13" height="13"><use href="#i-bolt"/></svg> Creators</button>
+      <button class="rankings-tab" onclick="showRankingsTab('clean-sheets', this)"><svg class="icon" width="13" height="13"><use href="#i-shield"/></svg> Clean Sheets</button>
+      <button class="rankings-tab" onclick="showRankingsTab('value', this)"><svg class="icon" width="13" height="13"><use href="#i-coin"/></svg> Value Picks</button>
+      <button class="rankings-tab" onclick="showRankingsTab('form', this)"><svg class="icon" width="13" height="13"><use href="#i-flame"/></svg> Form</button>
+      <button class="rankings-tab" onclick="showRankingsTab('next4', this)"><svg class="icon" width="13" height="13"><use href="#i-calendar"/></svg> Next 4 GWs</button>
     </div>
 
     <div id="rankings-content">
-      <div class="loading"><div class="loading-spinner"></div>Loading rankings...</div>
+      <div class="skel-card"><div class="skel-block">
+        <div class="skel" style="height:14px;width:30%"></div>
+        <div class="skel" style="height:40px"></div>
+        <div class="skel" style="height:40px"></div>
+        <div class="skel" style="height:40px"></div>
+        <div class="skel" style="height:40px"></div>
+        <div class="skel" style="height:40px"></div>
+      </div></div>
     </div>
   </div>
 

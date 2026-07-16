@@ -1,6 +1,7 @@
 // scout.js — scouting report (percentile comparison)
 import { data, loadTable } from '../data.js';
-import { teamFullNames, teamBadgeImg, norm } from '../util.js';
+import { teamFullNames, teamBadgeImg, norm, icon } from '../util.js';
+import { revealBars } from '../fx.js';
 
 // Goals/assists read oddly as a per-90 decimal ("0.82 goals") — show the
 // whole-number total for the window instead. Percentiles still rank the
@@ -31,7 +32,7 @@ const SCOUT_MAX = 4;
 // (scoutPctColor: red -> grey -> green) so a multi-player bar's colour is
 // never mistaken for a percentile reading. Validated for CVD separation and
 // contrast against the card surface (dataviz skill's categorical checks).
-const SCOUT_COLORS = ['#3987e5', '#c98500', '#d55181', '#5b4fc4'];
+const SCOUT_COLORS = ['#5EA7F7', '#E8A13C', '#E2649B', '#8B7BF4'];
 let scoutSelected = [];
 let scoutWindow = 'season';   // 'season' | 'l6' | 'l4'
 let scoutPeer = 'pooled';     // 'pooled' (MID+FWD) | 'position'
@@ -69,7 +70,7 @@ function scoutPct(row, key) {
 
 // FBref-style percentile colour: red (poor) → grey → green (elite)
 function scoutPctColor(p) {
-  if (p === '' || p == null) return '#3d4657';
+  if (p === '' || p == null) return '#5D6C80';
   const stops = [[1,[176,58,62]],[25,[186,108,70]],[50,[122,122,122]],[75,[92,160,96]],[99,[46,176,92]]];
   let lo = stops[0], hi = stops[stops.length - 1];
   for (let i = 0; i < stops.length - 1; i++)
@@ -82,7 +83,7 @@ function scoutPctColor(p) {
 function renderScoutChips() {
   const el = document.getElementById('scout-chips');
   el.innerHTML = scoutSelected.map((p, i) => `
-    <div class="scout-chip" style="--pc:${SCOUT_COLORS[i]}">
+    <div class="scout-chip lift" style="--pc:${SCOUT_COLORS[i]}">
       ${p.code ? `<img loading="lazy" src="https://resources.premierleague.com/premierleague/photos/players/110x140/p${p.code}.png" onerror="this.style.display='none'">` : ''}
       <div><div class="nm">${p.web_name}</div><div class="tm">${teamBadgeImg(p.team, 12)}${teamFullNames[p.team] || p.team} · ${p.position} · ${p.minutes} mins</div></div>
       <button aria-label="Remove ${p.web_name}" onclick="removeScoutPlayer(${i})">×</button>
@@ -137,7 +138,37 @@ function renderScoutReport() {
   const rows = data.scoutMeta.filter(m => gkMode ? m.group === 'Goalkeeping' : m.group !== 'Goalkeeping');
   const multi = shown.length > 1;
 
-  let html = '';
+  // Comparison verdict: who wins the most contested categories
+  let verdictHtml = '';
+  if (multi) {
+    const wins = shown.map(() => 0);
+    const winLabels = shown.map(() => []);
+    let contested = 0;
+    rows.forEach(m => {
+      const pcts = shown.map(s => (s.row ? scoutPct(s.row, m.key) : null));
+      const valid = pcts.filter(v => v != null).map(Number);
+      if (valid.length < 2) return;
+      const maxP = Math.max(...valid);
+      const winners = pcts.map((v, i) => (v != null && Number(v) === maxP ? i : -1)).filter(i => i >= 0);
+      if (winners.length !== 1) return;
+      contested++;
+      wins[winners[0]]++;
+      winLabels[winners[0]].push(m.label);
+    });
+    if (contested >= 4) {
+      const order = wins.map((w, i) => [w, i]).sort((a, b) => b[0] - a[0]);
+      const [topW, topI] = order[0];
+      const [secondW, secondI] = order[1];
+      if (topW > secondW) {
+        const runnerEdge = winLabels[secondI][0];
+        verdictHtml = `<div class="scout-verdict">${icon('bolt', 14)}<span><strong>${shown[topI].sel.web_name}</strong> wins <strong>${topW} of ${contested}</strong> contested categories${shown.length === 2 ? ` vs ${shown[secondI].sel.web_name}` : ''}${runnerEdge && secondW > 0 ? ` — ${shown[secondI].sel.web_name}'s edge: ${runnerEdge.toLowerCase()}` : ''}.</span></div>`;
+      } else {
+        verdictHtml = `<div class="scout-verdict">${icon('bolt', 14)}<span>Dead heat — <strong>${shown[topI].sel.web_name}</strong> and <strong>${shown[secondI].sel.web_name}</strong> split the categories ${topW}–${secondW}.</span></div>`;
+      }
+    }
+  }
+
+  let html = verdictHtml;
   if (multi) {
     html += `<div class="scout-colheads"><div></div><div class="scout-cells">`;
     shown.forEach((s, i) => {
@@ -167,13 +198,14 @@ function renderScoutReport() {
         html += `<div class="scout-cell">
           <span class="v">${displayVal}</span>
           <span class="p">${pct ?? '—'}</span>
-          <div class="scout-bar"><i style="width:${pct ?? 0}%;background:${barColor}"></i></div>
+          <div class="scout-bar"><i style="width:0;background:linear-gradient(90deg, color-mix(in srgb, ${barColor} 72%, transparent), ${barColor})" data-reveal-width="${pct ?? 0}%"></i></div>
         </div>`;
       }
     });
     html += `</div></div>`;
   });
   report.innerHTML = html;
+  revealBars(report);
 }
 
 function initScoutSearch() {
