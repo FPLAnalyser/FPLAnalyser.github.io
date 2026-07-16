@@ -10,7 +10,7 @@
  * cache continuously fresh, so a code change is picked up automatically on the
  * visit after next. Bump CACHE_VERSION only if this file's own logic changes.
  */
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const CACHE = `fpl-analyser-${CACHE_VERSION}`;
 
 // Best-effort precache of the core shell so the very next load works offline.
@@ -19,6 +19,7 @@ const CORE = [
   './',
   './index.html',
   './css/styles.css',
+  './js/fx.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
 ];

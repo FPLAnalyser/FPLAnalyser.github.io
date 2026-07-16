@@ -20,7 +20,7 @@ function teamBadgeUrl(team) {
 // Small inline team badge to sit next to any team name
 function teamBadgeImg(team, size = 14) {
   const url = teamBadgeUrl(team);
-  return url ? `<img loading="lazy" src="${url}" alt="" style="width:${size}px;height:${size}px;object-fit:contain;vertical-align:-2px;margin-right:4px;" onerror="this.style.display='none'">` : '';
+  return url ? `<img loading="lazy" class="badge-img" src="${url}" alt="" style="width:${size}px;height:${size}px;object-fit:contain;" onerror="this.style.display='none'">` : '';
 }
 
 // Accent-insensitive comparison ("Dubravka" matches "Dúbravka")
@@ -35,6 +35,30 @@ function escQ(s) {
 
 function getPositionEmoji(pos) {
   return { GKP: '🧤', DEF: '🛡️', MID: '⚡', FWD: '⚽' }[pos] || '👤';
+}
+
+// Inline SVG icon from the sprite in index.html (stroke follows currentColor)
+function icon(name, size = 16, cls = '') {
+  return `<svg class="icon ${cls}" width="${size}" height="${size}" aria-hidden="true"><use href="#i-${name}"></use></svg>`;
+}
+
+function positionIcon(pos, size = 13) {
+  const id = { GKP: 'hand', DEF: 'shield', MID: 'bolt', FWD: 'ball' }[pos] || 'users';
+  return icon(id, size);
+}
+
+// Star rating: accepts a 0–5 number or a pipeline string like "⭐⭐⭐½".
+// Renders a grey track with a gold clipped fill; data-sort feeds table sorting.
+function renderStars(value, { size = 13, showNum = true } = {}) {
+  const n = typeof value === 'string' ? starsToNum(value)
+    : (typeof value === 'number' && !isNaN(value) ? value : null);
+  if (n == null) return `<span class="stars stars-na" data-sort="">N/A</span>`;
+  const row = icon('star', size).repeat(5);
+  return `<span class="stars" data-sort="${n}" role="img" aria-label="${n} out of 5 stars">` +
+    `<span class="stars-wrap"><span class="stars-track">${row}</span>` +
+    `<span class="stars-fill" style="width:${(n / 5 * 100).toFixed(1)}%">${row}</span></span>` +
+    (showNum ? `<span class="stars-num num">${n.toFixed(1)}</span>` : '') +
+    `</span>`;
 }
 
 function tip(text) {
@@ -131,5 +155,5 @@ function fixtureChips(fixtureEase, team, n = 3) {
 }
 
 export { teamFullNames, teamCodes, teamBadgeUrl, teamBadgeImg, norm, escQ,
-         getPositionEmoji, tip, TOOLTIPS, starsToNum, avgRatingField,
-         FDR_COLORS, fixtureChips };
+         getPositionEmoji, icon, positionIcon, renderStars, tip, TOOLTIPS,
+         starsToNum, avgRatingField, FDR_COLORS, fixtureChips };
