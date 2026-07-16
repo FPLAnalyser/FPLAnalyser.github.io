@@ -1,6 +1,6 @@
 // rankings.js — rankings tables
 import { data, loaded } from '../data.js';
-import { teamBadgeImg, escQ } from '../util.js';
+import { teamBadgeImg, escQ, icon, renderStars } from '../util.js';
 
 // ── Rankings ──────────────────────────────────────────────────────────────────
 let currentRankingsTab = 'top-rated';
@@ -51,11 +51,11 @@ function renderRankings() {
         <td class="rank-num">${i + 1}</td>
         <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
         <td><span class="badge badge-pos">${p.position}</span></td>
-        <td style="color:var(--text2)">${teamBadgeImg(p.team, 14)}${p.team}</td>
-        <td style="font-family:'JetBrains Mono',monospace">£${p.price}m</td>
-        <td>${p.season_overall_rating || 'N/A'}</td>
-        <td>${p.gw4_overall_rating || 'N/A'}</td>
-        <td style="font-family:'JetBrains Mono',monospace;color:var(--accent)">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'}</td>
+        <td class="t2">${teamBadgeImg(p.team, 14)}${p.team}</td>
+        <td class="num">£${p.price}m</td>
+        <td>${renderStars(p.season_overall_rating)}</td>
+        <td>${renderStars(p.gw4_overall_rating)}</td>
+        <td class="num t-brand">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'}</td>
       </tr>
     `);
 } else if (currentRankingsTab === 'goal-threats') {
@@ -73,11 +73,11 @@ function renderRankings() {
         <td class="rank-num">${i + 1}</td>
         <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
         <td><span class="badge badge-pos">${p.position}</span></td>
-        <td style="color:var(--text2)">${teamBadgeImg(p.team, 14)}${p.team}</td>
-        <td>${p.season_goal_score_rating || 'N/A'}</td>
-        <td>${p.season_att_goal_score_rating || 'N/A'}</td>
-        <td style="font-family:'JetBrains Mono',monospace">${xgShare4gw}</td>
-        <td style="font-family:'JetBrains Mono',monospace">${xgShareSeason}</td>
+        <td class="t2">${teamBadgeImg(p.team, 14)}${p.team}</td>
+        <td>${renderStars(p.season_goal_score_rating)}</td>
+        <td>${renderStars(p.season_att_goal_score_rating)}</td>
+        <td class="num">${xgShare4gw}</td>
+        <td class="num">${xgShareSeason}</td>
       </tr>`;
     });
   } else if (currentRankingsTab === 'creators') {
@@ -95,11 +95,11 @@ function renderRankings() {
         <td class="rank-num">${i + 1}</td>
         <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
         <td><span class="badge badge-pos">${p.position}</span></td>
-        <td style="color:var(--text2)">${teamBadgeImg(p.team, 14)}${p.team}</td>
-        <td>${p.season_creative_score_rating || 'N/A'}</td>
-        <td>${p.season_att_creative_score_rating || 'N/A'}</td>
-        <td style="font-family:'JetBrains Mono',monospace">${xaShare4gw}</td>
-        <td style="font-family:'JetBrains Mono',monospace">${xaShareSeason}</td>
+        <td class="t2">${teamBadgeImg(p.team, 14)}${p.team}</td>
+        <td>${renderStars(p.season_creative_score_rating)}</td>
+        <td>${renderStars(p.season_att_creative_score_rating)}</td>
+        <td class="num">${xaShare4gw}</td>
+        <td class="num">${xaShareSeason}</td>
       </tr>`;
     });
 } else if (currentRankingsTab === 'clean-sheets') {
@@ -114,15 +114,15 @@ function renderRankings() {
         <td class="rank-num">${i + 1}</td>
         <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
         <td><span class="badge badge-pos">${p.position}</span></td>
-        <td style="color:var(--text2)">${teamBadgeImg(p.team, 14)}${p.team}</td>
-        <td>${p.season_cs_score_rating || 'N/A'}</td>
-        <td>${p.season_overall_rating || 'N/A'}</td>
+        <td class="t2">${teamBadgeImg(p.team, 14)}${p.team}</td>
+        <td>${renderStars(p.season_cs_score_rating)}</td>
+        <td>${renderStars(p.season_overall_rating)}</td>
       </tr>
     `);
   } else if (currentRankingsTab === 'next4') {
     const rated = players.filter(p => p.next4_score);
     if (!rated.length) {
-      container.innerHTML = `${posFilter}<div class="empty-state"><div class="empty-icon">📅</div>
+      container.innerHTML = `${posFilter}<div class="empty-state"><div class="empty-icon">${icon('calendar', 44)}</div>
         <div>Next 4 GW ratings aren't available yet — they appear once upcoming fixtures exist for the season.</div></div>`;
       return;
     }
@@ -133,11 +133,11 @@ function renderRankings() {
         <td class="rank-num">${i + 1}</td>
         <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
         <td><span class="badge badge-pos">${p.position}</span></td>
-        <td style="color:var(--text2)">${teamBadgeImg(p.team, 14)}${p.team}</td>
-        <td>${p.next4_overall_rating || 'N/A'}</td>
-        <td style="font-family:'JetBrains Mono',monospace;color:${p.next4_fixture_factor >= 1 ? 'var(--accent)' : 'var(--hot)'}">${p.next4_fixture_factor ? '×' + Number(p.next4_fixture_factor).toFixed(2) : 'N/A'}</td>
-        <td>${p.season_overall_rating || 'N/A'}</td>
-        <td>${p.gw4_overall_rating || 'N/A'}</td>
+        <td class="t2">${teamBadgeImg(p.team, 14)}${p.team}</td>
+        <td>${renderStars(p.next4_overall_rating)}</td>
+        <td class="num ${p.next4_fixture_factor >= 1 ? 't-good' : 't-bad'}">${p.next4_fixture_factor ? '×' + Number(p.next4_fixture_factor).toFixed(2) : 'N/A'}</td>
+        <td>${renderStars(p.season_overall_rating)}</td>
+        <td>${renderStars(p.gw4_overall_rating)}</td>
       </tr>
     `);
   } else if (currentRankingsTab === 'value') {
@@ -148,10 +148,10 @@ function renderRankings() {
         <td class="rank-num">${i + 1}</td>
         <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
         <td><span class="badge badge-pos">${p.position}</span></td>
-        <td style="color:var(--text2)">${teamBadgeImg(p.team, 14)}${p.team}</td>
-        <td style="font-family:'JetBrains Mono',monospace">£${p.price}m</td>
-        <td>${p.season_value_score_rating || 'N/A'}</td>
-        <td style="font-family:'JetBrains Mono',monospace;color:var(--accent)">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'}</td>
+        <td class="t2">${teamBadgeImg(p.team, 14)}${p.team}</td>
+        <td class="num">£${p.price}m</td>
+        <td>${renderStars(p.season_value_score_rating)}</td>
+        <td class="num t-brand">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'}</td>
       </tr>
     `);
   } else if (currentRankingsTab === 'form') {
@@ -163,7 +163,7 @@ function renderRankings() {
       ${posFilter}
       <div class="form-section">
         <div>
-          <div class="section-header">🔥 Hot Streak Players</div>
+          <div class="section-header">${icon('flame', 13)} Hot Streak Players</div>
           <table class="rankings-table">
             <thead><tr><th>Player</th><th>Pos</th><th>Season P90</th><th>4GW P90</th><th>Delta</th></tr></thead>
             <tbody>
@@ -171,16 +171,16 @@ function renderRankings() {
                 <tr>
                   <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
                   <td><span class="badge badge-pos">${p.position}</span></td>
-                  <td style="font-family:'JetBrains Mono',monospace">${Number(p.pts_per90_season).toFixed(2)}</td>
-                  <td style="font-family:'JetBrains Mono',monospace">${Number(p.pts_per90_4gw).toFixed(2)}</td>
-                  <td style="color:var(--hot);font-family:'JetBrains Mono',monospace">+${Number(p.pts_delta).toFixed(2)}</td>
+                  <td class="num">${Number(p.pts_per90_season).toFixed(2)}</td>
+                  <td class="num">${Number(p.pts_per90_4gw).toFixed(2)}</td>
+                  <td class="num t-hot">+${Number(p.pts_delta).toFixed(2)}</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
         </div>
         <div>
-          <div class="section-header">🧊 Cold Streak Players</div>
+          <div class="section-header">${icon('snow', 13)} Cold Streak Players</div>
           <table class="rankings-table">
             <thead><tr><th>Player</th><th>Pos</th><th>Season P90</th><th>4GW P90</th><th>Delta</th></tr></thead>
             <tbody>
@@ -188,9 +188,9 @@ function renderRankings() {
                 <tr>
                   <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
                   <td><span class="badge badge-pos">${p.position}</span></td>
-                  <td style="font-family:'JetBrains Mono',monospace">${Number(p.pts_per90_season).toFixed(2)}</td>
-                  <td style="font-family:'JetBrains Mono',monospace">${Number(p.pts_per90_4gw).toFixed(2)}</td>
-                  <td style="color:var(--cold);font-family:'JetBrains Mono',monospace">${Number(p.pts_delta).toFixed(2)}</td>
+                  <td class="num">${Number(p.pts_per90_season).toFixed(2)}</td>
+                  <td class="num">${Number(p.pts_per90_4gw).toFixed(2)}</td>
+                  <td class="num t-cold">${Number(p.pts_delta).toFixed(2)}</td>
                 </tr>
               `).join('')}
             </tbody>

@@ -1,7 +1,8 @@
 // players.js — player search, player card, cross-page navigation to a player
 import { data } from '../data.js';
 import { teamFullNames, teamBadgeUrl, teamBadgeImg, norm, escQ,
-         getPositionEmoji, tip, TOOLTIPS } from '../util.js';
+         icon, positionIcon, renderStars, tip, TOOLTIPS } from '../util.js';
+import { animateCounters } from '../fx.js';
 import { showPage } from '../nav.js';
 import { renderPlayerShotMap } from '../playershotmap.js';
 
@@ -19,14 +20,14 @@ function renderPlayersDefault() {
       ${top25.map((p,i) => {
         const photo = p.code ? `https://resources.premierleague.com/premierleague/photos/players/110x140/p${p.code}.png` : '';
         const streak = data.seasonToDate.find(x => x.web_name === p.web_name);
-        const streakIcon = streak && streak.streak === '🔥 Hot' ? '🔥' : streak && streak.streak === '🧊 Cold' ? '🧊' : '';
-        return `<div class="ownership-card" onclick="showPlayer('${escQ(p.web_name)}')">
+        const streakIcon = streak && streak.streak === '🔥 Hot' ? icon('flame', 12, 't-hot') : streak && streak.streak === '🧊 Cold' ? icon('snow', 12, 't-cold') : '';
+        return `<div class="ownership-card lift" onclick="showPlayer('${escQ(p.web_name)}')">
           <img loading="lazy" class="ownership-photo" src="${photo}" onerror="this.style.opacity='0'">
           <div class="ownership-info">
             <div class="ownership-name">${p.web_name} ${streakIcon}</div>
             <div class="ownership-meta">${p.position} · ${teamBadgeImg(p.team, 12)}${teamFullNames[p.team] || p.team} · £${p.price}m</div>
             <div class="ownership-pct">${p.selected_by_percent}% owned</div>
-            <div style="font-size:11px;margin-top:2px">${p.season_overall_rating || 'N/A'}</div>
+            <div style="margin-top:3px">${renderStars(p.season_overall_rating, { size: 10, showNum: false })}</div>
           </div>
         </div>`;
       }).join('')}
@@ -105,9 +106,9 @@ function showPlayer(name) {
   const isAtt = pos === 'MID' || pos === 'FWD';
   const streak = std ? std.streak : '';
   const streakHtml = streak === '🔥 Hot'
-    ? `<span class="streak-hot">🔥 Hot Streak</span>`
+    ? `<span class="streak-hot">${icon('flame', 13)} Hot Streak</span>`
     : streak === '🧊 Cold'
-    ? `<span class="streak-cold">🧊 Cold Streak</span>`
+    ? `<span class="streak-cold">${icon('snow', 13)} Cold Streak</span>`
     : '';
 
   const personas = p4 ? p4.personas : '';
@@ -215,7 +216,7 @@ function showPlayer(name) {
             style="width:72px;height:90px;object-fit:cover;border-radius:8px;"
             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
           >
-          <div style="display:none;width:72px;height:72px;border-radius:50%;background:var(--border);align-items:center;justify-content:center;font-size:28px;">${getPositionEmoji(pos)}</div>
+          <div class="t3" style="display:none;width:72px;height:90px;align-items:center;justify-content:center;">${positionIcon(pos, 30)}</div>
         </div>
         <div class="player-info">
           <div class="player-name">${name}</div>
@@ -233,26 +234,26 @@ function showPlayer(name) {
               <div class="rating-label">
                 <span class="tooltip-wrap">Season (Position)<span class="tooltip-icon">i</span><span class="tooltip-box">${TOOLTIPS.overall}</span></span>
               </div>
-              <div class="rating-stars">${seasonOverall}</div>
+              <div class="rating-stars">${renderStars(r.season_overall_rating)}</div>
             </div>
             <div class="rating-block">
               <div class="rating-label">Last 4GW (Position)</div>
-              <div class="rating-stars">${gw4Overall}</div>
+              <div class="rating-stars">${renderStars(r.gw4_overall_rating)}</div>
             </div>
             <div class="rating-block">
               <div class="rating-label">
                 <span class="tooltip-wrap">Next 4GW (Fixtures)<span class="tooltip-icon">i</span><span class="tooltip-box">${TOOLTIPS.next4}</span></span>
               </div>
-              <div class="rating-stars">${r.next4_overall_rating || 'N/A'}</div>
+              <div class="rating-stars">${renderStars(r.next4_overall_rating)}</div>
             </div>
             ${isAtt ? `
             <div class="rating-block">
               <div class="rating-label">Season (Attacker)</div>
-              <div class="rating-stars">${attSeason}</div>
+              <div class="rating-stars">${renderStars(r.season_att_overall_rating)}</div>
             </div>
             <div class="rating-block">
               <div class="rating-label">Last 4GW (Attacker)</div>
-              <div class="rating-stars">${attGw4}</div>
+              <div class="rating-stars">${renderStars(r.gw4_att_overall_rating)}</div>
             </div>
             ` : ''}
           </div>
@@ -277,23 +278,23 @@ function showPlayer(name) {
         <div class="section-header">Key Stats (Season)</div>
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-value">${r.season_ppg ? r.season_ppg.toFixed(1) : 'N/A'}</div>
+            <div class="stat-value">${(v => v != null && !isNaN(v) ? `<span data-count="${v}" data-count-format="1dp">0</span>` : 'N/A')(r.season_ppg)}</div>
             <div class="stat-label">Pts Per Game</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">${ptsPer90 !== 'N/A' ? Number(ptsPer90).toFixed(2) : 'N/A'}</div>
+            <div class="stat-value">${(v => v != null && !isNaN(v) ? `<span data-count="${v}" data-count-format="2dp">0</span>` : 'N/A')(ptsPer90 !== 'N/A' ? Number(ptsPer90) : null)}</div>
             <div class="stat-label">Pts Per 90</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">${r.total_mins ? Math.round(r.total_mins) : 'N/A'}</div>
+            <div class="stat-value">${(v => v != null && !isNaN(v) ? `<span data-count="${v}" data-count-format="int">0</span>` : 'N/A')(r.total_mins)}</div>
             <div class="stat-label">Total Mins</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">${r.season_start_rate ? (r.season_start_rate * 100).toFixed(0) + '%' : 'N/A'}</div>
+            <div class="stat-value">${(v => v != null && !isNaN(v) ? `<span data-count="${v}" data-count-format="int" data-count-suffix="%">0</span>` : 'N/A')(r.season_start_rate ? r.season_start_rate * 100 : null)}</div>
             <div class="stat-label">Start Rate</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">${r.season_mins90_rate ? (r.season_mins90_rate * 100).toFixed(0) + '%' : 'N/A'}</div>
+            <div class="stat-value">${(v => v != null && !isNaN(v) ? `<span data-count="${v}" data-count-format="int" data-count-suffix="%">0</span>` : 'N/A')(r.season_mins90_rate ? r.season_mins90_rate * 100 : null)}</div>
             <div class="stat-label">90 Mins Rate</div>
           </div>
           <div class="stat-card">
@@ -325,8 +326,8 @@ function showPlayer(name) {
           <tbody>
             <tr>
               <td><strong>Overall</strong></td>
-              <td>${seasonOverall}</td>
-              <td>${gw4Overall}</td>
+              <td>${renderStars(r.season_overall_rating)}</td>
+              <td>${renderStars(r.gw4_overall_rating)}</td>
             </tr>
             ${dimRows}
           </tbody>
@@ -339,8 +340,8 @@ function showPlayer(name) {
           <tbody>
             <tr>
               <td><strong>Overall</strong></td>
-              <td>${attSeason}</td>
-              <td>${attGw4}</td>
+              <td>${renderStars(r.season_att_overall_rating)}</td>
+              <td>${renderStars(r.gw4_att_overall_rating)}</td>
             </tr>
             ${attDimRows}
           </tbody>
@@ -353,11 +354,11 @@ function showPlayer(name) {
         <div class="section-header">Per 90 Stats (Season)</div>
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-value">${xgPer90 !== 'N/A' ? Number(xgPer90).toFixed(3) : 'N/A'}</div>
+            <div class="stat-value">${(v => v != null && !isNaN(v) ? `<span data-count="${v}" data-count-format="2dp">0</span>` : 'N/A')(xgPer90 !== 'N/A' ? Number(xgPer90) : null)}</div>
             <div class="stat-label">xG per 90</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">${xaPer90 !== 'N/A' ? Number(xaPer90).toFixed(3) : 'N/A'}</div>
+            <div class="stat-value">${(v => v != null && !isNaN(v) ? `<span data-count="${v}" data-count-format="2dp">0</span>` : 'N/A')(xaPer90 !== 'N/A' ? Number(xaPer90) : null)}</div>
             <div class="stat-label">xA per 90</div>
           </div>
         </div>
@@ -373,32 +374,32 @@ function showPlayer(name) {
           );
           return insight ? `
             <div class="finance-insight">
-              <div class="finance-insight-label">📊 Analysis</div>
+              <div class="finance-insight-label">${icon('trend-up', 12)} Analysis</div>
               ${insight}
             </div>
           ` : '';
         })()}
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-value">${alpha !== 'N/A' ? Number(alpha).toFixed(2) : 'N/A'}</div>
+            <div class="stat-value">${(v => v != null && !isNaN(v) ? `<span data-count="${v}" data-count-format="2dp">0</span>` : 'N/A')(alpha !== 'N/A' ? Number(alpha) : null)}</div>
             <div class="stat-label">
               <span class="tooltip-wrap">Alpha<span class="tooltip-icon">i</span><span class="tooltip-box">${TOOLTIPS.alpha}</span></span>
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">${sharpe !== 'N/A' ? Number(sharpe).toFixed(2) : 'N/A'}</div>
+            <div class="stat-value">${(v => v != null && !isNaN(v) ? `<span data-count="${v}" data-count-format="2dp">0</span>` : 'N/A')(sharpe !== 'N/A' ? Number(sharpe) : null)}</div>
             <div class="stat-label">
               <span class="tooltip-wrap">Sharpe<span class="tooltip-icon">i</span><span class="tooltip-box">${TOOLTIPS.sharpe}</span></span>
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">${sortino !== 'N/A' ? Number(sortino).toFixed(2) : 'N/A'}</div>
+            <div class="stat-value">${(v => v != null && !isNaN(v) ? `<span data-count="${v}" data-count-format="2dp">0</span>` : 'N/A')(sortino !== 'N/A' ? Number(sortino) : null)}</div>
             <div class="stat-label">
               <span class="tooltip-wrap">Sortino<span class="tooltip-icon">i</span><span class="tooltip-box">${TOOLTIPS.sortino}</span></span>
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">${consistency !== 'N/A' ? Number(consistency).toFixed(2) : 'N/A'}</div>
+            <div class="stat-value">${(v => v != null && !isNaN(v) ? `<span data-count="${v}" data-count-format="2dp">0</span>` : 'N/A')(consistency !== 'N/A' ? Number(consistency) : null)}</div>
             <div class="stat-label">
               <span class="tooltip-wrap">Consistency<span class="tooltip-icon">i</span><span class="tooltip-box">${TOOLTIPS.consistency}</span></span>
             </div>
@@ -408,11 +409,11 @@ function showPlayer(name) {
         <div class="section-header">Home vs Away (Season)</div>
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-value">${homeAvg !== 'N/A' ? Number(homeAvg).toFixed(1) : 'N/A'}</div>
+            <div class="stat-value">${(v => v != null && !isNaN(v) ? `<span data-count="${v}" data-count-format="1dp">0</span>` : 'N/A')(homeAvg !== 'N/A' ? Number(homeAvg) : null)}</div>
             <div class="stat-label">Home Avg Pts</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">${awayAvg !== 'N/A' ? Number(awayAvg).toFixed(1) : 'N/A'}</div>
+            <div class="stat-value">${(v => v != null && !isNaN(v) ? `<span data-count="${v}" data-count-format="1dp">0</span>` : 'N/A')(awayAvg !== 'N/A' ? Number(awayAvg) : null)}</div>
             <div class="stat-label">Away Avg Pts</div>
           </div>
           <div class="stat-card">
@@ -456,23 +457,22 @@ function showPlayer(name) {
   if (pos !== 'GKP') {
     renderPlayerShotMap(r.element, document.getElementById(`pshotmap-${r.element}`));
   }
+  animateCounters(document.getElementById('player-result'));
 }
 
 function buildDimRows(dims, r) {
   return dims.map(([label, sCol, gCol, tipKey]) => {
-    const sVal = r[sCol] || 'N/A';
-    const gVal = r[gCol] || 'N/A';
     const tooltip = tipKey && TOOLTIPS[tipKey] ? tip(TOOLTIPS[tipKey]) : '';
-    return `<tr><td><span class="tooltip-wrap">${label}${tooltip ? `<span class="tooltip-icon">i</span><span class="tooltip-box">${TOOLTIPS[tipKey]}</span>` : ''}</span></td><td>${sVal}</td><td>${gVal}</td></tr>`;
+    return `<tr><td><span class="tooltip-wrap">${label}${tooltip ? `<span class="tooltip-icon">i</span><span class="tooltip-box">${TOOLTIPS[tipKey]}</span>` : ''}</span></td><td>${renderStars(r[sCol])}</td><td>${renderStars(r[gCol])}</td></tr>`;
   }).join('');
 }
 
 function buildTierRow(label, tier) {
-  if (!tier) return `<tr><td>${label}</td><td colspan="5" style="color:var(--text2)">No data</td></tr>`;
+  if (!tier) return `<tr><td>${label}</td><td colspan="5" class="t2">No data</td></tr>`;
   return `<tr>
     <td>${label}</td>
     <td>${tier.games_played}</td>
-    <td style="color:var(--accent);font-family:'JetBrains Mono',monospace">${Number(tier.avg_pts).toFixed(1)}</td>
+    <td class="num t-brand">${Number(tier.avg_pts).toFixed(1)}</td>
     <td>${tier.total_goals}</td>
     <td>${tier.total_assists}</td>
     <td>${Number(tier.avg_bonus).toFixed(1)}</td>

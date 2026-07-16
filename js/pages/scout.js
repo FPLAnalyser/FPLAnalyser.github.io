@@ -31,7 +31,7 @@ const SCOUT_MAX = 4;
 // (scoutPctColor: red -> grey -> green) so a multi-player bar's colour is
 // never mistaken for a percentile reading. Validated for CVD separation and
 // contrast against the card surface (dataviz skill's categorical checks).
-const SCOUT_COLORS = ['#3987e5', '#c98500', '#d55181', '#5b4fc4'];
+const SCOUT_COLORS = ['#5EA7F7', '#E8A13C', '#E2649B', '#8B7BF4'];
 let scoutSelected = [];
 let scoutWindow = 'season';   // 'season' | 'l6' | 'l4'
 let scoutPeer = 'pooled';     // 'pooled' (MID+FWD) | 'position'
@@ -69,7 +69,7 @@ function scoutPct(row, key) {
 
 // FBref-style percentile colour: red (poor) → grey → green (elite)
 function scoutPctColor(p) {
-  if (p === '' || p == null) return '#3d4657';
+  if (p === '' || p == null) return '#5D6C80';
   const stops = [[1,[176,58,62]],[25,[186,108,70]],[50,[122,122,122]],[75,[92,160,96]],[99,[46,176,92]]];
   let lo = stops[0], hi = stops[stops.length - 1];
   for (let i = 0; i < stops.length - 1; i++)
@@ -82,7 +82,7 @@ function scoutPctColor(p) {
 function renderScoutChips() {
   const el = document.getElementById('scout-chips');
   el.innerHTML = scoutSelected.map((p, i) => `
-    <div class="scout-chip" style="--pc:${SCOUT_COLORS[i]}">
+    <div class="scout-chip lift" style="--pc:${SCOUT_COLORS[i]}">
       ${p.code ? `<img loading="lazy" src="https://resources.premierleague.com/premierleague/photos/players/110x140/p${p.code}.png" onerror="this.style.display='none'">` : ''}
       <div><div class="nm">${p.web_name}</div><div class="tm">${teamBadgeImg(p.team, 12)}${teamFullNames[p.team] || p.team} · ${p.position} · ${p.minutes} mins</div></div>
       <button aria-label="Remove ${p.web_name}" onclick="removeScoutPlayer(${i})">×</button>

@@ -10,7 +10,7 @@
  * cache continuously fresh, so a code change is picked up automatically on the
  * visit after next. Bump CACHE_VERSION only if this file's own logic changes.
  */
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE = `fpl-analyser-${CACHE_VERSION}`;
 
 // Best-effort precache of the core shell so the very next load works offline.

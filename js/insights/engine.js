@@ -7,10 +7,10 @@
 
 const SEVERITY_ORDER = { act: 0, warn: 1, info: 2, good: 3 };
 const SEVERITY_META = {
-  act: { icon: '🔴', label: 'Action', color: '#FF6B6B' },
-  warn: { icon: '🟡', label: 'Watch', color: '#eab308' },
-  info: { icon: '🔵', label: 'Worth knowing', color: '#58a6ff' },
-  good: { icon: '🟢', label: 'Good news', color: '#38D9A9' },
+  act: { iconId: 'alert', label: 'Action', color: 'var(--bad)' },
+  warn: { iconId: 'eye', label: 'Watch', color: 'var(--warn)' },
+  info: { iconId: 'info', label: 'Worth knowing', color: 'var(--info)' },
+  good: { iconId: 'check', label: 'Good news', color: 'var(--good)' },
 };
 const MAX_PER_SEVERITY = 5;
 

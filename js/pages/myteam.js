@@ -1,6 +1,7 @@
 // myteam.js — Load Your Team page: squad view + the insight report
 import { data } from '../data.js';
-import { teamFullNames, escQ, avgRatingField, fixtureChips } from '../util.js';
+import { teamFullNames, escQ, avgRatingField, fixtureChips, icon, renderStars, starsToNum } from '../util.js';
+import { skeletonHero, skeletonCards } from '../fx.js';
 import { fplFetch, getCurrentGwFallback, fetchEntry, fetchEntryHistory } from '../api.js';
 import { buildContext, runRules, SEVERITY_META } from '../insights/engine.js';
 import { RULES } from '../insights/rules.js';
@@ -23,11 +24,11 @@ async function loadMyTeam() {
   const container = document.getElementById('loadteam-result');
 
   if (!teamId || !/^\d+$/.test(teamId)) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div>Please enter a valid numeric Team ID</div></div>`;
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">${icon('alert', 44)}</div><div>Please enter a valid numeric Team ID</div></div>`;
     return;
   }
 
-  container.innerHTML = `<div class="loading"><div class="loading-spinner"></div>Loading your team...</div>`;
+  container.innerHTML = skeletonHero() + skeletonCards(2);
 
   try {
     const entryData = await fetchEntry(teamId);
@@ -44,9 +45,9 @@ async function loadMyTeam() {
     const detail = (e && e.message ? e.message : String(e)).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
     container.innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">⚠️</div>
+        <div class="empty-icon">${icon('alert', 44)}</div>
         <div>Could not load your team. Double-check the Team ID, or your browser/network may be blocking the request to the FPL API.</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);margin-top:12px;word-break:break-word;">${detail}</div>
+        <div class="num t2" style="font-size:11px;margin-top:12px;word-break:break-word;">${detail}</div>
       </div>
     `;
   }
@@ -71,17 +72,17 @@ function buildReportHtml(picksData, historyData) {
 
   if (!insights.length) {
     return `<div class="section-header">Your Report</div>
-      <div class="insight-card" style="--sev:#38D9A9">
-        <div class="insight-headline">No alerts this week — your squad looks healthy 🟢</div>
+      <div class="insight-card" style="--sev:var(--good)">
+        <div class="insight-headline">${icon('check', 14, 't-good')} No alerts this week — your squad looks healthy</div>
         <div class="insight-body">Every starter is minutes-secure and every position group is holding up against the league benchmarks. Check back after the next gameweek.</div>
       </div>`;
   }
 
   const suggestionCard = (s) => `
-    <div class="suggestion-card" onclick="event.stopPropagation();showPlayerFromRankings('${escQ(s.web_name)}')">
+    <div class="suggestion-card lift" onclick="event.stopPropagation();showPlayerFromRankings('${escQ(s.web_name)}')">
       ${s.code ? `<img loading="lazy" src="https://resources.premierleague.com/premierleague/photos/players/110x140/p${s.code}.png" onerror="this.style.opacity='0'">` : ''}
       <div class="suggestion-info">
-        <div class="suggestion-name">${s.web_name} <span style="color:var(--text2);font-weight:400">£${Number(s.price).toFixed(1)}m · ${s.team}</span></div>
+        <div class="suggestion-name">${s.web_name} <span class="t2" style="font-weight:400">£${Number(s.price).toFixed(1)}m · ${s.team}</span></div>
         <div class="suggestion-reason">${s.reason}</div>
       </div>
     </div>`;
@@ -90,7 +91,7 @@ function buildReportHtml(picksData, historyData) {
     ${insights.map(i => {
       const meta = SEVERITY_META[i.severity] || SEVERITY_META.info;
       return `<div class="insight-card" style="--sev:${meta.color}">
-        <div class="insight-headline">${meta.icon} ${i.headline}</div>
+        <div class="insight-headline"><span class="insight-sev-icon">${icon(meta.iconId, 14)}</span> ${i.headline}</div>
         <div class="insight-body">${i.body}</div>
         <div class="insight-evidence">${i.evidence}</div>
         ${i.suggestions && i.suggestions.length ? `<div class="suggestion-row">${i.suggestions.map(suggestionCard).join('')}</div>` : ''}
@@ -104,7 +105,7 @@ function renderMyTeam(picksData, gw, historyData, entryData, teamId) {
   const entryHistory = picksData.entry_history || {};
 
   if (!picks.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div>No squad data found for that Team ID / gameweek ${gw}.</div></div>`;
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">${icon('alert', 44)}</div><div>No squad data found for that Team ID / gameweek ${gw}.</div></div>`;
     return;
   }
 
@@ -140,14 +141,14 @@ function renderMyTeam(picksData, gw, historyData, entryData, teamId) {
 
     const photo = r.code ? `https://resources.premierleague.com/premierleague/photos/players/110x140/p${r.code}.png` : '';
     const streak = std ? std.streak : '';
-    const streakIcon = streak === '🔥 Hot' ? '🔥' : streak === '🧊 Cold' ? '🧊' : '';
+    const streakIcon = streak === '🔥 Hot' ? icon('flame', 13, 't-hot') : streak === '🧊 Cold' ? icon('snow', 13, 't-cold') : '';
     const streakLabel = streak === '🔥 Hot' ? 'Hot Streak' : streak === '🧊 Cold' ? 'Cold Streak' : '';
     const personas = p4 && p4.personas && p4.personas !== 'None' ? p4.personas.split(', ') : [];
 
     const tooltip = `
       <span class="tooltip-box">
         <strong>${r.web_name}</strong> · ${r.position} · ${teamFullNames[r.team] || r.team} · £${r.price}m<br>
-        Season: ${r.season_overall_rating || 'N/A'} · 4GW: ${r.gw4_overall_rating || 'N/A'}
+        Season: ${starsToNum(r.season_overall_rating) != null ? starsToNum(r.season_overall_rating).toFixed(1) + '★' : 'N/A'} · 4GW: ${starsToNum(r.gw4_overall_rating) != null ? starsToNum(r.gw4_overall_rating).toFixed(1) + '★' : 'N/A'}
         ${streakLabel ? ' · ' + streakLabel : ''}
         ${personas.length ? '<br>' + personas.join(', ') : ''}
       </span>
@@ -162,9 +163,9 @@ function renderMyTeam(picksData, gw, historyData, entryData, teamId) {
         <div class="pitch-card-name">${r.web_name}</div>
         <div class="pitch-card-meta">${r.position} · £${r.price}m</div>
         ${nextFixturesHtml(r.team)}
-        <div class="pitch-card-l4">L4: ${r.gw4_overall_rating || 'N/A'}</div>
-        <div class="pitch-card-l4">N4: ${r.next4_overall_rating || 'N/A'}</div>
-        <div class="pitch-card-footer">${r.season_overall_rating || 'N/A'}</div>
+        <div class="pitch-card-l4">L4 ${renderStars(r.gw4_overall_rating, { size: 8, showNum: false })}</div>
+        <div class="pitch-card-l4">N4 ${renderStars(r.next4_overall_rating, { size: 8, showNum: false })}</div>
+        <div class="pitch-card-footer">${renderStars(r.season_overall_rating, { size: 9, showNum: false })}</div>
         ${tooltip}
       </div>
     `;
@@ -187,19 +188,19 @@ function renderMyTeam(picksData, gw, historyData, entryData, teamId) {
     <div class="section-header">Team Ratings</div>
     <div class="team-stats-row" style="flex-wrap:wrap;gap:24px 32px;margin-bottom:8px;">
       <div class="team-stat">
-        <div class="team-stat-value">${overallAvg !== null ? overallAvg.toFixed(1) + ' ★' : 'N/A'}</div>
+        <div class="team-stat-value">${renderStars(overallAvg, { size: 12 })}</div>
         <div class="team-stat-label">Avg Overall Rating</div>
       </div>
       <div class="team-stat">
-        <div class="team-stat-value">${reliabilityAvg !== null ? reliabilityAvg.toFixed(1) + ' ★' : 'N/A'}</div>
+        <div class="team-stat-value">${renderStars(reliabilityAvg, { size: 12 })}</div>
         <div class="team-stat-label">Avg Reliability (XI)</div>
       </div>
       <div class="team-stat">
-        <div class="team-stat-value">${goalAvg !== null ? goalAvg.toFixed(1) + ' ★' : 'N/A'}</div>
+        <div class="team-stat-value">${renderStars(goalAvg, { size: 12 })}</div>
         <div class="team-stat-label">Avg Goal Threat (MID/FWD)</div>
       </div>
       <div class="team-stat">
-        <div class="team-stat-value">${csAvg !== null ? csAvg.toFixed(1) + ' ★' : 'N/A'}</div>
+        <div class="team-stat-value">${renderStars(csAvg, { size: 12 })}</div>
         <div class="team-stat-label">Avg Clean Sheet (GKP/DEF)</div>
       </div>
       <div class="team-stat">

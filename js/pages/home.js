@@ -1,6 +1,6 @@
 // home.js — dashboard: what matters this week (fixtures, captaincy, form)
 import { data } from '../data.js';
-import { teamFullNames, teamBadgeImg, escQ, fixtureChips } from '../util.js';
+import { teamFullNames, teamBadgeImg, escQ, fixtureChips, icon, renderStars } from '../util.js';
 
 function metaLine() {
   const m = data.meta;
@@ -27,7 +27,7 @@ function dashRow(p, valueHtml) {
 }
 
 function dashCard(title, icon, players, valueFn) {
-  return `<div class="dashboard-card">
+  return `<div class="dashboard-card lift">
     <div class="dashboard-card-header">${icon} ${title}</div>
     <div class="dashboard-card-body">
       ${players.map((p, i) => { p._rank = i + 1; return dashRow(p, valueFn(p)); }).join('')}
@@ -46,11 +46,11 @@ function gwPanel() {
     const topPPG = data.ratings.filter(p => p.season_ok)
       .sort((a, b) => (b.season_ppg || 0) - (a.season_ppg || 0)).slice(0, 5);
     return `<div class="gw-panel">
-      <div class="gw-panel-title">Season complete 🏁</div>
+      <div class="gw-panel-title">${icon('trophy', 16, 't-brand')} Season complete</div>
       <div class="gw-panel-sub">${metaLine()} — the weekly panel (deadline, captaincy picks, fixture swings) switches on when next season's fixtures land.</div>
       <div class="home-columns">
-        ${dashCard('Season Top Rated', '⭐', topRated, p => p.season_overall_rating || 'N/A')}
-        ${dashCard('Season Top PPG', '💰', topPPG, p => p.season_ppg ? p.season_ppg.toFixed(1) + ' ppg' : 'N/A')}
+        ${dashCard('Season Top Rated', icon('star', 14), topRated, p => renderStars(p.season_overall_rating, { size: 10, showNum: false }))}
+        ${dashCard('Season Top PPG', icon('coin', 14), topPPG, p => p.season_ppg ? p.season_ppg.toFixed(1) + ' ppg' : 'N/A')}
       </div>
     </div>`;
   }
@@ -70,8 +70,8 @@ function gwPanel() {
   return `<div class="gw-panel">
     <div class="gw-panel-title">Gameweek ${nextGw}</div>
     <div class="gw-panel-sub">${metaLine()}${deadlineHtml}</div>
-    ${captains.length ? dashCard('Captaincy Shortlist — form × fixtures (next 4 GWs)', '🎖️', captains,
-      p => `${p.next4_overall_rating || 'N/A'}${p.next4_fixture_factor ? ` <span style="color:var(--text2);font-size:11px">×${Number(p.next4_fixture_factor).toFixed(2)}</span>` : ''}`) : ''}
+    ${captains.length ? dashCard('Captaincy Shortlist — form × fixtures (next 4 GWs)', icon('crown', 14, 't-brand'), captains,
+      p => `${renderStars(p.next4_overall_rating, { size: 10, showNum: false })}${p.next4_fixture_factor ? ` <span class="t2" style="font-size:11px">×${Number(p.next4_fixture_factor).toFixed(2)}</span>` : ''}`) : ''}
   </div>`;
 }
 
@@ -92,7 +92,7 @@ function fixtureTicker() {
       ${rows.map(r => `<tr onclick="showTeamFromHome('${r.team}')">
         <td class="ticker-team">${teamBadgeImg(r.team, 16)}${teamFullNames[r.team] || r.team}</td>
         <td><div class="ticker-chips">${fixtureChips(data.fixtureEase, r.team, 3)}</div></td>
-        <td class="ticker-ease" style="color:${r.avgEase >= 1 ? 'var(--accent)' : 'var(--hot)'}" title="Attack ease vs league average over the next 3 (higher = kinder fixtures)">×${r.avgEase.toFixed(2)}</td>
+        <td class="ticker-ease ${r.avgEase >= 1 ? 't-good' : 't-bad'}" title="Attack ease vs league average over the next 3 (higher = kinder fixtures)">×${r.avgEase.toFixed(2)}</td>
       </tr>`).join('')}
     </tbody>
   </table>`;
@@ -106,8 +106,8 @@ function formWatch() {
   if (!hot.length && !cold.length) return '';
   return `<div class="section-header">Form Watch</div>
   <div class="home-columns">
-    ${dashCard('Hot Streak', '🔥', hot, p => `+${Number(p.pts_delta).toFixed(1)}`)}
-    ${dashCard('Cold Streak', '🧊', cold, p => `${Number(p.pts_delta).toFixed(1)}`)}
+    ${dashCard('Hot Streak', icon('flame', 14, 't-hot'), hot, p => `+${Number(p.pts_delta).toFixed(1)}`)}
+    ${dashCard('Cold Streak', icon('snow', 14, 't-cold'), cold, p => `${Number(p.pts_delta).toFixed(1)}`)}
   </div>`;
 }
 

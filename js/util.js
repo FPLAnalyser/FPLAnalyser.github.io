@@ -137,8 +137,9 @@ function avgRatingField(rows, field) {
   return vals.reduce((a, b) => a + b, 0) / vals.length;
 }
 
-// FPL-style fixture difficulty colours: [background, text]
-const FDR_COLORS = { 1: ['#375523','#fff'], 2: ['#01fc7a','#0D1117'], 3: ['#e7e7e7','#0D1117'], 4: ['#ff1751','#fff'], 5: ['#80072d','#fff'] };
+// Fixture difficulty colours: [background, text]. FDR 3 is a neutral dark
+// chip (not white) so mid fixtures recede instead of glaring on dark cards.
+const FDR_COLORS = { 1: ['#2F5D24','#EAF5E4'], 2: ['#27C46B','#06240F'], 3: ['#39424E','#E8EDF3'], 4: ['#E8434F','#fff'], 5: ['#7A1030','#fff'] };
 
 // Next-n fixture chips for a team from the pre-computed fixture_ease rows.
 // Returns '' when no upcoming fixtures are known (e.g. between seasons).

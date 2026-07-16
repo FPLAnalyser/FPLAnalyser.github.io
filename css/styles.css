@@ -283,9 +283,9 @@
     letter-spacing: 0.5px;
   }
 
-  .badge-pos { background: #1f3a5f; color: #58a6ff; }
+  .badge-pos { background: rgba(94, 167, 247, 0.14); color: var(--info); }
   .badge-team { background: var(--border); color: var(--text2); }
-  .badge-price { background: #1f3d2a; color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+  .badge-price { background: var(--brand-dim); color: var(--brand); font-family: var(--font-num); }
 
   .streak-hot { color: var(--hot); font-size: 14px; font-weight: 600; }
   .streak-cold { color: var(--cold); font-size: 14px; font-weight: 600; }
@@ -403,12 +403,12 @@
 
   .persona-tag {
     padding: 4px 12px;
-    border-radius: 20px;
+    border-radius: var(--r-pill);
     font-size: 12px;
     font-weight: 500;
-    background: #1f3a5f;
-    color: #58a6ff;
-    border: 1px solid #1f4a7f;
+    background: rgba(94, 167, 247, 0.12);
+    color: var(--info);
+    border: 1px solid rgba(94, 167, 247, 0.28);
   }
 
   .flag-tag {
@@ -418,8 +418,8 @@
     font-weight: 500;
   }
 
-  .flag-monster { background: #1f3d2a; color: var(--accent); border: 1px solid #2d5a3d; }
-  .flag-risk { background: #3d1f1f; color: var(--hot); border: 1px solid #5a2d2d; }
+  .flag-monster { background: var(--brand-dim); color: var(--brand); border: 1px solid rgba(52, 224, 173, 0.3); }
+  .flag-risk { background: rgba(242, 109, 109, 0.12); color: var(--bad); border: 1px solid rgba(242, 109, 109, 0.3); }
 
   /* ── Section Headers ── */
   .section-header {
@@ -690,8 +690,8 @@
 
   /* ── Finance insight box ── */
   .finance-insight {
-    background: #1a2332;
-    border: 1px solid var(--accent);
+    background: linear-gradient(135deg, var(--brand-dim), transparent 70%), var(--surface-2);
+    border: 1px solid rgba(52, 224, 173, 0.3);
     border-radius: 8px;
     padding: 14px;
     margin-bottom: 20px;
@@ -879,8 +879,10 @@
 
   /* ── Pitch formation view ── */
   .pitch {
-    background: radial-gradient(ellipse at center, #2d7a4f 0%, #1e5a3a 55%, #164a2e 100%);
-    border-radius: 16px;
+    background: radial-gradient(ellipse at center, #1E5C3C 0%, #14432B 55%, #0E3520 100%);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-1);
     padding: 28px 12px 18px;
     margin-bottom: 20px;
     position: relative;
@@ -947,9 +949,9 @@
 
   .pitch-card {
     width: 92px;
-    background: rgba(13, 17, 23, 0.92);
+    background: rgba(9, 12, 17, 0.94);
     border: 1px solid rgba(255,255,255,0.14);
-    border-radius: 8px;
+    border-radius: var(--r-md);
     overflow: hidden;
     text-align: center;
     cursor: pointer;
@@ -961,7 +963,7 @@
   .pitch-card.bench { opacity: 0.85; background: rgba(13, 17, 23, 0.5); border-color: var(--border); }
 
   .pitch-card-name {
-    background: #161B22;
+    background: var(--surface-2);
     color: var(--text);
     font-size: 11px;
     font-weight: 700;
@@ -1094,8 +1096,10 @@
   .scout-chip button:hover { color: var(--text); }
 
   .scout-warn {
-    margin: 0 0 16px; padding: 10px 14px; border: 1px solid #7c5c14; background: #2a2110;
-    color: #eab308; font-size: 13px; border-radius: 8px; display: none;
+    margin: 0 0 16px; padding: 10px 14px;
+    border: 1px solid rgba(240, 181, 74, 0.35);
+    background: rgba(240, 181, 74, 0.08);
+    color: var(--warn); font-size: 13px; border-radius: var(--r-sm); display: none;
   }
 
   .scout-report { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
@@ -1116,7 +1120,7 @@
   .scout-cell .p { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text2); text-align: right; }
   .scout-bar { height: 12px; background: var(--bg); border-radius: 3px; overflow: hidden; }
   .scout-bar i { display: block; height: 100%; border-radius: 3px; transition: width .5s cubic-bezier(.2,.8,.2,1); }
-  .scout-cell.na .v, .scout-cell.na .p { color: #3d4657; }
+  .scout-cell.na .v, .scout-cell.na .p { color: var(--text-3); }
   .scout-colheads { display: grid; grid-template-columns: 200px 1fr; border-bottom: 1px solid var(--border); background: var(--bg); }
   .scout-colheads .who {
     font-weight: 600; font-size: 12px; padding: 8px 18px 8px 0;
@@ -1133,9 +1137,9 @@
   /* ── Data staleness banner ── */
   .stale-banner {
     display: none;
-    background: #2a2110;
-    border-bottom: 1px solid #7c5c14;
-    color: #eab308;
+    background: rgba(240, 181, 74, 0.08);
+    border-bottom: 1px solid rgba(240, 181, 74, 0.35);
+    color: var(--warn);
     font-size: 13px;
     padding: 8px 24px;
     text-align: center;
@@ -1435,9 +1439,11 @@
   }
   .player-card, .dashboard-card, .gw-panel, .scout-report, .bench-strip { border-radius: var(--r-lg); }
   .insight-card {
-    background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent 40%), var(--surface-1);
+    background: color-mix(in srgb, var(--sev, var(--brand)) 5%, var(--surface-1));
+    border-color: color-mix(in srgb, var(--sev, var(--brand)) 18%, transparent);
     box-shadow: var(--shadow-1);
   }
+  .insight-sev-icon { color: var(--sev, var(--brand)); }
 
   /* ── Hover lift (cards only — never table rows) ── */
   .lift {
@@ -1493,6 +1499,8 @@
   .t3 { color: var(--text-3); }
   .t-good { color: var(--good); }
   .t-bad { color: var(--bad); }
+  .t-hot { color: var(--hot); }
+  .t-cold { color: var(--cold); }
   .t-warn { color: var(--warn); }
   .t-brand { color: var(--brand); }
   .badge-img { vertical-align: -2px; margin-right: 5px; }
