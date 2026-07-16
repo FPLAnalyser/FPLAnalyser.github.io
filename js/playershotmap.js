@@ -33,9 +33,11 @@ function distanceYards(x, y) {
   return Math.sqrt(depthM * depthM + widthM * widthM) * YD_PER_M;
 }
 
+// Y=0 draws on the pitch's right, Y=1 on the left — matches the team shot
+// map's convention (js/shotmap.js), confirmed against real shot locations.
 function toPitch(x, y) {
   const cy = (1 - Math.max(0.5, Math.min(1, Number(x)))) * 105;
-  const cx = Math.max(0, Math.min(1, Number(y))) * 68;
+  const cx = (1 - Math.max(0, Math.min(1, Number(y)))) * 68;
   return { cx, cy };
 }
 
@@ -103,13 +105,18 @@ function shotDots(shots, recent) {
   }).join('');
 }
 
+// Each swatch is an exact match for one of the four dot styles actually
+// drawn on the pitch (recency x outcome) — no abstract/generic swatch that
+// could be confused with another (a plain grey-filled circle meant "earlier"
+// in one swatch and "goal" in another swatch previously, and the two were
+// indistinguishable).
 function legend() {
   return `
     <div class="pshot-legend">
-      <span class="pshot-key"><span class="pshot-swatch pshot-sw-recent"></span>Last 4 GWs</span>
-      <span class="pshot-key"><span class="pshot-swatch pshot-sw-old"></span>Earlier</span>
-      <span class="pshot-key"><span class="pshot-swatch pshot-sw-goalfill"></span>Goal (filled)</span>
-      <span class="pshot-key"><span class="pshot-swatch pshot-sw-ring"></span>Shot (ring)</span>
+      <span class="pshot-key"><span class="pshot-swatch pshot-sw-recent-goal"></span>Last 4 GWs · Goal</span>
+      <span class="pshot-key"><span class="pshot-swatch pshot-sw-recent-shot"></span>Last 4 GWs · Shot</span>
+      <span class="pshot-key"><span class="pshot-swatch pshot-sw-old-goal"></span>Earlier · Goal</span>
+      <span class="pshot-key"><span class="pshot-swatch pshot-sw-old-shot"></span>Earlier · Shot</span>
       <span class="pshot-key pshot-note">Size = xG</span>
     </div>
   `;

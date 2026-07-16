@@ -1302,10 +1302,12 @@
   }
   .pshot-key { display: flex; align-items: center; gap: 6px; }
   .pshot-swatch { width: 12px; height: 12px; border-radius: 50%; display: inline-block; box-sizing: border-box; }
-  .pshot-sw-recent { background: var(--accent2); }
-  .pshot-sw-old { background: rgba(226,232,240,0.72); }
-  .pshot-sw-goalfill { background: var(--text2); }
-  .pshot-sw-ring { background: transparent; border: 1.5px solid var(--text2); }
+  /* Each swatch matches a dot style exactly (see .pshot-recent/.pshot-old/
+     .pshot-goal in the map itself) — never a generic stand-in colour. */
+  .pshot-sw-recent-goal { background: var(--accent2); opacity: 0.78; border: 1.5px solid var(--accent2); }
+  .pshot-sw-recent-shot { background: transparent; border: 1.5px solid var(--accent2); }
+  .pshot-sw-old-goal { background: rgba(226,232,240,0.6); border: 1.5px solid rgba(226,232,240,0.6); }
+  .pshot-sw-old-shot { background: transparent; border: 1.5px solid rgba(226,232,240,0.6); }
   .pshot-note { font-style: italic; }
   .pshot-tt-recent {
     margin-top: 4px;

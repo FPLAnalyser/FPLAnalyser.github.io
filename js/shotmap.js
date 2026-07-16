@@ -84,10 +84,12 @@ function distanceYards(x, y) {
 
 // Plotting/zone position: X clamped to the attacking half, Y mirrored for
 // "against" so the rendered picture is always in the analysed team's own frame.
+// (Y=0 draws on the pitch's right, Y=1 on the left — confirmed against real
+// shot locations; the earlier assumption had this backwards.)
 function toPitch(x, y, mode) {
   const clampedX = Math.max(0.5, Math.min(1, Number(x)));
   const clampedY = Math.max(0, Math.min(1, Number(y)));
-  let cx = clampedY * 68;
+  let cx = (1 - clampedY) * 68;
   if (mode === 'against') cx = 68 - cx;
   return { cx, cy: (1 - clampedX) * 105 };
 }
