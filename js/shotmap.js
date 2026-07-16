@@ -29,24 +29,29 @@ const YD_PER_M = 1.09361;
 // Box + grid geometry in meters on the 68 x 52.5 half-pitch (goal at y=0).
 // viewBox extends above y=0 (VIEW_Y_MIN) so the goal frame isn't clipped.
 const BOX_L = 13.84, BOX_R = 54.16;
-const THIRD = (BOX_R - BOX_L) / 3;
-const T1 = BOX_L + THIRD, T2 = BOX_L + 2 * THIRD;
-const DEPTH = { d0: 0, d1: 6, d2: 16.5, d3: 24, d4: 52.5 };
+const SIX_YARD_L = 24.84, SIX_YARD_R = 43.16; // six-yard box: 18.32m wide, centred
+const SIX_THIRD = (SIX_YARD_R - SIX_YARD_L) / 3;
+const SIX_T1 = SIX_YARD_L + SIX_THIRD, SIX_T2 = SIX_YARD_L + 2 * SIX_THIRD;
+const DEPTH = { d0: 0, d1: 5.5, d2: 16.5, d3: 24, d4: 52.5 }; // d1 = real six-yard depth
 const VIEW_Y_MIN = -5, VIEW_H = DEPTH.d4 - VIEW_Y_MIN, VIEW_W = 68;
 
-// 12 zones: six-yard thirds, box thirds + bylines, one edge-of-box band,
-// long-range thirds. Wide-of-the-box shots between the six-yard line and
-// the edge-of-box line fold into the long-range byline columns (b4-wl/wr,
-// which start at d2 instead of d3) — there's no separate "wide, edge of
-// box" zone, matching how sparse that specific pocket actually is.
+// 14 zones, matching Opta-style end-location grids: the six-yard box itself
+// only splits into thirds (shots wide of it at that depth are vanishingly
+// rare and fold into the nearest six-yard third), but the rest of the box
+// gets the full seven columns — byline, the channel between byline and
+// six-yard width, and the six-yard-width thirds, mirrored — since that's
+// where the bulk of the width variation in shooting position actually is.
+// Edge-of-box and long-range bands are unchanged (1 + 3 cells).
 const ZONE_META = {
-  'b1-l': { name: 'Left Six-Yard', narrative: 'the left of the six-yard box' },
+  'b1-l': { name: 'Left of Six-Yard Box', narrative: 'the left of the six-yard box' },
   'b1-m': { name: 'Six-Yard Box', narrative: 'right in the six-yard box' },
-  'b1-r': { name: 'Right Six-Yard', narrative: 'the right of the six-yard box' },
+  'b1-r': { name: 'Right of Six-Yard Box', narrative: 'the right of the six-yard box' },
   'b2-wl': { name: 'Left Byline', narrative: 'the left byline' },
-  'b2-l': { name: 'Left of Box', narrative: 'the left side of the box' },
+  'b2-el': { name: 'Left of Box', narrative: 'the left of the box' },
+  'b2-l': { name: 'Inside Left', narrative: 'inside-left of the box' },
   'b2-m': { name: 'Middle of Box', narrative: 'the middle of the box' },
-  'b2-r': { name: 'Right of Box', narrative: 'the right side of the box' },
+  'b2-r': { name: 'Inside Right', narrative: 'inside-right of the box' },
+  'b2-er': { name: 'Right of Box', narrative: 'the right of the box' },
   'b2-wr': { name: 'Right Byline', narrative: 'the right byline' },
   'b3-c': { name: 'Edge of Box', narrative: 'the edge of the box' },
   'b4-wl': { name: 'Long Range, Left', narrative: 'long range on the left' },
@@ -55,13 +60,15 @@ const ZONE_META = {
 };
 
 const ZONE_SHAPES = {
-  'b1-l': { x: BOX_L, y: DEPTH.d0, w: THIRD, h: DEPTH.d1 - DEPTH.d0 },
-  'b1-m': { x: T1, y: DEPTH.d0, w: THIRD, h: DEPTH.d1 - DEPTH.d0 },
-  'b1-r': { x: T2, y: DEPTH.d0, w: THIRD, h: DEPTH.d1 - DEPTH.d0 },
+  'b1-l': { x: SIX_YARD_L, y: DEPTH.d0, w: SIX_THIRD, h: DEPTH.d1 - DEPTH.d0 },
+  'b1-m': { x: SIX_T1, y: DEPTH.d0, w: SIX_THIRD, h: DEPTH.d1 - DEPTH.d0 },
+  'b1-r': { x: SIX_T2, y: DEPTH.d0, w: SIX_THIRD, h: DEPTH.d1 - DEPTH.d0 },
   'b2-wl': { x: 0, y: DEPTH.d1, w: BOX_L, h: DEPTH.d2 - DEPTH.d1 },
-  'b2-l': { x: BOX_L, y: DEPTH.d1, w: THIRD, h: DEPTH.d2 - DEPTH.d1 },
-  'b2-m': { x: T1, y: DEPTH.d1, w: THIRD, h: DEPTH.d2 - DEPTH.d1 },
-  'b2-r': { x: T2, y: DEPTH.d1, w: THIRD, h: DEPTH.d2 - DEPTH.d1 },
+  'b2-el': { x: BOX_L, y: DEPTH.d1, w: SIX_YARD_L - BOX_L, h: DEPTH.d2 - DEPTH.d1 },
+  'b2-l': { x: SIX_YARD_L, y: DEPTH.d1, w: SIX_THIRD, h: DEPTH.d2 - DEPTH.d1 },
+  'b2-m': { x: SIX_T1, y: DEPTH.d1, w: SIX_THIRD, h: DEPTH.d2 - DEPTH.d1 },
+  'b2-r': { x: SIX_T2, y: DEPTH.d1, w: SIX_THIRD, h: DEPTH.d2 - DEPTH.d1 },
+  'b2-er': { x: SIX_YARD_R, y: DEPTH.d1, w: BOX_R - SIX_YARD_R, h: DEPTH.d2 - DEPTH.d1 },
   'b2-wr': { x: BOX_R, y: DEPTH.d1, w: 68 - BOX_R, h: DEPTH.d2 - DEPTH.d1 },
   'b3-c': { x: BOX_L, y: DEPTH.d2, w: BOX_R - BOX_L, h: DEPTH.d3 - DEPTH.d2 },
   'b4-wl': { x: 0, y: DEPTH.d2, w: BOX_L, h: DEPTH.d4 - DEPTH.d2 },
@@ -94,14 +101,23 @@ function toPitch(x, y, mode) {
 
 function classifyZone(cx, cy) {
   const inBoxWidth = cx >= BOX_L && cx <= BOX_R;
+  const inSixWidth = cx >= SIX_YARD_L && cx <= SIX_YARD_R;
   const wide = cx < BOX_L ? 'wl' : cx > BOX_R ? 'wr' : null;
+  const sixSide = cx < SIX_YARD_L ? 'l' : cx > SIX_YARD_R ? 'r' : null;
+
   if (cy <= DEPTH.d1) {
-    if (!inBoxWidth) return wide === 'wl' ? 'b1-l' : 'b1-r';
-    return cx < T1 ? 'b1-l' : cx < T2 ? 'b1-m' : 'b1-r';
+    // Six-yard depth: only 3 cells, matching the six-yard box's own width.
+    // Wide-of-the-box at this shallow a depth is a near-impossible shooting
+    // angle — fold it into the nearest six-yard third rather than adding a
+    // near-always-empty column.
+    if (inSixWidth) return cx < SIX_T1 ? 'b1-l' : cx < SIX_T2 ? 'b1-m' : 'b1-r';
+    return sixSide === 'l' ? 'b1-l' : 'b1-r';
   }
   if (cy <= DEPTH.d2) {
+    // Rest of the box: full 7 columns (byline, channel, six-yard thirds).
     if (!inBoxWidth) return `b2-${wide}`;
-    return cx < T1 ? 'b2-l' : cx < T2 ? 'b2-m' : 'b2-r';
+    if (!inSixWidth) return sixSide === 'l' ? 'b2-el' : 'b2-er';
+    return cx < SIX_T1 ? 'b2-l' : cx < SIX_T2 ? 'b2-m' : 'b2-r';
   }
   if (!inBoxWidth) return `b4-${wide}`;
   return cy <= DEPTH.d3 ? 'b3-c' : 'b4-c';
@@ -212,7 +228,7 @@ function narrativeBlock(a, team, mode, metric) {
 
 function pitchMarkings() {
   return `
-    <line class="shotmap-line" x1="0" y1="52.5" x2="68" y2="52.5"></line>
+    <rect class="shotmap-line" x="0" y="0" width="68" height="52.5"></rect>
     <path class="shotmap-line" d="M 24.85 52.5 A 9.15 9.15 0 0 1 43.15 52.5"></path>
     <rect class="shotmap-line shotmap-box" x="13.84" y="0" width="40.32" height="16.5"></rect>
     <rect class="shotmap-line shotmap-box" x="24.84" y="0" width="18.32" height="5.5"></rect>

@@ -56,7 +56,7 @@ function pitchAndGoal() {
   const netCols = [1, 2, 3, 4, 5, 6].map(i => gl + (gr - gl) * i / 7);
   const netRows = [-1.2, -2.4];
   return `
-    <line class="shotmap-line" x1="0" y1="52.5" x2="68" y2="52.5"></line>
+    <rect class="shotmap-line" x="0" y="0" width="68" height="52.5"></rect>
     <path class="shotmap-line" d="M 24.85 52.5 A 9.15 9.15 0 0 1 43.15 52.5"></path>
     <rect class="shotmap-line shotmap-box" x="13.84" y="0" width="40.32" height="16.5"></rect>
     <rect class="shotmap-line shotmap-box" x="24.84" y="0" width="18.32" height="5.5"></rect>

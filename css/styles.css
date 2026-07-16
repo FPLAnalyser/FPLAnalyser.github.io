@@ -1380,12 +1380,16 @@
     position: absolute;
     transform: translate(-50%, -50%);
     text-align: center;
+    white-space: nowrap;
     pointer-events: none;
-    font-size: 15px;
+    font-size: 12px;
     font-weight: 700;
     font-family: 'JetBrains Mono', monospace;
     color: var(--text);
     text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+  @media (max-width: 500px) {
+    .shotmap-zone-label { font-size: 10px; }
   }
 
   .shotmap-tooltip {
