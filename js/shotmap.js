@@ -35,13 +35,13 @@ const SIX_T1 = SIX_YARD_L + SIX_THIRD, SIX_T2 = SIX_YARD_L + 2 * SIX_THIRD;
 const DEPTH = { d0: 0, d1: 5.5, d2: 16.5, d3: 24, d4: 52.5 }; // d1 = real six-yard depth
 const VIEW_Y_MIN = -5, VIEW_H = DEPTH.d4 - VIEW_Y_MIN, VIEW_W = 68;
 
-// 14 zones, matching Opta-style end-location grids: the six-yard box itself
-// only splits into thirds (shots wide of it at that depth are vanishingly
-// rare and fold into the nearest six-yard third), but the rest of the box
-// gets the full seven columns — byline, the channel between byline and
-// six-yard width, and the six-yard-width thirds, mirrored — since that's
-// where the bulk of the width variation in shooting position actually is.
-// Edge-of-box and long-range bands are unchanged (1 + 3 cells).
+// 14 zones, matching Opta-style end-location grids. The box is a full 7
+// columns wide (byline, the channel between byline and six-yard width, and
+// the six-yard-width thirds, mirrored) — the two outer columns (byline,
+// channel) run the ENTIRE box depth (goal line to the 18-yard line), while
+// only the six-yard-width middle strip is further split by depth into the
+// six-yard row (b1) and the rest of the box (b2-l/m/r). Edge-of-box and
+// long-range bands are unchanged (1 + 3 cells).
 const ZONE_META = {
   'b1-l': { name: 'Left of Six-Yard Box', narrative: 'the left of the six-yard box' },
   'b1-m': { name: 'Six-Yard Box', narrative: 'right in the six-yard box' },
@@ -63,13 +63,15 @@ const ZONE_SHAPES = {
   'b1-l': { x: SIX_YARD_L, y: DEPTH.d0, w: SIX_THIRD, h: DEPTH.d1 - DEPTH.d0 },
   'b1-m': { x: SIX_T1, y: DEPTH.d0, w: SIX_THIRD, h: DEPTH.d1 - DEPTH.d0 },
   'b1-r': { x: SIX_T2, y: DEPTH.d0, w: SIX_THIRD, h: DEPTH.d1 - DEPTH.d0 },
-  'b2-wl': { x: 0, y: DEPTH.d1, w: BOX_L, h: DEPTH.d2 - DEPTH.d1 },
-  'b2-el': { x: BOX_L, y: DEPTH.d1, w: SIX_YARD_L - BOX_L, h: DEPTH.d2 - DEPTH.d1 },
+  // Byline + channel columns run the full box depth (d0 to d2), not just
+  // below the six-yard row — they flank the six-yard box on both sides.
+  'b2-wl': { x: 0, y: DEPTH.d0, w: BOX_L, h: DEPTH.d2 - DEPTH.d0 },
+  'b2-el': { x: BOX_L, y: DEPTH.d0, w: SIX_YARD_L - BOX_L, h: DEPTH.d2 - DEPTH.d0 },
   'b2-l': { x: SIX_YARD_L, y: DEPTH.d1, w: SIX_THIRD, h: DEPTH.d2 - DEPTH.d1 },
   'b2-m': { x: SIX_T1, y: DEPTH.d1, w: SIX_THIRD, h: DEPTH.d2 - DEPTH.d1 },
   'b2-r': { x: SIX_T2, y: DEPTH.d1, w: SIX_THIRD, h: DEPTH.d2 - DEPTH.d1 },
-  'b2-er': { x: SIX_YARD_R, y: DEPTH.d1, w: BOX_R - SIX_YARD_R, h: DEPTH.d2 - DEPTH.d1 },
-  'b2-wr': { x: BOX_R, y: DEPTH.d1, w: 68 - BOX_R, h: DEPTH.d2 - DEPTH.d1 },
+  'b2-er': { x: SIX_YARD_R, y: DEPTH.d0, w: BOX_R - SIX_YARD_R, h: DEPTH.d2 - DEPTH.d0 },
+  'b2-wr': { x: BOX_R, y: DEPTH.d0, w: 68 - BOX_R, h: DEPTH.d2 - DEPTH.d0 },
   'b3-c': { x: BOX_L, y: DEPTH.d2, w: BOX_R - BOX_L, h: DEPTH.d3 - DEPTH.d2 },
   'b4-wl': { x: 0, y: DEPTH.d2, w: BOX_L, h: DEPTH.d4 - DEPTH.d2 },
   'b4-c': { x: BOX_L, y: DEPTH.d3, w: BOX_R - BOX_L, h: DEPTH.d4 - DEPTH.d3 },
@@ -105,18 +107,14 @@ function classifyZone(cx, cy) {
   const wide = cx < BOX_L ? 'wl' : cx > BOX_R ? 'wr' : null;
   const sixSide = cx < SIX_YARD_L ? 'l' : cx > SIX_YARD_R ? 'r' : null;
 
-  if (cy <= DEPTH.d1) {
-    // Six-yard depth: only 3 cells, matching the six-yard box's own width.
-    // Wide-of-the-box at this shallow a depth is a near-impossible shooting
-    // angle — fold it into the nearest six-yard third rather than adding a
-    // near-always-empty column.
-    if (inSixWidth) return cx < SIX_T1 ? 'b1-l' : cx < SIX_T2 ? 'b1-m' : 'b1-r';
-    return sixSide === 'l' ? 'b1-l' : 'b1-r';
-  }
   if (cy <= DEPTH.d2) {
-    // Rest of the box: full 7 columns (byline, channel, six-yard thirds).
+    // Anywhere in the box (goal line to 18-yard line). The byline and
+    // channel columns span this whole depth in one cell each; only the
+    // six-yard-width middle strip is further split into the six-yard row
+    // (b1, shallow) and the rest of the box (b2-l/m/r, deeper).
     if (!inBoxWidth) return `b2-${wide}`;
     if (!inSixWidth) return sixSide === 'l' ? 'b2-el' : 'b2-er';
+    if (cy <= DEPTH.d1) return cx < SIX_T1 ? 'b1-l' : cx < SIX_T2 ? 'b1-m' : 'b1-r';
     return cx < SIX_T1 ? 'b2-l' : cx < SIX_T2 ? 'b2-m' : 'b2-r';
   }
   if (!inBoxWidth) return `b4-${wide}`;
