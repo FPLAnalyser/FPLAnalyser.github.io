@@ -1118,8 +1118,8 @@
   .scout-cell { display: grid; grid-template-columns: 58px 34px 1fr; gap: 10px; align-items: center; padding: 6px 18px 6px 0; }
   .scout-cell .v { font-family: 'JetBrains Mono', monospace; font-size: 13px; text-align: right; }
   .scout-cell .p { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text2); text-align: right; }
-  .scout-bar { height: 12px; background: var(--bg); border-radius: 3px; overflow: hidden; }
-  .scout-bar i { display: block; height: 100%; border-radius: 3px; transition: width .5s cubic-bezier(.2,.8,.2,1); }
+  .scout-bar { height: 14px; background: var(--bg); border-radius: 7px; overflow: hidden; }
+  .scout-bar i { display: block; height: 100%; border-radius: 7px; transition: width .6s cubic-bezier(.2,.8,.2,1); }
   .scout-cell.na .v, .scout-cell.na .p { color: var(--text-3); }
   .scout-colheads { display: grid; grid-template-columns: 200px 1fr; border-bottom: 1px solid var(--border); background: var(--bg); }
   .scout-colheads .who {
@@ -1339,8 +1339,10 @@
   .shotmap-pitch {
     width: 100%;
     display: block;
-    background: radial-gradient(ellipse at 50% 0%, #163a26 0%, var(--shotmap-surface) 65%, #0b2417 100%);
-    border-radius: 10px;
+    background: radial-gradient(ellipse at 50% 0%, #123123 0%, var(--shotmap-surface) 65%, #0A2013 100%);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-1);
   }
   /* Real pitch markings read as structure — bold and solid. */
   /* Decorative marks never intercept hover — only .shotmap-zone should. */
@@ -1394,7 +1396,7 @@
   .pshot-dot { stroke-width: 0.35; pointer-events: none; }
   .pshot-old { stroke: rgba(226,232,240,0.6); fill: none; }
   .pshot-old.pshot-goal { fill: rgba(226,232,240,0.6); }
-  .pshot-recent { stroke: var(--accent2); fill: none; }
+  .pshot-recent { stroke: var(--accent2); fill: none; filter: drop-shadow(0 0 1.5px rgba(255, 138, 92, 0.7)); }
   .pshot-recent.pshot-goal { fill: var(--accent2); fill-opacity: 0.78; }
   .pshot-hit { fill: transparent; cursor: pointer; }
 

@@ -1,6 +1,7 @@
 // scout.js — scouting report (percentile comparison)
 import { data, loadTable } from '../data.js';
 import { teamFullNames, teamBadgeImg, norm, icon } from '../util.js';
+import { revealBars } from '../fx.js';
 
 // Goals/assists read oddly as a per-90 decimal ("0.82 goals") — show the
 // whole-number total for the window instead. Percentiles still rank the
@@ -197,13 +198,14 @@ function renderScoutReport() {
         html += `<div class="scout-cell">
           <span class="v">${displayVal}</span>
           <span class="p">${pct ?? '—'}</span>
-          <div class="scout-bar"><i style="width:${pct ?? 0}%;background:${barColor}"></i></div>
+          <div class="scout-bar"><i style="width:0;background:linear-gradient(90deg, color-mix(in srgb, ${barColor} 72%, transparent), ${barColor})" data-reveal-width="${pct ?? 0}%"></i></div>
         </div>`;
       }
     });
     html += `</div></div>`;
   });
   report.innerHTML = html;
+  revealBars(report);
 }
 
 function initScoutSearch() {

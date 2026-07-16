@@ -1,6 +1,8 @@
 // rankings.js — rankings tables
 import { data, loaded } from '../data.js';
 import { teamBadgeImg, escQ, icon, renderStars } from '../util.js';
+import { miniBar } from '../viz.js';
+import { revealBars } from '../fx.js';
 
 // ── Rankings ──────────────────────────────────────────────────────────────────
 let currentRankingsTab = 'top-rated';
@@ -87,6 +89,7 @@ function renderRankings() {
   if (currentRankingsTab === 'top-rated') {
     players.sort((a, b) => (b.season_overall_score || 0) - (a.season_overall_score || 0));
     headers = ['#', 'Player', 'Pos', 'Team', 'Price', 'Season Rating', '4GW Rating', 'PPG'];
+    const maxPpg = Math.max(...players.slice(0, 30).map(p => p.season_ppg || 0), 1);
     rows = players.slice(0, 30).map((p, i) => `
       <tr>
         <td class="rank-num">${i + 1}</td>
@@ -96,7 +99,7 @@ function renderRankings() {
         <td class="num">£${p.price}m</td>
         <td>${renderStars(p.season_overall_rating)}</td>
         <td>${renderStars(p.gw4_overall_rating)}</td>
-        <td class="num t-brand">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'}</td>
+        <td>${p.season_ppg ? miniBar(p.season_ppg.toFixed(1), maxPpg) : 'N/A'}</td>
       </tr>
     `);
 } else if (currentRankingsTab === 'goal-threats') {
@@ -184,6 +187,7 @@ function renderRankings() {
   } else if (currentRankingsTab === 'value') {
     players.sort((a, b) => (b.season_value_score || 0) - (a.season_value_score || 0));
     headers = ['#', 'Player', 'Pos', 'Team', 'Price', 'Value Rating', 'PPG'];
+    const maxPpg = Math.max(...players.slice(0, 30).map(p => p.season_ppg || 0), 1);
     rows = players.slice(0, 30).map((p, i) => `
       <tr>
         <td class="rank-num">${i + 1}</td>
@@ -192,7 +196,7 @@ function renderRankings() {
         <td class="t2">${teamBadgeImg(p.team, 14)}${p.team}</td>
         <td class="num">£${p.price}m</td>
         <td>${renderStars(p.season_value_score_rating)}</td>
-        <td class="num t-brand">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'}</td>
+        <td>${p.season_ppg ? miniBar(p.season_ppg.toFixed(1), maxPpg) : 'N/A'}</td>
       </tr>
     `);
   } else if (currentRankingsTab === 'form') {
@@ -251,6 +255,7 @@ function renderRankings() {
       <tbody>${rows.join('')}</tbody>
     </table>
   `;
+  revealBars(container);
 }
 
 window.showRankingsTab = showRankingsTab;

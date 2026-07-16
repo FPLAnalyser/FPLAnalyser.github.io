@@ -2,6 +2,7 @@
 import { data } from '../data.js';
 import { teamFullNames, escQ, avgRatingField, fixtureChips, icon, renderStars, starsToNum } from '../util.js';
 import { skeletonHero, skeletonCards } from '../fx.js';
+import { sparkline } from '../viz.js';
 import { fplFetch, getCurrentGwFallback, fetchEntry, fetchEntryHistory } from '../api.js';
 import { buildContext, runRules, SEVERITY_META } from '../insights/engine.js';
 import { RULES } from '../insights/rules.js';
@@ -218,6 +219,13 @@ function renderMyTeam(picksData, gw, historyData, entryData, teamId) {
         <div class="team-stat-value">£${teamValue}m</div>
         <div class="team-stat-label">Total Team Value</div>
       </div>
+      ${(() => {
+        const gwPoints = historyData && historyData.current ? historyData.current.map(e => e.points).filter(v => v != null) : [];
+        return gwPoints.length > 1 ? `<div class="team-stat">
+          <div class="team-stat-value">${sparkline(gwPoints, { w: 170, h: 40 })}</div>
+          <div class="team-stat-label">Your points by GW</div>
+        </div>` : '';
+      })()}
     </div>
 
     ${buildReportHtml(picksData, historyData)}

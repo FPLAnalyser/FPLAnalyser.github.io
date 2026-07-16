@@ -2,8 +2,8 @@
 import { data } from '../data.js';
 import { teamFullNames, teamBadgeImg, escQ, fixtureChips, icon, renderStars } from '../util.js';
 import { buildLeagueStories } from '../insights/narrative.js';
-import { radialGauge } from '../viz.js';
-import { animateCounters } from '../fx.js';
+import { radialGauge, miniBar } from '../viz.js';
+import { animateCounters, revealBars } from '../fx.js';
 
 function metaLine() {
   const m = data.meta;
@@ -88,6 +88,7 @@ function fixtureTicker() {
     const avgEase = next.reduce((s, f) => s + (f.att_ease || 1), 0) / (next.length || 1);
     return { team, avgEase };
   }).sort((a, b) => b.avgEase - a.avgEase);
+  const maxEase = Math.max(...rows.map(r => r.avgEase), 1);
 
   return `<div class="section-header">Fixture Ticker — next 3, easiest run first</div>
   <table class="ticker-table" style="margin-bottom:24px">
@@ -95,7 +96,7 @@ function fixtureTicker() {
       ${rows.map(r => `<tr onclick="showTeamFromHome('${r.team}')">
         <td class="ticker-team">${teamBadgeImg(r.team, 16)}${teamFullNames[r.team] || r.team}</td>
         <td><div class="ticker-chips">${fixtureChips(data.fixtureEase, r.team, 3)}</div></td>
-        <td class="ticker-ease ${r.avgEase >= 1 ? 't-good' : 't-bad'}" title="Attack ease vs league average over the next 3 (higher = kinder fixtures)">×${r.avgEase.toFixed(2)}</td>
+        <td class="ticker-ease" title="Attack ease vs league average over the next 3 (higher = kinder fixtures)">${miniBar(r.avgEase, maxEase, { tone: r.avgEase >= 1 ? 'good' : 'bad', text: '×' + r.avgEase.toFixed(2) })}</td>
       </tr>`).join('')}
     </tbody>
   </table>`;
@@ -156,6 +157,7 @@ function renderHome() {
     ${formWatch()}
   `;
   animateCounters(container);
+  revealBars(container);
 }
 
 export { renderHome };
