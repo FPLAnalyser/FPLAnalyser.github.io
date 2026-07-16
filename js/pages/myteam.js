@@ -87,7 +87,18 @@ function buildReportHtml(picksData, historyData) {
       </div>
     </div>`;
 
-  return `<div class="section-header">Your Report</div>
+  // "Actions this week" summary — severity counts at a glance
+  const counts = {};
+  insights.forEach(i => { counts[i.severity] = (counts[i.severity] || 0) + 1; });
+  const chips = ['act', 'warn', 'info', 'good']
+    .filter(k => counts[k])
+    .map(k => {
+      const meta = SEVERITY_META[k];
+      return `<span class="sev-chip" style="--sev:${meta.color}">${icon(meta.iconId, 12)} ${counts[k]} ${meta.label}</span>`;
+    }).join('');
+
+  return `<div class="section-header">Your Report — ${counts.act || 0} action${(counts.act || 0) === 1 ? '' : 's'} this week</div>
+    <div class="sev-chips">${chips}</div>
     ${insights.map(i => {
       const meta = SEVERITY_META[i.severity] || SEVERITY_META.info;
       return `<div class="insight-card" style="--sev:${meta.color}">

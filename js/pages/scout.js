@@ -1,6 +1,6 @@
 // scout.js — scouting report (percentile comparison)
 import { data, loadTable } from '../data.js';
-import { teamFullNames, teamBadgeImg, norm } from '../util.js';
+import { teamFullNames, teamBadgeImg, norm, icon } from '../util.js';
 
 // Goals/assists read oddly as a per-90 decimal ("0.82 goals") — show the
 // whole-number total for the window instead. Percentiles still rank the
@@ -137,7 +137,37 @@ function renderScoutReport() {
   const rows = data.scoutMeta.filter(m => gkMode ? m.group === 'Goalkeeping' : m.group !== 'Goalkeeping');
   const multi = shown.length > 1;
 
-  let html = '';
+  // Comparison verdict: who wins the most contested categories
+  let verdictHtml = '';
+  if (multi) {
+    const wins = shown.map(() => 0);
+    const winLabels = shown.map(() => []);
+    let contested = 0;
+    rows.forEach(m => {
+      const pcts = shown.map(s => (s.row ? scoutPct(s.row, m.key) : null));
+      const valid = pcts.filter(v => v != null).map(Number);
+      if (valid.length < 2) return;
+      const maxP = Math.max(...valid);
+      const winners = pcts.map((v, i) => (v != null && Number(v) === maxP ? i : -1)).filter(i => i >= 0);
+      if (winners.length !== 1) return;
+      contested++;
+      wins[winners[0]]++;
+      winLabels[winners[0]].push(m.label);
+    });
+    if (contested >= 4) {
+      const order = wins.map((w, i) => [w, i]).sort((a, b) => b[0] - a[0]);
+      const [topW, topI] = order[0];
+      const [secondW, secondI] = order[1];
+      if (topW > secondW) {
+        const runnerEdge = winLabels[secondI][0];
+        verdictHtml = `<div class="scout-verdict">${icon('bolt', 14)}<span><strong>${shown[topI].sel.web_name}</strong> wins <strong>${topW} of ${contested}</strong> contested categories${shown.length === 2 ? ` vs ${shown[secondI].sel.web_name}` : ''}${runnerEdge && secondW > 0 ? ` — ${shown[secondI].sel.web_name}'s edge: ${runnerEdge.toLowerCase()}` : ''}.</span></div>`;
+      } else {
+        verdictHtml = `<div class="scout-verdict">${icon('bolt', 14)}<span>Dead heat — <strong>${shown[topI].sel.web_name}</strong> and <strong>${shown[secondI].sel.web_name}</strong> split the categories ${topW}–${secondW}.</span></div>`;
+      }
+    }
+  }
+
+  let html = verdictHtml;
   if (multi) {
     html += `<div class="scout-colheads"><div></div><div class="scout-cells">`;
     shown.forEach((s, i) => {

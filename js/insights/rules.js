@@ -528,4 +528,4 @@ function suggestReplacements(ctx, pos, budget) {
     });
 }
 
-export { RULES };
+export { RULES, blendedPpg, blendedScore };

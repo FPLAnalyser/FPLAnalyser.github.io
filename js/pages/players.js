@@ -2,7 +2,9 @@
 import { data } from '../data.js';
 import { teamFullNames, teamBadgeUrl, teamBadgeImg, norm, escQ,
          icon, positionIcon, renderStars, tip, TOOLTIPS } from '../util.js';
-import { animateCounters } from '../fx.js';
+import { animateCounters, revealBars } from '../fx.js';
+import { buildPlayerBundle, buildPlayerVerdict } from '../insights/narrative.js';
+import { radialGauge } from '../viz.js';
 import { showPage } from '../nav.js';
 import { renderPlayerShotMap } from '../playershotmap.js';
 
@@ -200,6 +202,24 @@ function showPlayer(name) {
   const xaPer90 = std ? std.xa_per90_season : 'N/A';
   const ptsDelta = std ? std.pts_delta : 'N/A';
 
+  // Narrative verdict for the hero strip
+  const bundle = buildPlayerBundle(r.element, data);
+  const verdict = bundle ? buildPlayerVerdict(bundle, data) : null;
+  const toneClass = { good: 't-good', warn: 't-warn', bad: 't-bad', info: 't-info' };
+  const verdictHero = verdict && (verdict.score != null || verdict.bullets.length) ? `
+      <div class="verdict-hero">
+        ${verdict.score != null ? radialGauge(verdict.score, 100, verdict.scoreLabel, { tone: verdict.tone === 'info' ? 'brand' : verdict.tone }) : ''}
+        <div class="verdict-info">
+          <div class="verdict-kicker">The verdict</div>
+          ${verdict.verdict ? `<div class="verdict-label">${verdict.verdict}</div>` : ''}
+          ${personaHtml || flagHtml ? `<div class="personas-wrap">${personaHtml}${flagHtml}</div>` : ''}
+          ${verdict.bullets.length ? `<ul class="bullet-list">
+            ${verdict.bullets.map(b => `<li><span class="bullet-ic ${toneClass[b.tone] || 't-info'}">${icon(b.iconId, 14)}</span><span>${b.html}</span></li>`).join('')}
+          </ul>` : ''}
+          ${verdict.financeLine ? `<div class="verdict-finance">${verdict.financeLine}</div>` : ''}
+        </div>
+      </div>` : '';
+
   // Tier performance
   const tierData = data.tierPerf.filter(t => t.web_name === name);
   const tier1 = tierData.find(t => t.opponent_tier === 'Tier 1 - Top 6');
@@ -260,6 +280,8 @@ function showPlayer(name) {
         </div>
       </div>
 
+      ${verdictHero}
+
       <div class="tabs">
         <div class="tab active" onclick="showTab(this, 'overview-${name.replace(/\s/g,'-')}')">Overview</div>
         <div class="tab" onclick="showTab(this, 'ratings-${name.replace(/\s/g,'-')}')">Ratings</div>
@@ -270,11 +292,6 @@ function showPlayer(name) {
 
       <!-- Overview Tab -->
       <div id="overview-${name.replace(/\s/g,'-')}" class="tab-content active">
-        ${personaHtml || flagHtml ? `
-        <div class="section-header">Personas & Flags</div>
-        <div class="personas-wrap">${personaHtml}${flagHtml}</div>
-        ` : ''}
-
         <div class="section-header">Key Stats (Season)</div>
         <div class="stats-grid">
           <div class="stat-card">
@@ -364,21 +381,6 @@ function showPlayer(name) {
         </div>
 
         <div class="section-header">Finance Metrics (Last 4GW)</div>
-        ${(() => {
-          const insight = getFinanceInsight(
-            name, pos,
-            alpha !== 'N/A' ? Number(alpha) : null,
-            sharpe !== 'N/A' ? Number(sharpe) : null,
-            sortino !== 'N/A' ? Number(sortino) : null,
-            consistency !== 'N/A' ? Number(consistency) : null
-          );
-          return insight ? `
-            <div class="finance-insight">
-              <div class="finance-insight-label">${icon('trend-up', 12)} Analysis</div>
-              ${insight}
-            </div>
-          ` : '';
-        })()}
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-value">${(v => v != null && !isNaN(v) ? `<span data-count="${v}" data-count-format="2dp">0</span>` : 'N/A')(alpha !== 'N/A' ? Number(alpha) : null)}</div>
@@ -458,6 +460,7 @@ function showPlayer(name) {
     renderPlayerShotMap(r.element, document.getElementById(`pshotmap-${r.element}`));
   }
   animateCounters(document.getElementById('player-result'));
+  revealBars(document.getElementById('player-result'));
 }
 
 function buildDimRows(dims, r) {
@@ -477,35 +480,6 @@ function buildTierRow(label, tier) {
     <td>${tier.total_assists}</td>
     <td>${Number(tier.avg_bonus).toFixed(1)}</td>
   </tr>`;
-}
-
-function getFinanceInsight(name, pos, alpha, sharpe, sortino, consistency) {
-  if (!alpha && alpha !== 0) return null;
-  
-  const posLabel = { GKP: 'goalkeeper', DEF: 'defender', MID: 'midfielder', FWD: 'forward' }[pos] || 'player';
-  
-  if (alpha > 2 && sharpe > 1.5 && consistency < 0.4) {
-    return `<strong>Consistent outperformer</strong> — ${name} generates strong returns well above the ${posLabel} benchmark with low week-to-week variance. A reliable captain option who delivers regularly.`;
-  }
-  if (alpha > 2 && sharpe < 1.0 && consistency > 0.5) {
-    return `<strong>Boom or bust</strong> — ${name} generates elite points but with high unpredictability. Can haul big in good weeks but blanks are frequent. Best captained when fixtures align rather than as a weekly armband choice.`;
-  }
-  if (alpha > 1 && sortino > sharpe && consistency > 0.4) {
-    return `<strong>Haul merchant</strong> — ${name} produces occasional big scores that boost their average, but blanks between returns. Higher Sortino than Sharpe confirms the upside is real. Worth captaining against weak opposition.`;
-  }
-  if (alpha > 0 && sharpe > 1.0 && consistency < 0.45) {
-    return `<strong>Reliable floor</strong> — ${name} consistently delivers modest returns above the ${posLabel} benchmark with minimal variance. A safe budget pick who provides a predictable points floor each week.`;
-  }
-  if (alpha > 0 && sharpe > 0 && consistency > 0.5) {
-    return `<strong>Streaky performer</strong> — ${name} outperforms the benchmark on average but their week-to-week output is inconsistent. Useful in good runs but hard to rely on across a full month.`;
-  }
-  if (alpha < 0 && sortino > 0) {
-    return `<strong>Underperforming with upside</strong> — ${name} is below the ${posLabel} benchmark overall but their downside risk is limited. May be going through a temporary dip — check their hot/cold streak and upcoming fixtures.`;
-  }
-  if (alpha < 0 && sortino < 0) {
-    return `<strong>Avoid or sell</strong> — ${name} is underperforming the ${posLabel} benchmark with poor risk-adjusted returns. Unless fixtures improve dramatically, better options are likely available.`;
-  }
-  return `<strong>Average performer</strong> — ${name} is performing broadly in line with the ${posLabel} benchmark. Monitor form and fixtures before investing further.`;
 }
 
 function showPlayerFromRankings(name) {

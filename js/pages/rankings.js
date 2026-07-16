@@ -21,6 +21,47 @@ function filterPos(pos, el) {
   renderRankings();
 }
 
+
+// One-line narrative above each tab: what the list means + who leads it
+function tabNarrative() {
+  const lead = (arr) => arr && arr.length ? arr[0] : null;
+  const rated = data.ratings.filter(p => p.season_ok);
+  let p, m, html = '';
+  switch (currentRankingsTab) {
+    case 'top-rated':
+      p = lead([...rated].sort((a, b) => (b.season_overall_score || 0) - (a.season_overall_score || 0)));
+      if (p) html = `<strong>${p.web_name}</strong> leads the overall ratings — ${p.season_ppg ? p.season_ppg.toFixed(1) + ' points per game' : 'the strongest all-round profile'} at £${p.price}m. Ratings blend output, consistency and reliability within each position.`;
+      break;
+    case 'goal-threats':
+      p = lead(rated.filter(x => ['MID','FWD'].includes(x.position)).sort((a, b) => (b.season_goal_score || 0) - (a.season_goal_score || 0)));
+      m = p && data.metrics.find(x => x.web_name === p.web_name);
+      if (p) html = `<strong>${p.web_name}</strong> is the league's biggest goal threat${m && m.xg_share_season ? ` — taking <strong>${(m.xg_share_season * 100).toFixed(0)}%</strong> of ${p.team}'s xG` : ''}. Sustainable threat comes from box shots, not long-range volume.`;
+      break;
+    case 'creators':
+      p = lead(rated.filter(x => ['MID','FWD'].includes(x.position)).sort((a, b) => (b.season_creative_score || 0) - (a.season_creative_score || 0)));
+      m = p && data.metrics.find(x => x.web_name === p.web_name);
+      if (p) html = `<strong>${p.web_name}</strong> creates more than anyone${m && m.xa_share_season ? ` — <strong>${(m.xa_share_season * 100).toFixed(0)}%</strong> of ${p.team}'s xA runs through them` : ''}. Assist points follow chance creation.`;
+      break;
+    case 'clean-sheets':
+      p = lead(rated.filter(x => ['GKP','DEF'].includes(x.position)).sort((a, b) => (b.season_cs_score || 0) - (a.season_cs_score || 0)));
+      if (p) html = `<strong>${p.web_name}</strong> anchors the strongest defensive numbers in the league. Clean-sheet ratings weigh xGC, not just results — they find defences that deserve their record.`;
+      break;
+    case 'value':
+      p = lead([...rated].sort((a, b) => (b.season_value_score || 0) - (a.season_value_score || 0)));
+      if (p) html = `<strong>${p.web_name}</strong> is the best points-per-pound in the game at £${p.price}m. Value picks free up budget for premiums elsewhere.`;
+      break;
+    case 'form':
+      p = lead(data.seasonToDate.filter(x => x.streak === '🔥 Hot').sort((a, b) => (b.pts_delta || 0) - (a.pts_delta || 0)));
+      if (p) html = `<strong>${p.web_name}</strong> is the hottest player right now — <strong>+${Number(p.pts_delta).toFixed(1)} pts/90</strong> above their season baseline. Check the xGI before chasing: form backed by underlying numbers sticks.`;
+      break;
+    case 'next4':
+      p = lead(rated.filter(x => x.next4_score).sort((a, b) => (b.next4_score || 0) - (a.next4_score || 0)));
+      if (p) html = `<strong>${p.web_name}</strong> tops the fixture-adjusted model for the next 4 gameweeks — quality and form weighted by how attackable the upcoming opponents are.`;
+      break;
+  }
+  return html ? `<div class="tab-narrative">${icon('bolt', 14)}<span>${html}</span></div>` : '';
+}
+
 function renderRankings() {
   if (!loaded) return;
   const container = document.getElementById('rankings-content');
@@ -160,6 +201,7 @@ function renderRankings() {
     const cold = stdData.filter(p => p.streak === '🧊 Cold').sort((a,b) => a.pts_delta - b.pts_delta);
 
     container.innerHTML = `
+      ${tabNarrative()}
       ${posFilter}
       <div class="form-section">
         <div>
@@ -202,6 +244,7 @@ function renderRankings() {
   }
 
   container.innerHTML = `
+    ${tabNarrative()}
     ${posFilter}
     <table class="rankings-table">
       <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>

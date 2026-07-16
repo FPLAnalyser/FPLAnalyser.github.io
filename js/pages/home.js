@@ -1,6 +1,9 @@
 // home.js — dashboard: what matters this week (fixtures, captaincy, form)
 import { data } from '../data.js';
 import { teamFullNames, teamBadgeImg, escQ, fixtureChips, icon, renderStars } from '../util.js';
+import { buildLeagueStories } from '../insights/narrative.js';
+import { radialGauge } from '../viz.js';
+import { animateCounters } from '../fx.js';
 
 function metaLine() {
   const m = data.meta;
@@ -111,13 +114,48 @@ function formWatch() {
   </div>`;
 }
 
+// ── The Briefing: lead narrative cards built from the shared story engine ──
+const TONE_CLASS = { good: 't-good', warn: 't-warn', bad: 't-bad', info: 't-info' };
+
+function briefingCard(st) {
+  const click = st.player
+    ? `showPlayerFromRankings('${escQ(st.player.web_name)}')`
+    : st.team ? `showTeamFromHome('${st.team}')` : '';
+  const photo = st.player && st.player.code
+    ? `https://resources.premierleague.com/premierleague/photos/players/110x140/p${st.player.code}.png` : '';
+  return `<div class="briefing-card lift"${click ? ` onclick="${click}"` : ''}>
+    <div class="briefing-kicker">${icon(st.iconId, 13)} ${st.title}</div>
+    ${st.player ? `<div class="briefing-head">
+      ${photo ? `<img loading="lazy" class="briefing-photo" src="${photo}" onerror="this.style.opacity='0'">` : ''}
+      <div class="briefing-who">
+        <div class="briefing-name">${st.player.web_name}</div>
+        <div class="briefing-meta">${st.player.position} · ${teamBadgeImg(st.player.team, 12)}${teamFullNames[st.player.team] || st.player.team} · £${st.player.price}m</div>
+        ${st.verdict ? `<div class="briefing-verdict">${st.verdict}</div>` : ''}
+      </div>
+      ${st.score != null ? radialGauge(st.score, 100, st.scoreLabel, { size: 74, tone: st.tone === 'warn' ? 'warn' : 'brand' }) : ''}
+    </div>` : ''}
+    ${st.bullets && st.bullets.length ? `<ul class="bullet-list">
+      ${st.bullets.map(b => `<li><span class="bullet-ic ${TONE_CLASS[b.tone] || 't-info'}">${icon(b.iconId, 14)}</span><span>${b.html}</span></li>`).join('')}
+    </ul>` : ''}
+  </div>`;
+}
+
+function briefing() {
+  const stories = buildLeagueStories(data);
+  if (!stories.length) return '';
+  return `<div class="section-header">The Briefing</div>
+    <div class="briefing-grid">${stories.map(briefingCard).join('')}</div>`;
+}
+
 function renderHome() {
   const container = document.getElementById('home-content');
   container.innerHTML = `
+    ${briefing()}
     ${gwPanel()}
     ${fixtureTicker()}
     ${formWatch()}
   `;
+  animateCounters(container);
 }
 
 export { renderHome };
