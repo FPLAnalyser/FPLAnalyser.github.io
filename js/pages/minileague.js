@@ -2,7 +2,8 @@
 // effective ownership among rivals, template players you're missing, your
 // differentials, and the captaincy spread.
 import { data } from '../data.js';
-import { teamBadgeImg, escQ } from '../util.js';
+import { teamBadgeImg, escQ, icon, renderStars } from '../util.js';
+import { skeletonTable } from '../fx.js';
 import { fetchLeagueStandings, fetchPicksCached } from '../api.js';
 
 const MAX_RIVALS = 10;          // proxy-friendly: 10 picks fetches per analysis
@@ -28,7 +29,7 @@ function miniLeagueSectionHtml(entryData, teamId, gw, ownedElements) {
       </select>
       <button class="btn-primary" onclick="analyseMiniLeague()">Analyse rivals</button>
     </div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">
+    <div class="t2" style="font-size:12px;margin-bottom:12px;">
       Compares your squad against the top ${MAX_RIVALS} managers in the league — what they own that you don't, and where you have the edge.
     </div>
     <div id="ml-result"></div>`;
@@ -40,14 +41,14 @@ async function analyseMiniLeague() {
   if (!select || !mlState) return;
   const leagueId = select.value;
   const leagueName = select.options[select.selectedIndex].textContent;
-  result.innerHTML = `<div class="loading"><div class="loading-spinner"></div>Fetching rival squads… (up to ${MAX_RIVALS} managers, a few seconds)</div>`;
+  result.innerHTML = skeletonTable(5);
 
   try {
     const standings = await fetchLeagueStandings(leagueId);
     const rows = (standings.standings && standings.standings.results) || [];
     const rivals = rows.filter(r => String(r.entry) !== mlState.teamId).slice(0, MAX_RIVALS);
     if (!rivals.length) {
-      result.innerHTML = `<div class="empty-state"><div class="empty-icon">🤝</div><div>No other managers found in this league yet.</div></div>`;
+      result.innerHTML = `<div class="empty-state"><div class="empty-icon">${icon('users', 44)}</div><div>No other managers found in this league yet.</div></div>`;
       return;
     }
 
@@ -67,9 +68,9 @@ async function analyseMiniLeague() {
   } catch (e) {
     console.error('mini-league error:', e);
     const detail = (e && e.message ? e.message : String(e)).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
-    result.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div>
+    result.innerHTML = `<div class="empty-state"><div class="empty-icon">${icon('alert', 44)}</div>
       <div>Couldn't analyse this league — the FPL API may be rate-limiting the proxy. Try again in a minute.</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);margin-top:12px;">${detail}</div></div>`;
+      <div class="num t2" style="font-size:11px;margin-top:12px;">${detail}</div></div>`;
   }
 }
 
@@ -90,10 +91,10 @@ function renderMiniLeague(container, leagueName, rivalPicks) {
     if (!r) return '';
     return `<tr>
       <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(r.web_name)}')">${r.web_name}</span></td>
-      <td style="color:var(--text2)">${teamBadgeImg(r.team, 14)}${r.team}</td>
+      <td class="t2">${teamBadgeImg(r.team, 14)}${r.team}</td>
       <td><span class="badge badge-pos">${r.position}</span></td>
-      <td>${r.gw4_overall_rating || r.season_overall_rating || 'N/A'}</td>
-      <td style="font-family:'JetBrains Mono',monospace;color:var(--accent)">${extra}</td>
+      <td>${renderStars(r.gw4_overall_rating || r.season_overall_rating, { size: 10, showNum: false })}</td>
+      <td class="num t-brand">${extra}</td>
     </tr>`;
   };
 
@@ -121,14 +122,14 @@ function renderMiniLeague(container, leagueName, rivalPicks) {
         ${template.length ? `<table class="rankings-table">
           <thead><tr><th>Player</th><th>Team</th><th>Pos</th><th>Form</th><th>Rival own</th></tr></thead>
           <tbody>${template.map(([el, c]) => rowHtml(el, `${Math.round(c / n * 100)}%`)).join('')}</tbody>
-        </table>` : `<div style="color:var(--text2);font-size:13px;padding:8px 0">Nothing — you already own every template player in this league. 💪</div>`}
+        </table>` : `<div class="t2" style="font-size:13px;padding:8px 0">${icon('check', 13, 't-good')} Nothing — you already own every template player in this league.</div>`}
       </div>
       <div>
         <div class="section-header">Your differentials — your edge over this league</div>
         ${diffs.length ? `<table class="rankings-table">
           <thead><tr><th>Player</th><th>Team</th><th>Pos</th><th>Form</th><th>Rival own</th></tr></thead>
           <tbody>${diffs.map(el => rowHtml(el, `${Math.round((counts.get(el) || 0) / n * 100)}%`)).join('')}</tbody>
-        </table>` : `<div style="color:var(--text2);font-size:13px;padding:8px 0">None — your squad matches the league template closely. Rank moves will come from captaincy.</div>`}
+        </table>` : `<div class="t2" style="font-size:13px;padding:8px 0">None — your squad matches the league template closely. Rank moves will come from captaincy.</div>`}
       </div>
     </div>
     ${capRows.length ? `
@@ -137,7 +138,7 @@ function renderMiniLeague(container, leagueName, rivalPicks) {
       <thead><tr><th>Player</th><th>Team</th><th>Pos</th><th>Form</th><th>Captained by</th></tr></thead>
       <tbody>${capRows.map(([el, c]) => rowHtml(el, `${c} of ${n}`)).join('')}</tbody>
     </table>
-    <div style="font-size:12px;color:var(--text2)">Matching the majority captain protects your rank; going against it is how you attack. Based on the top ${n} managers in ${leagueName.replace(/\s*\(you.*\)$/, '')}.</div>
+    <div class="t2" style="font-size:12px">Matching the majority captain protects your rank; going against it is how you attack. Based on the top ${n} managers in ${leagueName.replace(/\s*\(you.*\)$/, '')}.</div>
     ` : ''}
   `;
 }

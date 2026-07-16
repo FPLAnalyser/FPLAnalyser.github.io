@@ -1,6 +1,6 @@
 // app.js — entry point: loads data, registers pages, wires global listeners
 import { loadAll, loaded, data } from './data.js';
-import { registerPage } from './nav.js';
+import { registerPage, showPage } from './nav.js';
 import { renderHome } from './pages/home.js';
 import { renderPlayersDefault, initSearch } from './pages/players.js';
 import { renderTeamsDefault } from './pages/teams.js';
@@ -77,7 +77,11 @@ document.addEventListener('click', (e) => {
 
   const getValue = (row) => {
     const cell = row.children[colIndex];
-    return cell ? cell.textContent.trim() : '';
+    if (!cell) return '';
+    // Components (star ratings, gauges) carry an explicit sort key
+    const el = cell.querySelector('[data-sort]');
+    if (el) return el.dataset.sort;
+    return cell.textContent.trim();
   };
 
   // Star ratings (e.g. "⭐⭐⭐½") render as text but should sort by star count.
@@ -130,6 +134,9 @@ async function init() {
   renderHome();
   showRankingsTab('top-rated', document.querySelector('#page-rankings .rankings-tab'));
   initMyTeam();
+  // Deep link: honour #page hashes on load (page-level only)
+  const page = location.hash.slice(1);
+  if (page && page !== 'home' && document.getElementById('page-' + page)) showPage(page);
 }
 init();
 

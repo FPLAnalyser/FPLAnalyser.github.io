@@ -1,6 +1,8 @@
 // rankings.js — rankings tables
 import { data, loaded } from '../data.js';
-import { teamBadgeImg, escQ } from '../util.js';
+import { teamBadgeImg, escQ, icon, renderStars } from '../util.js';
+import { miniBar } from '../viz.js';
+import { revealBars } from '../fx.js';
 
 // ── Rankings ──────────────────────────────────────────────────────────────────
 let currentRankingsTab = 'top-rated';
@@ -19,6 +21,47 @@ function filterPos(pos, el) {
   document.querySelectorAll('.pos-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
   renderRankings();
+}
+
+
+// One-line narrative above each tab: what the list means + who leads it
+function tabNarrative() {
+  const lead = (arr) => arr && arr.length ? arr[0] : null;
+  const rated = data.ratings.filter(p => p.season_ok);
+  let p, m, html = '';
+  switch (currentRankingsTab) {
+    case 'top-rated':
+      p = lead([...rated].sort((a, b) => (b.season_overall_score || 0) - (a.season_overall_score || 0)));
+      if (p) html = `<strong>${p.web_name}</strong> leads the overall ratings — ${p.season_ppg ? p.season_ppg.toFixed(1) + ' points per game' : 'the strongest all-round profile'} at £${p.price}m. Ratings blend output, consistency and reliability within each position.`;
+      break;
+    case 'goal-threats':
+      p = lead(rated.filter(x => ['MID','FWD'].includes(x.position)).sort((a, b) => (b.season_goal_score || 0) - (a.season_goal_score || 0)));
+      m = p && data.metrics.find(x => x.web_name === p.web_name);
+      if (p) html = `<strong>${p.web_name}</strong> is the league's biggest goal threat${m && m.xg_share_season ? ` — taking <strong>${(m.xg_share_season * 100).toFixed(0)}%</strong> of ${p.team}'s xG` : ''}. Sustainable threat comes from box shots, not long-range volume.`;
+      break;
+    case 'creators':
+      p = lead(rated.filter(x => ['MID','FWD'].includes(x.position)).sort((a, b) => (b.season_creative_score || 0) - (a.season_creative_score || 0)));
+      m = p && data.metrics.find(x => x.web_name === p.web_name);
+      if (p) html = `<strong>${p.web_name}</strong> creates more than anyone${m && m.xa_share_season ? ` — <strong>${(m.xa_share_season * 100).toFixed(0)}%</strong> of ${p.team}'s xA runs through them` : ''}. Assist points follow chance creation.`;
+      break;
+    case 'clean-sheets':
+      p = lead(rated.filter(x => ['GKP','DEF'].includes(x.position)).sort((a, b) => (b.season_cs_score || 0) - (a.season_cs_score || 0)));
+      if (p) html = `<strong>${p.web_name}</strong> anchors the strongest defensive numbers in the league. Clean-sheet ratings weigh xGC, not just results — they find defences that deserve their record.`;
+      break;
+    case 'value':
+      p = lead([...rated].sort((a, b) => (b.season_value_score || 0) - (a.season_value_score || 0)));
+      if (p) html = `<strong>${p.web_name}</strong> is the best points-per-pound in the game at £${p.price}m. Value picks free up budget for premiums elsewhere.`;
+      break;
+    case 'form':
+      p = lead(data.seasonToDate.filter(x => x.streak === '🔥 Hot').sort((a, b) => (b.pts_delta || 0) - (a.pts_delta || 0)));
+      if (p) html = `<strong>${p.web_name}</strong> is the hottest player right now — <strong>+${Number(p.pts_delta).toFixed(1)} pts/90</strong> above their season baseline. Check the xGI before chasing: form backed by underlying numbers sticks.`;
+      break;
+    case 'next4':
+      p = lead(rated.filter(x => x.next4_score).sort((a, b) => (b.next4_score || 0) - (a.next4_score || 0)));
+      if (p) html = `<strong>${p.web_name}</strong> tops the fixture-adjusted model for the next 4 gameweeks — quality and form weighted by how attackable the upcoming opponents are.`;
+      break;
+  }
+  return html ? `<div class="tab-narrative">${icon('bolt', 14)}<span>${html}</span></div>` : '';
 }
 
 function renderRankings() {
@@ -46,16 +89,17 @@ function renderRankings() {
   if (currentRankingsTab === 'top-rated') {
     players.sort((a, b) => (b.season_overall_score || 0) - (a.season_overall_score || 0));
     headers = ['#', 'Player', 'Pos', 'Team', 'Price', 'Season Rating', '4GW Rating', 'PPG'];
+    const maxPpg = Math.max(...players.slice(0, 30).map(p => p.season_ppg || 0), 1);
     rows = players.slice(0, 30).map((p, i) => `
       <tr>
         <td class="rank-num">${i + 1}</td>
         <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
         <td><span class="badge badge-pos">${p.position}</span></td>
-        <td style="color:var(--text2)">${teamBadgeImg(p.team, 14)}${p.team}</td>
-        <td style="font-family:'JetBrains Mono',monospace">£${p.price}m</td>
-        <td>${p.season_overall_rating || 'N/A'}</td>
-        <td>${p.gw4_overall_rating || 'N/A'}</td>
-        <td style="font-family:'JetBrains Mono',monospace;color:var(--accent)">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'}</td>
+        <td class="t2">${teamBadgeImg(p.team, 14)}${p.team}</td>
+        <td class="num">£${p.price}m</td>
+        <td>${renderStars(p.season_overall_rating)}</td>
+        <td>${renderStars(p.gw4_overall_rating)}</td>
+        <td>${p.season_ppg ? miniBar(p.season_ppg.toFixed(1), maxPpg) : 'N/A'}</td>
       </tr>
     `);
 } else if (currentRankingsTab === 'goal-threats') {
@@ -73,11 +117,11 @@ function renderRankings() {
         <td class="rank-num">${i + 1}</td>
         <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
         <td><span class="badge badge-pos">${p.position}</span></td>
-        <td style="color:var(--text2)">${teamBadgeImg(p.team, 14)}${p.team}</td>
-        <td>${p.season_goal_score_rating || 'N/A'}</td>
-        <td>${p.season_att_goal_score_rating || 'N/A'}</td>
-        <td style="font-family:'JetBrains Mono',monospace">${xgShare4gw}</td>
-        <td style="font-family:'JetBrains Mono',monospace">${xgShareSeason}</td>
+        <td class="t2">${teamBadgeImg(p.team, 14)}${p.team}</td>
+        <td>${renderStars(p.season_goal_score_rating)}</td>
+        <td>${renderStars(p.season_att_goal_score_rating)}</td>
+        <td class="num">${xgShare4gw}</td>
+        <td class="num">${xgShareSeason}</td>
       </tr>`;
     });
   } else if (currentRankingsTab === 'creators') {
@@ -95,11 +139,11 @@ function renderRankings() {
         <td class="rank-num">${i + 1}</td>
         <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
         <td><span class="badge badge-pos">${p.position}</span></td>
-        <td style="color:var(--text2)">${teamBadgeImg(p.team, 14)}${p.team}</td>
-        <td>${p.season_creative_score_rating || 'N/A'}</td>
-        <td>${p.season_att_creative_score_rating || 'N/A'}</td>
-        <td style="font-family:'JetBrains Mono',monospace">${xaShare4gw}</td>
-        <td style="font-family:'JetBrains Mono',monospace">${xaShareSeason}</td>
+        <td class="t2">${teamBadgeImg(p.team, 14)}${p.team}</td>
+        <td>${renderStars(p.season_creative_score_rating)}</td>
+        <td>${renderStars(p.season_att_creative_score_rating)}</td>
+        <td class="num">${xaShare4gw}</td>
+        <td class="num">${xaShareSeason}</td>
       </tr>`;
     });
 } else if (currentRankingsTab === 'clean-sheets') {
@@ -114,15 +158,15 @@ function renderRankings() {
         <td class="rank-num">${i + 1}</td>
         <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
         <td><span class="badge badge-pos">${p.position}</span></td>
-        <td style="color:var(--text2)">${teamBadgeImg(p.team, 14)}${p.team}</td>
-        <td>${p.season_cs_score_rating || 'N/A'}</td>
-        <td>${p.season_overall_rating || 'N/A'}</td>
+        <td class="t2">${teamBadgeImg(p.team, 14)}${p.team}</td>
+        <td>${renderStars(p.season_cs_score_rating)}</td>
+        <td>${renderStars(p.season_overall_rating)}</td>
       </tr>
     `);
   } else if (currentRankingsTab === 'next4') {
     const rated = players.filter(p => p.next4_score);
     if (!rated.length) {
-      container.innerHTML = `${posFilter}<div class="empty-state"><div class="empty-icon">📅</div>
+      container.innerHTML = `${posFilter}<div class="empty-state"><div class="empty-icon">${icon('calendar', 44)}</div>
         <div>Next 4 GW ratings aren't available yet — they appear once upcoming fixtures exist for the season.</div></div>`;
       return;
     }
@@ -133,25 +177,26 @@ function renderRankings() {
         <td class="rank-num">${i + 1}</td>
         <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
         <td><span class="badge badge-pos">${p.position}</span></td>
-        <td style="color:var(--text2)">${teamBadgeImg(p.team, 14)}${p.team}</td>
-        <td>${p.next4_overall_rating || 'N/A'}</td>
-        <td style="font-family:'JetBrains Mono',monospace;color:${p.next4_fixture_factor >= 1 ? 'var(--accent)' : 'var(--hot)'}">${p.next4_fixture_factor ? '×' + Number(p.next4_fixture_factor).toFixed(2) : 'N/A'}</td>
-        <td>${p.season_overall_rating || 'N/A'}</td>
-        <td>${p.gw4_overall_rating || 'N/A'}</td>
+        <td class="t2">${teamBadgeImg(p.team, 14)}${p.team}</td>
+        <td>${renderStars(p.next4_overall_rating)}</td>
+        <td class="num ${p.next4_fixture_factor >= 1 ? 't-good' : 't-bad'}">${p.next4_fixture_factor ? '×' + Number(p.next4_fixture_factor).toFixed(2) : 'N/A'}</td>
+        <td>${renderStars(p.season_overall_rating)}</td>
+        <td>${renderStars(p.gw4_overall_rating)}</td>
       </tr>
     `);
   } else if (currentRankingsTab === 'value') {
     players.sort((a, b) => (b.season_value_score || 0) - (a.season_value_score || 0));
     headers = ['#', 'Player', 'Pos', 'Team', 'Price', 'Value Rating', 'PPG'];
+    const maxPpg = Math.max(...players.slice(0, 30).map(p => p.season_ppg || 0), 1);
     rows = players.slice(0, 30).map((p, i) => `
       <tr>
         <td class="rank-num">${i + 1}</td>
         <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
         <td><span class="badge badge-pos">${p.position}</span></td>
-        <td style="color:var(--text2)">${teamBadgeImg(p.team, 14)}${p.team}</td>
-        <td style="font-family:'JetBrains Mono',monospace">£${p.price}m</td>
-        <td>${p.season_value_score_rating || 'N/A'}</td>
-        <td style="font-family:'JetBrains Mono',monospace;color:var(--accent)">${p.season_ppg ? p.season_ppg.toFixed(1) : 'N/A'}</td>
+        <td class="t2">${teamBadgeImg(p.team, 14)}${p.team}</td>
+        <td class="num">£${p.price}m</td>
+        <td>${renderStars(p.season_value_score_rating)}</td>
+        <td>${p.season_ppg ? miniBar(p.season_ppg.toFixed(1), maxPpg) : 'N/A'}</td>
       </tr>
     `);
   } else if (currentRankingsTab === 'form') {
@@ -160,10 +205,11 @@ function renderRankings() {
     const cold = stdData.filter(p => p.streak === '🧊 Cold').sort((a,b) => a.pts_delta - b.pts_delta);
 
     container.innerHTML = `
+      ${tabNarrative()}
       ${posFilter}
       <div class="form-section">
         <div>
-          <div class="section-header">🔥 Hot Streak Players</div>
+          <div class="section-header">${icon('flame', 13)} Hot Streak Players</div>
           <table class="rankings-table">
             <thead><tr><th>Player</th><th>Pos</th><th>Season P90</th><th>4GW P90</th><th>Delta</th></tr></thead>
             <tbody>
@@ -171,16 +217,16 @@ function renderRankings() {
                 <tr>
                   <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
                   <td><span class="badge badge-pos">${p.position}</span></td>
-                  <td style="font-family:'JetBrains Mono',monospace">${Number(p.pts_per90_season).toFixed(2)}</td>
-                  <td style="font-family:'JetBrains Mono',monospace">${Number(p.pts_per90_4gw).toFixed(2)}</td>
-                  <td style="color:var(--hot);font-family:'JetBrains Mono',monospace">+${Number(p.pts_delta).toFixed(2)}</td>
+                  <td class="num">${Number(p.pts_per90_season).toFixed(2)}</td>
+                  <td class="num">${Number(p.pts_per90_4gw).toFixed(2)}</td>
+                  <td class="num t-hot">+${Number(p.pts_delta).toFixed(2)}</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
         </div>
         <div>
-          <div class="section-header">🧊 Cold Streak Players</div>
+          <div class="section-header">${icon('snow', 13)} Cold Streak Players</div>
           <table class="rankings-table">
             <thead><tr><th>Player</th><th>Pos</th><th>Season P90</th><th>4GW P90</th><th>Delta</th></tr></thead>
             <tbody>
@@ -188,9 +234,9 @@ function renderRankings() {
                 <tr>
                   <td><span class="clickable-name" onclick="showPlayerFromRankings('${escQ(p.web_name)}')">${p.web_name}</span></td>
                   <td><span class="badge badge-pos">${p.position}</span></td>
-                  <td style="font-family:'JetBrains Mono',monospace">${Number(p.pts_per90_season).toFixed(2)}</td>
-                  <td style="font-family:'JetBrains Mono',monospace">${Number(p.pts_per90_4gw).toFixed(2)}</td>
-                  <td style="color:var(--cold);font-family:'JetBrains Mono',monospace">${Number(p.pts_delta).toFixed(2)}</td>
+                  <td class="num">${Number(p.pts_per90_season).toFixed(2)}</td>
+                  <td class="num">${Number(p.pts_per90_4gw).toFixed(2)}</td>
+                  <td class="num t-cold">${Number(p.pts_delta).toFixed(2)}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -202,12 +248,14 @@ function renderRankings() {
   }
 
   container.innerHTML = `
+    ${tabNarrative()}
     ${posFilter}
     <table class="rankings-table">
       <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
       <tbody>${rows.join('')}</tbody>
     </table>
   `;
+  revealBars(container);
 }
 
 window.showRankingsTab = showRankingsTab;

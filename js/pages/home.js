@@ -1,6 +1,9 @@
 // home.js — dashboard: what matters this week (fixtures, captaincy, form)
 import { data } from '../data.js';
-import { teamFullNames, teamBadgeImg, escQ, fixtureChips } from '../util.js';
+import { teamFullNames, teamBadgeImg, escQ, fixtureChips, icon, renderStars } from '../util.js';
+import { buildLeagueStories } from '../insights/narrative.js';
+import { radialGauge, miniBar } from '../viz.js';
+import { animateCounters, revealBars } from '../fx.js';
 
 function metaLine() {
   const m = data.meta;
@@ -27,7 +30,7 @@ function dashRow(p, valueHtml) {
 }
 
 function dashCard(title, icon, players, valueFn) {
-  return `<div class="dashboard-card">
+  return `<div class="dashboard-card lift">
     <div class="dashboard-card-header">${icon} ${title}</div>
     <div class="dashboard-card-body">
       ${players.map((p, i) => { p._rank = i + 1; return dashRow(p, valueFn(p)); }).join('')}
@@ -46,11 +49,11 @@ function gwPanel() {
     const topPPG = data.ratings.filter(p => p.season_ok)
       .sort((a, b) => (b.season_ppg || 0) - (a.season_ppg || 0)).slice(0, 5);
     return `<div class="gw-panel">
-      <div class="gw-panel-title">Season complete 🏁</div>
+      <div class="gw-panel-title">${icon('trophy', 16, 't-brand')} Season complete</div>
       <div class="gw-panel-sub">${metaLine()} — the weekly panel (deadline, captaincy picks, fixture swings) switches on when next season's fixtures land.</div>
       <div class="home-columns">
-        ${dashCard('Season Top Rated', '⭐', topRated, p => p.season_overall_rating || 'N/A')}
-        ${dashCard('Season Top PPG', '💰', topPPG, p => p.season_ppg ? p.season_ppg.toFixed(1) + ' ppg' : 'N/A')}
+        ${dashCard('Season Top Rated', icon('star', 14), topRated, p => renderStars(p.season_overall_rating, { size: 10, showNum: false }))}
+        ${dashCard('Season Top PPG', icon('coin', 14), topPPG, p => p.season_ppg ? p.season_ppg.toFixed(1) + ' ppg' : 'N/A')}
       </div>
     </div>`;
   }
@@ -70,8 +73,8 @@ function gwPanel() {
   return `<div class="gw-panel">
     <div class="gw-panel-title">Gameweek ${nextGw}</div>
     <div class="gw-panel-sub">${metaLine()}${deadlineHtml}</div>
-    ${captains.length ? dashCard('Captaincy Shortlist — form × fixtures (next 4 GWs)', '🎖️', captains,
-      p => `${p.next4_overall_rating || 'N/A'}${p.next4_fixture_factor ? ` <span style="color:var(--text2);font-size:11px">×${Number(p.next4_fixture_factor).toFixed(2)}</span>` : ''}`) : ''}
+    ${captains.length ? dashCard('Captaincy Shortlist — form × fixtures (next 4 GWs)', icon('crown', 14, 't-brand'), captains,
+      p => `${renderStars(p.next4_overall_rating, { size: 10, showNum: false })}${p.next4_fixture_factor ? ` <span class="t2" style="font-size:11px">×${Number(p.next4_fixture_factor).toFixed(2)}</span>` : ''}`) : ''}
   </div>`;
 }
 
@@ -85,6 +88,7 @@ function fixtureTicker() {
     const avgEase = next.reduce((s, f) => s + (f.att_ease || 1), 0) / (next.length || 1);
     return { team, avgEase };
   }).sort((a, b) => b.avgEase - a.avgEase);
+  const maxEase = Math.max(...rows.map(r => r.avgEase), 1);
 
   return `<div class="section-header">Fixture Ticker — next 3, easiest run first</div>
   <table class="ticker-table" style="margin-bottom:24px">
@@ -92,7 +96,7 @@ function fixtureTicker() {
       ${rows.map(r => `<tr onclick="showTeamFromHome('${r.team}')">
         <td class="ticker-team">${teamBadgeImg(r.team, 16)}${teamFullNames[r.team] || r.team}</td>
         <td><div class="ticker-chips">${fixtureChips(data.fixtureEase, r.team, 3)}</div></td>
-        <td class="ticker-ease" style="color:${r.avgEase >= 1 ? 'var(--accent)' : 'var(--hot)'}" title="Attack ease vs league average over the next 3 (higher = kinder fixtures)">×${r.avgEase.toFixed(2)}</td>
+        <td class="ticker-ease" title="Attack ease vs league average over the next 3 (higher = kinder fixtures)">${miniBar(r.avgEase, maxEase, { tone: r.avgEase >= 1 ? 'good' : 'bad', text: '×' + r.avgEase.toFixed(2) })}</td>
       </tr>`).join('')}
     </tbody>
   </table>`;
@@ -106,18 +110,54 @@ function formWatch() {
   if (!hot.length && !cold.length) return '';
   return `<div class="section-header">Form Watch</div>
   <div class="home-columns">
-    ${dashCard('Hot Streak', '🔥', hot, p => `+${Number(p.pts_delta).toFixed(1)}`)}
-    ${dashCard('Cold Streak', '🧊', cold, p => `${Number(p.pts_delta).toFixed(1)}`)}
+    ${dashCard('Hot Streak', icon('flame', 14, 't-hot'), hot, p => `+${Number(p.pts_delta).toFixed(1)}`)}
+    ${dashCard('Cold Streak', icon('snow', 14, 't-cold'), cold, p => `${Number(p.pts_delta).toFixed(1)}`)}
   </div>`;
+}
+
+// ── The Briefing: lead narrative cards built from the shared story engine ──
+const TONE_CLASS = { good: 't-good', warn: 't-warn', bad: 't-bad', info: 't-info' };
+
+function briefingCard(st) {
+  const click = st.player
+    ? `showPlayerFromRankings('${escQ(st.player.web_name)}')`
+    : st.team ? `showTeamFromHome('${st.team}')` : '';
+  const photo = st.player && st.player.code
+    ? `https://resources.premierleague.com/premierleague/photos/players/110x140/p${st.player.code}.png` : '';
+  return `<div class="briefing-card lift"${click ? ` onclick="${click}"` : ''}>
+    <div class="briefing-kicker">${icon(st.iconId, 13)} ${st.title}</div>
+    ${st.player ? `<div class="briefing-head">
+      ${photo ? `<img loading="lazy" class="briefing-photo" src="${photo}" onerror="this.style.opacity='0'">` : ''}
+      <div class="briefing-who">
+        <div class="briefing-name">${st.player.web_name}</div>
+        <div class="briefing-meta">${st.player.position} · ${teamBadgeImg(st.player.team, 12)}${teamFullNames[st.player.team] || st.player.team} · £${st.player.price}m</div>
+        ${st.verdict ? `<div class="briefing-verdict">${st.verdict}</div>` : ''}
+      </div>
+      ${st.score != null ? radialGauge(st.score, 100, st.scoreLabel, { size: 74, tone: st.tone === 'warn' ? 'warn' : 'brand' }) : ''}
+    </div>` : ''}
+    ${st.bullets && st.bullets.length ? `<ul class="bullet-list">
+      ${st.bullets.map(b => `<li><span class="bullet-ic ${TONE_CLASS[b.tone] || 't-info'}">${icon(b.iconId, 14)}</span><span>${b.html}</span></li>`).join('')}
+    </ul>` : ''}
+  </div>`;
+}
+
+function briefing() {
+  const stories = buildLeagueStories(data);
+  if (!stories.length) return '';
+  return `<div class="section-header">The Briefing</div>
+    <div class="briefing-grid">${stories.map(briefingCard).join('')}</div>`;
 }
 
 function renderHome() {
   const container = document.getElementById('home-content');
   container.innerHTML = `
+    ${briefing()}
     ${gwPanel()}
     ${fixtureTicker()}
     ${formWatch()}
   `;
+  animateCounters(container);
+  revealBars(container);
 }
 
 export { renderHome };

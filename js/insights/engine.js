@@ -7,12 +7,39 @@
 
 const SEVERITY_ORDER = { act: 0, warn: 1, info: 2, good: 3 };
 const SEVERITY_META = {
-  act: { icon: '🔴', label: 'Action', color: '#FF6B6B' },
-  warn: { icon: '🟡', label: 'Watch', color: '#eab308' },
-  info: { icon: '🔵', label: 'Worth knowing', color: '#58a6ff' },
-  good: { icon: '🟢', label: 'Good news', color: '#38D9A9' },
+  act: { iconId: 'alert', label: 'Action', color: 'var(--bad)' },
+  warn: { iconId: 'eye', label: 'Watch', color: 'var(--warn)' },
+  info: { iconId: 'info', label: 'Worth knowing', color: 'var(--info)' },
+  good: { iconId: 'check', label: 'Good news', color: 'var(--good)' },
 };
 const MAX_PER_SEVERITY = 5;
+
+// Fixture-ease helpers for a fixture_ease table, usable with or without a
+// squad context (Home briefing + player verdicts share this with the rules).
+// [skip, take]: teamEase('ARS', 0, 3) = next 3; teamEase('ARS', 3, 3) = the 3 after
+function makeTeamEase(fixtureEase) {
+  const easeByTeam = {};
+  (fixtureEase || []).forEach(f => {
+    (easeByTeam[f.team] = easeByTeam[f.team] || []).push(f);
+  });
+  Object.values(easeByTeam).forEach(list => list.sort((a, b) => a.gw - b.gw));
+
+  function teamEase(team, skipGws, nGws) {
+    const rows = easeByTeam[team] || [];
+    if (!rows.length) return null;
+    const gws = [...new Set(rows.map(f => f.gw))].slice(skipGws, skipGws + nGws);
+    if (gws.length < nGws) return null;
+    const sel = rows.filter(f => gws.includes(f.gw));
+    return sel.reduce((s, f) => s + (f.att_ease || 1), 0) / sel.length;
+  }
+
+  function teamFixtureList(team, nGws) {
+    return (easeByTeam[team] || []).slice(0, nGws)
+      .map(f => `${f.opponent} (${f.venue})`).join(', ');
+  }
+
+  return { teamEase, teamFixtureList, easeByTeam };
+}
 
 // league: { ratings, personas4, seasonToDate, playerForm, priceRisk,
 //           personaShifts, teamMetrics, benchmarks, replacementPool, fixtureEase }
@@ -52,27 +79,7 @@ function buildContext(picksData, historyData, league) {
     positionGroups[pos] = squad.filter(s => s.r && s.r.position === pos && s.isStarter);
   }
 
-  // fixture ease helper: avg attack-ease for a team over upcoming GWs
-  // [skip, take]: teamEase('ARS', 0, 3) = next 3; teamEase('ARS', 3, 3) = the 3 after
-  const easeByTeam = {};
-  (league.fixtureEase || []).forEach(f => {
-    (easeByTeam[f.team] = easeByTeam[f.team] || []).push(f);
-  });
-  Object.values(easeByTeam).forEach(list => list.sort((a, b) => a.gw - b.gw));
-
-  function teamEase(team, skipGws, nGws) {
-    const rows = easeByTeam[team] || [];
-    if (!rows.length) return null;
-    const gws = [...new Set(rows.map(f => f.gw))].slice(skipGws, skipGws + nGws);
-    if (gws.length < nGws) return null;
-    const sel = rows.filter(f => gws.includes(f.gw));
-    return sel.reduce((s, f) => s + (f.att_ease || 1), 0) / sel.length;
-  }
-
-  function teamFixtureList(team, nGws) {
-    return (easeByTeam[team] || []).slice(0, nGws)
-      .map(f => `${f.opponent} (${f.venue})`).join(', ');
-  }
+  const { teamEase, teamFixtureList } = makeTeamEase(league.fixtureEase);
 
   return {
     squad,
@@ -112,4 +119,4 @@ function runRules(rules, ctx) {
   });
 }
 
-export { buildContext, runRules, SEVERITY_META, SEVERITY_ORDER, MAX_PER_SEVERITY };
+export { buildContext, runRules, makeTeamEase, SEVERITY_META, SEVERITY_ORDER, MAX_PER_SEVERITY };
