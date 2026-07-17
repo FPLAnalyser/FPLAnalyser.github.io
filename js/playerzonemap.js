@@ -38,7 +38,14 @@ function currentSlice(root) {
 
 function rerender(root, name) {
   const shots = currentSlice(root);
-  const a = analyse(shots, 'for');
+  // Passing 'against' here isn't about defence — it selects shotzones.js's
+  // toPitch flip branch (cx = 68 - y*68), which is the formula that plots
+  // player_shots.json's raw x/y correctly. That's the exact same math as
+  // playershotmap.js's own toPitch, confirmed against real shot locations;
+  // shots_for.json (team attack) is pre-processed differently upstream and
+  // needs the *unflipped* branch instead, which is why the team map's own
+  // Attack view correctly passes 'for'.
+  const a = analyse(shots, 'against');
   const mm = METRIC_META[root._metric];
   root._analysis = a;
   root.querySelector('.shotmap-narrative-wrap').innerHTML = narrativeBlock(a, name, root._metric, NARRATIVE_OPTS);
