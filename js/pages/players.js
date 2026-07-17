@@ -105,6 +105,7 @@ function showPlayer(name) {
 
   if (!r) return;
 
+  const slug = name.replace(/[^a-zA-Z0-9]+/g, '-');
   const pos = r.position;
   const isAtt = pos === 'MID' || pos === 'FWD';
   const streak = std ? std.streak : '';
@@ -284,15 +285,15 @@ function showPlayer(name) {
       ${verdictHero}
 
       <div class="tabs">
-        <div class="tab active" onclick="showTab(this, 'overview-${name.replace(/\s/g,'-')}')">Overview</div>
-        <div class="tab" onclick="showTab(this, 'ratings-${name.replace(/\s/g,'-')}')">Ratings</div>
-        <div class="tab" onclick="showTab(this, 'stats-${name.replace(/\s/g,'-')}')">Stats & Metrics</div>
-        <div class="tab" onclick="showTab(this, 'fixtures-${name.replace(/\s/g,'-')}')">Fixtures</div>
-        ${pos !== 'GKP' ? `<div class="tab" onclick="showTab(this, 'shots-${name.replace(/\s/g,'-')}')">Shots</div>` : ''}
+        <div class="tab active" onclick="showTab(this, 'overview-${slug}')">Overview</div>
+        <div class="tab" onclick="showTab(this, 'ratings-${slug}')">Ratings</div>
+        <div class="tab" onclick="showTab(this, 'stats-${slug}')">Stats & Metrics</div>
+        <div class="tab" onclick="showTab(this, 'fixtures-${slug}')">Fixtures</div>
+        ${pos !== 'GKP' ? `<div class="tab" onclick="showTab(this, 'shots-${slug}')">Shots</div>` : ''}
       </div>
 
       <!-- Overview Tab -->
-      <div id="overview-${name.replace(/\s/g,'-')}" class="tab-content active">
+      <div id="overview-${slug}" class="tab-content active">
         <div class="section-header">Key Stats (Season)</div>
         <div class="stats-grid">
           <div class="stat-card">
@@ -337,7 +338,7 @@ function showPlayer(name) {
       </div>
 
       <!-- Ratings Tab -->
-      <div id="ratings-${name.replace(/\s/g,'-')}" class="tab-content">
+      <div id="ratings-${slug}" class="tab-content">
         <div class="section-header">Position Ratings — vs ${pos} players only</div>
         <table class="ratings-table">
           <thead><tr><th>Dimension</th><th>Season</th><th>Last 4GW</th></tr></thead>
@@ -368,7 +369,7 @@ function showPlayer(name) {
       </div>
 
       <!-- Stats Tab -->
-      <div id="stats-${name.replace(/\s/g,'-')}" class="tab-content">
+      <div id="stats-${slug}" class="tab-content">
         <div class="section-header">Per 90 Stats (Season)</div>
         <div class="stats-grid">
           <div class="stat-card">
@@ -427,7 +428,7 @@ function showPlayer(name) {
       </div>
 
       <!-- Fixtures Tab -->
-      <div id="fixtures-${name.replace(/\s/g,'-')}" class="tab-content">
+      <div id="fixtures-${slug}" class="tab-content">
         <div class="section-header">Performance by Opponent Tier</div>
         <table class="ratings-table">
           <thead>
@@ -449,7 +450,7 @@ function showPlayer(name) {
       </div>
 
       ${pos !== 'GKP' ? `
-      <div id="shots-${name.replace(/\s/g,'-')}" class="tab-content">
+      <div id="shots-${slug}" class="tab-content">
         <div class="section-header">Shot Map</div>
         <div id="pshotmap-${r.element}"></div>
         <div class="section-header" style="margin-top:20px">Shot Zones</div>
