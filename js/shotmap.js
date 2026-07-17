@@ -38,20 +38,24 @@ const SIX_T1 = SIX_YARD_L + SIX_THIRD, SIX_T2 = SIX_YARD_L + 2 * SIX_THIRD;
 // 5.5-11, 11-16.5) — 11m also happens to be the real penalty-spot distance.
 // d3 caps the "long range" band at 13.5m beyond the box (30m from goal) —
 // past that, shots are rare enough that one big zone reads better than
-// three thin ones.
-const DEPTH = { d0: 0, d1: 5.5, d1b: 11, d2: 16.5, d3: 30, d4: 52.5 };
+// three thin ones. d2c splits that 16.5-30 band in half, so the near half
+// (right outside the box) and far half (genuine long range) each get their
+// own left/middle/right row.
+const DEPTH = { d0: 0, d1: 5.5, d1b: 11, d2: 16.5, d2c: 23.25, d3: 30, d4: 52.5 };
 const VIEW_Y_MIN = -5, VIEW_H = DEPTH.d4 - VIEW_Y_MIN, VIEW_W = 68;
 
-// 17 zones, matching Opta-style end-location grids. Byline + channel columns
+// 20 zones, matching Opta-style end-location grids. Byline + channel columns
 // run the entire box depth (goal line to the 18-yard line) in one cell each
 // side — only the six-yard-width middle strip gets finer depth resolution,
 // split into three bands: the six-yard row (b1), the rest of the box
 // (b2-l/m/r), and the back of the box right before the 18-yard line (b3-c,
 // a single cell — precise left/right position matters less that deep).
-// Long range (b4) runs from the box edge to 30m, split into three columns
-// aligned to the box's own thirds (b4-l/m/r) flanked by the wide,
-// outside-the-box-width columns (b4-wl/wr). Beyond 30m, all the way to the
-// halfway line, is one single zone (b5) — too far out to be worth splitting.
+// From the box edge to 30m, the centre band splits into three columns
+// aligned to the box's own thirds, in two depth rows: just outside the box
+// (b4-l/m/r) and long range proper (b4b-l/m/r) — flanked the whole way by
+// the wide, outside-the-box-width columns (b4-wl/wr, one cell each, full
+// 16.5-30 depth). Beyond 30m, all the way to the halfway line, is one
+// single zone (b5) — too far out to be worth splitting.
 const ZONE_META = {
   'b1-l': { name: 'Left of Six-Yard Box', narrative: 'the left of the six-yard box' },
   'b1-m': { name: 'Six-Yard Box', narrative: 'right in the six-yard box' },
@@ -65,10 +69,13 @@ const ZONE_META = {
   'b2-wr': { name: 'Right Byline', narrative: 'the right byline' },
   'b3-c': { name: 'Back of Box', narrative: 'the back of the box' },
   'b4-wl': { name: 'Long Range, Wide Left', narrative: 'long range, wide on the left' },
-  'b4-l': { name: 'Long Range, Left of Box', narrative: 'long range, left of the box' },
-  'b4-m': { name: 'Long Range, Central', narrative: 'long range, centrally' },
-  'b4-r': { name: 'Long Range, Right of Box', narrative: 'long range, right of the box' },
+  'b4-l': { name: 'Edge of Box, Left', narrative: 'just outside the box on the left' },
+  'b4-m': { name: 'Edge of Box, Centre', narrative: 'just outside the box, centrally' },
+  'b4-r': { name: 'Edge of Box, Right', narrative: 'just outside the box on the right' },
   'b4-wr': { name: 'Long Range, Wide Right', narrative: 'long range, wide on the right' },
+  'b4b-l': { name: 'Long Range, Left of Box', narrative: 'long range, left of the box' },
+  'b4b-m': { name: 'Long Range, Central', narrative: 'long range, centrally' },
+  'b4b-r': { name: 'Long Range, Right of Box', narrative: 'long range, right of the box' },
   'b5-c': { name: 'Very Long Range', narrative: 'from very long range, near the halfway line' },
 };
 
@@ -87,10 +94,13 @@ const ZONE_SHAPES = {
   'b2-wr': { x: BOX_R, y: DEPTH.d0, w: 68 - BOX_R, h: DEPTH.d2 - DEPTH.d0 },
   'b3-c': { x: SIX_YARD_L, y: DEPTH.d1b, w: SIX_YARD_R - SIX_YARD_L, h: DEPTH.d2 - DEPTH.d1b },
   'b4-wl': { x: 0, y: DEPTH.d2, w: BOX_L, h: DEPTH.d3 - DEPTH.d2 },
-  'b4-l': { x: BOX_L, y: DEPTH.d2, w: BOX_THIRD, h: DEPTH.d3 - DEPTH.d2 },
-  'b4-m': { x: BOX_T1, y: DEPTH.d2, w: BOX_THIRD, h: DEPTH.d3 - DEPTH.d2 },
-  'b4-r': { x: BOX_T2, y: DEPTH.d2, w: BOX_THIRD, h: DEPTH.d3 - DEPTH.d2 },
+  'b4-l': { x: BOX_L, y: DEPTH.d2, w: BOX_THIRD, h: DEPTH.d2c - DEPTH.d2 },
+  'b4-m': { x: BOX_T1, y: DEPTH.d2, w: BOX_THIRD, h: DEPTH.d2c - DEPTH.d2 },
+  'b4-r': { x: BOX_T2, y: DEPTH.d2, w: BOX_THIRD, h: DEPTH.d2c - DEPTH.d2 },
   'b4-wr': { x: BOX_R, y: DEPTH.d2, w: 68 - BOX_R, h: DEPTH.d3 - DEPTH.d2 },
+  'b4b-l': { x: BOX_L, y: DEPTH.d2c, w: BOX_THIRD, h: DEPTH.d3 - DEPTH.d2c },
+  'b4b-m': { x: BOX_T1, y: DEPTH.d2c, w: BOX_THIRD, h: DEPTH.d3 - DEPTH.d2c },
+  'b4b-r': { x: BOX_T2, y: DEPTH.d2c, w: BOX_THIRD, h: DEPTH.d3 - DEPTH.d2c },
   'b5-c': { x: 0, y: DEPTH.d3, w: 68, h: DEPTH.d4 - DEPTH.d3 },
 };
 
@@ -136,8 +146,9 @@ function classifyZone(cx, cy) {
     return 'b3-c';
   }
   if (cy > DEPTH.d3) return 'b5-c'; // very long range — one zone, full width
-  if (!inBoxWidth) return `b4-${wide}`;
-  return cx < BOX_T1 ? 'b4-l' : cx < BOX_T2 ? 'b4-m' : 'b4-r';
+  if (!inBoxWidth) return `b4-${wide}`; // wide flanks: one cell, full 16.5-30 depth
+  if (cy <= DEPTH.d2c) return cx < BOX_T1 ? 'b4-l' : cx < BOX_T2 ? 'b4-m' : 'b4-r';
+  return cx < BOX_T1 ? 'b4b-l' : cx < BOX_T2 ? 'b4b-m' : 'b4b-r';
 }
 
 function emptyAgg() {
