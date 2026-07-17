@@ -195,4 +195,4 @@ async function renderPlayerShotMap(element, container) {
   bindHover(container);
 }
 
-export { renderPlayerShotMap };
+export { renderPlayerShotMap, loadPlayerShots };

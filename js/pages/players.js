@@ -7,6 +7,7 @@ import { buildPlayerBundle, buildPlayerVerdict } from '../insights/narrative.js'
 import { radialGauge } from '../viz.js';
 import { showPage } from '../nav.js';
 import { renderPlayerShotMap } from '../playershotmap.js';
+import { renderPlayerZoneMap } from '../playerzonemap.js';
 
 function renderPlayersDefault() {
   const container = document.getElementById('player-result');
@@ -451,6 +452,8 @@ function showPlayer(name) {
       <div id="shots-${name.replace(/\s/g,'-')}" class="tab-content">
         <div class="section-header">Shot Map</div>
         <div id="pshotmap-${r.element}"></div>
+        <div class="section-header" style="margin-top:20px">Shot Zones</div>
+        <div id="pzonemap-${r.element}"></div>
       </div>
       ` : ''}
     </div>
@@ -458,6 +461,7 @@ function showPlayer(name) {
 
   if (pos !== 'GKP') {
     renderPlayerShotMap(r.element, document.getElementById(`pshotmap-${r.element}`));
+    renderPlayerZoneMap(r.element, name, document.getElementById(`pzonemap-${r.element}`));
   }
   animateCounters(document.getElementById('player-result'));
   revealBars(document.getElementById('player-result'));
