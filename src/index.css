@@ -1,0 +1,156 @@
+@import "tailwindcss";
+
+/* ── Design tokens ──────────────────────────────────────────────────────
+   Evolved from the legacy stylesheet's token system. The raw custom
+   properties are kept (ported chart/shot-map code references them via
+   var(--…)); the @theme block exposes them to Tailwind as utilities
+   (bg-surface-1, text-brand, font-num, rounded-lg …). */
+
+:root {
+  /* Surface elevation (near-black, layered) */
+  --bg-0: #07090C;
+  --bg-1: #0B0E13;
+  --surface-1: #10141B;
+  --surface-2: #161C26;
+  --surface-3: #1D2431;
+  --surface-glass: rgba(22, 28, 38, 0.72);
+
+  /* Borders (alpha-based so they sit on any surface) */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-mid: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+
+  /* Brand: teal + cyan gradient partner */
+  --brand: #34E0AD;
+  --brand-strong: #17C990;
+  --brand-2: #24B8D6;
+  --brand-dim: rgba(52, 224, 173, 0.12);
+  --grad-brand: linear-gradient(135deg, #34E0AD 0%, #24B8D6 100%);
+  --glow-brand: 0 0 28px rgba(52, 224, 173, 0.22);
+
+  /* Text ramp */
+  --text-1: #F4F7FA;
+  --text-2: #97A5B8;
+  --text-3: #5D6C80;
+
+  /* Semantic */
+  --good: #3DDC97;
+  --warn: #F0B54A;
+  --bad: #F26D6D;
+  --info: #5EA7F7;
+  --star-c: #FFC53D;
+
+  /* Chart categorical (CVD-separated on dark) */
+  --chart-1: #34E0AD;
+  --chart-2: #5EA7F7;
+  --chart-3: #E8A13C;
+  --chart-4: #E2649B;
+  --chart-5: #8B7BF4;
+
+  /* Shadows */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-3: 0 20px 56px rgba(0, 0, 0, 0.5);
+
+  /* Aliases still referenced by ported inline-style/SVG code */
+  --accent: var(--brand);
+  --accent2: #FF8A5C;
+  --hot: #FF7A6B;
+  --cold: #57C8E8;
+  --star: var(--star-c);
+
+  /* Shot map — pitch surface + the reserved "goal conceded" red
+     (contrast-validated against the pitch surface) */
+  --shotmap-surface: #0D2B1D;
+  --shotmap-goal: #E14B4B;
+}
+
+@theme {
+  --color-*: initial;
+  --color-bg-0: var(--bg-0);
+  --color-bg-1: var(--bg-1);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-glass: var(--surface-glass);
+  --color-line: var(--border-subtle);
+  --color-line-mid: var(--border-mid);
+  --color-line-strong: var(--border-strong);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-2: var(--brand-2);
+  --color-brand-dim: var(--brand-dim);
+  --color-ink: var(--text-1);
+  --color-ink-2: var(--text-2);
+  --color-ink-3: var(--text-3);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+  --color-info: var(--info);
+  --color-star: var(--star-c);
+  --color-hot: var(--hot);
+  --color-cold: var(--cold);
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-transparent: transparent;
+
+  --font-ui: "Inter", system-ui, sans-serif;
+  --font-num: "JetBrains Mono", monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --shadow-card: var(--shadow-1);
+  --shadow-float: var(--shadow-2);
+  --shadow-modal: var(--shadow-3);
+}
+
+/* ── Base ── */
+
+body {
+  background:
+    radial-gradient(1100px 700px at 85% -10%, rgba(52, 224, 173, 0.055), transparent 60%),
+    radial-gradient(900px 600px at -10% 25%, rgba(36, 184, 214, 0.045), transparent 55%),
+    var(--bg-0);
+  background-attachment: fixed;
+  color: var(--text-1);
+  font-family: var(--font-ui);
+  min-height: 100vh;
+}
+
+/* Icons (inline SVG sprite in index.html) */
+.icon {
+  display: inline-block;
+  vertical-align: -0.18em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+/* Motion policy — Framer Motion handles its own via useReducedMotion;
+   this covers CSS transitions/animations. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skel {
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+}

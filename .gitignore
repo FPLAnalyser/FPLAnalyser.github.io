@@ -9,3 +9,12 @@ verify_player.py
 README copy.md
 __pycache__/
 *.pyc
+node_modules/
+dist/
+dev-dist/
+
+# TS build cache
+*.tsbuildinfo
+
+# local scratch verification
+_verify.mjs
