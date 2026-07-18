@@ -10,10 +10,12 @@ interface Props<T> {
   placeholder?: string
   limit?: number
   initialValue?: string
+  /** Clear the input after a selection (for multi-select pickers). */
+  clearOnSelect?: boolean
 }
 
 /** Accent-insensitive live-search input with a results dropdown (mouse + touch). */
-export function SearchBox<T>({ items, getLabel, renderItem, onSelect, placeholder = 'Search…', limit = 8, initialValue = '' }: Props<T>) {
+export function SearchBox<T>({ items, getLabel, renderItem, onSelect, placeholder = 'Search…', limit = 8, initialValue = '', clearOnSelect = false }: Props<T>) {
   const [q, setQ] = useState(initialValue)
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
@@ -37,7 +39,7 @@ export function SearchBox<T>({ items, getLabel, renderItem, onSelect, placeholde
 
   const pick = (item: T) => {
     onSelect(item)
-    setQ(getLabel(item))
+    setQ(clearOnSelect ? '' : getLabel(item))
     setOpen(false)
   }
 
