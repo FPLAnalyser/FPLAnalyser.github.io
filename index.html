@@ -25,6 +25,46 @@
     }
   })();
 </script>
+<script>
+  // 1) Purge the pre-migration service worker and its caches. A zombie legacy
+  //    worker (script now deleted → 404 on update checks) can fall back to the
+  //    OLD cached shell on a slow network, whose js/ files no longer exist —
+  //    a broken page until refresh. Kill it and its 'fpl-analyser-*' caches.
+  (function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          regs.forEach(function (reg) {
+            var sw = reg.active || reg.waiting || reg.installing;
+            if (sw && /service-worker\.js/.test(sw.scriptURL)) reg.unregister();
+          });
+        }).catch(function () {});
+      }
+      if (window.caches && caches.keys) {
+        caches.keys().then(function (keys) {
+          keys.forEach(function (k) { if (k.indexOf('fpl-analyser-') === 0) caches.delete(k); });
+        }).catch(function () {});
+      }
+    } catch (e) { /* best effort */ }
+  })();
+
+  // 2) Start the core data downloads NOW, during HTML parse — the app's data
+  //    layer picks these promises up, cutting the JS-download-then-fetch chain
+  //    out of the critical path (worth seconds on a phone connection).
+  (function () {
+    try {
+      window.__early = {};
+      [
+        'ratings', 'personas_4gw', 'advanced_metrics', 'team_metrics',
+        'season_to_date', 'player_tiers', 'fixture_ease', 'meta',
+        'benchmarks', 'replacement_pool', 'persona_shifts', 'price_risk', 'player_form'
+      ].forEach(function (n) {
+        window.__early[n] = fetch('site_data/' + n + '.json');
+        window.__early[n].catch(function () {}); // avoid unhandled-rejection noise
+      });
+    } catch (e) { /* the data layer falls back to its own fetches */ }
+  })();
+</script>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">

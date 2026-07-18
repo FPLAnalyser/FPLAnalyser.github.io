@@ -146,12 +146,16 @@ body {
     radial-gradient(1100px 720px at 85% -12%, var(--glow), transparent 60%),
     radial-gradient(900px 620px at -8% 20%, var(--glow), transparent 55%),
     var(--bg-0);
-  background-attachment: fixed;
   color: var(--ink-1);
   font-family: var(--font-ui);
   font-feature-settings: "tnum" 0;
   min-height: 100vh;
   transition: background-color 0.25s ease, color 0.25s ease;
+}
+/* Fixed backgrounds force whole-page repaints on touch scroll (iOS Safari
+   jank) — keep the parallax glow on mouse-driven devices only. */
+@media (hover: hover) and (pointer: fine) {
+  body { background-attachment: fixed; }
 }
 
 .tabular { font-variant-numeric: tabular-nums; }

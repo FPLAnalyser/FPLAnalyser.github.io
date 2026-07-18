@@ -10,6 +10,13 @@
 
 import type { CoreData, Row } from './types'
 
+declare global {
+  interface Window {
+    /** Core-table fetches kicked off from index.html during HTML parse. */
+    __early?: Record<string, Promise<Response>>
+  }
+}
+
 const BASE = 'https://raw.githubusercontent.com/stefcourt2004-png/fpl-analyser/main/'
 
 // One shared promise per table name → every caller gets the same data and we
@@ -19,6 +26,18 @@ const cache = new Map<string, Promise<unknown>>()
 // Fetch a table, trying the local copy then the published main branch, with a
 // few retries to ride out flaky mobile networks / a racing service worker.
 async function fetchTable<T>(name: string): Promise<T> {
+  // Use the download index.html already started, if there is one — it began
+  // during HTML parse, long before this module was even downloaded.
+  const early = typeof window !== 'undefined' ? window.__early?.[name] : undefined
+  if (early) {
+    delete window.__early![name]
+    try {
+      const r = await early
+      if (r.ok) return (await r.json()) as T
+    } catch {
+      /* fall through to the normal retrying path */
+    }
+  }
   let lastErr: unknown
   for (let attempt = 0; attempt < 3; attempt++) {
     for (const url of [`site_data/${name}.json`, `${BASE}site_data/${name}.json`]) {
