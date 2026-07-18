@@ -26,7 +26,14 @@ export function Layout() {
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-1 px-3 md:h-[70px] md:px-6">
-          <img src="logo.png" alt="FPL Analyser" className="mr-1 h-9 shrink-0 md:mr-2 md:h-12" />
+          <NavLink to="/" className="mr-3 flex shrink-0 flex-col justify-center leading-none md:mr-5" aria-label="FPL Analyser — home">
+            <span className="text-[17px] font-extrabold tracking-tight text-ink md:text-xl">
+              FPL <span className="text-accent">Analyser</span>
+            </span>
+            <span className="mt-0.5 hidden text-[9px] font-semibold tracking-[0.22em] text-ink-3 uppercase md:block">
+              Data · Insight · Points
+            </span>
+          </NavLink>
           <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto md:gap-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {LINKS.map((link) => (
               <span key={link.to} className="flex items-center">
