@@ -1,5 +1,4 @@
 import { useId, type ReactNode } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
 import { AnimatedCounter } from './AnimatedCounter'
 
 /** Shared categorical palette (maps to the --chart-* tokens). */
@@ -37,7 +36,6 @@ export function RadialGauge({
   tone?: Tone
   showMax?: boolean
 }) {
-  const reduced = useReducedMotion()
   const gid = useId()
   if (value == null || isNaN(value)) return null
   const stroke = Math.max(8, Math.round(size * 0.1))
@@ -57,7 +55,7 @@ export function RadialGauge({
             </linearGradient>
           </defs>
           <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-3)" strokeWidth={stroke} />
-          <motion.circle
+          <circle
             cx={size / 2}
             cy={size / 2}
             r={r}
@@ -67,11 +65,7 @@ export function RadialGauge({
             strokeLinecap="round"
             transform={`rotate(-90 ${size / 2} ${size / 2})`}
             strokeDasharray={c}
-            initial={reduced ? false : { strokeDashoffset: c }}
-            whileInView={{ strokeDashoffset: c - frac * c }}
-            viewport={{ once: true, amount: 0.4 }}
-            transition={{ duration: 0.9, ease: 'easeOut' }}
-            style={reduced ? { strokeDashoffset: c - frac * c } : undefined}
+            strokeDashoffset={c - frac * c}
           />
         </svg>
         <div className="absolute flex items-baseline gap-0.5 leading-none">
@@ -140,7 +134,6 @@ export function Radar({
   seriesALabel?: string
   seriesBLabel?: string
 }) {
-  const reduced = useReducedMotion()
   const n = axes.length
   if (n < 3) return null
   const cx = size / 2
@@ -154,7 +147,6 @@ export function Radar({
   const gridPoly = (frac: number) => axes.map((_, i) => { const [x, y] = at(i, frac); return `${x.toFixed(1)},${y.toFixed(1)}` }).join(' ')
 
   const hasB = axes.some((ax) => ax.b != null) && !!seriesBLabel
-  const grow = { transformOrigin: `${cx}px ${cy}px` } as const
 
   return (
     <div className="flex flex-col items-center">
@@ -165,24 +157,14 @@ export function Radar({
         {axes.map((_, i) => { const [x, y] = at(i, 1); return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="var(--surface-3)" strokeWidth={1} /> })}
 
         {hasB && (
-          <motion.polygon
+          <polygon
             points={polyOf(axes.map((ax) => ax.b))}
             fill="var(--info)" fillOpacity={0.1} stroke="var(--info)" strokeWidth={1.5} strokeLinejoin="round"
-            style={reduced ? grow : { ...grow }}
-            initial={reduced ? false : { scale: 0, opacity: 0 }}
-            whileInView={{ scale: 1, opacity: 1 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.6, ease: 'easeOut', delay: 0.1 }}
           />
         )}
-        <motion.polygon
+        <polygon
           points={polyOf(axes.map((ax) => ax.a))}
           fill="var(--accent)" fillOpacity={0.32} stroke="var(--accent)" strokeWidth={2.5} strokeLinejoin="round"
-          style={grow}
-          initial={reduced ? false : { scale: 0, opacity: 0 }}
-          whileInView={{ scale: 1, opacity: 1 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
         />
         {axes.map((ax, i) => { const [x, y] = at(i, ax.a == null ? 0 : Math.max(0, Math.min(1, ax.a / 100))); return <circle key={i} cx={x} cy={y} r={2.5} fill="var(--accent)" /> })}
 
@@ -222,7 +204,6 @@ export function Donut({
   centerLabel?: string
   centerValue?: ReactNode
 }) {
-  const reduced = useReducedMotion()
   const clean = segments.filter((s) => s.value > 0)
   const total = clean.reduce((s, x) => s + x.value, 0)
   if (total <= 0) return null
@@ -241,15 +222,11 @@ export function Donut({
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
           <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-3)" strokeWidth={thickness} />
           {arcs.map((a, i) => (
-            <motion.circle
+            <circle
               key={i}
               cx={size / 2} cy={size / 2} r={r} fill="none" stroke={a.color} strokeWidth={thickness}
               strokeDasharray={`${a.dash.toFixed(2)} ${a.gap.toFixed(2)}`}
               transform={`rotate(${a.rot} ${size / 2} ${size / 2})`}
-              initial={reduced ? false : { opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true, amount: 0.4 }}
-              transition={{ duration: 0.4, delay: i * 0.08 }}
             />
           ))}
         </svg>
@@ -285,7 +262,6 @@ export function MiniBar({
   tone?: Tone
   text?: string
 }) {
-  const reduced = useReducedMotion()
   const v = Number(value)
   if (isNaN(v) || !max) return <span className="text-ink-3">{text ?? (value == null ? 'N/A' : String(value))}</span>
   const widthPct = Math.max(2, Math.min(100, (v / max) * 100))
@@ -293,13 +269,9 @@ export function MiniBar({
     <div className="flex items-center gap-2">
       <span className="font-num text-sm tabular-nums">{text ?? value}</span>
       <span className="h-1.5 min-w-14 flex-1 overflow-hidden rounded-full bg-surface-3">
-        <motion.span
+        <span
           className="block h-full rounded-full"
-          style={{ background: solidTone(tone) }}
-          initial={reduced ? false : { width: 0 }}
-          whileInView={{ width: `${widthPct}%` }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.7, ease: 'easeOut' }}
+          style={{ background: solidTone(tone), width: `${widthPct}%` }}
         />
       </span>
     </div>

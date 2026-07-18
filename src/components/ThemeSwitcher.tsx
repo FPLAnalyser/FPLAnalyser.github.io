@@ -1,12 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ACCENTS, useTheme } from '../lib/theme'
 import { Icon } from './Icon'
 
 /** Compact theme control: light/dark toggle + an accent-colour picker. */
 export function ThemeSwitcher() {
   const { accent, mode, setAccent, toggleMode } = useTheme()
-  const reduced = useReducedMotion()
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
 
@@ -48,15 +46,8 @@ export function ThemeSwitcher() {
           />
         </button>
 
-        <AnimatePresence>
-          {open && (
-            <motion.div
-              initial={reduced ? false : { opacity: 0, y: -6, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={reduced ? undefined : { opacity: 0, y: -6, scale: 0.97 }}
-              transition={{ duration: 0.14, ease: 'easeOut' }}
-              className="absolute right-0 top-full z-[150] mt-2 w-44 rounded-lg border border-line-mid bg-surface-2 p-1.5 shadow-float"
-            >
+        {open && (
+            <div className="absolute right-0 top-full z-[150] mt-2 w-44 rounded-lg border border-line-mid bg-surface-2 p-1.5 shadow-float">
               <div className="px-2 py-1 text-[10px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Accent</div>
               {ACCENTS.map((a) => (
                 <button
@@ -79,9 +70,8 @@ export function ThemeSwitcher() {
                   )}
                 </button>
               ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+        )}
       </div>
     </div>
   )

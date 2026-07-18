@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { NavLink, Outlet } from 'react-router-dom'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Icon } from './Icon'
 import { OnboardingModal, hasSeenOnboarding } from './OnboardingModal'
 import { ThemeSwitcher } from './ThemeSwitcher'
@@ -20,7 +20,6 @@ const LINKS: { to: string; label: string }[] = [
 export function Layout() {
   const [helpOpen, setHelpOpen] = useState(() => !hasSeenOnboarding())
   const [searchOpen, setSearchOpen] = useState(false)
-  const location = useLocation()
   const reduced = useReducedMotion()
 
   return (
@@ -95,18 +94,11 @@ export function Layout() {
         </div>
       </nav>
 
+      {/* No animated route transition: content must never depend on the
+          animation engine to become visible (it silently fails on some WebKit
+          versions, leaving pages mounted but at opacity 0). */}
       <main className="pb-[calc(env(safe-area-inset-bottom)+76px)] md:pb-[env(safe-area-inset-bottom)]">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={location.pathname}
-            initial={reduced ? false : { opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reduced ? undefined : { opacity: 0, y: -6 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
-          >
-            <Outlet />
-          </motion.div>
-        </AnimatePresence>
+        <Outlet />
       </main>
 
       <BottomNav onSearch={() => setSearchOpen(true)} />

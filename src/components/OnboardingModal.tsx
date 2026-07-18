@@ -1,5 +1,3 @@
-import { AnimatePresence, motion } from 'framer-motion'
-
 const SEEN_KEY = 'fpl_onboarded'
 
 export function hasSeenOnboarding(): boolean {
@@ -29,27 +27,21 @@ export function OnboardingModal({ open, onClose }: Props) {
     onClose()
   }
 
+  // Plain conditional render — a modal must never rely on the animation
+  // engine to become visible (an invisible overlay still swallows every tap).
+  if (!open) return null
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) close()
-          }}
-        >
-          <motion.div
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) close()
+      }}
+    >
+          <div
             role="dialog"
             aria-modal="true"
             aria-label="Welcome to FPL Analyser"
             className="w-full max-w-lg rounded-xl border border-line-mid bg-surface-2 p-6 shadow-modal"
-            initial={{ opacity: 0, y: 24, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 12, scale: 0.98 }}
-            transition={{ type: 'spring', stiffness: 320, damping: 28 }}
           >
             <div className="mb-5 flex items-center gap-4">
               <img src="icons/icon-192.png" alt="" width={56} height={56} className="rounded-lg" />
@@ -89,9 +81,7 @@ export function OnboardingModal({ open, onClose }: Props) {
             >
               Get started
             </button>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          </div>
+    </div>
   )
 }

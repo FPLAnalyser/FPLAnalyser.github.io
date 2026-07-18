@@ -38,7 +38,12 @@ export function AnimatedCounter({ value, format = 'int', prefix = '', suffix = '
       setDisplay(value)
       return
     }
-    if (!inView) return
+    if (!inView) {
+      // Fail-safe: if the in-view signal never fires (observer quirk on some
+      // browsers), snap to the real value rather than showing 0 forever.
+      const fallback = setTimeout(() => setDisplay(value), 1500)
+      return () => clearTimeout(fallback)
+    }
     let raf = 0
     const start = performance.now()
     const tick = (now: number) => {

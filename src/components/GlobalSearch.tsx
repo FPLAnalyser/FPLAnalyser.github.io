@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Icon } from './Icon'
 import { TeamBadge, PositionIcon } from './badges'
 import { useCore } from '../lib/useData'
@@ -169,7 +168,6 @@ export function GlobalSearch({
 
 /** Mobile full-screen search sheet, triggered from the top bar / bottom nav. */
 export function SearchSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const reduced = useReducedMotion()
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -177,29 +175,15 @@ export function SearchSheet({ open, onClose }: { open: boolean; onClose: () => v
     return () => document.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
+  // Plain conditional render — overlays must never depend on the animation
+  // engine to become visible (it silently fails on some WebKit versions).
+  if (!open) return null
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="fixed inset-0 z-[200] bg-surface-1/95 backdrop-blur-xl"
-          style={{ paddingTop: 'env(safe-area-inset-top)' }}
-          initial={reduced ? false : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={reduced ? undefined : { opacity: 0 }}
-          transition={{ duration: 0.15 }}
-        >
-          <motion.div
-            className="mx-auto max-w-lg px-4 pt-4"
-            initial={reduced ? false : { y: -12, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={reduced ? undefined : { y: -12, opacity: 0 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
-          >
-            <GlobalSearch variant="overlay" autoFocus onClose={onClose} />
-            <p className="mt-3 px-1 text-xs text-ink-3">Jump to any player or team.</p>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <div className="fixed inset-0 z-[200] bg-surface-1/95 backdrop-blur-xl" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+      <div className="mx-auto max-w-lg px-4 pt-4">
+        <GlobalSearch variant="overlay" autoFocus onClose={onClose} />
+        <p className="mt-3 px-1 text-xs text-ink-3">Jump to any player or team.</p>
+      </div>
+    </div>
   )
 }
