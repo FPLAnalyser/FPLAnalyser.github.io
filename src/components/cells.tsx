@@ -7,7 +7,7 @@ export function PlayerNameCell({ name }: { name: string }) {
   return (
     <button
       type="button"
-      className="text-left font-medium text-ink transition-colors hover:text-brand"
+      className="text-left font-medium text-ink transition-colors hover:text-accent"
       onClick={(e) => {
         e.stopPropagation()
         navigate(`/player?name=${encodeURIComponent(name)}`)

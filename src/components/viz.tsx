@@ -2,17 +2,17 @@ import { useId } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { AnimatedCounter } from './AnimatedCounter'
 
-export type Tone = 'good' | 'warn' | 'bad' | 'info' | 'brand'
+export type Tone = 'good' | 'warn' | 'bad' | 'info' | 'accent'
 
 const TONE_COLOR: Record<Tone, string> = {
   good: 'var(--good)',
   warn: 'var(--warn)',
   bad: 'var(--bad)',
   info: 'var(--info)',
-  brand: 'url(#grad-brand)',
+  accent: 'var(--accent)',
 }
 
-const solidTone = (tone: Tone) => (tone === 'brand' ? 'var(--brand)' : TONE_COLOR[tone])
+const solidTone = (tone: Tone) => TONE_COLOR[tone]
 
 /** Radial gauge: value out of max as a rounded donut arc with count-up centre. */
 export function RadialGauge({
@@ -20,7 +20,7 @@ export function RadialGauge({
   max = 100,
   label = '',
   size = 108,
-  tone = 'brand',
+  tone = 'accent',
 }: {
   value: number | null
   max?: number
@@ -69,7 +69,7 @@ export function Sparkline({
   values,
   w = 220,
   h = 48,
-  tone = 'brand',
+  tone = 'accent',
 }: {
   values: number[]
   w?: number
@@ -109,7 +109,7 @@ export function Sparkline({
 export function MiniBar({
   value,
   max,
-  tone = 'brand',
+  tone = 'accent',
   text,
 }: {
   value: number | null

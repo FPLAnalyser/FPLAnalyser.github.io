@@ -280,7 +280,7 @@ export default function Rankings() {
 
       {narrative && (
         <div className="mb-4 flex items-start gap-2 rounded-lg border border-line bg-surface-1 px-4 py-3 text-sm text-ink-2">
-          <span className="mt-0.5 text-brand">
+          <span className="mt-0.5 text-accent">
             <Icon name="bolt" size={14} />
           </span>
           <span>{narrative}</span>
@@ -300,6 +300,7 @@ export default function Rankings() {
           initialSort="rank"
           initialDir="asc"
           rowKey={(r) => String(r.element)}
+          featured
         />
       ) : (
         <EmptyState icon={<Icon name="calendar" size={44} />}>

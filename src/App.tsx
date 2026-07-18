@@ -3,6 +3,7 @@ import { createHashRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { PageSkeleton } from './components/Skeleton'
 import { DataProvider } from './lib/useData'
+import { ThemeProvider } from './lib/theme'
 
 const Home = lazy(() => import('./pages/Home'))
 const Players = lazy(() => import('./pages/Players'))
@@ -33,8 +34,10 @@ const router = createHashRouter([
 
 export default function App() {
   return (
-    <DataProvider>
-      <RouterProvider router={router} />
-    </DataProvider>
+    <ThemeProvider>
+      <DataProvider>
+        <RouterProvider router={router} />
+      </DataProvider>
+    </ThemeProvider>
   )
 }

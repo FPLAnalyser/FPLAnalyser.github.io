@@ -4,9 +4,27 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>FPL Analyser | Data Driven FPL</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#07090C">
+<meta name="theme-color" content="#0c0b09">
+<script>
+  // Apply the saved (or system-preferred) theme before first paint to avoid a flash.
+  (function () {
+    try {
+      var root = document.documentElement;
+      var accent = localStorage.getItem('fpl_accent');
+      if (accent !== 'aurum' && accent !== 'frost' && accent !== 'verdant') accent = 'aurum';
+      var mode = localStorage.getItem('fpl_mode');
+      if (mode !== 'light' && mode !== 'dark') {
+        mode = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      root.dataset.accent = accent;
+      root.dataset.mode = mode;
+    } catch (e) {
+      document.documentElement.dataset.accent = 'aurum';
+      document.documentElement.dataset.mode = 'dark';
+    }
+  })();
+</script>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -47,6 +65,8 @@
   <symbol id="i-crown" viewBox="0 0 24 24"><path d="M2 6.5l4.3 3.7a1 1 0 0 0 1.52-.29L12 3.5l4.18 6.41a1 1 0 0 0 1.52.29L22 6.5l-2.5 11a1 1 0 0 1-.98.78H5.48a1 1 0 0 1-.98-.78z"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></symbol>
 </svg>
 
 <div id="root"></div>

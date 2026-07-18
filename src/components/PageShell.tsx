@@ -6,11 +6,9 @@ export function PageShell({ children }: { children: ReactNode }) {
 
 export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <header className="mb-6">
-      <h1 className="bg-gradient-to-br from-ink to-ink-2 bg-clip-text text-2xl font-extrabold tracking-tight text-transparent md:text-3xl">
-        {title}
-      </h1>
-      {subtitle && <p className="mt-1 text-sm text-ink-2 md:text-base">{subtitle}</p>}
+    <header className="mb-7">
+      <h1 className="text-3xl font-extrabold tracking-[-0.02em] text-ink md:text-4xl">{title}</h1>
+      {subtitle && <p className="mt-1.5 text-sm text-ink-2 md:text-[15px]">{subtitle}</p>}
     </header>
   )
 }

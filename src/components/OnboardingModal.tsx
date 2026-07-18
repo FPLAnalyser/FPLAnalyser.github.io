@@ -79,12 +79,12 @@ export function OnboardingModal({ open, onClose }: Props) {
                 versus their peers, with an automatic head-to-head verdict.
               </li>
             </ul>
-            <div className="mb-5 rounded-md bg-brand-dim px-3 py-2 text-xs leading-relaxed text-ink-2">
+            <div className="mb-5 rounded-md bg-accent-soft px-3 py-2 text-xs leading-relaxed text-ink-2">
               Tip: on your phone, tap the ⓘ icons to see what any rating or metric means. Add the site to your
               home screen for an app-like experience.
             </div>
             <button
-              className="min-h-11 w-full rounded-md bg-brand font-semibold text-bg-0 transition-colors hover:bg-brand-strong"
+              className="min-h-11 w-full rounded-md bg-accent font-semibold text-accent-contrast transition-colors hover:bg-accent-strong"
               onClick={close}
             >
               Get started

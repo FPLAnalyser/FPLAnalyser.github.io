@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Icon } from './Icon'
 import { OnboardingModal, hasSeenOnboarding } from './OnboardingModal'
+import { ThemeSwitcher } from './ThemeSwitcher'
 
 const LINKS: { to: string; label: string; kicker?: string }[] = [
   { to: '/', label: 'Briefing', kicker: 'Analytics' },
@@ -41,7 +42,7 @@ export function Layout() {
                   to={link.to}
                   className={({ isActive }) =>
                     `relative flex min-h-11 items-center whitespace-nowrap rounded-md px-2.5 text-[13px] font-medium transition-colors md:px-3 md:text-sm ${
-                      isActive ? 'text-brand' : 'text-ink-2 hover:text-ink'
+                      isActive ? 'text-accent' : 'text-ink-2 hover:text-ink'
                     }`
                   }
                 >
@@ -51,7 +52,7 @@ export function Layout() {
                       {isActive && (
                         <motion.span
                           layoutId="nav-underline"
-                          className="absolute inset-x-2 bottom-1 h-0.5 rounded-full bg-brand"
+                          className="absolute inset-x-2 bottom-1 h-0.5 rounded-full bg-accent"
                           transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
                         />
                       )}
@@ -61,14 +62,17 @@ export function Layout() {
               </span>
             ))}
           </div>
-          <button
-            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-md text-ink-2 transition-colors hover:text-ink"
-            title="How it works"
-            aria-label="How it works"
-            onClick={() => setHelpOpen(true)}
-          >
-            <Icon name="info" size={16} />
-          </button>
+          <div className="flex shrink-0 items-center gap-0.5">
+            <ThemeSwitcher />
+            <button
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-ink-2 transition-colors hover:text-ink"
+              title="How it works"
+              aria-label="How it works"
+              onClick={() => setHelpOpen(true)}
+            >
+              <Icon name="info" size={16} />
+            </button>
+          </div>
         </div>
       </nav>
 

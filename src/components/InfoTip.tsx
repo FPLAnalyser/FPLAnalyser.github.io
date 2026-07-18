@@ -46,7 +46,7 @@ export function InfoTip({ text, children, size = 14 }: { text: ReactNode; childr
         ref={anchorRef}
         type="button"
         aria-label="More info"
-        className="inline-grid size-4 place-items-center rounded-full border border-line-mid text-[9px] font-bold text-ink-2 transition-colors hover:border-brand hover:text-brand"
+        className="inline-grid size-4 place-items-center rounded-full border border-line-mid text-[9px] font-bold text-ink-2 transition-colors hover:border-accent hover:text-accent"
         style={{ width: size, height: size }}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}

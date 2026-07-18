@@ -34,7 +34,7 @@ export function Tabs({
             aria-selected={isActive}
             onClick={() => onChange(tab.id)}
             className={`relative flex min-h-11 shrink-0 items-center gap-1.5 px-3 text-sm font-medium whitespace-nowrap transition-colors ${
-              isActive ? 'text-brand' : 'text-ink-2 hover:text-ink'
+              isActive ? 'text-accent' : 'text-ink-2 hover:text-ink'
             }`}
           >
             {tab.icon}
@@ -42,7 +42,7 @@ export function Tabs({
             {isActive && (
               <motion.span
                 layoutId={layoutId}
-                className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-brand"
+                className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-accent"
                 transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
               />
             )}
@@ -73,7 +73,7 @@ export function PillGroup({
             onClick={() => onChange(opt.id)}
             className={`min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${
               isActive
-                ? 'border-brand bg-brand-dim text-brand'
+                ? 'border-accent bg-accent-soft text-accent'
                 : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
             }`}
           >
