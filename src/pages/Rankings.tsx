@@ -5,6 +5,7 @@ import { SortableTable, type Column } from '../components/SortableTable'
 import { StarRating } from '../components/StarRating'
 import { MiniBar } from '../components/viz'
 import { PlayerNameCell, PosBadge, TeamCell } from '../components/cells'
+import { InfoTip } from '../components/InfoTip'
 import { Icon } from '../components/Icon'
 import { PageSkeleton } from '../components/Skeleton'
 import { EmptyState } from '../components/PageShell'
@@ -19,7 +20,7 @@ const TABS: TabDef[] = [
   { id: 'creators', label: 'Creators', icon: <Icon name="bolt" size={13} /> },
   { id: 'clean-sheets', label: 'Clean Sheets', icon: <Icon name="shield" size={13} /> },
   { id: 'value', label: 'Value Picks', icon: <Icon name="coin" size={13} /> },
-  { id: 'form', label: 'Form', icon: <Icon name="flame" size={13} /> },
+  { id: 'form', label: 'Form', icon: <Icon name="flame" size={13} solid /> },
   { id: 'next4', label: 'Next 4 GWs', icon: <Icon name="calendar" size={13} /> },
 ]
 
@@ -77,6 +78,19 @@ const scoreCol = (scoreKey: string, header: string): Column<Row> => ({
   align: 'left',
   sortValue: (r) => num(r, scoreKey),
   cell: (r) => <StarRating value={num(r, scoreKey)} />,
+})
+// Like scoreCol, but shows an explained N/A when the window has too few minutes.
+const windowScoreCol = (scoreKey: string, header: string): Column<Row> => ({
+  key: scoreKey,
+  header,
+  align: 'left',
+  sortValue: (r) => num(r, scoreKey),
+  cell: (r) =>
+    num(r, scoreKey) == null ? (
+      <span className="inline-flex items-center gap-1 text-ink-3">N/A<InfoTip text="Not enough minutes in the last 4 gameweeks to produce a rating." /></span>
+    ) : (
+      <StarRating value={num(r, scoreKey)} />
+    ),
 })
 function ppgCol(rows: Row[]): Column<Row> {
   const maxPpg = Math.max(...rows.map((p) => num(p, 'season_ppg') ?? 0), 1)
@@ -155,7 +169,7 @@ export default function Rankings() {
             teamCol,
             priceCol,
             scoreCol('season_overall_score', 'Season Rating'),
-            scoreCol('gw4_overall_score', '4GW Rating'),
+            windowScoreCol('gw4_overall_score', '4GW Rating'),
             ppgCol(rows),
           ],
           rows,
@@ -275,7 +289,9 @@ export default function Rankings() {
   return (
     <PageShell>
       <PageHeader title="Rankings" subtitle="Top players across all metrics" />
-      <div className="mb-4">
+      {/* Desktop: tab strip. Mobile: a reliable native dropdown (tabs were
+          hard to reach in a horizontal scroller on a phone). */}
+      <div className="mb-4 hidden md:block">
         <Tabs
           tabs={TABS}
           active={tab}
@@ -284,6 +300,16 @@ export default function Rankings() {
             setPos('ALL')
           }}
         />
+      </div>
+      <div className="mb-4 md:hidden">
+        <label className="mb-1.5 block text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Ranking</label>
+        <select
+          value={tab}
+          onChange={(e) => { setTab(e.target.value); setPos('ALL') }}
+          className="min-h-11 w-full rounded-lg border border-line-mid bg-surface-1 px-3 text-base text-ink"
+        >
+          {TABS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+        </select>
       </div>
 
       {narrative && (
@@ -375,7 +401,7 @@ function FormTables({ rows, pos }: { rows: Row[]; pos: string }) {
     <div className="flex flex-col gap-6 lg:flex-row">
       {table(
         <>
-          <Icon name="flame" size={13} /> Hot Streak Players
+          <Icon name="flame" size={13} solid /> Hot Streak Players
         </>,
         hot,
         'text-hot',

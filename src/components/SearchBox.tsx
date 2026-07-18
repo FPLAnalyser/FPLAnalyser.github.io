@@ -54,7 +54,7 @@ export function SearchBox<T>({ items, getLabel, renderItem, onSelect, placeholde
           value={q}
           placeholder={placeholder}
           autoComplete="off"
-          className="min-h-11 w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-3"
+          className="min-h-11 w-full bg-transparent text-base text-ink outline-none placeholder:text-ink-3 md:text-sm"
           onChange={(e) => {
             setQ(e.target.value)
             setOpen(true)

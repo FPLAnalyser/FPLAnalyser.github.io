@@ -17,8 +17,11 @@ const TONE_TEXT: Record<string, string> = { good: 'text-good', warn: 'text-warn'
 
 function PhotoByCode({ code, size = 40 }: { code: number | null; size?: number }) {
   const [failed, setFailed] = useState(false)
-  if (!code || failed) return <div className="shrink-0 rounded-md bg-surface-3" style={{ width: size, height: size }} />
-  return <img loading="lazy" src={`https://resources.premierleague.com/premierleague/photos/players/110x140/p${code}.png`} alt="" className="shrink-0 rounded-md object-cover" style={{ width: size, height: size }} onError={() => setFailed(true)} />
+  // PL headshots are 110×140 (portrait); match the box aspect so the whole
+  // head-and-shoulders fits instead of cropping a zoomed-in face.
+  const h = Math.round(size * 1.27)
+  if (!code || failed) return <div className="shrink-0 rounded-md bg-surface-3" style={{ width: size, height: h }} />
+  return <img loading="lazy" src={`https://resources.premierleague.com/premierleague/photos/players/110x140/p${code}.png`} alt="" className="shrink-0 rounded-md object-cover object-top" style={{ width: size, height: h }} onError={() => setFailed(true)} />
 }
 
 interface DashItem { rank: number; name: string; code: number | null; pos: string; team: string; value: ReactNode }
@@ -283,7 +286,7 @@ function FormWatch({ seasonToDate, ratings, onPlayer }: { seasonToDate: Row[]; r
     <>
       <SectionHeader>Form Watch</SectionHeader>
       <div className="grid gap-3 md:grid-cols-2">
-        <DashCard title="Hot Streak" icon={<span className="text-hot"><Icon name="flame" size={14} /></span>} items={toItems(hot, true)} onPlayer={onPlayer} />
+        <DashCard title="Hot Streak" icon={<span className="text-hot"><Icon name="flame" size={14} solid /></span>} items={toItems(hot, true)} onPlayer={onPlayer} />
         <DashCard title="Cold Streak" icon={<span className="text-cold"><Icon name="snow" size={14} /></span>} items={toItems(cold, false)} onPlayer={onPlayer} />
       </div>
     </>

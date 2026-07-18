@@ -146,7 +146,7 @@ function MostOwned({ ratings, data, onSelect }: { ratings: RatingRow[]; data: Co
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 font-semibold text-ink">
                   {String(p.web_name)}
-                  {streak === '🔥 Hot' && <span className="text-hot"><Icon name="flame" size={12} /></span>}
+                  {streak === '🔥 Hot' && <span className="text-hot"><Icon name="flame" size={12} solid /></span>}
                   {streak === '🧊 Cold' && <span className="text-cold"><Icon name="snow" size={12} /></span>}
                 </div>
                 <div className="mt-0.5 flex items-center gap-1 text-xs text-ink-2">
@@ -220,15 +220,15 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
             <span className="rounded bg-surface-3 px-2 py-0.5 font-semibold text-ink-2">{pos}</span>
             <span className="flex items-center gap-1 rounded bg-surface-3 px-2 py-0.5 text-ink-2"><TeamBadge team={String(r.team)} size={12} />{teamFullNames[String(r.team)] || r.team}</span>
             <span className="rounded bg-surface-3 px-2 py-0.5 text-ink-2">£{r.price}m</span>
-            {streak === '🔥 Hot' && <span className="flex items-center gap-1 text-hot"><Icon name="flame" size={12} /> Hot Streak</span>}
+            {streak === '🔥 Hot' && <span className="flex items-center gap-1 text-hot"><Icon name="flame" size={12} solid /> Hot Streak</span>}
             {streak === '🧊 Cold' && <span className="flex items-center gap-1 text-cold"><Icon name="snow" size={12} /> Cold Streak</span>}
           </div>
           <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
-            <RatingBlock label={<>Season (Position) <InfoTip text={TOOLTIPS.overall as string} /></>} value={str(r, 'season_overall_rating')} />
-            <RatingBlock label="Last 4GW (Position)" value={str(r, 'gw4_overall_rating')} />
+            <RatingBlock label={<>Season (Position) <InfoTip text={TOOLTIPS.overall as string} /></>} value={num(r, 'season_overall_score')} />
+            <RatingBlock label="Last 4GW (Position)" value={num(r, 'gw4_overall_score')} />
             <RatingBlock label={<>Next 4GW (Fixtures) <InfoTip text={TOOLTIPS.next4 as string} /></>} value={str(r, 'next4_overall_rating')} />
-            {isAtt && <RatingBlock label="Season (Attacker)" value={str(r, 'season_att_overall_rating')} />}
-            {isAtt && <RatingBlock label="Last 4GW (Attacker)" value={str(r, 'gw4_att_overall_rating')} />}
+            {isAtt && <RatingBlock label="Season (Attacker)" value={num(r, 'season_att_overall_score')} />}
+            {isAtt && <RatingBlock label="Last 4GW (Attacker)" value={num(r, 'gw4_att_overall_score')} />}
           </div>
         </div>
       </div>
@@ -291,7 +291,7 @@ function Tag({ label, tip, tone }: { label: string; tip?: string; tone?: 'good' 
   )
 }
 
-function RatingBlock({ label, value }: { label: ReactNode; value: string | null }) {
+function RatingBlock({ label, value }: { label: ReactNode; value: number | string | null }) {
   return (
     <div>
       <div className="mb-1 flex items-center gap-1 text-[11px] tracking-wide text-ink-3 uppercase">{label}</div>
@@ -331,7 +331,7 @@ function OverviewTab({ r, std, m, pos, isAtt }: { r: RatingRow; std: Row | null;
       <Section title={`Rating Profile — vs ${pos} players`}>
         <div className="grid gap-5 lg:grid-cols-[300px_1fr] lg:items-center">
           <Radar axes={radarAxes(r, dims)} seriesALabel="Season" seriesBLabel="Last 4GW" />
-          <DimTable r={r} dims={dims} overall={['season_overall_rating', 'gw4_overall_rating']} />
+          <DimTable r={r} dims={dims} overall={['season_overall_score', 'gw4_overall_score']} />
         </div>
       </Section>
 
@@ -345,7 +345,7 @@ function OverviewTab({ r, std, m, pos, isAtt }: { r: RatingRow; std: Row | null;
       )}
       {isAtt && (
         <Section title="Attacker Ratings — vs all MID & FWD players">
-          <DimTable r={r} dims={ATT_COMBINED_DIMS} overall={['season_att_overall_rating', 'gw4_att_overall_rating']} />
+          <DimTable r={r} dims={ATT_COMBINED_DIMS} overall={['season_att_overall_score', 'gw4_att_overall_score']} />
         </Section>
       )}
     </div>
@@ -353,6 +353,7 @@ function OverviewTab({ r, std, m, pos, isAtt }: { r: RatingRow; std: Row | null;
 }
 
 function DimTable({ r, dims, overall }: { r: RatingRow; dims: Dim[]; overall: [string, string] }) {
+  // `overall` holds the two continuous *_score columns for the header row.
   return (
     <div className="overflow-x-auto rounded-xl border border-line">
       <table className="w-full text-sm">
@@ -366,8 +367,8 @@ function DimTable({ r, dims, overall }: { r: RatingRow; dims: Dim[]; overall: [s
         <tbody>
           <tr className="border-b border-line">
             <td className="px-4 py-3 font-semibold text-ink">Overall</td>
-            <td className="px-4 py-3"><StarRating value={str(r, overall[0])} /></td>
-            <td className="px-4 py-3"><StarRating value={str(r, overall[1])} /></td>
+            <td className="px-4 py-3"><StarRating value={num(r, overall[0])} /></td>
+            <td className="px-4 py-3"><StarRating value={num(r, overall[1])} /></td>
           </tr>
           {dims.map(([label, sCol, gCol, tipKey]) => (
             <tr key={label} className="border-b border-line last:border-0">

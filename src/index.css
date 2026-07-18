@@ -19,6 +19,7 @@
   /* Constant across themes */
   --star-c: #e0c074;            /* ratings stay warm gold in every theme */
   --good: #3ddc7a; --warn: #e8b04a; --bad: #f0736f; --info: #6ea8ff;
+  --hot: #ff5a3c; --cold: #4ea3ff;   /* hot streak = fiery red · cold streak = frost blue */
   --chart-1: #d9b45c; --chart-2: #6ea8ff; --chart-3: #57c993; --chart-4: #e2649b; --chart-5: #b79bf0;
   --font-ui: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-num: 'Manrope', system-ui, sans-serif;
@@ -122,6 +123,8 @@
   --color-warn: var(--warn);
   --color-bad: var(--bad);
   --color-info: var(--info);
+  --color-hot: var(--hot);
+  --color-cold: var(--cold);
   --color-star: var(--star-c);
   --color-white: #ffffff;
   --color-black: #000000;
@@ -159,6 +162,8 @@ body {
   fill: none; stroke: currentColor; stroke-width: 1.75;
   stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0;
 }
+/* Solid/filled icon variant (e.g. the hot-streak flame). */
+.icon.icon-solid { fill: currentColor; stroke: none; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { PageHeader, PageShell, EmptyState } from '../components/PageShell'
 import { SkeletonBlock } from '../components/Skeleton'
 import { StarRating } from '../components/StarRating'
-import { Sparkline } from '../components/viz'
+import { Tabs, type TabDef } from '../components/Tabs'
 import { FixtureChips } from '../components/FixtureChips'
 import { TeamBadge } from '../components/badges'
 import { Icon, type IconName } from '../components/Icon'
@@ -99,6 +99,7 @@ interface Enriched { pick: any; r: RatingRow | undefined; p4: Row | undefined; s
 
 function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
   const { picksData, gw, historyData, entryData, teamId } = loaded
+  const [tab, setTab] = useState<SquadTab>('squad')
   const picks: any[] = picksData.picks || []
   const entryHistory = picksData.entry_history || {}
 
@@ -123,7 +124,6 @@ function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
   const goalAvg = avgRatingField(startingRated.filter((r) => r.position === 'MID' || r.position === 'FWD'), 'season_goal_score_rating')
   const csAvg = avgRatingField(startingRated.filter((r) => r.position === 'GKP' || r.position === 'DEF'), 'season_cs_score_rating')
   const teamValue = entryHistory.value != null ? (entryHistory.value / 10).toFixed(1) : 'N/A'
-  const gwPoints: number[] = historyData?.current ? historyData.current.map((e: any) => e.points).filter((v: any) => v != null) : []
 
   const posGroups: Enriched[][] = [
     startingXI.filter((e) => e.r?.position === 'GKP'),
@@ -134,43 +134,55 @@ function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
   ]
 
   const ownedElements = new Set(picks.map((p) => p.element))
+  const hasLeagues = ((entryData?.leagues?.classic) || []).length > 0
 
   return (
     <div>
-      <SectionHeader>Team Ratings</SectionHeader>
-      <div className="mb-2 flex flex-wrap gap-x-8 gap-y-5">
-        <RatingStat label="Avg Overall Rating" node={<StarRating value={overallAvg} size={12} />} />
-        <RatingStat label="Avg Reliability (XI)" node={<StarRating value={reliabilityAvg} size={12} />} />
-        <RatingStat label="Avg Goal Threat (MID/FWD)" node={<StarRating value={goalAvg} size={12} />} />
-        <RatingStat label="Avg Clean Sheet (GKP/DEF)" node={<StarRating value={csAvg} size={12} />} />
-        <RatingStat label="Total Team Value" node={<span className="font-num text-lg font-semibold tabular-nums text-ink">£{teamValue}m</span>} />
-        {gwPoints.length > 1 && <RatingStat label="Your points by GW" node={<Sparkline values={gwPoints} w={170} h={40} />} />}
+      <div className="mb-5">
+        <Tabs tabs={SQUAD_TABS(hasLeagues)} active={tab} onChange={(id) => setTab(id as SquadTab)} layoutId="myteam-tab" />
       </div>
 
-      <Report picksData={picksData} historyData={historyData} data={data} />
-
-      <SectionHeader>Starting XI — Gameweek {gw}</SectionHeader>
-      <div className="rounded-2xl p-3 md:p-5" style={{ background: 'var(--shotmap-surface)' }}>
-        {posGroups.map((rows, i) => rows.length > 0 && (
-          <div key={i} className="flex flex-wrap justify-center gap-2 py-2 md:gap-3">
-            {rows.map((e, j) => <PitchCard key={j} e={e} data={data} />)}
+      {tab === 'squad' ? (
+        <>
+          <SectionHeader>Team Ratings</SectionHeader>
+          <div className="mb-2 flex flex-wrap gap-x-8 gap-y-5">
+            <RatingStat label="Avg Overall Rating" node={<StarRating value={overallAvg} size={12} />} />
+            <RatingStat label="Avg Reliability (XI)" node={<StarRating value={reliabilityAvg} size={12} />} />
+            <RatingStat label="Avg Goal Threat (MID/FWD)" node={<StarRating value={goalAvg} size={12} />} />
+            <RatingStat label="Avg Clean Sheet (GKP/DEF)" node={<StarRating value={csAvg} size={12} />} />
+            <RatingStat label="Total Team Value" node={<span className="font-num text-lg font-semibold tabular-nums text-ink">£{teamValue}m</span>} />
           </div>
-        ))}
-      </div>
 
-      {bench.length > 0 && (
-        <div className="mt-3 rounded-xl border border-line bg-surface-1/60 p-3">
-          <div className="mb-2 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Bench</div>
-          <div className="flex flex-wrap justify-center gap-2 md:gap-3">
-            {bench.map((e, j) => <PitchCard key={j} e={e} data={data} bench />)}
+          <Report picksData={picksData} historyData={historyData} data={data} ownedElements={ownedElements} />
+
+          <SectionHeader>Starting XI — Gameweek {gw}</SectionHeader>
+          <div className="rounded-2xl p-2 md:p-5" style={{ background: 'var(--shotmap-surface)' }}>
+            {posGroups.map((rows, i) => rows.length > 0 && (
+              <div key={i} className="flex justify-center gap-1.5 py-1.5 md:gap-3">
+                {rows.map((e, j) => <PitchCard key={j} e={e} data={data} />)}
+              </div>
+            ))}
           </div>
-        </div>
+
+          {bench.length > 0 && (
+            <div className="mt-3 rounded-xl border border-line bg-surface-1/60 p-2 md:p-3">
+              <div className="mb-2 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Bench</div>
+              <div className="flex justify-center gap-1.5 md:gap-3">
+                {bench.map((e, j) => <PitchCard key={j} e={e} data={data} bench />)}
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <MiniLeague entryData={entryData} teamId={teamId} gw={gw} ownedElements={ownedElements} data={data} />
       )}
-
-      <MiniLeague entryData={entryData} teamId={teamId} gw={gw} ownedElements={ownedElements} data={data} />
     </div>
   )
 }
+
+type SquadTab = 'squad' | 'league'
+const SQUAD_TABS = (hasLeagues: boolean): TabDef[] =>
+  hasLeagues ? [{ id: 'squad', label: 'Squad & Report' }, { id: 'league', label: 'Mini-League' }] : [{ id: 'squad', label: 'Squad & Report' }]
 
 function RatingStat({ label, node }: { label: string; node: ReactNode }) {
   return (
@@ -186,7 +198,7 @@ function PitchCard({ e, data, bench }: { e: Enriched; data: CoreData; bench?: bo
   const [photoFail, setPhotoFail] = useState(false)
   const { pick, r, p4, std } = e
   if (!r) {
-    return <div className="w-[92px] rounded-lg border border-line bg-surface-2 p-2 text-center text-xs text-ink-3">Unknown (ID {pick.element})</div>
+    return <div className="min-w-0 max-w-[104px] flex-1 basis-0 rounded-lg border border-line bg-surface-2 p-1.5 text-center text-[10px] text-ink-3">ID {pick.element}</div>
   }
   const streak = std ? str(std, 'streak') : ''
   const photo = r.code ? `https://resources.premierleague.com/premierleague/photos/players/110x140/p${r.code}.png` : null
@@ -197,27 +209,25 @@ function PitchCard({ e, data, bench }: { e: Enriched; data: CoreData; bench?: bo
   return (
     <button
       onClick={() => navigate(`/player?name=${encodeURIComponent(String(r.web_name))}`)}
-      className={`group relative w-[96px] rounded-lg border p-2 text-center transition-colors md:w-[104px] ${bench ? 'border-line bg-surface-1/70' : 'border-line-mid bg-surface-1/90'} hover:border-accent`}
+      className={`group relative min-w-0 max-w-[104px] flex-1 basis-0 rounded-lg border p-1.5 text-center transition-colors md:p-2 ${bench ? 'border-line bg-surface-1/70' : 'border-line-mid bg-surface-1/90'} hover:border-accent`}
       title={`${r.web_name} · ${r.position} · ${teamFullNames[String(r.team)] || r.team} · £${r.price}m · Season ${seasonN != null ? seasonN.toFixed(1) + '★' : 'N/A'} · 4GW ${gw4N != null ? gw4N.toFixed(1) + '★' : 'N/A'}${personas.length ? ' · ' + personas.join(', ') : ''}`}
     >
-      {pick.is_captain && <span className="absolute top-1 left-1 grid size-4 place-items-center rounded-full bg-accent text-[9px] font-bold text-accent-contrast">C</span>}
-      {pick.is_vice_captain && <span className="absolute top-1 left-1 grid size-4 place-items-center rounded-full bg-surface-3 text-[9px] font-bold text-ink">V</span>}
-      {streak === '🔥 Hot' && <span className="absolute top-1 right-1 text-hot"><Icon name="flame" size={11} /></span>}
-      {streak === '🧊 Cold' && <span className="absolute top-1 right-1 text-cold"><Icon name="snow" size={11} /></span>}
+      {pick.is_captain && <span className="absolute top-0.5 left-0.5 grid size-4 place-items-center rounded-full bg-accent text-[9px] font-bold text-accent-contrast">C</span>}
+      {pick.is_vice_captain && <span className="absolute top-0.5 left-0.5 grid size-4 place-items-center rounded-full bg-surface-3 text-[9px] font-bold text-ink">V</span>}
+      {streak === '🔥 Hot' && <span className="absolute top-0.5 right-0.5 text-hot"><Icon name="flame" size={10} solid /></span>}
+      {streak === '🧊 Cold' && <span className="absolute top-0.5 right-0.5 text-cold"><Icon name="snow" size={10} /></span>}
       {photo && !photoFail
-        ? <img loading="lazy" src={photo} alt="" className="mx-auto h-10 w-8 object-cover" onError={() => setPhotoFail(true)} />
-        : <div className="mx-auto grid h-10 w-8 place-items-center text-ink-3"><Icon name="users" size={14} /></div>}
-      <div className="mt-1 truncate text-xs font-semibold text-ink">{String(r.web_name)}</div>
-      <div className="text-[10px] text-ink-2">{r.position} · £{r.price}m</div>
+        ? <img loading="lazy" src={photo} alt="" className="mx-auto h-9 w-7 object-cover object-top" onError={() => setPhotoFail(true)} />
+        : <div className="mx-auto grid h-9 w-7 place-items-center text-ink-3"><Icon name="users" size={13} /></div>}
+      <div className="mt-1 truncate text-[11px] font-semibold text-ink">{String(r.web_name)}</div>
+      <div className="truncate text-[9px] text-ink-2">{r.position} · £{r.price}m</div>
       <div className="mt-1 flex justify-center"><FixtureChips fixtureEase={data.fixtureEase} team={String(r.team)} n={3} /></div>
-      <div className="mt-1 flex items-center justify-center gap-1 text-[9px] text-ink-3">L4 <StarRating value={str(r, 'gw4_overall_rating')} size={8} showNum={false} /></div>
-      <div className="flex items-center justify-center gap-1 text-[9px] text-ink-3">N4 <StarRating value={str(r, 'next4_overall_rating')} size={8} showNum={false} /></div>
-      <div className="mt-1 flex justify-center"><StarRating value={str(r, 'season_overall_rating')} size={9} showNum={false} /></div>
+      <div className="mt-1.5 flex justify-center"><StarRating value={str(r, 'season_overall_rating')} size={11} /></div>
     </button>
   )
 }
 
-function Report({ picksData, historyData, data }: { picksData: any; historyData: any; data: CoreData }) {
+function Report({ picksData, historyData, data, ownedElements }: { picksData: any; historyData: any; data: CoreData; ownedElements: Set<number> }) {
   const insights = useMemo(() => {
     const ctx = buildContext(picksData, historyData, {
       ratings: data.ratings, personas4: data.personas4, seasonToDate: data.seasonToDate, metrics: data.metrics,
@@ -227,6 +237,24 @@ function Report({ picksData, historyData, data }: { picksData: any; historyData:
     return runRules(RULES, ctx) as any[]
   }, [picksData, historyData, data])
   const navigate = useNavigate()
+
+  // Insights name their subject in the headline; resolve it to a link so tapping
+  // a report card jumps to the relevant player or team page.
+  const ownedNames = useMemo(
+    () => data.ratings.filter((r) => ownedElements.has(r.element)).map((r) => String(r.web_name)).sort((a, b) => b.length - a.length),
+    [data.ratings, ownedElements],
+  )
+  const teamEntries = useMemo(() => Object.entries(teamFullNames), [])
+  const resolveLink = (headline: string): (() => void) | undefined => {
+    const h = headline.replace(/<[^>]*>/g, '')
+    const name = ownedNames.find((n) => n && h.includes(n))
+    if (name) return () => navigate(`/player?name=${encodeURIComponent(name)}`)
+    const byFull = teamEntries.find(([, full]) => h.includes(full))
+    if (byFull) return () => navigate(`/teams?team=${byFull[0]}`)
+    const byCode = teamEntries.find(([code]) => new RegExp(`\\b${code}\\b`).test(h))
+    if (byCode) return () => navigate(`/teams?team=${byCode[0]}`)
+    return undefined
+  }
 
   if (!insights.length) {
     return (
@@ -257,11 +285,18 @@ function Report({ picksData, historyData, data }: { picksData: any; historyData:
       <div className="space-y-3">
         {insights.map((i, idx) => {
           const meta = SEVERITY_META[i.severity] || SEVERITY_META.info
+          const go = resolveLink(String(i.headline))
           return (
-            <div key={idx} className="rounded-xl border border-line bg-surface-1/60 p-4" style={{ borderLeft: `3px solid ${meta.color}` }}>
+            <div
+              key={idx}
+              onClick={go}
+              className={`rounded-xl border border-line bg-surface-1/60 p-4 ${go ? 'cursor-pointer transition-colors hover:border-line-mid hover:bg-surface-2/50' : ''}`}
+              style={{ borderLeft: `3px solid ${meta.color}` }}
+            >
               <div className="flex items-center gap-2 font-semibold text-ink">
                 <span style={{ color: meta.color }}><Icon name={meta.iconId as IconName} size={14} /></span>
-                <span dangerouslySetInnerHTML={{ __html: i.headline }} />
+                <span className="flex-1" dangerouslySetInnerHTML={{ __html: i.headline }} />
+                {go && <span className="text-ink-3"><Icon name="trend-up" size={14} className="rotate-45" /></span>}
               </div>
               <div className="mt-1 text-sm text-ink-2" dangerouslySetInnerHTML={{ __html: i.body }} />
               {i.evidence && <div className="mt-1.5 text-xs text-ink-3" dangerouslySetInnerHTML={{ __html: i.evidence }} />}

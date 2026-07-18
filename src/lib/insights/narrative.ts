@@ -40,19 +40,24 @@ function buildPlayerBundle(ref: string | number, data: any): any {
   };
 }
 
-// ── Headline rating: percentile among positional peers ───────────────────────
-// With fixtures: blended form × fixture ease = a captain rating.
-// Between seasons: season overall score = a season rating. Never a stale
-// "captain" number when no fixtures exist.
+// ── Headline rating (0–100) ──────────────────────────────────────────────────
+// Between seasons: the season overall rating (season_overall_score × 20), the
+// SAME number shown on the Rankings/Players ratings — never a peer percentile,
+// so a player's rating is one consistent figure everywhere.
+// With fixtures: a captain rating = blended form × fixture ease, expressed as a
+// percentile among in-form peers (a genuinely different, fixture-aware number,
+// labelled "Captain rating").
 function ratingPercentile(bundle: any, data: any): number | null {
   const { r, hasFixtures } = bundle;
+  if (!hasFixtures) {
+    const s = num(r.season_overall_score);
+    return s == null ? null : Math.round(Math.max(0, Math.min(100, s * 20)));
+  }
   const broad = (p: string) => (p === 'GKP' ? 'GKP' : p === 'DEF' ? 'DEF' : 'ATT');
   const peers = (data.ratings || []).filter((x: any) =>
     x.season_ok && broad(x.position) === broad(r.position) &&
     ((num(x.gw4_start_rate) ?? num(x.season_start_rate) ?? 0) >= 0.7));
-  const scoreOf = hasFixtures
-    ? (x: any) => (blendedScore(x) ?? 0) * (num(x.next4_fixture_factor) ?? 1)
-    : (x: any) => num(x.season_overall_score) ?? 0;
+  const scoreOf = (x: any) => (blendedScore(x) ?? 0) * (num(x.next4_fixture_factor) ?? 1);
   const mine = scoreOf(r);
   if (!peers.length || mine == null) return null;
   const below = peers.filter((x: any) => scoreOf(x) < mine).length;

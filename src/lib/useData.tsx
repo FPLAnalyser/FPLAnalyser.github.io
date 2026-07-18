@@ -15,9 +15,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let alive = true
-    loadCore()
-      .then((data) => alive && setState({ data, error: null }))
-      .catch((error) => alive && setState({ data: null, error }))
+    let attempts = 0
+    const attempt = () => {
+      loadCore()
+        .then((data) => alive && setState({ data, error: null }))
+        .catch((error) => {
+          if (!alive) return
+          attempts++
+          if (attempts < 4) setTimeout(attempt, 600 * attempts)
+          else setState({ data: null, error })
+        })
+    }
+    attempt()
     return () => {
       alive = false
     }
@@ -51,10 +60,19 @@ export function useLazyTable<T = unknown>(name: string | null): LazyState<T> {
       return
     }
     let alive = true
+    let attempts = 0
     setState({ data: null, loading: true, error: null })
-    loadTable<T>(name)
-      .then((data) => alive && setState({ data, loading: false, error: null }))
-      .catch((error) => alive && setState({ data: null, loading: false, error }))
+    const attempt = () => {
+      loadTable<T>(name)
+        .then((data) => alive && setState({ data, loading: false, error: null }))
+        .catch((error) => {
+          if (!alive) return
+          attempts++
+          if (attempts < 4) setTimeout(attempt, 600 * attempts)
+          else setState({ data: null, loading: false, error })
+        })
+    }
+    attempt()
     return () => {
       alive = false
     }

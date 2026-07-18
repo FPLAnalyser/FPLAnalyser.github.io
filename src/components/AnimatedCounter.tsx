@@ -19,6 +19,7 @@ interface Props {
   prefix?: string
   suffix?: string
   className?: string
+  style?: React.CSSProperties
   duration?: number
 }
 
@@ -26,7 +27,7 @@ interface Props {
  * Counts up from 0 to `value` when scrolled into view (fx.js animateCounters
  * equivalent). Renders the final value immediately under reduced motion.
  */
-export function AnimatedCounter({ value, format = 'int', prefix = '', suffix = '', className, duration = 650 }: Props) {
+export function AnimatedCounter({ value, format = 'int', prefix = '', suffix = '', className, style, duration = 650 }: Props) {
   const ref = useRef<HTMLSpanElement>(null)
   const inView = useInView(ref, { once: true, amount: 0.4 })
   const reduced = useReducedMotion()
@@ -50,7 +51,7 @@ export function AnimatedCounter({ value, format = 'int', prefix = '', suffix = '
   }, [inView, value, reduced, duration])
 
   return (
-    <span ref={ref} className={className}>
+    <span ref={ref} className={className} style={style}>
       {prefix}
       {isNaN(value) ? '—' : fmt(display, format)}
       {suffix}

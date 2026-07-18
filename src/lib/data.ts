@@ -16,23 +16,35 @@ const BASE = 'https://raw.githubusercontent.com/stefcourt2004-png/fpl-analyser/m
 // never fetch a table twice (covers eager core tables and lazy big tables).
 const cache = new Map<string, Promise<unknown>>()
 
+// Fetch a table, trying the local copy then the published main branch, with a
+// few retries to ride out flaky mobile networks / a racing service worker.
+async function fetchTable<T>(name: string): Promise<T> {
+  let lastErr: unknown
+  for (let attempt = 0; attempt < 3; attempt++) {
+    for (const url of [`site_data/${name}.json`, `${BASE}site_data/${name}.json`]) {
+      try {
+        const r = await fetch(url, { cache: 'no-cache' })
+        if (r.ok) return (await r.json()) as T
+      } catch (e) {
+        lastErr = e
+      }
+    }
+    if (attempt < 2) await new Promise((res) => setTimeout(res, 350 * (attempt + 1)))
+  }
+  throw lastErr ?? new Error(`no source for table ${name}`)
+}
+
 export function loadTable<T = Row[]>(name: string): Promise<T> {
   const existing = cache.get(name)
   if (existing) return existing as Promise<T>
 
-  const promise = (async () => {
-    for (const url of [`site_data/${name}.json`, `${BASE}site_data/${name}.json`]) {
-      try {
-        const r = await fetch(url)
-        if (r.ok) return (await r.json()) as T
-      } catch {
-        /* try next source */
-      }
-    }
-    throw new Error(`no source for table ${name}`)
-  })()
-
+  const promise = fetchTable<T>(name)
   cache.set(name, promise)
+  // On failure, evict so the next caller retries instead of reusing a rejected
+  // promise (which previously left the page stuck until a full page reload).
+  promise.catch(() => {
+    if (cache.get(name) === promise) cache.delete(name)
+  })
   return promise
 }
 
@@ -50,7 +62,7 @@ let corePromise: Promise<CoreData> | null = null
 /** Loads and caches the core tables needed across most pages. */
 export function loadCore(): Promise<CoreData> {
   if (corePromise) return corePromise
-  corePromise = (async () => {
+  const p = (async () => {
     const [
       ratings,
       personas4,
@@ -96,6 +108,11 @@ export function loadCore(): Promise<CoreData> {
       playerForm,
     }
   })()
+  corePromise = p
+  // Reset on failure so a later mount/navigation can retry the core load.
+  p.catch(() => {
+    if (corePromise === p) corePromise = null
+  })
   return corePromise
 }
 

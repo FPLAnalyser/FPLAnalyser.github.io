@@ -17,52 +17,69 @@ const TONE_COLOR: Record<Tone, string> = {
 
 const solidTone = (tone: Tone) => TONE_COLOR[tone]
 
-/** Radial gauge: value out of max as a rounded donut arc with count-up centre. */
+/**
+ * Radial gauge: value out of max as a rounded gradient arc with a count-up
+ * centre and a `/max` suffix. The label sits BELOW the ring so long labels
+ * (e.g. "Season rating") never get clipped inside the circle.
+ */
 export function RadialGauge({
   value,
   max = 100,
   label = '',
   size = 108,
   tone = 'accent',
+  showMax = true,
 }: {
   value: number | null
   max?: number
   label?: string
   size?: number
   tone?: Tone
+  showMax?: boolean
 }) {
   const reduced = useReducedMotion()
+  const gid = useId()
   if (value == null || isNaN(value)) return null
-  const stroke = 8
+  const stroke = Math.max(8, Math.round(size * 0.1))
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
   const frac = Math.max(0, Math.min(1, value / max))
   const color = TONE_COLOR[tone]
+  const color2 = tone === 'accent' ? 'var(--accent-2)' : color
   return (
-    <div className="relative inline-grid place-items-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-3)" strokeWidth={stroke} />
-        <motion.circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke={color}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-          strokeDasharray={c}
-          initial={reduced ? false : { strokeDashoffset: c }}
-          whileInView={{ strokeDashoffset: c - frac * c }}
-          viewport={{ once: true, amount: 0.4 }}
-          transition={{ duration: 0.9, ease: 'easeOut' }}
-          style={reduced ? { strokeDashoffset: c - frac * c } : undefined}
-        />
-      </svg>
-      <div className="absolute flex flex-col items-center">
-        <AnimatedCounter value={value} className="font-num text-2xl font-semibold text-ink" />
-        {label && <div className="mt-0.5 text-[11px] tracking-wide text-ink-2 uppercase">{label}</div>}
+    <div className="inline-flex flex-col items-center gap-2">
+      <div className="relative inline-grid place-items-center" style={{ width: size, height: size }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+          <defs>
+            <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor={color} />
+              <stop offset="100%" stopColor={color2} />
+            </linearGradient>
+          </defs>
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-3)" strokeWidth={stroke} />
+          <motion.circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            stroke={`url(#${gid})`}
+            strokeWidth={stroke}
+            strokeLinecap="round"
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+            strokeDasharray={c}
+            initial={reduced ? false : { strokeDashoffset: c }}
+            whileInView={{ strokeDashoffset: c - frac * c }}
+            viewport={{ once: true, amount: 0.4 }}
+            transition={{ duration: 0.9, ease: 'easeOut' }}
+            style={reduced ? { strokeDashoffset: c - frac * c } : undefined}
+          />
+        </svg>
+        <div className="absolute flex items-baseline gap-0.5 leading-none">
+          <AnimatedCounter value={value} className="font-num font-bold text-ink" style={{ fontSize: Math.round(size * 0.3) }} />
+          {showMax && <span className="font-num font-semibold text-ink-3" style={{ fontSize: Math.round(size * 0.13) }}>/{max}</span>}
+        </div>
       </div>
+      {label && <div className="max-w-28 text-center text-[10px] font-semibold tracking-[0.1em] text-ink-3 uppercase">{label}</div>}
     </div>
   )
 }

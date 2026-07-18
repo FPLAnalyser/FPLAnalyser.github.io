@@ -17,7 +17,7 @@ const TIER_CLASS: Record<Tier, string> = {
   elite: 'text-accent bg-accent-soft',
   strong: 'text-good bg-good/10',
   fair: 'text-ink-2 bg-surface-3',
-  weak: 'text-ink-3 bg-surface-3',
+  weak: 'text-bad bg-bad/10', // anything under 50 flags red
 }
 
 /**

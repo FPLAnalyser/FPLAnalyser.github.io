@@ -140,7 +140,7 @@ export function GlobalSearch({
           value={q}
           placeholder="Search players & teams…"
           autoComplete="off"
-          className="min-h-11 w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-3"
+          className="min-h-11 w-full bg-transparent text-base text-ink outline-none placeholder:text-ink-3 md:text-sm"
           onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(0) }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}

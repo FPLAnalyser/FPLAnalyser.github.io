@@ -5,11 +5,15 @@ import { PageHeader, PageShell } from '../components/PageShell'
 import { SearchBox } from '../components/SearchBox'
 import { Tabs, type TabDef } from '../components/Tabs'
 import { TeamBadge } from '../components/badges'
+import { InfoTip } from '../components/InfoTip'
 import { Icon } from '../components/Icon'
 import { useCore, useLazyTable } from '../lib/useData'
+import { distanceYards } from '../lib/shotzones'
 import { num, str } from '../lib/rows'
 import { teamFullNames } from '../lib/util'
 import type { RatingRow, Row } from '../lib/types'
+
+interface TeamDist { avg: number; pct: number }
 
 const SCOUT_MAX = 4
 const SCOUT_COLORS = ['#5EA7F7', '#E8A13C', '#E2649B', '#8B7BF4']
@@ -60,6 +64,31 @@ export default function Scouting() {
   const scout = scoutQ.data ?? []
   const scoutMeta = metaQ.data ?? []
 
+  // Team avg distance of shots faced (from shots_conceded) → a keeper-relevant
+  // defensive stat: further out = the defence forces harder chances.
+  // shots_conceded is an object keyed by the conceding team → array of shots faced.
+  const concededQ = useLazyTable<Record<string, Row[]>>('shots_conceded')
+  const teamDist = useMemo(() => {
+    const out = new Map<string, TeamDist>()
+    const bag = concededQ.data
+    if (!bag || typeof bag !== 'object') return out
+    const avg = new Map<string, number>()
+    for (const [team, shots] of Object.entries(bag)) {
+      if (!Array.isArray(shots)) continue
+      let d = 0, n = 0
+      for (const s of shots) {
+        if (s?.x == null || s?.y == null) continue
+        d += distanceYards(s.x as number, s.y as number)
+        n += 1
+      }
+      if (n > 0) avg.set(team, d / n)
+    }
+    const sorted = [...avg.values()].sort((a, b) => a - b)
+    const pctOf = (v: number) => (sorted.length < 2 ? 50 : Math.round((sorted.filter((x) => x < v).length / (sorted.length - 1)) * 100))
+    for (const [t, v] of avg) out.set(t, { avg: v, pct: pctOf(v) })
+    return out
+  }, [concededQ.data])
+
   // element -> price (from core ratings) for the Discover price filter.
   const priceMap = useMemo(() => {
     const m = new Map<number, number>()
@@ -103,7 +132,10 @@ export default function Scouting() {
       <div className="mb-4"><Tabs tabs={MODE_TABS} active={mode} onChange={(id) => setMode(id as ScoutMode)} layoutId="scout-mode" /></div>
 
       <div className="mb-3"><Tabs tabs={WIN_TABS} active={win} onChange={(id) => setWin(id as ScoutWin)} layoutId="scout-win" /></div>
-      <div className="mb-4"><Tabs tabs={PEER_TABS} active={peer} onChange={(id) => setPeer(id as ScoutPeer)} layoutId="scout-peer" /></div>
+      <div className="mb-4 flex items-center gap-2">
+        <Tabs tabs={PEER_TABS} active={peer} onChange={(id) => setPeer(id as ScoutPeer)} layoutId="scout-peer" />
+        <InfoTip text="MID + FWD pooled ranks every midfielder and forward together in one attacking pool — good for comparing a winger against a striker. By position ranks each player only against others in their exact position (GKP/DEF/MID/FWD)." />
+      </div>
 
       {mode === 'discover' ? (
         loading ? (
@@ -158,7 +190,7 @@ export default function Scouting() {
           <div className="mt-1 text-sm text-ink-3">Percentiles ranked within peer group, {WINDOW_LABELS[win]}.</div>
         </div>
       ) : (
-        <ScoutReport selected={selected} scoutMeta={scoutMeta} scoutRow={scoutRow} scoutPct={scoutPct} win={win} reduced={!!reduced} />
+        <ScoutReport selected={selected} scoutMeta={scoutMeta} scoutRow={scoutRow} scoutPct={scoutPct} teamDist={teamDist} win={win} reduced={!!reduced} />
       )}
       </>
       )}
@@ -277,7 +309,7 @@ function Discover({
             <select
               value=""
               onChange={(e) => { if (e.target.value) setCriteria((cs) => [...cs, { key: e.target.value, min: 60 }]) }}
-              className="min-h-9 rounded-lg border border-line-mid bg-surface-2 px-3 text-sm text-ink-2"
+              className="min-h-11 rounded-lg border border-line-mid bg-surface-2 px-3 text-base text-ink-2 md:min-h-9 md:text-sm"
             >
               <option value="">+ Add metric filter…</option>
               {available.map((m) => <option key={str(m, 'key')} value={str(m, 'key')!}>{String(m.label)}</option>)}
@@ -296,34 +328,39 @@ function Discover({
       ) : (
         <div className="flex flex-col">
           {shown.map(({ p, price, mins, pcts, score }, idx) => (
-            <div key={p.element} className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line py-2.5 last:border-0">
-              <span className="w-6 shrink-0 text-center font-num text-xs tabular-nums text-ink-3">{idx + 1}</span>
-              <button className="min-w-0 flex-1 text-left" onClick={() => navigate(`/player?name=${encodeURIComponent(p.web_name)}`)}>
-                <div className="truncate font-medium text-ink hover:text-accent">{p.web_name}</div>
-                <div className="flex items-center gap-1.5 text-[11px] text-ink-3"><TeamBadge team={p.team} size={11} />{p.team} · {p.position} · {price != null ? `£${price.toFixed(1)}m` : '—'} · {mins} mins</div>
-              </button>
+            <div key={p.element} className="border-b border-line py-2.5 last:border-0">
+              {/* Name row — never competes with the metric pills for width. */}
+              <div className="flex items-center gap-3">
+                <span className="w-6 shrink-0 text-center font-num text-xs tabular-nums text-ink-3">{idx + 1}</span>
+                <button className="min-w-0 flex-1 text-left" onClick={() => navigate(`/player?name=${encodeURIComponent(p.web_name)}`)}>
+                  <div className="truncate font-medium text-ink hover:text-accent">{p.web_name}</div>
+                  <div className="flex items-center gap-1.5 truncate text-[11px] text-ink-3"><TeamBadge team={p.team} size={11} />{p.team} · {p.position} · {price != null ? `£${price.toFixed(1)}m` : '—'} · {mins} mins</div>
+                </button>
+                {activeCriteria.length > 0 && (
+                  <span className="shrink-0 text-right">
+                    <span className="font-num text-base font-semibold tabular-nums" style={{ color: pctColor(score) }}>{Math.round(score)}</span>
+                    <span className="ml-0.5 text-[10px] text-ink-3">match</span>
+                  </span>
+                )}
+                <button
+                  aria-label={`Compare ${p.web_name}`}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-line-mid text-ink-2 transition-colors hover:border-accent hover:text-accent"
+                  onClick={() => onAdd(p)}
+                >
+                  <Icon name="check" size={14} />
+                </button>
+              </div>
+              {/* Metric pills wrap freely on their own row. */}
               {activeCriteria.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5">
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5 pl-9">
                   {activeCriteria.map((c, i) => (
                     <span key={c.key} className="inline-flex items-center gap-1 rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px]">
-                      <span className="text-ink-3">{metricLabel(c.key).split(' ')[0]}</span>
+                      <span className="text-ink-3">{metricLabel(c.key)}</span>
                       <span className="font-num tabular-nums" style={{ color: pctColor(pcts[i]) }}>{pcts[i] ?? '—'}</span>
                     </span>
                   ))}
                 </div>
               )}
-              <span className="w-11 shrink-0 text-right">
-                {activeCriteria.length > 0
-                  ? <span className="font-num text-sm font-semibold tabular-nums" style={{ color: pctColor(score) }}>{Math.round(score)}</span>
-                  : <span className="font-num text-xs tabular-nums text-ink-3">{mins}′</span>}
-              </span>
-              <button
-                aria-label={`Compare ${p.web_name}`}
-                className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-line-mid text-ink-2 transition-colors hover:border-accent hover:text-accent"
-                onClick={() => onAdd(p)}
-              >
-                <Icon name="check" size={14} />
-              </button>
             </div>
           ))}
         </div>
@@ -333,12 +370,13 @@ function Discover({
 }
 
 function ScoutReport({
-  selected, scoutMeta, scoutRow, scoutPct, win, reduced,
+  selected, scoutMeta, scoutRow, scoutPct, teamDist, win, reduced,
 }: {
   selected: SelPlayer[]
   scoutMeta: Row[]
   scoutRow: (el: number) => Row | null
   scoutPct: (row: Row, key: string) => number | null
+  teamDist: Map<string, TeamDist>
   win: ScoutWin
   reduced: boolean
 }) {
@@ -479,6 +517,50 @@ function ScoutReport({
           </div>
         </div>
       ))}
+
+      {gkMode && teamDist.size > 0 && (
+        <div className="mb-4">
+          <div className="mb-1.5 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Team Defence</div>
+          <div className="flex items-center gap-3 border-b border-line py-2 last:border-0">
+            <div className="flex w-36 shrink-0 items-center gap-1 text-sm text-ink-2 md:w-44">
+              Avg Shot Distance Against
+              <InfoTip text="Average distance of the shots the keeper's team faces. Further out = the defence forces harder chances, which helps the keeper. Percentile is vs all teams." />
+            </div>
+            <div className="grid flex-1 gap-3" style={{ gridTemplateColumns: `repeat(${shown.length}, minmax(0,1fr))` }}>
+              {shown.map((s, i) => {
+                const td = teamDist.get(s.sel.team)
+                if (!td) {
+                  return (
+                    <div key={i} className="min-w-0">
+                      <div className="flex items-baseline justify-between text-xs"><span className="text-ink-3">—</span><span className="text-ink-3">n/a</span></div>
+                      <div className="mt-1 h-1.5 rounded-full bg-surface-3" />
+                    </div>
+                  )
+                }
+                const color = multi ? SCOUT_COLORS[i] : pctColor(td.pct)
+                return (
+                  <div key={i} className="min-w-0">
+                    <div className="flex items-baseline justify-between text-xs">
+                      <span className="font-num font-medium tabular-nums text-ink">{td.avg.toFixed(1)} yd</span>
+                      <span className="font-num tabular-nums text-ink-2">{td.pct}</span>
+                    </div>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-3">
+                      <motion.div
+                        className="h-full rounded-full"
+                        style={{ background: `linear-gradient(90deg, color-mix(in srgb, ${color} 72%, transparent), ${color})` }}
+                        initial={reduced ? false : { width: 0 }}
+                        whileInView={{ width: `${td.pct}%` }}
+                        viewport={{ once: true, amount: 0.3 }}
+                        transition={{ duration: 0.7, ease: 'easeOut' }}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
