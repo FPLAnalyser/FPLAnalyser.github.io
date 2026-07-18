@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { createHashRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { PageSkeleton } from './components/Skeleton'
@@ -22,12 +22,23 @@ function lazyRetry(factory: () => Promise<{ default: React.ComponentType<unknown
   })
 }
 
-const Home = lazyRetry(() => import('./pages/Home'))
-const Players = lazyRetry(() => import('./pages/Players'))
-const Teams = lazyRetry(() => import('./pages/Teams'))
-const Rankings = lazyRetry(() => import('./pages/Rankings'))
-const MyTeam = lazyRetry(() => import('./pages/MyTeam'))
-const Scouting = lazyRetry(() => import('./pages/Scouting'))
+const PAGE_LOADERS = {
+  home: () => import('./pages/Home'),
+  players: () => import('./pages/Players'),
+  teams: () => import('./pages/Teams'),
+  rankings: () => import('./pages/Rankings'),
+  myteam: () => import('./pages/MyTeam'),
+  scouting: () => import('./pages/Scouting'),
+  fixtures: () => import('./pages/Fixtures'),
+}
+
+const Home = lazyRetry(PAGE_LOADERS.home)
+const Players = lazyRetry(PAGE_LOADERS.players)
+const Teams = lazyRetry(PAGE_LOADERS.teams)
+const Rankings = lazyRetry(PAGE_LOADERS.rankings)
+const MyTeam = lazyRetry(PAGE_LOADERS.myteam)
+const Scouting = lazyRetry(PAGE_LOADERS.scouting)
+const Fixtures = lazyRetry(PAGE_LOADERS.fixtures)
 
 const page = (el: React.ReactNode) => <Suspense fallback={<PageSkeleton />}>{el}</Suspense>
 
@@ -42,6 +53,7 @@ const router = createHashRouter([
       { path: 'player', element: page(<Players />) },
       { path: 'teams', element: page(<Teams />) },
       { path: 'rankings', element: page(<Rankings />) },
+      { path: 'fixtures', element: page(<Fixtures />) },
       { path: 'loadteam', element: page(<MyTeam />) },
       { path: 'scout', element: page(<Scouting />) },
       { path: '*', element: <Navigate to="/" replace /> },
@@ -50,6 +62,17 @@ const router = createHashRouter([
 ])
 
 export default function App() {
+  // Warm every route chunk once the first page has painted, so tapping a tab
+  // never waits on a network fetch (chunks are tiny and SW-precached after this).
+  useEffect(() => {
+    const warm = () => Object.values(PAGE_LOADERS).forEach((load) => load().catch(() => {}))
+    const idle = (window as { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback
+    const id = idle ? idle(warm) : window.setTimeout(warm, 1500)
+    return () => {
+      if (!idle) window.clearTimeout(id as number)
+    }
+  }, [])
+
   return (
     <ThemeProvider>
       <DataProvider>

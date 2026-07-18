@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion, useReducedMotion } from 'framer-motion'
 import { PageHeader, PageShell } from '../components/PageShell'
 import { SearchBox } from '../components/SearchBox'
 import { Tabs, type TabDef } from '../components/Tabs'
@@ -27,16 +26,45 @@ const WIN_TABS: TabDef[] = [
   { id: 'l6', label: 'Last 6 GWs' },
   { id: 'l4', label: 'Last 4 GWs' },
 ]
-const PEER_TABS: TabDef[] = [
-  { id: 'pooled', label: 'MID + FWD pooled' },
-  { id: 'position', label: 'By position' },
-]
 const MODE_TABS: TabDef[] = [
   { id: 'compare', label: 'Compare' },
   { id: 'discover', label: 'Discover' },
 ]
 const POSITIONS = ['All', 'GKP', 'DEF', 'MID', 'FWD'] as const
 type ScoutMode = 'compare' | 'discover'
+
+// Per-metric explainers (scouting_meta carries no descriptions).
+const SCOUT_TIPS: Record<string, string> = {
+  goals: 'Total goals scored in the window. The percentile compares goals per 90 minutes against the peer group.',
+  npxg: 'Non-penalty expected goals per 90 — chance quality from open play and set pieces, penalties excluded.',
+  xg_delta: 'Goals minus xG. Positive = finishing above expectation (clinical); negative = leaving chances unconverted.',
+  xgi: 'Expected goal involvements per 90 (xG + xA) — total attacking threat, scoring and creating combined.',
+  xgi_delta: 'Actual goals + assists minus xGI. Positive = returns running above the underlying numbers.',
+  shots: 'Total shots taken per 90 minutes.',
+  sot: 'Shots on target per 90 — volume that actually tests the keeper.',
+  box_shots: 'Shots taken inside the penalty box per 90 — the highest-value shot locations.',
+  headed_shots: 'Headed shots per 90 — aerial threat, mostly from crosses and set pieces.',
+  fk_shots: 'Direct free-kick shots per 90.',
+  touches_box: "Touches inside the opponent's box per 90 — how often they get into dangerous areas.",
+  avg_shot_distance: 'Average distance of their shots from goal, in yards. Closer usually means better-quality chances.',
+  assists: 'Total assists in the window. The percentile compares assists per 90 against the peer group.',
+  xa: 'Expected assists per 90 — the quality of chances created for teammates.',
+  xa_delta: 'Assists minus xA. Positive = teammates converting their chances at an above-expected rate.',
+  chances_created: 'Passes leading directly to a shot, per 90.',
+  big_chances: 'Big chances created per 90 — passes leading to a clear scoring opportunity.',
+  xg_chain: 'xG of every attacking move the player was involved in, per 90 — credit for build-up, not just the final action.',
+  xg_buildup: 'xG Chain excluding shots and key passes — pure build-up involvement deep in moves.',
+  crosses: 'Completed open-play crosses per 90.',
+  sp_deliveries: 'Set-piece deliveries per 90 (corners and free-kick crosses taken).',
+  tackles: 'Tackles won per 90.',
+  cbi: 'Clearances, blocks and interceptions per 90 — core defensive volume.',
+  recoveries: 'Ball recoveries per 90 — winning loose balls back for the team.',
+  def_contrib: "FPL's defensive-contribution count per 90 — the stat behind DC bonus points.",
+  saves: 'Saves per 90 minutes. High volume usually means a busy keeper behind a leaky defence.',
+  cs: 'Clean sheets per 90 (share of games without conceding).',
+  xgc_prevented: 'Expected goals conceded minus actual goals conceded — shot-stopping above or below expectation.',
+  bps: 'Bonus point system score per 90 — how often the keeper racks up bonus-relevant actions.',
+}
 
 // FBref-style percentile colour: red (poor) → grey → green (elite).
 function pctColor(p: number | null): string {
@@ -59,7 +87,6 @@ export default function Scouting() {
   const [selected, setSelected] = useState<SelPlayer[]>([])
   const [win, setWin] = useState<ScoutWin>('season')
   const [peer, setPeer] = useState<ScoutPeer>('pooled')
-  const reduced = useReducedMotion()
 
   const scout = scoutQ.data ?? []
   const scoutMeta = metaQ.data ?? []
@@ -132,9 +159,24 @@ export default function Scouting() {
       <div className="mb-4"><Tabs tabs={MODE_TABS} active={mode} onChange={(id) => setMode(id as ScoutMode)} layoutId="scout-mode" /></div>
 
       <div className="mb-3"><Tabs tabs={WIN_TABS} active={win} onChange={(id) => setWin(id as ScoutWin)} layoutId="scout-win" /></div>
-      <div className="mb-4 flex items-center gap-2">
-        <Tabs tabs={PEER_TABS} active={peer} onChange={(id) => setPeer(id as ScoutPeer)} layoutId="scout-peer" />
-        <InfoTip text="MID + FWD pooled ranks every midfielder and forward together in one attacking pool — good for comparing a winger against a striker. By position ranks each player only against others in their exact position (GKP/DEF/MID/FWD)." />
+      {/* Peer group as pills, each with its own explainer. */}
+      <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+        {([
+          ['pooled', 'MID + FWD pooled', 'Ranks every midfielder and forward together in one attacking pool — good for comparing a winger against a striker on the same scale.'],
+          ['position', 'By position', 'Ranks each player only against others in their exact position (GKP / DEF / MID / FWD) — good for judging how a player stacks up in their own role.'],
+        ] as [ScoutPeer, string, string][]).map(([id, label, tip]) => (
+          <span key={id} className="flex items-center gap-1.5">
+            <button
+              onClick={() => setPeer(id)}
+              className={`min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${
+                peer === id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+              }`}
+            >
+              {label}
+            </button>
+            <InfoTip text={tip} />
+          </span>
+        ))}
       </div>
 
       {mode === 'discover' ? (
@@ -190,7 +232,7 @@ export default function Scouting() {
           <div className="mt-1 text-sm text-ink-3">Percentiles ranked within peer group, {WINDOW_LABELS[win]}.</div>
         </div>
       ) : (
-        <ScoutReport selected={selected} scoutMeta={scoutMeta} scoutRow={scoutRow} scoutPct={scoutPct} teamDist={teamDist} win={win} reduced={!!reduced} />
+        <ScoutReport selected={selected} scoutMeta={scoutMeta} scoutRow={scoutRow} scoutPct={scoutPct} teamDist={teamDist} win={win} />
       )}
       </>
       )}
@@ -370,7 +412,7 @@ function Discover({
 }
 
 function ScoutReport({
-  selected, scoutMeta, scoutRow, scoutPct, teamDist, win, reduced,
+  selected, scoutMeta, scoutRow, scoutPct, teamDist, win,
 }: {
   selected: SelPlayer[]
   scoutMeta: Row[]
@@ -378,7 +420,6 @@ function ScoutReport({
   scoutPct: (row: Row, key: string) => number | null
   teamDist: Map<string, TeamDist>
   win: ScoutWin
-  reduced: boolean
 }) {
   const warnings: string[] = []
   const hasGK = selected.some((p) => p.position === 'GKP')
@@ -391,6 +432,8 @@ function ScoutReport({
   if (missing.length) warnings.push(`No ${WINDOW_LABELS[win]} data for ${missing.join(', ')} — not enough minutes in this window.`)
 
   const gkMode = shownSel.every((p) => p.position === 'GKP')
+  // Shot-distance-against applies to any defensive asset (keepers and defenders).
+  const defensiveMode = shownSel.length > 0 && shownSel.every((p) => p.position === 'GKP' || p.position === 'DEF')
   const rows = scoutMeta.filter((m) => (gkMode ? str(m, 'group') === 'Goalkeeping' : str(m, 'group') !== 'Goalkeeping'))
   const multi = shown.length > 1
 
@@ -453,17 +496,16 @@ function ScoutReport({
       {verdict}
 
       {multi && (
-        <div className="mb-2 flex items-center gap-3 px-1">
-          <div className="w-36 shrink-0 md:w-44" />
-          <div className="grid flex-1 gap-3" style={{ gridTemplateColumns: `repeat(${shown.length}, minmax(0,1fr))` }}>
-            {shown.map((s, i) => (
-              <div key={i} className="flex items-center gap-1.5 text-xs font-semibold text-ink">
-                <span className="size-2.5 rounded-full" style={{ background: SCOUT_COLORS[i] }} />
-                {s.sel.web_name}
-                <span className="flex items-center gap-1 font-normal text-ink-3"><TeamBadge team={s.sel.team} size={10} />{s.sel.team}</span>
-              </div>
-            ))}
-          </div>
+        // Wrapped chip legend — column-aligned names collided once 3-4 players
+        // were selected on a phone.
+        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 px-1">
+          {shown.map((s, i) => (
+            <span key={i} className="flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap text-ink">
+              <span className="size-2.5 shrink-0 rounded-full" style={{ background: SCOUT_COLORS[i] }} />
+              {s.sel.web_name}
+              <span className="flex items-center gap-1 font-normal text-ink-3"><TeamBadge team={s.sel.team} size={10} />{s.sel.team}</span>
+            </span>
+          ))}
         </div>
       )}
 
@@ -475,7 +517,9 @@ function ScoutReport({
               const key = str(m, 'key')!
               return (
                 <div key={key} className="flex items-center gap-3 border-b border-line py-2 last:border-0">
-                  <div className="w-36 shrink-0 text-sm text-ink-2 md:w-44">{String(m.label)}</div>
+                  <div className="w-36 shrink-0 text-sm text-ink-2 md:w-44">
+                    <span className="inline-flex items-center gap-1">{String(m.label)}{SCOUT_TIPS[key] && <InfoTip text={SCOUT_TIPS[key]} />}</span>
+                  </div>
                   <div className="grid flex-1 gap-3" style={{ gridTemplateColumns: `repeat(${shown.length}, minmax(0,1fr))` }}>
                     {shown.map((s, i) => {
                       const raw = s.row ? s.row[`${key}_per90`] : null
@@ -498,13 +542,9 @@ function ScoutReport({
                             <span className="font-num tabular-nums text-ink-2">{pct ?? '—'}</span>
                           </div>
                           <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-3">
-                            <motion.div
+                            <div
                               className="h-full rounded-full"
-                              style={{ background: `linear-gradient(90deg, color-mix(in srgb, ${color} 72%, transparent), ${color})` }}
-                              initial={reduced ? false : { width: 0 }}
-                              whileInView={{ width: `${pct ?? 0}%` }}
-                              viewport={{ once: true, amount: 0.3 }}
-                              transition={{ duration: 0.7, ease: 'easeOut' }}
+                              style={{ width: `${pct ?? 0}%`, background: `linear-gradient(90deg, color-mix(in srgb, ${color} 72%, transparent), ${color})` }}
                             />
                           </div>
                         </div>
@@ -518,13 +558,13 @@ function ScoutReport({
         </div>
       ))}
 
-      {gkMode && teamDist.size > 0 && (
+      {defensiveMode && teamDist.size > 0 && (
         <div className="mb-4">
           <div className="mb-1.5 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Team Defence</div>
           <div className="flex items-center gap-3 border-b border-line py-2 last:border-0">
             <div className="flex w-36 shrink-0 items-center gap-1 text-sm text-ink-2 md:w-44">
-              Avg Shot Distance Against
-              <InfoTip text="Average distance of the shots the keeper's team faces. Further out = the defence forces harder chances, which helps the keeper. Percentile is vs all teams." />
+              <span className="inline-flex items-center gap-1">Avg Shot Distance Against
+              <InfoTip text="Average distance of the shots this player's team faces. Further out = the defence forces opponents into harder chances — good for clean sheets. Percentile is vs all 20 teams." /></span>
             </div>
             <div className="grid flex-1 gap-3" style={{ gridTemplateColumns: `repeat(${shown.length}, minmax(0,1fr))` }}>
               {shown.map((s, i) => {
@@ -545,13 +585,9 @@ function ScoutReport({
                       <span className="font-num tabular-nums text-ink-2">{td.pct}</span>
                     </div>
                     <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-3">
-                      <motion.div
+                      <div
                         className="h-full rounded-full"
-                        style={{ background: `linear-gradient(90deg, color-mix(in srgb, ${color} 72%, transparent), ${color})` }}
-                        initial={reduced ? false : { width: 0 }}
-                        whileInView={{ width: `${td.pct}%` }}
-                        viewport={{ once: true, amount: 0.3 }}
-                        transition={{ duration: 0.7, ease: 'easeOut' }}
+                        style={{ width: `${td.pct}%`, background: `linear-gradient(90deg, color-mix(in srgb, ${color} 72%, transparent), ${color})` }}
                       />
                     </div>
                   </div>

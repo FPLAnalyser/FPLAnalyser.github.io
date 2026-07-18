@@ -156,12 +156,15 @@ function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
           <Report picksData={picksData} historyData={historyData} data={data} ownedElements={ownedElements} />
 
           <SectionHeader>Starting XI — Gameweek {gw}</SectionHeader>
-          <div className="rounded-2xl p-2 md:p-5" style={{ background: 'var(--shotmap-surface)' }}>
-            {posGroups.map((rows, i) => rows.length > 0 && (
-              <div key={i} className="flex justify-center gap-1.5 py-1.5 md:gap-3">
-                {rows.map((e, j) => <PitchCard key={j} e={e} data={data} />)}
-              </div>
-            ))}
+          <div className="relative overflow-hidden rounded-2xl p-2 pt-4 md:p-5 md:pt-7" style={{ background: 'var(--shotmap-surface)' }}>
+            <PitchLines />
+            <div className="relative">
+              {posGroups.map((rows, i) => rows.length > 0 && (
+                <div key={i} className="flex justify-center gap-1.5 py-1.5 md:gap-3">
+                  {rows.map((e, j) => <PitchCard key={j} e={e} data={data} />)}
+                </div>
+              ))}
+            </div>
           </div>
 
           {bench.length > 0 && (
@@ -183,6 +186,36 @@ function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
 type SquadTab = 'squad' | 'league'
 const SQUAD_TABS = (hasLeagues: boolean): TabDef[] =>
   hasLeagues ? [{ id: 'squad', label: 'Squad & Report' }, { id: 'league', label: 'Mini-League' }] : [{ id: 'squad', label: 'Squad & Report' }]
+
+/**
+ * Decorative half-pitch markings behind the Starting XI (own goal at the top,
+ * halfway line + centre circle at the bottom). Stretches with the container.
+ */
+function PitchLines() {
+  return (
+    <svg
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      viewBox="0 0 100 140"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <g fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5">
+        <rect x="2" y="2" width="96" height="136" rx="1.5" />
+        {/* penalty area + six-yard box (own goal at the top) */}
+        <rect x="21" y="2" width="58" height="22" />
+        <rect x="36" y="2" width="28" height="8.5" />
+        {/* goal frame */}
+        <rect x="42.5" y="0.7" width="15" height="1.3" stroke="rgba(255,255,255,0.4)" />
+        {/* penalty spot + the D */}
+        <circle cx="50" cy="17.5" r="0.7" fill="rgba(255,255,255,0.3)" stroke="none" />
+        <path d="M 39 24 A 12.5 10.5 0 0 0 61 24" />
+        {/* halfway line + centre circle */}
+        <line x1="2" y1="138" x2="98" y2="138" />
+        <path d="M 37 138 A 13.5 11.5 0 0 1 63 138" />
+      </g>
+    </svg>
+  )
+}
 
 function RatingStat({ label, node }: { label: string; node: ReactNode }) {
   return (
@@ -238,20 +271,25 @@ function Report({ picksData, historyData, data, ownedElements }: { picksData: an
   }, [picksData, historyData, data])
   const navigate = useNavigate()
 
-  // Insights name their subject in the headline; resolve it to a link so tapping
-  // a report card jumps to the relevant player or team page.
+  // Insights name their subject somewhere in the card text; resolve it to a link
+  // so tapping a report card jumps to the relevant player or team page. The
+  // headline alone is not enough — several rules only name the player in the
+  // body or evidence ("Your DEF group is underperforming … X is the weakest link").
   const ownedNames = useMemo(
     () => data.ratings.filter((r) => ownedElements.has(r.element)).map((r) => String(r.web_name)).sort((a, b) => b.length - a.length),
     [data.ratings, ownedElements],
   )
   const teamEntries = useMemo(() => Object.entries(teamFullNames), [])
-  const resolveLink = (headline: string): (() => void) | undefined => {
-    const h = headline.replace(/<[^>]*>/g, '')
-    const name = ownedNames.find((n) => n && h.includes(n))
+  const resolveLink = (i: { headline?: string; body?: string; evidence?: string }): (() => void) | undefined => {
+    const text = [i.headline, i.body, i.evidence]
+      .filter(Boolean)
+      .join(' · ')
+      .replace(/<[^>]*>/g, '')
+    const name = ownedNames.find((n) => n && text.includes(n))
     if (name) return () => navigate(`/player?name=${encodeURIComponent(name)}`)
-    const byFull = teamEntries.find(([, full]) => h.includes(full))
+    const byFull = teamEntries.find(([, full]) => text.includes(full))
     if (byFull) return () => navigate(`/teams?team=${byFull[0]}`)
-    const byCode = teamEntries.find(([code]) => new RegExp(`\\b${code}\\b`).test(h))
+    const byCode = teamEntries.find(([code]) => new RegExp(`\\b${code}\\b`).test(text))
     if (byCode) return () => navigate(`/teams?team=${byCode[0]}`)
     return undefined
   }
@@ -285,7 +323,7 @@ function Report({ picksData, historyData, data, ownedElements }: { picksData: an
       <div className="space-y-3">
         {insights.map((i, idx) => {
           const meta = SEVERITY_META[i.severity] || SEVERITY_META.info
-          const go = resolveLink(String(i.headline))
+          const go = resolveLink(i)
           return (
             <div
               key={idx}

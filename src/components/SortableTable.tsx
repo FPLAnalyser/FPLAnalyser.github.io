@@ -65,7 +65,7 @@ export function SortableTable<T>({ rows, columns, initialSort, initialDir = 'des
 
   return (
     <div className="overflow-x-auto rounded-xl border border-line bg-surface-1/40">
-      <table className="w-full border-collapse text-sm">
+      <table className="w-full border-collapse text-[13px] md:text-sm">
         <thead>
           <tr className="border-b border-line-mid">
             {columns.map((col, i) => {
@@ -75,7 +75,7 @@ export function SortableTable<T>({ rows, columns, initialSort, initialDir = 'des
                 <th
                   key={col.key}
                   onClick={() => onHeaderClick(col)}
-                  className={`px-4 py-3.5 text-[11px] font-semibold tracking-[0.1em] whitespace-nowrap text-ink-3 uppercase ${alignClass[col.align ?? (i === 0 ? 'left' : 'right')]} ${
+                  className={`px-2.5 py-3 text-[10px] font-semibold tracking-[0.08em] whitespace-nowrap text-ink-3 uppercase md:px-4 md:py-3.5 md:text-[11px] md:tracking-[0.1em] ${alignClass[col.align ?? (i === 0 ? 'left' : 'right')]} ${
                     col.sortValue ? 'cursor-pointer select-none hover:text-ink-2' : ''
                   } ${isSticky ? 'sticky left-0 z-10 bg-surface-1' : ''}`}
                 >
@@ -109,7 +109,7 @@ export function SortableTable<T>({ rows, columns, initialSort, initialDir = 'des
                   return (
                     <td
                       key={col.key}
-                      className={`px-4 py-4 ${alignClass[col.align ?? (i === 0 ? 'left' : 'right')]} ${
+                      className={`px-2.5 py-3 md:px-4 md:py-4 ${alignClass[col.align ?? (i === 0 ? 'left' : 'right')]} ${
                         isSticky ? 'sticky left-0 z-10 bg-bg-0' : ''
                       } ${isLeader && i === 0 ? 'shadow-[inset_2px_0_0_var(--accent)]' : ''}`}
                     >

@@ -180,7 +180,7 @@ function buildPlayerVerdict(bundle: any, data: any): any {
   const score = ratingPercentile(bundle, data);
   return {
     score,
-    scoreLabel: hasFixtures ? 'Captain rating' : 'Season rating',
+    scoreLabel: hasFixtures ? 'Captain rating' : 'FPL Analyser rating',
     verdict: score != null ? verdictLabel(score, hasFixtures, hasRisk) : null,
     tone: score == null ? 'info' : hasRisk ? 'warn' : score >= 75 ? 'good' : score >= 35 ? 'info' : 'bad',
     bullets: bullets.slice(0, 5),

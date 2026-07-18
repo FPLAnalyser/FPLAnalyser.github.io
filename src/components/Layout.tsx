@@ -12,6 +12,7 @@ const LINKS: { to: string; label: string }[] = [
   { to: '/player', label: 'Players' },
   { to: '/teams', label: 'Teams' },
   { to: '/rankings', label: 'Rankings' },
+  { to: '/fixtures', label: 'Fixtures' },
   { to: '/scout', label: 'Scouting' },
   { to: '/loadteam', label: 'My Team' },
 ]

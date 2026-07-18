@@ -11,7 +11,7 @@ import { PageSkeleton } from '../components/Skeleton'
 import { EmptyState } from '../components/PageShell'
 import { useCore } from '../lib/useData'
 import { num, str, bool } from '../lib/rows'
-import { ratingToNum } from '../lib/util'
+import { ratingToNum, TOOLTIPS } from '../lib/util'
 import type { RatingRow, Row } from '../lib/types'
 
 const TABS: TabDef[] = [
@@ -20,7 +20,7 @@ const TABS: TabDef[] = [
   { id: 'creators', label: 'Creators', icon: <Icon name="bolt" size={13} /> },
   { id: 'clean-sheets', label: 'Clean Sheets', icon: <Icon name="shield" size={13} /> },
   { id: 'value', label: 'Value Picks', icon: <Icon name="coin" size={13} /> },
-  { id: 'form', label: 'Form', icon: <Icon name="flame" size={13} solid /> },
+  { id: 'form', label: 'Form', icon: <span className="text-hot"><Icon name="flame" size={13} solid /></span> },
   { id: 'next4', label: 'Next 4 GWs', icon: <Icon name="calendar" size={13} /> },
 ]
 
@@ -33,6 +33,7 @@ function rankCol(): Column<Row> {
     key: 'rank',
     header: '#',
     align: 'left',
+    tip: "Position in this ranking, ordered by the tab's headline metric.",
     sortValue: (r) => num(r, '_rank'),
     cell: (r) => <span className="font-num text-ink-3 tabular-nums">{num(r, '_rank')}</span>,
   }
@@ -61,28 +62,32 @@ const teamCol: Column<Row> = {
 const priceCol: Column<Row> = {
   key: 'price',
   header: 'Price',
+  tip: 'Current FPL price.',
   sortValue: (r) => num(r, 'price'),
   cell: (r) => <span className="font-num tabular-nums">£{num(r, 'price')}m</span>,
 }
-const starCol = (key: string, header: string): Column<Row> => ({
+const starCol = (key: string, header: string, tip?: string): Column<Row> => ({
   key,
   header,
+  tip,
   align: 'left',
   sortValue: (r) => ratingToNum(str(r, key)), // sort by numeric rating; null (N/A) sinks
   cell: (r) => <StarRating value={str(r, key)} />,
 })
 // Overall ratings render from the continuous 0–5 score for a granular /100 number.
-const scoreCol = (scoreKey: string, header: string): Column<Row> => ({
+const scoreCol = (scoreKey: string, header: string, tip?: string): Column<Row> => ({
   key: scoreKey,
   header,
+  tip,
   align: 'left',
   sortValue: (r) => num(r, scoreKey),
   cell: (r) => <StarRating value={num(r, scoreKey)} />,
 })
 // Like scoreCol, but shows an explained N/A when the window has too few minutes.
-const windowScoreCol = (scoreKey: string, header: string): Column<Row> => ({
+const windowScoreCol = (scoreKey: string, header: string, tip?: string): Column<Row> => ({
   key: scoreKey,
   header,
+  tip,
   align: 'left',
   sortValue: (r) => num(r, scoreKey),
   cell: (r) =>
@@ -97,6 +102,7 @@ function ppgCol(rows: Row[]): Column<Row> {
   return {
     key: 'ppg',
     header: 'PPG',
+    tip: 'Average FPL points per game this season.',
     sortValue: (r) => num(r, 'season_ppg'),
     cell: (r) => {
       const v = num(r, 'season_ppg')
@@ -148,9 +154,10 @@ export default function Rankings() {
     const seasonOk = ratings.filter((p) => bool(p, 'season_ok'))
     const applyPos = (rows: Row[]) => (pos === 'ALL' ? rows : rows.filter((p) => p.position === pos))
 
-    const shareCol = (key: string, header: string): Column<Row> => ({
+    const shareCol = (key: string, header: string, tip?: string): Column<Row> => ({
       key,
       header,
+      tip,
       sortValue: (r) => num(metricByName.get(String(r.web_name)) ?? {}, key),
       cell: (r) => {
         const v = num(metricByName.get(String(r.web_name)) ?? {}, key)
@@ -168,8 +175,8 @@ export default function Rankings() {
             posCol,
             teamCol,
             priceCol,
-            scoreCol('season_overall_score', 'Season Rating'),
-            windowScoreCol('gw4_overall_score', '4GW Rating'),
+            scoreCol('season_overall_score', 'Season Rating', TOOLTIPS.overall as string),
+            windowScoreCol('gw4_overall_score', '4GW Rating', 'The same composite rating measured over the last 4 gameweeks only — a form snapshot.'),
             ppgCol(rows),
           ],
           rows,
@@ -185,10 +192,10 @@ export default function Rankings() {
             playerCol,
             posCol,
             teamCol,
-            starCol('season_goal_score_rating', 'Goal Rating (Pos)'),
-            starCol('season_att_goal_score_rating', 'Goal Rating (ATT)'),
-            shareCol('xg_share_4gw', 'xG Share 4GW'),
-            shareCol('xg_share_season', 'xG Share Season'),
+            starCol('season_goal_score_rating', 'Goal Rating (Pos)', TOOLTIPS.goal as string),
+            starCol('season_att_goal_score_rating', 'Goal Rating (ATT)', 'The same goal-threat rating, but ranked against all midfielders and forwards pooled together.'),
+            shareCol('xg_share_4gw', 'xG Share 4GW', "Share of their team's expected goals over the last 4 gameweeks."),
+            shareCol('xg_share_season', 'xG Share Season', "Share of their team's expected goals across the whole season."),
           ],
           rows,
         }
@@ -203,10 +210,10 @@ export default function Rankings() {
             playerCol,
             posCol,
             teamCol,
-            starCol('season_creative_score_rating', 'Creative Rating (Pos)'),
-            starCol('season_att_creative_score_rating', 'Creative Rating (ATT)'),
-            shareCol('xa_share_4gw', 'xA Share 4GW'),
-            shareCol('xa_share_season', 'xA Share Season'),
+            starCol('season_creative_score_rating', 'Creative Rating (Pos)', TOOLTIPS.creative as string),
+            starCol('season_att_creative_score_rating', 'Creative Rating (ATT)', 'The same creativity rating, but ranked against all midfielders and forwards pooled together.'),
+            shareCol('xa_share_4gw', 'xA Share 4GW', "Share of their team's expected assists over the last 4 gameweeks."),
+            shareCol('xa_share_season', 'xA Share Season', "Share of their team's expected assists across the whole season."),
           ],
           rows,
         }
@@ -221,8 +228,8 @@ export default function Rankings() {
             playerCol,
             posCol,
             teamCol,
-            starCol('season_cs_score_rating', 'CS Rating'),
-            scoreCol('season_overall_score', 'Overall Rating'),
+            starCol('season_cs_score_rating', 'CS Rating', TOOLTIPS.cs as string),
+            scoreCol('season_overall_score', 'Overall Rating', TOOLTIPS.overall as string),
           ],
           rows,
         }
@@ -236,7 +243,7 @@ export default function Rankings() {
             posCol,
             teamCol,
             priceCol,
-            starCol('season_value_score_rating', 'Value Rating'),
+            starCol('season_value_score_rating', 'Value Rating', TOOLTIPS.value as string),
             ppgCol(rows),
           ],
           rows,
@@ -252,10 +259,11 @@ export default function Rankings() {
             playerCol,
             posCol,
             teamCol,
-            starCol('next4_overall_rating', 'Next 4GW Rating'),
+            starCol('next4_overall_rating', 'Next 4GW Rating', TOOLTIPS.next4 as string),
             {
               key: 'ease',
               header: 'Fixture Ease',
+              tip: 'Opponent-difficulty multiplier over the next 4 gameweeks. Above ×1.00 = an easier-than-average run.',
               sortValue: (r) => num(r, 'next4_fixture_factor'),
               cell: (r) => {
                 const f = num(r, 'next4_fixture_factor')
@@ -263,8 +271,8 @@ export default function Rankings() {
                 return <span className={`font-num tabular-nums ${f >= 1 ? 'text-good' : 'text-bad'}`}>×{f.toFixed(2)}</span>
               },
             },
-            scoreCol('season_overall_score', 'Season Rating'),
-            scoreCol('gw4_overall_score', '4GW Rating'),
+            scoreCol('season_overall_score', 'Season Rating', TOOLTIPS.overall as string),
+            scoreCol('gw4_overall_score', '4GW Rating', 'The same composite rating measured over the last 4 gameweeks only — a form snapshot.'),
           ],
           rows,
         }
@@ -356,36 +364,49 @@ function FormTables({ rows, pos }: { rows: Row[]; pos: string }) {
     .sort((a, b) => (num(a, 'pts_delta') ?? 0) - (num(b, 'pts_delta') ?? 0))
     .slice(0, 15)
 
+  const th = (label: string, tip: string, right = true) => (
+    <th className={`px-2.5 py-2 font-semibold md:px-3 ${right ? 'text-right' : 'text-left'}`}>
+      <span className={`inline-flex items-center gap-1 ${right ? 'flex-row-reverse' : ''}`}>
+        {label}
+        <InfoTip text={tip} />
+      </span>
+    </th>
+  )
+
   const table = (title: React.ReactNode, list: Row[], deltaClass: string, sign: boolean) => (
     <div className="min-w-0 flex-1">
       <div className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-ink">{title}</div>
       <div className="overflow-x-auto rounded-lg border border-line">
-        <table className="w-full text-sm">
+        <table className="w-full text-[13px] md:text-sm">
           <thead>
             <tr className="border-b border-line bg-surface-2 text-ink-2">
-              <th className="px-3 py-2 text-left font-semibold">Player</th>
-              <th className="px-3 py-2 text-left font-semibold">Pos</th>
-              <th className="px-3 py-2 text-right font-semibold">Season P90</th>
-              <th className="px-3 py-2 text-right font-semibold">4GW P90</th>
-              <th className="px-3 py-2 text-right font-semibold">Delta</th>
+              <th className="px-2.5 py-2 text-left font-semibold md:px-3">Player</th>
+              <th className="px-2.5 py-2 text-left font-semibold md:px-3">Team</th>
+              <th className="px-2.5 py-2 text-left font-semibold md:px-3">Pos</th>
+              {th('Season P90', 'Average FPL points per 90 minutes across the whole season.')}
+              {th('4GW P90', 'Average FPL points per 90 minutes over the last 4 gameweeks.')}
+              {th('Delta', 'Last-4-gameweek points-per-90 minus the season baseline — the size of the streak.')}
             </tr>
           </thead>
           <tbody>
             {list.map((p) => (
               <tr key={String(p.element)} className="border-b border-line/60 last:border-0">
-                <td className="px-3 py-2">
+                <td className="px-2.5 py-2 md:px-3">
                   <PlayerNameCell name={String(p.web_name)} />
                 </td>
-                <td className="px-3 py-2">
+                <td className="px-2.5 py-2 md:px-3">
+                  <TeamCell team={String(p.team)} />
+                </td>
+                <td className="px-2.5 py-2 md:px-3">
                   <PosBadge pos={String(p.position)} />
                 </td>
-                <td className="px-3 py-2 text-right font-num tabular-nums">
+                <td className="px-2.5 py-2 text-right font-num tabular-nums md:px-3">
                   {(num(p, 'pts_per90_season') ?? 0).toFixed(2)}
                 </td>
-                <td className="px-3 py-2 text-right font-num tabular-nums">
+                <td className="px-2.5 py-2 text-right font-num tabular-nums md:px-3">
                   {(num(p, 'pts_per90_4gw') ?? 0).toFixed(2)}
                 </td>
-                <td className={`px-3 py-2 text-right font-num tabular-nums ${deltaClass}`}>
+                <td className={`px-2.5 py-2 text-right font-num tabular-nums md:px-3 ${deltaClass}`}>
                   {sign ? '+' : ''}
                   {(num(p, 'pts_delta') ?? 0).toFixed(2)}
                 </td>
@@ -401,7 +422,7 @@ function FormTables({ rows, pos }: { rows: Row[]; pos: string }) {
     <div className="flex flex-col gap-6 lg:flex-row">
       {table(
         <>
-          <Icon name="flame" size={13} solid /> Hot Streak Players
+          <span className="text-hot"><Icon name="flame" size={13} solid /></span> Hot Streak Players
         </>,
         hot,
         'text-hot',
@@ -409,7 +430,7 @@ function FormTables({ rows, pos }: { rows: Row[]; pos: string }) {
       )}
       {table(
         <>
-          <Icon name="snow" size={13} /> Cold Streak Players
+          <span className="text-cold"><Icon name="snow" size={13} /></span> Cold Streak Players
         </>,
         cold,
         'text-cold',

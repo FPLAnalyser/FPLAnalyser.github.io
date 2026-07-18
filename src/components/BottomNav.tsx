@@ -4,7 +4,8 @@ import { Icon, type IconName } from './Icon'
 
 const TABS: { to: string; label: string; icon: IconName }[] = [
   { to: '/', label: 'Home', icon: 'bolt' },
-  { to: '/rankings', label: 'Rankings', icon: 'trophy' },
+  { to: '/rankings', label: 'Ranks', icon: 'trophy' },
+  { to: '/fixtures', label: 'Fixtures', icon: 'calendar' },
   { to: '/scout', label: 'Scout', icon: 'target' },
   { to: '/loadteam', label: 'My Team', icon: 'pitch' },
 ]
@@ -21,19 +22,19 @@ export function BottomNav({ onSearch }: { onSearch: () => void }) {
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       aria-label="Primary"
     >
-      <div className="mx-auto grid max-w-md grid-cols-5 items-end px-1">
-        {TABS.slice(0, 2).map((t) => <Tab key={t.to} {...t} reduced={reduced} />)}
+      <div className="mx-auto grid max-w-lg grid-cols-6 items-end px-1">
+        {TABS.slice(0, 3).map((t) => <Tab key={t.to} {...t} reduced={reduced} />)}
         <div className="flex justify-center">
           <button
             type="button"
             onClick={onSearch}
             aria-label="Search players & teams"
-            className="-mt-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-contrast shadow-float transition-transform active:scale-95"
+            className="-mt-4 flex h-13 w-13 items-center justify-center rounded-full bg-accent text-accent-contrast shadow-float transition-transform active:scale-95"
           >
-            <Icon name="search" size={22} />
+            <Icon name="search" size={20} />
           </button>
         </div>
-        {TABS.slice(2).map((t) => <Tab key={t.to} {...t} reduced={reduced} />)}
+        {TABS.slice(3).map((t) => <Tab key={t.to} {...t} reduced={reduced} />)}
       </div>
     </nav>
   )

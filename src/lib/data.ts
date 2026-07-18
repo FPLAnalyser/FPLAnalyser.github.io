@@ -23,7 +23,9 @@ async function fetchTable<T>(name: string): Promise<T> {
   for (let attempt = 0; attempt < 3; attempt++) {
     for (const url of [`site_data/${name}.json`, `${BASE}site_data/${name}.json`]) {
       try {
-        const r = await fetch(url, { cache: 'no-cache' })
+        // Default HTTP caching: the service worker (stale-while-revalidate)
+        // owns freshness; forcing revalidation here made mobile loads crawl.
+        const r = await fetch(url)
         if (r.ok) return (await r.json()) as T
       } catch (e) {
         lastErr = e

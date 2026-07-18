@@ -60,10 +60,15 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
-            // Same strategy as the legacy SW: fresh data online, last-known offline.
+            // Serve instantly from cache and refresh in the background. The
+            // pipeline updates site_data at most daily, and NetworkFirst's
+            // wait-for-network made every page feel slow on mobile.
             urlPattern: /\/site_data\/.*\.json$/,
-            handler: 'NetworkFirst',
-            options: { cacheName: 'site-data', networkTimeoutSeconds: 10 },
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'site-data',
+              expiration: { maxAgeSeconds: 60 * 60 * 24 * 7 },
+            },
           },
         ],
       },
