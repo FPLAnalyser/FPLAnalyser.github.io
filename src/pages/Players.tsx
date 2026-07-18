@@ -3,8 +3,8 @@ import { useSearchParams } from 'react-router-dom'
 import { PageHeader, PageShell, EmptyState } from '../components/PageShell'
 import { SearchBox } from '../components/SearchBox'
 import { Tabs, type TabDef } from '../components/Tabs'
-import { StarRating } from '../components/StarRating'
-import { RadialGauge, type Tone } from '../components/viz'
+import { StarRating, ratingTo100 } from '../components/StarRating'
+import { RadialGauge, Radar, type Tone } from '../components/viz'
 import { AnimatedCounter } from '../components/AnimatedCounter'
 import { InfoTip } from '../components/InfoTip'
 import { Icon, type IconName } from '../components/Icon'
@@ -205,9 +205,7 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
 
   const tabs: TabDef[] = [
     { id: 'overview', label: 'Overview' },
-    { id: 'ratings', label: 'Ratings' },
-    { id: 'stats', label: 'Stats & Metrics' },
-    { id: 'fixtures', label: 'Fixtures' },
+    { id: 'form', label: 'Form & Fixtures' },
     ...(pos !== 'GKP' ? [{ id: 'shots', label: 'Shots' }] : []),
   ]
 
@@ -271,10 +269,8 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
         <Tabs tabs={tabs} active={tab} onChange={setTab} layoutId={`player-${r.element}`} />
       </div>
 
-      {tab === 'overview' && <OverviewTab r={r} std={std} m={m} isAtt={isAtt} />}
-      {tab === 'ratings' && <RatingsTab r={r} pos={pos} isAtt={isAtt} />}
-      {tab === 'stats' && <StatsTab r={r} m={m} std={std} />}
-      {tab === 'fixtures' && <FixturesTab name={name} tierPerf={data.tierPerf} />}
+      {tab === 'overview' && <OverviewTab r={r} std={std} m={m} pos={pos} isAtt={isAtt} />}
+      {tab === 'form' && <FormFixturesTab r={r} m={m} std={std} name={name} tierPerf={data.tierPerf} />}
       {tab === 'shots' && pos !== 'GKP' && (
         <div>
           <Section title="Shot Map"><PlayerScatterMap element={r.element} /></Section>
@@ -304,10 +300,21 @@ function RatingBlock({ label, value }: { label: ReactNode; value: string | null 
   )
 }
 
-function OverviewTab({ r, std, m, isAtt }: { r: RatingRow; std: Row | null; m: Row | null; isAtt: boolean }) {
+// Short axis labels so the radar stays legible with many dimensions.
+const RADAR_SHORT: Record<string, string> = {
+  'Def Contribution': 'Def Contrib', 'Creativity Depth': 'Creat. Depth', 'Finishing Skill': 'Finishing',
+  'Shot Quality': 'Shot Qual', 'BPS / Bonus': 'BPS', 'Clean Sheet': 'Clean Sht', 'Set Pieces': 'Set Piece',
+  'Goal Threat': 'Goals', 'Reliability': 'Reliab.', 'Creativity': 'Creativity',
+}
+function radarAxes(r: RatingRow, dims: Dim[]) {
+  return dims.map(([label, sCol, gCol]) => ({ label: RADAR_SHORT[label] ?? label, a: ratingTo100(str(r, sCol)), b: ratingTo100(str(r, gCol)) }))
+}
+
+function OverviewTab({ r, std, m, pos, isAtt }: { r: RatingRow; std: Row | null; m: Row | null; pos: string; isAtt: boolean }) {
   const ptsDelta = std ? num(std, 'pts_delta') : null
   const xgShare = m ? num(m, 'xg_share_4gw') : null
   const xaShare = m ? num(m, 'xa_share_4gw') : null
+  const dims = pos === 'GKP' ? GKP_DIMS : pos === 'DEF' ? DEF_DIMS : ATT_POS_DIMS
   return (
     <div>
       <Section title="Key Stats (Season)">
@@ -320,12 +327,25 @@ function OverviewTab({ r, std, m, isAtt }: { r: RatingRow; std: Row | null; m: R
           <Tile value={ptsDelta != null ? `${ptsDelta > 0 ? '+' : ''}${ptsDelta.toFixed(2)}` : 'N/A'} label="Form Delta" />
         </div>
       </Section>
+
+      <Section title={`Rating Profile — vs ${pos} players`}>
+        <div className="grid gap-5 lg:grid-cols-[300px_1fr] lg:items-center">
+          <Radar axes={radarAxes(r, dims)} seriesALabel="Season" seriesBLabel="Last 4GW" />
+          <DimTable r={r} dims={dims} overall={['season_overall_rating', 'gw4_overall_rating']} />
+        </div>
+      </Section>
+
       {isAtt && (
         <Section title="Attacking Share (Last 4GW)">
           <div className="grid grid-cols-2 gap-2">
             <Tile value={xgShare != null ? `${(xgShare * 100).toFixed(1)}%` : 'N/A'} label="Team xG Share" />
             <Tile value={xaShare != null ? `${(xaShare * 100).toFixed(1)}%` : 'N/A'} label="Team xA Share" />
           </div>
+        </Section>
+      )}
+      {isAtt && (
+        <Section title="Attacker Ratings — vs all MID & FWD players">
+          <DimTable r={r} dims={ATT_COMBINED_DIMS} overall={['season_att_overall_rating', 'gw4_att_overall_rating']} />
         </Section>
       )}
     </div>
@@ -364,23 +384,7 @@ function DimTable({ r, dims, overall }: { r: RatingRow; dims: Dim[]; overall: [s
   )
 }
 
-function RatingsTab({ r, pos, isAtt }: { r: RatingRow; pos: string; isAtt: boolean }) {
-  const dims = pos === 'GKP' ? GKP_DIMS : pos === 'DEF' ? DEF_DIMS : ATT_POS_DIMS
-  return (
-    <div>
-      <Section title={`Position Ratings — vs ${pos} players only`}>
-        <DimTable r={r} dims={dims} overall={['season_overall_rating', 'gw4_overall_rating']} />
-      </Section>
-      {isAtt && (
-        <Section title="Attacker Ratings — vs all MID & FWD players">
-          <DimTable r={r} dims={ATT_COMBINED_DIMS} overall={['season_att_overall_rating', 'gw4_att_overall_rating']} />
-        </Section>
-      )}
-    </div>
-  )
-}
-
-function StatsTab({ r, m, std }: { r: RatingRow; m: Row | null; std: Row | null }) {
+function FormFixturesTab({ r, m, std, name, tierPerf }: { r: RatingRow; m: Row | null; std: Row | null; name: string; tierPerf: Row[] }) {
   void r
   const n2 = (v: number | null, f: 1 | 2 = 2) => (v != null ? <AnimatedCounter value={v} format={f === 1 ? '1dp' : '2dp'} /> : 'N/A')
   return (
@@ -406,11 +410,12 @@ function StatsTab({ r, m, std }: { r: RatingRow; m: Row | null; std: Row | null 
           <Tile value={<span className="text-sm">{m ? str(m, 'form_direction') || '—' : '—'}</span>} label="Form Direction" />
         </div>
       </Section>
+      <TierTable name={name} tierPerf={tierPerf} />
     </div>
   )
 }
 
-function FixturesTab({ name, tierPerf }: { name: string; tierPerf: Row[] }) {
+function TierTable({ name, tierPerf }: { name: string; tierPerf: Row[] }) {
   const rows = tierPerf.filter((t) => t.web_name === name)
   const byTier = (t: string) => rows.find((x) => str(x, 'opponent_tier') === t) ?? null
   const tiers: [string, string, Row | null][] = [

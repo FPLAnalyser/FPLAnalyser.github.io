@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import { PageHeader, PageShell } from '../components/PageShell'
 import { SearchBox } from '../components/SearchBox'
 import { Tabs, type TabDef } from '../components/Tabs'
 import { TeamBadge } from '../components/badges'
 import { Icon } from '../components/Icon'
-import { useLazyTable } from '../lib/useData'
+import { useCore, useLazyTable } from '../lib/useData'
 import { num, str } from '../lib/rows'
 import { teamFullNames } from '../lib/util'
-import type { Row } from '../lib/types'
+import type { RatingRow, Row } from '../lib/types'
 
 const SCOUT_MAX = 4
 const SCOUT_COLORS = ['#5EA7F7', '#E8A13C', '#E2649B', '#8B7BF4']
@@ -26,6 +27,12 @@ const PEER_TABS: TabDef[] = [
   { id: 'pooled', label: 'MID + FWD pooled' },
   { id: 'position', label: 'By position' },
 ]
+const MODE_TABS: TabDef[] = [
+  { id: 'compare', label: 'Compare' },
+  { id: 'discover', label: 'Discover' },
+]
+const POSITIONS = ['All', 'GKP', 'DEF', 'MID', 'FWD'] as const
+type ScoutMode = 'compare' | 'discover'
 
 // FBref-style percentile colour: red (poor) → grey → green (elite).
 function pctColor(p: number | null): string {
@@ -43,6 +50,8 @@ interface SelPlayer { element: number; web_name: string; team: string; position:
 export default function Scouting() {
   const scoutQ = useLazyTable<Row[]>('scouting')
   const metaQ = useLazyTable<Row[]>('scouting_meta')
+  const { data: core } = useCore()
+  const [mode, setMode] = useState<ScoutMode>('compare')
   const [selected, setSelected] = useState<SelPlayer[]>([])
   const [win, setWin] = useState<ScoutWin>('season')
   const [peer, setPeer] = useState<ScoutPeer>('pooled')
@@ -50,6 +59,18 @@ export default function Scouting() {
 
   const scout = scoutQ.data ?? []
   const scoutMeta = metaQ.data ?? []
+
+  // element -> price (from core ratings) for the Discover price filter.
+  const priceMap = useMemo(() => {
+    const m = new Map<number, number>()
+    for (const r of (core?.ratings ?? []) as RatingRow[]) if (r.element != null && r.price != null) m.set(r.element, r.price)
+    return m
+  }, [core])
+
+  const addToCompare = (p: SelPlayer) => {
+    setMode('compare')
+    setSelected((s) => (s.length >= SCOUT_MAX || s.some((x) => x.element === p.element) ? s : [...s, p]))
+  }
 
   // Unique season-window players for the picker.
   const pool = useMemo(() => {
@@ -77,8 +98,23 @@ export default function Scouting() {
 
   return (
     <PageShell>
-      <PageHeader title="Scouting Report" subtitle="Per-90 percentiles vs positional peers — compare up to 4 players side by side" />
+      <PageHeader title="Scouting Report" subtitle="Per-90 percentiles vs positional peers — compare players head-to-head or discover who fits your criteria" />
 
+      <div className="mb-4"><Tabs tabs={MODE_TABS} active={mode} onChange={(id) => setMode(id as ScoutMode)} layoutId="scout-mode" /></div>
+
+      <div className="mb-3"><Tabs tabs={WIN_TABS} active={win} onChange={(id) => setWin(id as ScoutWin)} layoutId="scout-win" /></div>
+      <div className="mb-4"><Tabs tabs={PEER_TABS} active={peer} onChange={(id) => setPeer(id as ScoutPeer)} layoutId="scout-peer" /></div>
+
+      {mode === 'discover' ? (
+        loading ? (
+          <div className="rounded-xl border border-dashed border-line-mid bg-surface-1/50 px-6 py-16 text-center text-ink-2">Loading scouting data…</div>
+        ) : failed ? (
+          <div className="rounded-xl border border-dashed border-line-mid bg-surface-1/50 px-6 py-16 text-center text-ink-2">Scouting data isn't available yet.</div>
+        ) : (
+          <Discover pool={pool} scoutMeta={scoutMeta} scoutRow={scoutRow} scoutPct={scoutPct} priceMap={priceMap} win={win} onAdd={addToCompare} />
+        )
+      ) : (
+      <>
       <div className="mb-4">
         <SearchBox
           items={pool.filter((p) => !selected.some((s) => s.element === p.element))}
@@ -94,9 +130,6 @@ export default function Scouting() {
           clearOnSelect
         />
       </div>
-
-      <div className="mb-3"><Tabs tabs={WIN_TABS} active={win} onChange={(id) => setWin(id as ScoutWin)} layoutId="scout-win" /></div>
-      <div className="mb-4"><Tabs tabs={PEER_TABS} active={peer} onChange={(id) => setPeer(id as ScoutPeer)} layoutId="scout-peer" /></div>
 
       {selected.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">
@@ -127,7 +160,175 @@ export default function Scouting() {
       ) : (
         <ScoutReport selected={selected} scoutMeta={scoutMeta} scoutRow={scoutRow} scoutPct={scoutPct} win={win} reduced={!!reduced} />
       )}
+      </>
+      )}
     </PageShell>
+  )
+}
+
+function Discover({
+  pool, scoutMeta, scoutRow, scoutPct, priceMap, win, onAdd,
+}: {
+  pool: SelPlayer[]
+  scoutMeta: Row[]
+  scoutRow: (el: number) => Row | null
+  scoutPct: (row: Row, key: string) => number | null
+  priceMap: Map<number, number>
+  win: ScoutWin
+  onAdd: (p: SelPlayer) => void
+}) {
+  const navigate = useNavigate()
+  const [pos, setPos] = useState<(typeof POSITIONS)[number]>('All')
+  const [minMins, setMinMins] = useState(0)
+  const [maxPrice, setMaxPrice] = useState(15)
+  const [criteria, setCriteria] = useState<{ key: string; min: number }[]>([])
+
+  const isGK = pos === 'GKP'
+  const metrics = useMemo(
+    () => scoutMeta.filter((m) => (isGK ? str(m, 'group') === 'Goalkeeping' : str(m, 'group') !== 'Goalkeeping')),
+    [scoutMeta, isGK],
+  )
+  const metricLabel = (key: string) => String(metrics.find((m) => str(m, 'key') === key)?.label ?? key)
+  const available = metrics.filter((m) => !criteria.some((c) => c.key === str(m, 'key')))
+  const minsMax = win === 'season' ? 3000 : win === 'l6' ? 540 : 360
+
+  // Drop criteria whose metric isn't valid for the current position group.
+  const validKeys = new Set(metrics.map((m) => str(m, 'key')))
+  const activeCriteria = criteria.filter((c) => validKeys.has(c.key))
+
+  const results = useMemo(() => {
+    const out: { p: SelPlayer; price: number | null; mins: number; pcts: (number | null)[]; score: number }[] = []
+    for (const p of pool) {
+      if (pos === 'GKP') { if (p.position !== 'GKP') continue }
+      else if (pos === 'All') { if (p.position === 'GKP') continue }
+      else if (p.position !== pos) continue
+      const price = priceMap.get(p.element) ?? null
+      if (price != null && price > maxPrice) continue
+      const row = scoutRow(p.element)
+      if (!row) continue
+      const mins = num(row, 'minutes') ?? p.minutes
+      if (mins < minMins) continue
+      const pcts = activeCriteria.map((c) => scoutPct(row, c.key))
+      if (activeCriteria.some((c, i) => pcts[i] == null || (pcts[i] as number) < c.min)) continue
+      const score = activeCriteria.length ? pcts.reduce((a: number, b) => a + (b ?? 0), 0) / activeCriteria.length : mins
+      out.push({ p, price, mins, pcts, score })
+    }
+    out.sort((a, b) => b.score - a.score)
+    return out
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pool, pos, maxPrice, minMins, activeCriteria, priceMap, scoutRow, scoutPct])
+
+  const shown = results.slice(0, 40)
+
+  return (
+    <div>
+      <div className="mb-4 rounded-xl border border-line bg-surface-1/50 p-4">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Position</span>
+          {POSITIONS.map((pp) => (
+            <button
+              key={pp}
+              onClick={() => setPos(pp)}
+              className={`min-h-9 rounded-lg px-3 text-sm font-medium transition-colors ${pos === pp ? 'bg-accent text-accent-contrast' : 'bg-surface-2 text-ink-2 hover:text-ink'}`}
+            >
+              {pp}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block">
+            <div className="mb-1 flex items-center justify-between text-xs text-ink-2">
+              <span>Min minutes ({WINDOW_LABELS[win]})</span>
+              <span className="font-num tabular-nums text-ink">{minMins}</span>
+            </div>
+            <input type="range" min={0} max={minsMax} step={45} value={minMins} onChange={(e) => setMinMins(Number(e.target.value))} className="w-full accent-[var(--accent)]" />
+          </label>
+          <label className="block">
+            <div className="mb-1 flex items-center justify-between text-xs text-ink-2">
+              <span>Max price</span>
+              <span className="font-num tabular-nums text-ink">{maxPrice >= 15 ? 'Any' : `£${maxPrice.toFixed(1)}m`}</span>
+            </div>
+            <input type="range" min={4} max={15} step={0.5} value={maxPrice} onChange={(e) => setMaxPrice(Number(e.target.value))} className="w-full accent-[var(--accent)]" />
+          </label>
+        </div>
+
+        <div className="mt-4">
+          <div className="mb-2 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Metric thresholds (percentile ≥)</div>
+          {activeCriteria.length > 0 && (
+            <div className="mb-2 space-y-2">
+              {activeCriteria.map((c) => (
+                <div key={c.key} className="flex items-center gap-3">
+                  <span className="w-32 shrink-0 truncate text-sm text-ink-2 md:w-44">{metricLabel(c.key)}</span>
+                  <input
+                    type="range" min={0} max={99} step={1} value={c.min}
+                    onChange={(e) => setCriteria((cs) => cs.map((x) => (x.key === c.key ? { ...x, min: Number(e.target.value) } : x)))}
+                    className="min-w-0 flex-1 accent-[var(--accent)]"
+                  />
+                  <span className="w-8 shrink-0 text-right font-num tabular-nums text-sm" style={{ color: pctColor(c.min) }}>{c.min}</span>
+                  <button aria-label={`Remove ${metricLabel(c.key)} filter`} className="text-ink-3 hover:text-ink" onClick={() => setCriteria((cs) => cs.filter((x) => x.key !== c.key))}>
+                    <Icon name="x" size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {available.length > 0 && (
+            <select
+              value=""
+              onChange={(e) => { if (e.target.value) setCriteria((cs) => [...cs, { key: e.target.value, min: 60 }]) }}
+              className="min-h-9 rounded-lg border border-line-mid bg-surface-2 px-3 text-sm text-ink-2"
+            >
+              <option value="">+ Add metric filter…</option>
+              {available.map((m) => <option key={str(m, 'key')} value={str(m, 'key')!}>{String(m.label)}</option>)}
+            </select>
+          )}
+        </div>
+      </div>
+
+      <div className="mb-2 flex items-center justify-between px-1 text-sm text-ink-2">
+        <span><span className="font-semibold text-ink">{results.length}</span> {results.length === 1 ? 'player' : 'players'} match{activeCriteria.length ? '' : ' — add metric filters to narrow'}</span>
+        {activeCriteria.length > 0 && <span className="text-xs text-ink-3">ranked by average of your metrics</span>}
+      </div>
+
+      {shown.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-line-mid bg-surface-1/50 px-6 py-16 text-center text-ink-2">No players fit these criteria. Loosen a threshold or raise the price.</div>
+      ) : (
+        <div className="flex flex-col">
+          {shown.map(({ p, price, mins, pcts, score }, idx) => (
+            <div key={p.element} className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line py-2.5 last:border-0">
+              <span className="w-6 shrink-0 text-center font-num text-xs tabular-nums text-ink-3">{idx + 1}</span>
+              <button className="min-w-0 flex-1 text-left" onClick={() => navigate(`/player?name=${encodeURIComponent(p.web_name)}`)}>
+                <div className="truncate font-medium text-ink hover:text-accent">{p.web_name}</div>
+                <div className="flex items-center gap-1.5 text-[11px] text-ink-3"><TeamBadge team={p.team} size={11} />{p.team} · {p.position} · {price != null ? `£${price.toFixed(1)}m` : '—'} · {mins} mins</div>
+              </button>
+              {activeCriteria.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {activeCriteria.map((c, i) => (
+                    <span key={c.key} className="inline-flex items-center gap-1 rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px]">
+                      <span className="text-ink-3">{metricLabel(c.key).split(' ')[0]}</span>
+                      <span className="font-num tabular-nums" style={{ color: pctColor(pcts[i]) }}>{pcts[i] ?? '—'}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <span className="w-11 shrink-0 text-right">
+                {activeCriteria.length > 0
+                  ? <span className="font-num text-sm font-semibold tabular-nums" style={{ color: pctColor(score) }}>{Math.round(score)}</span>
+                  : <span className="font-num text-xs tabular-nums text-ink-3">{mins}′</span>}
+              </span>
+              <button
+                aria-label={`Compare ${p.web_name}`}
+                className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-line-mid text-ink-2 transition-colors hover:border-accent hover:text-accent"
+                onClick={() => onAdd(p)}
+              >
+                <Icon name="check" size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 

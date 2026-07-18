@@ -70,6 +70,14 @@ const starCol = (key: string, header: string): Column<Row> => ({
   sortValue: (r) => ratingToNum(str(r, key)), // sort by numeric rating; null (N/A) sinks
   cell: (r) => <StarRating value={str(r, key)} />,
 })
+// Overall ratings render from the continuous 0–5 score for a granular /100 number.
+const scoreCol = (scoreKey: string, header: string): Column<Row> => ({
+  key: scoreKey,
+  header,
+  align: 'left',
+  sortValue: (r) => num(r, scoreKey),
+  cell: (r) => <StarRating value={num(r, scoreKey)} />,
+})
 function ppgCol(rows: Row[]): Column<Row> {
   const maxPpg = Math.max(...rows.map((p) => num(p, 'season_ppg') ?? 0), 1)
   return {
@@ -146,8 +154,8 @@ export default function Rankings() {
             posCol,
             teamCol,
             priceCol,
-            starCol('season_overall_rating', 'Season Rating'),
-            starCol('gw4_overall_rating', '4GW Rating'),
+            scoreCol('season_overall_score', 'Season Rating'),
+            scoreCol('gw4_overall_score', '4GW Rating'),
             ppgCol(rows),
           ],
           rows,
@@ -200,7 +208,7 @@ export default function Rankings() {
             posCol,
             teamCol,
             starCol('season_cs_score_rating', 'CS Rating'),
-            starCol('season_overall_rating', 'Overall Rating'),
+            scoreCol('season_overall_score', 'Overall Rating'),
           ],
           rows,
         }
@@ -241,8 +249,8 @@ export default function Rankings() {
                 return <span className={`font-num tabular-nums ${f >= 1 ? 'text-good' : 'text-bad'}`}>×{f.toFixed(2)}</span>
               },
             },
-            starCol('season_overall_rating', 'Season Rating'),
-            starCol('gw4_overall_rating', '4GW Rating'),
+            scoreCol('season_overall_score', 'Season Rating'),
+            scoreCol('gw4_overall_score', '4GW Rating'),
           ],
           rows,
         }

@@ -1,6 +1,9 @@
-import { useId } from 'react'
+import { useId, type ReactNode } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { AnimatedCounter } from './AnimatedCounter'
+
+/** Shared categorical palette (maps to the --chart-* tokens). */
+export const CHART_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)']
 
 export type Tone = 'good' | 'warn' | 'bad' | 'info' | 'accent'
 
@@ -102,6 +105,154 @@ export function Sparkline({
       <polyline points={pts} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
       <circle cx={x(vals.length - 1).toFixed(1)} cy={y(vals[vals.length - 1]).toFixed(1)} r={3} fill={color} />
     </svg>
+  )
+}
+
+/**
+ * Radar / spider chart for a set of 0–100 dimensions. Plots one or two series
+ * (e.g. Season vs Last 4GW) as filled polygons with a labelled axis grid.
+ */
+export function Radar({
+  axes,
+  size = 300,
+  seriesALabel = 'Season',
+  seriesBLabel,
+}: {
+  axes: { label: string; a: number | null; b?: number | null }[]
+  size?: number
+  seriesALabel?: string
+  seriesBLabel?: string
+}) {
+  const reduced = useReducedMotion()
+  const n = axes.length
+  if (n < 3) return null
+  const cx = size / 2
+  const cy = size / 2
+  const pad = 54
+  const R = (size - pad * 2) / 2
+  const ang = (i: number) => -Math.PI / 2 + (i * 2 * Math.PI) / n
+  const at = (i: number, frac: number): [number, number] => [cx + Math.cos(ang(i)) * R * frac, cy + Math.sin(ang(i)) * R * frac]
+  const polyOf = (vals: (number | null | undefined)[]) =>
+    vals.map((v, i) => { const f = v == null ? 0 : Math.max(0, Math.min(1, v / 100)); const [x, y] = at(i, f); return `${x.toFixed(1)},${y.toFixed(1)}` }).join(' ')
+  const gridPoly = (frac: number) => axes.map((_, i) => { const [x, y] = at(i, frac); return `${x.toFixed(1)},${y.toFixed(1)}` }).join(' ')
+
+  const hasB = axes.some((ax) => ax.b != null) && !!seriesBLabel
+  const grow = { transformOrigin: `${cx}px ${cy}px` } as const
+
+  return (
+    <div className="flex flex-col items-center">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+        {[0.25, 0.5, 0.75, 1].map((f) => (
+          <polygon key={f} points={gridPoly(f)} fill="none" stroke="var(--surface-3)" strokeWidth={1} />
+        ))}
+        {axes.map((_, i) => { const [x, y] = at(i, 1); return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="var(--surface-3)" strokeWidth={1} /> })}
+
+        {hasB && (
+          <motion.polygon
+            points={polyOf(axes.map((ax) => ax.b))}
+            fill="var(--info)" fillOpacity={0.1} stroke="var(--info)" strokeWidth={1.5} strokeLinejoin="round"
+            style={reduced ? grow : { ...grow }}
+            initial={reduced ? false : { scale: 0, opacity: 0 }}
+            whileInView={{ scale: 1, opacity: 1 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.6, ease: 'easeOut', delay: 0.1 }}
+          />
+        )}
+        <motion.polygon
+          points={polyOf(axes.map((ax) => ax.a))}
+          fill="var(--accent)" fillOpacity={0.32} stroke="var(--accent)" strokeWidth={2.5} strokeLinejoin="round"
+          style={grow}
+          initial={reduced ? false : { scale: 0, opacity: 0 }}
+          whileInView={{ scale: 1, opacity: 1 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+        />
+        {axes.map((ax, i) => { const [x, y] = at(i, ax.a == null ? 0 : Math.max(0, Math.min(1, ax.a / 100))); return <circle key={i} cx={x} cy={y} r={2.5} fill="var(--accent)" /> })}
+
+        {axes.map((ax, i) => {
+          const [lx, ly] = at(i, 1.16)
+          const cos = Math.cos(ang(i))
+          const anchor = cos > 0.3 ? 'start' : cos < -0.3 ? 'end' : 'middle'
+          return (
+            <text key={i} x={lx} y={ly} textAnchor={anchor} dominantBaseline="middle" className="fill-ink-3 font-ui" style={{ fontSize: 9.5, fontWeight: 600 }}>
+              {ax.label}
+            </text>
+          )
+        })}
+      </svg>
+      <div className="mt-1 flex items-center gap-4 text-xs text-ink-2">
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: 'var(--accent)' }} />{seriesALabel}</span>
+        {hasB && <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: 'var(--info)' }} />{seriesBLabel}</span>}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Donut chart with a legend. Segments are auto-normalised to the total; each arc
+ * fades in on scroll. Optional centre label/value.
+ */
+export function Donut({
+  segments,
+  size = 168,
+  thickness = 24,
+  centerLabel,
+  centerValue,
+}: {
+  segments: { label: string; value: number; color: string }[]
+  size?: number
+  thickness?: number
+  centerLabel?: string
+  centerValue?: ReactNode
+}) {
+  const reduced = useReducedMotion()
+  const clean = segments.filter((s) => s.value > 0)
+  const total = clean.reduce((s, x) => s + x.value, 0)
+  if (total <= 0) return null
+  const r = (size - thickness) / 2
+  const c = 2 * Math.PI * r
+  let acc = 0
+  const arcs = clean.map((seg) => {
+    const frac = seg.value / total
+    const rot = -90 + (acc / total) * 360
+    acc += seg.value
+    return { ...seg, dash: frac * c, gap: c - frac * c, rot }
+  })
+  return (
+    <div className="flex flex-wrap items-center gap-5">
+      <div className="relative shrink-0" style={{ width: size, height: size }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-3)" strokeWidth={thickness} />
+          {arcs.map((a, i) => (
+            <motion.circle
+              key={i}
+              cx={size / 2} cy={size / 2} r={r} fill="none" stroke={a.color} strokeWidth={thickness}
+              strokeDasharray={`${a.dash.toFixed(2)} ${a.gap.toFixed(2)}`}
+              transform={`rotate(${a.rot} ${size / 2} ${size / 2})`}
+              initial={reduced ? false : { opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.4, delay: i * 0.08 }}
+            />
+          ))}
+        </svg>
+        {(centerValue != null || centerLabel) && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            {centerValue != null && <div className="font-num text-xl font-bold text-ink">{centerValue}</div>}
+            {centerLabel && <div className="text-[10px] tracking-wide text-ink-3 uppercase">{centerLabel}</div>}
+          </div>
+        )}
+      </div>
+      <ul className="min-w-32 flex-1 space-y-1.5">
+        {clean.map((s, i) => (
+          <li key={i} className="flex items-center gap-2 text-sm">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: s.color }} />
+            <span className="min-w-0 flex-1 truncate text-ink-2">{s.label}</span>
+            <span className="font-num tabular-nums text-ink">{Math.round((s.value / total) * 100)}%</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 

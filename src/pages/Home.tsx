@@ -47,6 +47,57 @@ function SectionHeader({ children }: { children: ReactNode }) {
   return <h2 className="mt-8 mb-3 text-sm font-semibold tracking-wide text-ink-2 uppercase first:mt-0">{children}</h2>
 }
 
+function Hero() {
+  const navigate = useNavigate()
+  const savedTeam = (() => { try { return localStorage.getItem('fpl_team_id') } catch { return null } })()
+  return (
+    <section className="mb-12">
+      <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] text-accent uppercase">Data. Insight. Points.</p>
+      <h1 className="max-w-3xl text-3xl leading-[1.08] font-extrabold tracking-[-0.02em] text-ink md:text-5xl">
+        Turn Premier League data into FPL points.
+      </h1>
+      <p className="mt-4 max-w-2xl text-base leading-relaxed text-ink-2 md:text-lg">
+        FPL Analyser rates every player on the numbers that actually predict returns — expected goals, minutes, form and
+        fixtures — then turns them into a plain-language verdict and transfer calls for <em>your</em> team.
+      </p>
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <button
+          onClick={() => navigate('/loadteam')}
+          className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-accent px-5 font-semibold text-accent-contrast transition-colors hover:bg-accent-strong"
+        >
+          {savedTeam ? 'Open your team report' : 'Load your team'}
+          <Icon name="trend-up" size={16} />
+        </button>
+        <button
+          onClick={() => navigate('/rankings')}
+          className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-line-mid px-5 font-semibold text-ink transition-colors hover:border-line-strong"
+        >
+          Browse the rankings
+        </button>
+        {savedTeam && <span className="text-sm text-ink-3">Welcome back — your squad is saved.</span>}
+      </div>
+
+      <div className="mt-9 grid gap-3 sm:grid-cols-3">
+        <Pillar icon="target" title="Data" body="We start with the underlying numbers — expected goals, minutes, percentiles versus peers — not last week's points." />
+        <Pillar icon="eye" title="Insight" body="Every player gets a rating out of 100, a persona, and a plain-language verdict you can actually act on." />
+        <Pillar icon="trophy" title="Points" body="Load your squad for personalised alerts, captaincy and transfers — all pointed at one thing: more points." />
+      </div>
+    </section>
+  )
+}
+
+function Pillar({ icon, title, body }: { icon: IconName; title: string; body: string }) {
+  return (
+    <div className="rounded-xl border border-line bg-surface-1/60 p-4">
+      <div className="mb-2 flex items-center gap-2">
+        <span className="grid size-8 place-items-center rounded-lg bg-accent-soft text-accent"><Icon name={icon} size={16} /></span>
+        <span className="text-sm font-bold tracking-wide text-ink uppercase">{title}</span>
+      </div>
+      <p className="text-sm leading-relaxed text-ink-2">{body}</p>
+    </div>
+  )
+}
+
 export default function Home() {
   const { data } = useCore()
   const navigate = useNavigate()
@@ -66,8 +117,7 @@ export default function Home() {
 
   return (
     <PageShell>
-      <p className="mb-3 text-[11px] font-semibold tracking-[0.28em] text-accent uppercase">Data. Insight. Points.</p>
-      <PageHeader title="FPL Analyser" subtitle="What matters this week — fixtures, form and captaincy, driven by the data" />
+      <Hero />
 
       {stories.length > 0 && (
         <>

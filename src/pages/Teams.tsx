@@ -6,6 +6,7 @@ import { SearchBox } from '../components/SearchBox'
 import { Tabs, type TabDef } from '../components/Tabs'
 import { StarRating } from '../components/StarRating'
 import { AnimatedCounter } from '../components/AnimatedCounter'
+import { Donut, CHART_COLORS } from '../components/viz'
 import { TeamBadge } from '../components/badges'
 import { PlayerNameCell, PosBadge } from '../components/cells'
 import { TeamShotMap } from '../components/ShotMap'
@@ -39,7 +40,6 @@ const pct = (v: number | null) => (v == null ? 'N/A' : `${(v * 100).toFixed(0)}%
 const TEAM_TABS: TabDef[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'players', label: 'Players' },
-  { id: 'breakdown', label: 'Points Breakdown' },
   { id: 'shots', label: 'Shots' },
 ]
 
@@ -174,21 +174,36 @@ function TeamCard({ team, season, gw4, ratings }: { team: string; season: Row; g
 
       {tab === 'overview' && (
         <div>
-          <Section title="Season Points Breakdown">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
-              <Tile value={pct(num(season, 'goal_pts_pct'))} label="From Goals" />
-              <Tile value={pct(num(season, 'assist_pts_pct'))} label="From Assists" />
-              <Tile value={pct(num(season, 'cs_pts_pct'))} label="From Clean Sheets" />
-              <Tile value={`${num(season, 'dc_pts') ? (((num(season, 'dc_pts') ?? 0) / totalPts) * 100).toFixed(0) : 0}%`} label="From Def Contributions" />
-              <Tile value={pct(num(season, 'bonus_pts_pct'))} label="From Bonus" />
-            </div>
-          </Section>
-          <Section title="Points by Position">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <Tile value={pct(num(season, 'gkp_pct'))} label="GKP" />
-              <Tile value={pct(num(season, 'def_pct'))} label="DEF" />
-              <Tile value={pct(num(season, 'mid_pct'))} label="MID" />
-              <Tile value={pct(num(season, 'fwd_pct'))} label="FWD" />
+          <div className="grid gap-4 md:grid-cols-2">
+            <Section title="Season Points Breakdown">
+              <Donut
+                segments={[
+                  { label: 'Goals', value: (num(season, 'goal_pts_pct') ?? 0) * 100, color: CHART_COLORS[0] },
+                  { label: 'Assists', value: (num(season, 'assist_pts_pct') ?? 0) * 100, color: CHART_COLORS[1] },
+                  { label: 'Clean Sheets', value: (num(season, 'cs_pts_pct') ?? 0) * 100, color: CHART_COLORS[2] },
+                  { label: 'Def Contributions', value: totalPts ? ((num(season, 'dc_pts') ?? 0) / totalPts) * 100 : 0, color: CHART_COLORS[3] },
+                  { label: 'Bonus', value: (num(season, 'bonus_pts_pct') ?? 0) * 100, color: CHART_COLORS[4] },
+                ]}
+                centerValue={<AnimatedCounter value={totalPts} />}
+                centerLabel="Season pts"
+              />
+            </Section>
+            <Section title="Points by Position">
+              <Donut
+                segments={[
+                  { label: 'Goalkeepers', value: (num(season, 'gkp_pct') ?? 0) * 100, color: CHART_COLORS[1] },
+                  { label: 'Defenders', value: (num(season, 'def_pct') ?? 0) * 100, color: CHART_COLORS[2] },
+                  { label: 'Midfielders', value: (num(season, 'mid_pct') ?? 0) * 100, color: CHART_COLORS[0] },
+                  { label: 'Forwards', value: (num(season, 'fwd_pct') ?? 0) * 100, color: CHART_COLORS[3] },
+                ]}
+              />
+            </Section>
+          </div>
+          <Section title="Expected Goals (Season)">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <Tile value={num(season, 'team_xg') != null ? Number(num(season, 'team_xg')).toFixed(1) : 'N/A'} label="Season xG" />
+              <Tile value={num(season, 'team_xa') != null ? Number(num(season, 'team_xa')).toFixed(1) : 'N/A'} label="Season xA" />
+              <Tile value={num(season, 'team_xgc') != null ? Number(num(season, 'team_xgc')).toFixed(1) : 'N/A'} label="Season xGC" />
             </div>
           </Section>
           <Section title="Concentration Risk">
@@ -240,16 +255,6 @@ function TeamCard({ team, season, gw4, ratings }: { team: string; season: Row; g
           initialDir="desc"
           rowKey={(r) => String(r.element)}
         />
-      )}
-
-      {tab === 'breakdown' && (
-        <Section title="xG and xGC">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <Tile value={num(season, 'team_xg') != null ? Number(num(season, 'team_xg')).toFixed(1) : 'N/A'} label="Season xG" />
-            <Tile value={num(season, 'team_xa') != null ? Number(num(season, 'team_xa')).toFixed(1) : 'N/A'} label="Season xA" />
-            <Tile value={num(season, 'team_xgc') != null ? Number(num(season, 'team_xgc')).toFixed(1) : 'N/A'} label="Season xGC" />
-          </div>
-        </Section>
       )}
 
       {tab === 'shots' && (
