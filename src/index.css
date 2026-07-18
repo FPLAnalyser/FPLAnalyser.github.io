@@ -171,3 +171,20 @@ body {
   background-size: 800px 100%;
   animation: shimmer 1.4s infinite linear;
 }
+
+/* ── Shot map (pitch surface stays green in both modes) ── */
+:root { --shotmap-surface: #10241a; }
+.shotmap-pitch { display: block; width: 100%; background: var(--shotmap-surface); border-radius: 12px; }
+.shotmap-line { fill: none; stroke: rgba(255, 255, 255, 0.22); stroke-width: 0.3; }
+.shotmap-box { fill: none; }
+.shotmap-spot { fill: rgba(255, 255, 255, 0.4); }
+.shotmap-net { stroke: rgba(255, 255, 255, 0.18); stroke-width: 0.15; }
+.shotmap-goal-frame { fill: none; stroke: rgba(255, 255, 255, 0.5); stroke-width: 0.4; }
+.shotmap-cell-outline { fill: none; stroke: rgba(255, 255, 255, 0.06); stroke-width: 0.12; }
+.shotmap-scatter { fill: rgba(255, 255, 255, 0.5); }
+.shotmap-zone { transition: fill-opacity 0.3s ease; }
+.shotmap-zone-label {
+  position: absolute; transform: translate(-50%, -50%);
+  font: 600 9px/1 var(--font-num); color: #fff; pointer-events: none;
+  font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+}

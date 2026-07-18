@@ -1,0 +1,130 @@
+// engine.ts — My Team insight engine core. Pure functions: no DOM access and
+// no data.js import, so the whole thing can be unit-tested in node.
+//
+// Insight shape: { rule_id, severity, headline, body, evidence, suggestions[] }
+// Severities: 'act' (🔴 do something) > 'warn' (🟡 watch closely)
+//           > 'info' (🔵 worth knowing) > 'good' (🟢 positive signal)
+
+type Ctx = any;
+
+interface Rule {
+  id: string;
+  severity: string;
+  run(ctx: Ctx): any;
+}
+
+const SEVERITY_ORDER: Record<string, number> = { act: 0, warn: 1, info: 2, good: 3 };
+const SEVERITY_META: Record<string, { iconId: string; label: string; color: string }> = {
+  act: { iconId: 'alert', label: 'Action', color: 'var(--bad)' },
+  warn: { iconId: 'eye', label: 'Watch', color: 'var(--warn)' },
+  info: { iconId: 'info', label: 'Worth knowing', color: 'var(--info)' },
+  good: { iconId: 'check', label: 'Good news', color: 'var(--good)' },
+};
+const MAX_PER_SEVERITY = 5;
+
+// Fixture-ease helpers for a fixture_ease table, usable with or without a
+// squad context (Home briefing + player verdicts share this with the rules).
+// [skip, take]: teamEase('ARS', 0, 3) = next 3; teamEase('ARS', 3, 3) = the 3 after
+function makeTeamEase(fixtureEase: any[]) {
+  const easeByTeam: Record<string, any[]> = {};
+  (fixtureEase || []).forEach((f: any) => {
+    (easeByTeam[f.team] = easeByTeam[f.team] || []).push(f);
+  });
+  Object.values(easeByTeam).forEach((list: any[]) => list.sort((a: any, b: any) => a.gw - b.gw));
+
+  function teamEase(team: string, skipGws: number, nGws: number): number | null {
+    const rows = easeByTeam[team] || [];
+    if (!rows.length) return null;
+    const gws = [...new Set(rows.map((f: any) => f.gw))].slice(skipGws, skipGws + nGws);
+    if (gws.length < nGws) return null;
+    const sel = rows.filter((f: any) => gws.includes(f.gw));
+    return sel.reduce((s: number, f: any) => s + (f.att_ease || 1), 0) / sel.length;
+  }
+
+  function teamFixtureList(team: string, nGws: number): string {
+    return (easeByTeam[team] || []).slice(0, nGws)
+      .map((f: any) => `${f.opponent} (${f.venue})`).join(', ');
+  }
+
+  return { teamEase, teamFixtureList, easeByTeam };
+}
+
+// league: { ratings, personas4, seasonToDate, playerForm, priceRisk,
+//           personaShifts, teamMetrics, benchmarks, replacementPool, fixtureEase }
+// picksData: FPL picks payload; historyData: FPL entry history payload (or null)
+function buildContext(picksData: any, historyData: any, league: any) {
+  const picks = picksData.picks || [];
+  const entryHistory = picksData.entry_history || {};
+  const byEl = (rows: any[]) => {
+    const m = new Map<any, any>();
+    (rows || []).forEach((r: any) => m.set(r.element, r));
+    return m;
+  };
+  const maps = {
+    ratings: byEl(league.ratings),
+    personas: byEl(league.personas4),
+    std: byEl(league.seasonToDate),
+    form: byEl(league.playerForm),
+    priceRisk: byEl(league.priceRisk),
+    shifts: byEl(league.personaShifts),
+    metrics: byEl(league.metrics),
+  };
+
+  const squad = picks.map((pick: any) => ({
+    pick,
+    isStarter: pick.position <= 11,
+    r: maps.ratings.get(pick.element) || null,
+    p4: maps.personas.get(pick.element) || null,
+    std: maps.std.get(pick.element) || null,
+    form: maps.form.get(pick.element) || null,
+    priceRisk: maps.priceRisk.get(pick.element) || null,
+    shift: maps.shifts.get(pick.element) || null,
+    m: maps.metrics.get(pick.element) || null,
+  }));
+
+  const positionGroups: Record<string, any[]> = {};
+  for (const pos of ['GKP', 'DEF', 'MID', 'FWD']) {
+    positionGroups[pos] = squad.filter((s: any) => s.r && s.r.position === pos && s.isStarter);
+  }
+
+  const { teamEase, teamFixtureList } = makeTeamEase(league.fixtureEase);
+
+  return {
+    squad,
+    starters: squad.filter((s: any) => s.isStarter),
+    captain: squad.find((s: any) => s.pick.is_captain) || null,
+    positionGroups,
+    bank: entryHistory.bank != null ? entryHistory.bank / 10 : null,
+    history: historyData || null,
+    benchmarks: league.benchmarks || null,
+    teamMetrics: league.teamMetrics || [],
+    replacementPool: league.replacementPool || [],
+    fixtureEase: league.fixtureEase || [],
+    league,   // full league tables for rules that scan beyond the squad
+    teamEase,
+    teamFixtureList,
+    ownedElements: new Set(picks.map((p: any) => p.element)),
+  };
+}
+
+function runRules(rules: Rule[], ctx: Ctx) {
+  const fired: any[] = [];
+  for (const rule of rules) {
+    try {
+      const out = rule.run(ctx);
+      if (Array.isArray(out)) fired.push(...out.map((i: any) => ({ rule_id: rule.id, severity: rule.severity, ...i })));
+      else if (out) fired.push({ rule_id: rule.id, severity: rule.severity, ...out });
+    } catch (e) {
+      // A broken rule must never take down the report
+      console.error(`insight rule ${rule.id} failed:`, e);
+    }
+  }
+  fired.sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9));
+  const counts: Record<string, number> = {};
+  return fired.filter((i) => {
+    counts[i.severity] = (counts[i.severity] || 0) + 1;
+    return counts[i.severity] <= MAX_PER_SEVERITY;
+  });
+}
+
+export { buildContext, runRules, makeTeamEase, SEVERITY_META, SEVERITY_ORDER, MAX_PER_SEVERITY };
