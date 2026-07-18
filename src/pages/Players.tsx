@@ -77,7 +77,7 @@ function PlayerPhoto({ code, pos, size }: { code: number | null; pos: string; si
 }
 
 export default function Players() {
-  const { data } = useCore()
+  const { data, error: coreError } = useCore()
   const [params, setParams] = useSearchParams()
   const name = params.get('name')
 
@@ -87,7 +87,7 @@ export default function Players() {
     return (
       <PageShell>
         <PageHeader title="Player Search" subtitle="Search for any player to see their FPL Analyser ratings, stats and form" />
-        <PageSkeleton />
+        <PageSkeleton error={coreError} />
       </PageShell>
     )
   }

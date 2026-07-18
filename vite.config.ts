@@ -44,6 +44,9 @@ function serveSiteData(): Plugin {
 export default defineConfig({
   // Relative base: works on GitHub Pages project sub-paths and in a Capacitor webview.
   base: './',
+  define: {
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     react(),
     tailwindcss(),

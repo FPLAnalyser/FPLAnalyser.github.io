@@ -48,6 +48,21 @@
     } catch (e) { /* best effort */ }
   })();
 
+  // Collect runtime errors from the very start so the #/debug page can show
+  // them even when they happen before React mounts.
+  (function () {
+    window.__errlog = [];
+    function log(kind, msg) {
+      if (window.__errlog.length < 30) window.__errlog.push(new Date().toISOString().slice(11, 19) + ' [' + kind + '] ' + msg);
+    }
+    window.addEventListener('error', function (e) {
+      log('error', (e.message || 'unknown') + (e.filename ? ' @ ' + e.filename.split('/').pop() + ':' + e.lineno : ''));
+    });
+    window.addEventListener('unhandledrejection', function (e) {
+      var r = e.reason; log('promise', (r && (r.message || String(r))) || 'unknown');
+    });
+  })();
+
   // 2) Start the core data downloads NOW, during HTML parse — the app's data
   //    layer picks these promises up, cutting the JS-download-then-fetch chain
   //    out of the critical path (worth seconds on a phone connection).

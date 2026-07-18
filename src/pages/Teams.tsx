@@ -44,7 +44,7 @@ const TEAM_TABS: TabDef[] = [
 ]
 
 export default function Teams() {
-  const { data } = useCore()
+  const { data, error: coreError } = useCore()
   const [params, setParams] = useSearchParams()
   const selected = params.get('team')
 
@@ -72,7 +72,7 @@ export default function Teams() {
     return (
       <PageShell>
         <PageHeader title="Team Search" subtitle="Search for a team to see their metrics and player ratings" />
-        <PageSkeleton />
+        <PageSkeleton error={coreError} />
       </PageShell>
     )
   }

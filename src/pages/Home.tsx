@@ -102,7 +102,7 @@ function Pillar({ icon, title, body }: { icon: IconName; title: string; body: st
 }
 
 export default function Home() {
-  const { data } = useCore()
+  const { data, error: coreError } = useCore()
   const navigate = useNavigate()
   const toPlayer = (name: string) => navigate(`/player?name=${encodeURIComponent(name)}`)
   const toTeam = (team: string) => navigate(`/teams?team=${team}`)
@@ -113,7 +113,7 @@ export default function Home() {
     return (
       <PageShell>
         <PageHeader title="FPL Analyser" subtitle="What matters this week — fixtures, form and captaincy, driven by the data" />
-        <PageSkeleton />
+        <PageSkeleton error={coreError} />
       </PageShell>
     )
   }

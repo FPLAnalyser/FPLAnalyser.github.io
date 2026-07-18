@@ -126,7 +126,7 @@ interface TabView {
 }
 
 export default function Rankings() {
-  const { data } = useCore()
+  const { data, error: coreError } = useCore()
   const [tab, setTab] = useState('top-rated')
   const [pos, setPos] = useState('ALL')
 
@@ -289,7 +289,7 @@ export default function Rankings() {
     return (
       <PageShell>
         <PageHeader title="Rankings" subtitle="Top players across all metrics" />
-        <PageSkeleton />
+        <PageSkeleton error={coreError} />
       </PageShell>
     )
   }

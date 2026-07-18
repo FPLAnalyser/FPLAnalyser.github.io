@@ -72,7 +72,7 @@ function profileOf(shots: Row[], withHead: boolean): Profile {
 }
 
 export default function Fixtures() {
-  const { data } = useCore()
+  const { data, error: coreError } = useCore()
   const [windowN, setWindowN] = useState<(typeof WINDOWS)[number]>(4)
   const [lens, setLens] = useState<Lens>('overall')
 
@@ -80,7 +80,7 @@ export default function Fixtures() {
     return (
       <PageShell>
         <PageHeader title="Fixture Analysis" subtitle="Our own difficulty ratings for every upcoming game — overall, for attackers and for defenders" />
-        <PageSkeleton />
+        <PageSkeleton error={coreError} />
       </PageShell>
     )
   }

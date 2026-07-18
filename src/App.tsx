@@ -39,6 +39,7 @@ const Rankings = lazyRetry(PAGE_LOADERS.rankings)
 const MyTeam = lazyRetry(PAGE_LOADERS.myteam)
 const Scouting = lazyRetry(PAGE_LOADERS.scouting)
 const Fixtures = lazyRetry(PAGE_LOADERS.fixtures)
+const Debug = lazyRetry(() => import('./pages/Debug'))
 
 const page = (el: React.ReactNode) => <Suspense fallback={<PageSkeleton />}>{el}</Suspense>
 
@@ -56,6 +57,7 @@ const router = createHashRouter([
       { path: 'fixtures', element: page(<Fixtures />) },
       { path: 'loadteam', element: page(<MyTeam />) },
       { path: 'scout', element: page(<Scouting />) },
+      { path: 'debug', element: page(<Debug />) },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },
