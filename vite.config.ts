@@ -20,31 +20,21 @@ function copySiteData(): Plugin {
   }
 }
 
-// Dev only: serve the repo-root assets the Python pipeline owns (site_data/*)
-// and the legacy static assets (logo.png, icons/, manifest) that don't move to
-// public/ until the Phase 7 cutover. In production these are copied to dist/.
-const MIME: Record<string, string> = {
-  '.json': 'application/json',
-  '.png': 'image/png',
-  '.webmanifest': 'application/manifest+json',
-  '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon',
-}
-function serveRootAssets(): Plugin {
-  const roots = ['site_data', 'icons']
-  const files = ['logo.png', 'manifest.webmanifest']
+// Dev only: serve site_data/* from the repo root (the Python pipeline owns that
+// directory, so it stays at the root and can't live in public/). In production
+// copySiteData() copies it into dist/.
+function serveSiteData(): Plugin {
   return {
-    name: 'serve-root-assets',
+    name: 'serve-site-data',
     apply: 'serve',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const url = decodeURIComponent((req.url || '').split('?')[0])
         const rel = normalize(url).replace(/^(\.\.[/\\])+/, '').replace(/^[/\\]+/, '')
-        const top = rel.split(/[/\\]/)[0]
-        if (!roots.includes(top) && !files.includes(rel)) return next()
+        if (rel.split(/[/\\]/)[0] !== 'site_data') return next()
         const abs = join(__dirname, rel)
-        if (!abs.startsWith(__dirname) || !existsSync(abs) || !statSync(abs).isFile()) return next()
-        res.setHeader('Content-Type', MIME[extname(abs)] || 'application/octet-stream')
+        if (!abs.startsWith(__dirname) || !existsSync(abs) || !statSync(abs).isFile() || extname(abs) !== '.json') return next()
+        res.setHeader('Content-Type', 'application/json')
         createReadStream(abs).pipe(res)
       })
     },
@@ -58,23 +48,22 @@ export default defineConfig({
     react(),
     tailwindcss(),
     copySiteData(),
-    serveRootAssets(),
+    serveSiteData(),
     VitePWA({
-      registerType: 'autoUpdate',
-      manifest: false, // manifest.webmanifest is hand-maintained
+      registerType: 'autoUpdate', // injects skipWaiting + clientsClaim for a clean takeover
+      manifest: false, // public/manifest.webmanifest is hand-maintained
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
+        // Hashed assets are precached (immutable → effectively self-updating,
+        // matching the legacy stale-while-revalidate intent).
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
         navigateFallback: 'index.html',
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
-            // Same strategy as the legacy service worker: fresh data when
-            // online, last-known data when offline.
+            // Same strategy as the legacy SW: fresh data online, last-known offline.
             urlPattern: /\/site_data\/.*\.json$/,
             handler: 'NetworkFirst',
-            options: {
-              cacheName: 'site-data',
-              networkTimeoutSeconds: 10,
-            },
+            options: { cacheName: 'site-data', networkTimeoutSeconds: 10 },
           },
         ],
       },
