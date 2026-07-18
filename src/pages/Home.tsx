@@ -66,6 +66,7 @@ export default function Home() {
 
   return (
     <PageShell>
+      <p className="mb-3 text-[11px] font-semibold tracking-[0.28em] text-accent uppercase">Data. Insight. Points.</p>
       <PageHeader title="FPL Analyser" subtitle="What matters this week — fixtures, form and captaincy, driven by the data" />
 
       {stories.length > 0 && (
