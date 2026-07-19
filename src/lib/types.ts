@@ -43,6 +43,28 @@ export interface FixtureEaseRow extends Row {
   fdr: 1 | 2 | 3 | 4 | 5
 }
 
+/** Our own team Attack/Defence ratings (0–100) + league rank, per window. */
+export interface TeamRatingRow extends Row {
+  team: string
+  window: '4gw' | '6gw' | 'season'
+  attack: number
+  attack_rank: number
+  defence: number
+  defence_rank: number
+  set_piece_share: number | null
+  set_piece_threat: boolean
+  // Underlying components surfaced for the list's Attack/Defence tabs.
+  // finish_delta (goals−xG) and xgc_prevented (xGC−goals conceded) are raw and
+  // carry a dataset-wide xG/goal offset, so the UI shows them relative to the
+  // league mean.
+  finish_delta: number | null
+  xgc_prevented: number | null
+  box_share: number | null
+  box_share_conceded: number | null
+  shots: number | null
+  shots_conceded: number | null
+}
+
 export interface Meta {
   generated_at: string
   current_gw: number | null
@@ -73,6 +95,7 @@ export interface CoreData {
   seasonToDate: Row[]
   tierPerf: Row[]
   fixtureEase: FixtureEaseRow[]
+  teamRatings: TeamRatingRow[]
   meta: Meta | null
   benchmarks: Row[] | null
   replacementPool: Row[]
