@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import { createHashRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { PageSkeleton } from './components/Skeleton'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { DataProvider } from './lib/useData'
 import { ThemeProvider } from './lib/theme'
 
@@ -41,7 +42,13 @@ const Scouting = lazyRetry(PAGE_LOADERS.scouting)
 const Fixtures = lazyRetry(PAGE_LOADERS.fixtures)
 const Debug = lazyRetry(() => import('./pages/Debug'))
 
-const page = (el: React.ReactNode) => <Suspense fallback={<PageSkeleton />}>{el}</Suspense>
+// Every route is wrapped so a render throw OR a stale-chunk import failure
+// becomes a visible, recoverable message + a logged error — never a blank page.
+const page = (el: React.ReactNode) => (
+  <ErrorBoundary>
+    <Suspense fallback={<PageSkeleton />}>{el}</Suspense>
+  </ErrorBoundary>
+)
 
 // Paths mirror the legacy hash routes (#home, #player, …) so old links keep working.
 const router = createHashRouter([

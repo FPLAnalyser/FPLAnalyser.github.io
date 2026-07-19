@@ -1,4 +1,3 @@
-import { motion, useReducedMotion } from 'framer-motion'
 import type { ReactNode } from 'react'
 
 export interface TabDef {
@@ -7,19 +6,22 @@ export interface TabDef {
   icon?: ReactNode
 }
 
-/** Horizontal, scrollable tab bar with an animated active underline. */
+/**
+ * Horizontal, scrollable tab bar with a CSS-only active underline. The
+ * `layoutId` prop is accepted for call-site compatibility but no longer drives
+ * an animation — the indicator must render without any animation engine, which
+ * fails silently on some Safari/WebKit builds and left routes blank.
+ */
 export function Tabs({
   tabs,
   active,
   onChange,
-  layoutId = 'tab-underline',
 }: {
   tabs: TabDef[]
   active: string
   onChange: (id: string) => void
   layoutId?: string
 }) {
-  const reduced = useReducedMotion()
   return (
     <div
       role="tablist"
@@ -39,13 +41,7 @@ export function Tabs({
           >
             {tab.icon}
             {tab.label}
-            {isActive && (
-              <motion.span
-                layoutId={layoutId}
-                className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-accent"
-                transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
-              />
-            )}
+            {isActive && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-accent" />}
           </button>
         )
       })}

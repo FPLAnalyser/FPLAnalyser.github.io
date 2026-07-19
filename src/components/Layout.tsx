@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { motion, useReducedMotion } from 'framer-motion'
 import { Icon } from './Icon'
 import { OnboardingModal, hasSeenOnboarding } from './OnboardingModal'
 import { ThemeSwitcher } from './ThemeSwitcher'
@@ -20,7 +19,6 @@ const LINKS: { to: string; label: string }[] = [
 export function Layout() {
   const [helpOpen, setHelpOpen] = useState(() => !hasSeenOnboarding())
   const [searchOpen, setSearchOpen] = useState(false)
-  const reduced = useReducedMotion()
 
   return (
     <div className="min-h-screen">
@@ -54,13 +52,7 @@ export function Layout() {
                 {({ isActive }) => (
                   <>
                     {link.label}
-                    {isActive && (
-                      <motion.span
-                        layoutId="nav-underline"
-                        className="absolute inset-x-2 bottom-1 h-0.5 rounded-full bg-accent"
-                        transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
-                      />
-                    )}
+                    {isActive && <span className="absolute inset-x-2 bottom-1 h-0.5 rounded-full bg-accent" />}
                   </>
                 )}
               </NavLink>

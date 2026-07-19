@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { useInView, useReducedMotion } from 'framer-motion'
 
 type CountFormat = 'int' | '1dp' | '2dp'
 
@@ -24,36 +23,54 @@ interface Props {
 }
 
 /**
- * Counts up from 0 to `value` when scrolled into view (fx.js animateCounters
- * equivalent). Renders the final value immediately under reduced motion.
+ * Counts up to `value` when scrolled into view. Uses native IntersectionObserver
+ * + matchMedia (no animation-library dependency in the render path) and ALWAYS
+ * renders the real value if anything about the effect misbehaves — the number
+ * must never be stuck at 0.
  */
 export function AnimatedCounter({ value, format = 'int', prefix = '', suffix = '', className, style, duration = 650 }: Props) {
   const ref = useRef<HTMLSpanElement>(null)
-  const inView = useInView(ref, { once: true, amount: 0.4 })
-  const reduced = useReducedMotion()
-  const [display, setDisplay] = useState(reduced ? value : 0)
+  const [display, setDisplay] = useState(value)
 
   useEffect(() => {
-    if (reduced) {
+    const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (reduced || typeof IntersectionObserver === 'undefined') {
       setDisplay(value)
       return
     }
-    if (!inView) {
-      // Fail-safe: if the in-view signal never fires (observer quirk on some
-      // browsers), snap to the real value rather than showing 0 forever.
-      const fallback = setTimeout(() => setDisplay(value), 1500)
-      return () => clearTimeout(fallback)
-    }
+
     let raf = 0
-    const start = performance.now()
-    const tick = (now: number) => {
-      const t = Math.min((now - start) / duration, 1)
-      setDisplay(value * easeOutCubic(t))
-      if (t < 1) raf = requestAnimationFrame(tick)
+    let done = false
+    const animate = () => {
+      const start = performance.now()
+      setDisplay(0)
+      const tick = (now: number) => {
+        const t = Math.min((now - start) / duration, 1)
+        setDisplay(value * easeOutCubic(t))
+        if (t < 1) raf = requestAnimationFrame(tick)
+      }
+      raf = requestAnimationFrame(tick)
     }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [inView, value, reduced, duration])
+
+    const el = ref.current
+    if (!el) {
+      setDisplay(value)
+      return
+    }
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting) && !done) {
+        done = true
+        io.disconnect()
+        animate()
+      }
+    }, { threshold: 0.4 })
+    io.observe(el)
+
+    // Fail-safe: if the observer never fires, show the real value anyway.
+    const fallback = setTimeout(() => { if (!done) { done = true; io.disconnect(); setDisplay(value) } }, 1200)
+
+    return () => { io.disconnect(); cancelAnimationFrame(raf); clearTimeout(fallback) }
+  }, [value, duration])
 
   return (
     <span ref={ref} className={className} style={style}>

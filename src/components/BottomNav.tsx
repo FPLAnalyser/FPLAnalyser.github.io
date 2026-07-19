@@ -1,5 +1,4 @@
 import { NavLink } from 'react-router-dom'
-import { motion, useReducedMotion } from 'framer-motion'
 import { Icon, type IconName } from './Icon'
 
 const TABS: { to: string; label: string; icon: IconName }[] = [
@@ -15,7 +14,6 @@ const TABS: { to: string; label: string; icon: IconName }[] = [
  * a prominent centre Search action that opens the global search sheet.
  */
 export function BottomNav({ onSearch }: { onSearch: () => void }) {
-  const reduced = useReducedMotion()
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-[150] border-t border-line bg-glass backdrop-blur-xl md:hidden"
@@ -23,7 +21,7 @@ export function BottomNav({ onSearch }: { onSearch: () => void }) {
       aria-label="Primary"
     >
       <div className="mx-auto grid max-w-lg grid-cols-6 items-end px-1">
-        {TABS.slice(0, 3).map((t) => <Tab key={t.to} {...t} reduced={reduced} />)}
+        {TABS.slice(0, 3).map((t) => <Tab key={t.to} {...t} />)}
         <div className="flex justify-center">
           <button
             type="button"
@@ -34,13 +32,13 @@ export function BottomNav({ onSearch }: { onSearch: () => void }) {
             <Icon name="search" size={20} />
           </button>
         </div>
-        {TABS.slice(3).map((t) => <Tab key={t.to} {...t} reduced={reduced} />)}
+        {TABS.slice(3).map((t) => <Tab key={t.to} {...t} />)}
       </div>
     </nav>
   )
 }
 
-function Tab({ to, label, icon, reduced }: { to: string; label: string; icon: IconName; reduced: boolean | null }) {
+function Tab({ to, label, icon }: { to: string; label: string; icon: IconName }) {
   return (
     <NavLink
       to={to}
@@ -53,13 +51,7 @@ function Tab({ to, label, icon, reduced }: { to: string; label: string; icon: Ic
     >
       {({ isActive }) => (
         <>
-          {isActive && (
-            <motion.span
-              layoutId="bottomnav-dot"
-              className="absolute top-1 h-1 w-1 rounded-full bg-accent"
-              transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
-            />
-          )}
+          {isActive && <span className="absolute top-1 h-1 w-1 rounded-full bg-accent" />}
           <Icon name={icon} size={20} />
           {label}
         </>
