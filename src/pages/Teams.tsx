@@ -5,7 +5,7 @@ import { SortableTable, type Column } from '../components/SortableTable'
 import { SearchBox } from '../components/SearchBox'
 import { StarRating } from '../components/StarRating'
 import { AnimatedCounter } from '../components/AnimatedCounter'
-import { Donut, CHART_COLORS, RatingNumber, ConcentrationBar } from '../components/viz'
+import { Donut, CHART_COLORS, RatingNumber, ConcentrationBar, scoreTone, SCORE_TEXT } from '../components/viz'
 import { TeamBadge } from '../components/badges'
 import { PlayerNameCell, PosBadge } from '../components/cells'
 import { FixtureChips } from '../components/FixtureChips'
@@ -64,6 +64,11 @@ export default function Teams() {
     for (const r of seasonRows) m.set(String(r.team), r)
     return m
   }, [seasonRows])
+  const ratingByTeam = useMemo(() => {
+    const m = new Map<string, TeamRatingRow>()
+    for (const r of teamRatings) if (r.window === 'season') m.set(r.team, r)
+    return m
+  }, [teamRatings])
 
   const selectTeam = (team: string) => {
     setParams(team ? { team } : {})
@@ -112,13 +117,27 @@ export default function Teams() {
           fixtureEase={fixtureEase}
         />
       ) : (
-        <AllTeamsTable rows={seasonRows} onSelect={selectTeam} />
+        <AllTeamsTable rows={seasonRows} ratingByTeam={ratingByTeam} onSelect={selectTeam} />
       )}
     </PageShell>
   )
 }
 
-function AllTeamsTable({ rows, onSelect }: { rows: Row[]; onSelect: (team: string) => void }) {
+function RatingCell({ score }: { score: number | null }) {
+  if (score == null) return <span className="text-ink-3">—</span>
+  const r = Math.round(score)
+  return <span className={`font-num font-semibold tabular-nums ${SCORE_TEXT[scoreTone(r)]}`}>{r}</span>
+}
+
+function AllTeamsTable({
+  rows,
+  ratingByTeam,
+  onSelect,
+}: {
+  rows: Row[]
+  ratingByTeam: Map<string, TeamRatingRow>
+  onSelect: (team: string) => void
+}) {
   const columns: Column<Row>[] = [
     {
       key: 'team',
@@ -132,6 +151,8 @@ function AllTeamsTable({ rows, onSelect }: { rows: Row[]; onSelect: (team: strin
         </span>
       ),
     },
+    { key: 'att', header: 'ATT', sortValue: (r) => ratingByTeam.get(String(r.team))?.attack ?? -1, cell: (r) => <RatingCell score={ratingByTeam.get(String(r.team))?.attack ?? null} /> },
+    { key: 'def', header: 'DEF', sortValue: (r) => ratingByTeam.get(String(r.team))?.defence ?? -1, cell: (r) => <RatingCell score={ratingByTeam.get(String(r.team))?.defence ?? null} /> },
     { key: 'form', header: 'Form', align: 'left', sortValue: (r) => str(r, 'form_direction'), cell: (r) => <span className="text-xs text-ink-2">{str(r, 'form_direction')}</span> },
     { key: 'cs', header: 'CS Rate', sortValue: (r) => num(r, 'cs_rate'), cell: (r) => <span className="font-num tabular-nums">{pct(num(r, 'cs_rate'))}</span> },
     { key: 'home', header: 'Home PPG', sortValue: (r) => num(r, 'home_pts_per_gw'), cell: (r) => <span className="font-num tabular-nums">{num(r, 'home_pts_per_gw') ?? 'N/A'}</span> },

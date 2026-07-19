@@ -259,7 +259,7 @@ export function scoreTone(r: number): Tone | 'neutral' {
   if (r >= 50) return 'neutral'
   return 'bad'
 }
-const SCORE_TEXT: Record<Tone | 'neutral', string> = {
+export const SCORE_TEXT: Record<Tone | 'neutral', string> = {
   accent: 'text-accent', good: 'text-good', warn: 'text-warn', bad: 'text-bad',
   info: 'text-info', neutral: 'text-ink',
 }
