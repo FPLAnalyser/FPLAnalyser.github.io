@@ -20,6 +20,7 @@ interface TeamDef {
   shotsPg: number; shotsPct: number
   boxPg: number; boxPct: number
 }
+interface TeamCS { rate: number; pct: number }
 interface PlayerMeta { rating: number | null; starts: number | null; mins: number | null; startRate: number | null }
 
 const SCOUT_MAX = 4
@@ -174,6 +175,23 @@ export default function Scouting() {
     return m
   }, [core])
 
+  // Team clean-sheet rate (season) from core team_metrics — the headline
+  // defensive outcome for defenders. Higher is better.
+  const teamCS = useMemo(() => {
+    const out = new Map<string, TeamCS>()
+    const rates = new Map<string, number>()
+    for (const t of (core?.teamMetrics ?? [])) {
+      if (str(t, 'window') !== 'season') continue
+      const team = str(t, 'team')
+      const r = num(t, 'cs_rate')
+      if (team && r != null) rates.set(team, r)
+    }
+    const sorted = [...rates.values()].sort((a, b) => a - b)
+    const pct = (v: number) => (sorted.length < 2 ? 50 : Math.round(((sorted.filter((x) => x < v).length + 0.5) / sorted.length) * 100))
+    for (const [t, r] of rates) out.set(t, { rate: r, pct: pct(r) })
+    return out
+  }, [core])
+
   const addToCompare = (p: SelPlayer) => {
     setMode('compare')
     setSelected((s) => (s.length >= SCOUT_MAX || s.some((x) => x.element === p.element) ? s : [...s, p]))
@@ -283,7 +301,7 @@ export default function Scouting() {
           <div className="mt-1 text-sm text-ink-3">Percentiles ranked within peer group, {WINDOW_LABELS[win]}.</div>
         </div>
       ) : (
-        <ScoutReport selected={selected} scoutMeta={scoutMeta} scoutRow={scoutRow} scoutPct={scoutPct} teamDef={teamDef} metaByEl={metaByEl} win={win} />
+        <ScoutReport selected={selected} scoutMeta={scoutMeta} scoutRow={scoutRow} scoutPct={scoutPct} teamDef={teamDef} teamCS={teamCS} metaByEl={metaByEl} win={win} />
       )}
       </>
       )}
@@ -463,13 +481,14 @@ function Discover({
 }
 
 function ScoutReport({
-  selected, scoutMeta, scoutRow, scoutPct, teamDef, metaByEl, win,
+  selected, scoutMeta, scoutRow, scoutPct, teamDef, teamCS, metaByEl, win,
 }: {
   selected: SelPlayer[]
   scoutMeta: Row[]
   scoutRow: (el: number) => Row | null
   scoutPct: (row: Row, key: string) => number | null
   teamDef: Map<string, TeamDef>
+  teamCS: Map<string, TeamCS>
   metaByEl: Map<number, PlayerMeta>
   win: ScoutWin
 }) {
@@ -506,14 +525,13 @@ function ScoutReport({
     else if (share >= 0.6) avail = 'is a regular for'
     else if (share >= 0.35) avail = 'is in and out of'
     else avail = 'is a fringe pick at'
-    const startTag = starts != null ? ` (${starts}/38 starts)` : ''
 
     const sentences: string[] = []
     const csOdds = td ? (td.shotsPct >= 66 ? 'strong' : td.shotsPct <= 34 ? 'poor' : 'average') : null
 
     if (sel.position === 'GKP') {
       const busy = (td && td.shotsPct <= 45) || hi('saves', 66)
-      sentences.push(`${avail} ${teamFullNames[sel.team] || sel.team}${startTag}.`)
+      sentences.push(`${avail} ${teamFullNames[sel.team] || sel.team}.`)
       if (busy && csOdds === 'poor') sentences.push("Behind a leaky defence he'll rack up save points and the odd bonus, but clean sheets are rare — treat him as a cheap enabler or matchup punt, not a set-and-forget.")
       else if (csOdds === 'strong' && !busy) sentences.push('Sits behind a mean defence, so clean-sheet points are the whole appeal; save volume is low, so returns come in lumps when the shutouts land.')
       else if (csOdds === 'strong' && busy) sentences.push('Rare profile — a busy keeper behind a strong defence, so both save points and clean sheets are on the table.')
@@ -524,7 +542,7 @@ function ScoutReport({
       const attack = hi('xgi', 74) || hi('npxg', 74) || hi('goals', 74)
       const setPiece = hi('headed_shots', 68) || hi('box_shots', 70)
       const dc = hi('def_contrib', 66)
-      sentences.push(`${avail} ${teamFullNames[sel.team] || sel.team}${startTag}.`)
+      sentences.push(`${avail} ${teamFullNames[sel.team] || sel.team}.`)
       if (csOdds === 'strong') sentences.push("Sits in one of the league's stingier defences, so clean-sheet points are the floor.")
       else if (csOdds === 'poor') sentences.push("Plays behind a leaky defence, so don't bank on clean sheets — his points have to come another way.")
       else sentences.push('Average clean-sheet odds, so returns will lean on the extras.')
@@ -536,7 +554,7 @@ function ScoutReport({
       const goals = hi('npxg', 72) || hi('goals', 72)
       const creator = hi('xa', 72) || hi('chances_created', 72) || hi('big_chances', 72)
       const dc = hi('def_contrib', 66)
-      sentences.push(`${avail} ${teamFullNames[sel.team] || sel.team}${startTag}.`)
+      sentences.push(`${avail} ${teamFullNames[sel.team] || sel.team}.`)
       if (goals && creator) sentences.push('An all-round attacking threat — real goal volume and elite creation, so points can land as goals or assists in any given week.')
       else if (goals) sentences.push('Gets his points chiefly from goals, with high-quality shot volume in dangerous areas — a captaincy-adjacent scorer when fixtures suit.')
       else if (creator) sentences.push('An assist-first pick: elite chance creation, but the goals are secondary, so returns hinge on teammates finishing.')
@@ -742,10 +760,19 @@ function ScoutReport({
         </div>
       ))}
 
-      {defensiveMode && teamDef.size > 0 && (
+      {defensiveMode && (teamDef.size > 0 || teamCS.size > 0) && (
         <div className="mb-4">
           <div className="mb-1.5 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Team Defence</div>
           <div className="flex flex-col">
+            <div className="flex items-center gap-3 border-b border-line py-2">
+              <LabelCell tip="Share of the team's league games kept as a clean sheet this season — the direct route to a defender's or keeper's clean-sheet points. Higher is better. Percentile vs all 20 teams.">Team Clean Sheets</LabelCell>
+              <div className="grid flex-1 gap-3" style={{ gridTemplateColumns: gridCols }}>
+                {shown.map((s, i) => {
+                  const cs = teamCS.get(s.sel.team)
+                  return cs == null ? <NaCell key={i} /> : <BarCell key={i} i={i} value={`${Math.round(cs.rate * 100)}%`} pct={cs.pct} />
+                })}
+              </div>
+            </div>
             {([
               ['Avg Shot Distance Against', 'yd', (d: TeamDef) => d.distAvg, (d: TeamDef) => d.distPct, "Average distance of the shots this player's team faces. Further out = the defence forces harder chances. Higher is better. Percentile vs all 20 teams."],
               ['Shots Conceded / Game', '', (d: TeamDef) => d.shotsPg, (d: TeamDef) => d.shotsPct, "Average shots the team faces per game. Fewer is better, so a low count scores green. Percentile vs all 20 teams."],
