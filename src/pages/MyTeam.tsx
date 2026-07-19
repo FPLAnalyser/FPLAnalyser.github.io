@@ -250,6 +250,7 @@ function PitchCard({ e, data, bench }: { e: Enriched; data: CoreData; bench?: bo
       {streak === '🧊 Cold' && <span className="absolute top-0.5 right-0.5 text-cold"><Icon name="snow" size={10} /></span>}
       <PlayerPhoto
         code={r.code}
+        element={r.element}
         className="mx-auto h-9 w-7 object-cover object-top"
         placeholder={<div className="mx-auto grid h-9 w-7 place-items-center text-ink-3"><Icon name="users" size={13} /></div>}
       />

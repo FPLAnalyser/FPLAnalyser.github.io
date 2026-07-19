@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { Icon } from './Icon'
 import { OnboardingModal, hasSeenOnboarding } from './OnboardingModal'
 import { ThemeSwitcher } from './ThemeSwitcher'
 import { GlobalSearch, SearchSheet } from './GlobalSearch'
 import { BottomNav } from './BottomNav'
+import { useCore } from '../lib/useData'
+import { ensureLiveCodes } from '../lib/photoCodes'
+import type { RatingRow } from '../lib/types'
 
 const LINKS: { to: string; label: string }[] = [
   { to: '/', label: 'Home' },
@@ -19,6 +22,16 @@ const LINKS: { to: string; label: string }[] = [
 export function Layout() {
   const [helpOpen, setHelpOpen] = useState(() => !hasSeenOnboarding())
   const [searchOpen, setSearchOpen] = useState(false)
+  const { data } = useCore()
+
+  // Best-effort: refresh player photo codes from the live FPL API so
+  // transferred / newly-added players show the current kit (falls back to the
+  // pipeline codes, and only applies if the live data matches our season).
+  useEffect(() => {
+    const ratings = (data?.ratings ?? []) as RatingRow[]
+    if (!ratings.length) return
+    ensureLiveCodes(ratings.filter((r) => r.element != null && r.code != null).map((r) => [r.element, r.code]))
+  }, [data])
 
   return (
     <div className="min-h-screen">
