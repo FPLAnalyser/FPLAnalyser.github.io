@@ -16,13 +16,14 @@ import type { CoreData, FixtureEaseRow, RatingRow, Row } from '../lib/types'
 
 const TONE_TEXT: Record<string, string> = { good: 'text-good', warn: 'text-warn', bad: 'text-bad', info: 'text-info', hot: 'text-hot', cold: 'text-cold' }
 
-function PhotoByCode({ code, size = 40 }: { code: number | null; size?: number }) {
+function PhotoByCode({ code, element, size = 40 }: { code: number | null; element?: number | null; size?: number }) {
   // PL headshots are portrait; match the box aspect so the whole head-and-
   // shoulders fits instead of cropping a zoomed-in face.
   const h = Math.round(size * 1.27)
   return (
     <PlayerPhoto
       code={code}
+      element={element}
       className="shrink-0 rounded-md object-cover object-top"
       style={{ width: size, height: h }}
       placeholder={<div className="shrink-0 rounded-md bg-surface-3" style={{ width: size, height: h }} />}
@@ -30,7 +31,7 @@ function PhotoByCode({ code, size = 40 }: { code: number | null; size?: number }
   )
 }
 
-interface DashItem { rank: number; name: string; code: number | null; pos: string; team: string; value: ReactNode }
+interface DashItem { rank: number; name: string; code: number | null; element?: number | null; pos: string; team: string; value: ReactNode }
 function DashCard({ title, icon, items, onPlayer }: { title: string; icon: ReactNode; items: DashItem[]; onPlayer: (name: string) => void }) {
   return (
     <div className="rounded-xl border border-line bg-surface-1/60 p-4">
@@ -39,7 +40,7 @@ function DashCard({ title, icon, items, onPlayer }: { title: string; icon: React
         {items.map((it) => (
           <button key={it.rank} onClick={() => onPlayer(it.name)} className="flex items-center gap-3 border-b border-line py-2 text-left last:border-0 transition-colors hover:bg-surface-2/50">
             <span className="w-6 font-num text-xs text-ink-3 tabular-nums">#{it.rank}</span>
-            <PhotoByCode code={it.code} size={32} />
+            <PhotoByCode code={it.code} element={it.element} size={32} />
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-medium text-ink">{it.name}</div>
               <div className="flex items-center gap-1 text-xs text-ink-2">{it.pos} · <TeamBadge team={it.team} size={11} />{teamFullNames[it.team] || it.team}</div>
@@ -165,7 +166,7 @@ function BriefingCard({ st, onPlayer, onTeam }: { st: Story; onPlayer: (n: strin
       </div>
       {st.player && (
         <div className="mb-2 flex items-center gap-3">
-          <PhotoByCode code={num(st.player, 'code')} size={44} />
+          <PhotoByCode code={num(st.player, 'code')} element={num(st.player, 'element')} size={44} />
           <div className="min-w-0 flex-1">
             <div className="font-semibold text-ink">{String(st.player.web_name)}</div>
             <div className="flex items-center gap-1 text-xs text-ink-2">{st.player.position} · <TeamBadge team={String(st.player.team)} size={11} />{teamFullNames[String(st.player.team)] || st.player.team} · £{st.player.price}m</div>
@@ -199,7 +200,7 @@ function GwPanel({ data, onPlayer }: { data: CoreData; onPlayer: (n: string) => 
   const seasonOk = data.ratings.filter((p) => num(p, 'season_ok') !== 0 && p.season_ok !== false) as RatingRow[]
 
   const toItems = (rows: RatingRow[], value: (p: RatingRow) => ReactNode): DashItem[] =>
-    rows.map((p, i) => ({ rank: i + 1, name: String(p.web_name), code: num(p, 'code'), pos: String(p.position), team: String(p.team), value: value(p) }))
+    rows.map((p, i) => ({ rank: i + 1, name: String(p.web_name), code: num(p, 'code'), element: num(p, 'element'), pos: String(p.position), team: String(p.team), value: value(p) }))
 
   if (!nextGw) {
     const topRated = [...seasonOk].sort((a, b) => (num(b, 'season_overall_score') ?? 0) - (num(a, 'season_overall_score') ?? 0)).slice(0, 5)
@@ -284,7 +285,7 @@ function FormWatch({ seasonToDate, ratings, onPlayer }: { seasonToDate: Row[]; r
 
   const toItems = (rows: Row[], sign: boolean): DashItem[] =>
     rows.map((p, i) => ({
-      rank: i + 1, name: String(p.web_name), code: codeByName.get(String(p.web_name)) ?? null, pos: String(p.position), team: String(p.team),
+      rank: i + 1, name: String(p.web_name), code: codeByName.get(String(p.web_name)) ?? null, element: num(p, 'element'), pos: String(p.position), team: String(p.team),
       value: <span className={sign ? 'text-hot' : 'text-cold'}>{sign ? '+' : ''}{(num(p, 'pts_delta') ?? 0).toFixed(1)}</span>,
     }))
 

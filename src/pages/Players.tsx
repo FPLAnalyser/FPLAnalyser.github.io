@@ -64,10 +64,11 @@ const ATT_COMBINED_DIMS: Dim[] = [
   ['90 Mins', 'season_att_mins90_rating', 'gw4_att_mins90_rating'],
 ]
 
-function PlayerPhoto({ code, pos, size }: { code: number | null; pos: string; size: number }) {
+function PlayerPhoto({ code, element, pos, size }: { code: number | null; element?: number | null; pos: string; size: number }) {
   return (
     <PhotoImg
       code={code}
+      element={element}
       className="rounded-lg object-cover object-top"
       style={{ width: size, height: size * 1.25 }}
       placeholder={<div className="grid place-items-center rounded-lg bg-surface-3 text-ink-3" style={{ width: size, height: size * 1.25 }}><PositionIcon pos={pos} size={size / 2.5} /></div>}
@@ -141,7 +142,7 @@ function MostOwned({ ratings, data, onSelect }: { ratings: RatingRow[]; data: Co
               onClick={() => onSelect(String(p.web_name))}
               className="flex items-center gap-3 rounded-xl border border-line bg-surface-1/60 p-3 text-left transition-colors hover:border-line-mid hover:bg-surface-2/60"
             >
-              <PlayerPhoto code={p.code} pos={p.position} size={44} />
+              <PlayerPhoto code={p.code} element={p.element} pos={p.position} size={44} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 font-semibold text-ink">
                   {String(p.web_name)}
@@ -212,7 +213,7 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
     <div className="rounded-xl border border-line bg-surface-1/50 p-5 md:p-6">
       {/* Header */}
       <div className="flex flex-wrap items-start gap-4">
-        <PlayerPhoto code={r.code} pos={pos} size={72} />
+        <PlayerPhoto code={r.code} element={r.element} pos={pos} size={72} />
         <div className="min-w-0 flex-1">
           <div className="text-2xl font-extrabold tracking-tight text-ink">{name}</div>
           <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
