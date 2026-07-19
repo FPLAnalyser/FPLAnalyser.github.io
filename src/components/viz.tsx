@@ -1,5 +1,6 @@
 import { useId, type ReactNode } from 'react'
 import { AnimatedCounter } from './AnimatedCounter'
+import { ordinal } from '../lib/util'
 
 /** Shared categorical palette (maps to the --chart-* tokens). */
 export const CHART_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)']
@@ -245,6 +246,123 @@ export function Donut({
             <span className="font-num tabular-nums text-ink">{Math.round((s.value / total) * 100)}%</span>
           </li>
         ))}
+      </ul>
+    </div>
+  )
+}
+
+/** Shared 0–100 tier thresholds — mirrors StarRating's tierOf so the app speaks
+ * one rating language (elite ≥80 · strong ≥65 · fair ≥50 · weak <50). */
+export function scoreTone(r: number): Tone | 'neutral' {
+  if (r >= 80) return 'accent'
+  if (r >= 65) return 'good'
+  if (r >= 50) return 'neutral'
+  return 'bad'
+}
+const SCORE_TEXT: Record<Tone | 'neutral', string> = {
+  accent: 'text-accent', good: 'text-good', warn: 'text-warn', bad: 'text-bad',
+  info: 'text-info', neutral: 'text-ink',
+}
+
+/**
+ * Big 0–100 rating with its league rank underneath — the Teams card anchor for
+ * Attack/Defence. Number is coloured by tier; a thin track echoes the score.
+ * `total` defaults to the 20-team league.
+ */
+export function RatingNumber({
+  value,
+  rank,
+  label,
+  total = 20,
+}: {
+  value: number | null
+  rank?: number | null
+  label: string
+  total?: number
+}) {
+  const has = value != null && !isNaN(value)
+  const r = has ? Math.round(value as number) : null
+  const tone = r == null ? 'neutral' : scoreTone(r)
+  const barColor = tone === 'neutral' ? 'var(--ink-3)' : TONE_COLOR[tone as Tone]
+  return (
+    <div className="flex-1 rounded-lg border border-line bg-surface-1 px-3 py-3">
+      <div className="text-[11px] font-semibold tracking-wide text-ink-2 uppercase">{label}</div>
+      <div className="mt-1 flex items-baseline gap-1.5">
+        {r == null ? (
+          <span className="font-num text-3xl font-bold text-ink-3">—</span>
+        ) : (
+          <AnimatedCounter value={r} className={`font-num text-3xl font-bold tabular-nums ${SCORE_TEXT[tone]}`} />
+        )}
+        {rank != null && r != null && (
+          <span className="font-num text-xs font-semibold tabular-nums text-ink-3">{ordinal(rank)}</span>
+        )}
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-3">
+        <span className="block h-full rounded-full" style={{ width: `${r ?? 0}%`, background: barColor }} />
+      </div>
+      {rank != null && r != null && (
+        <div className="mt-1.5 text-[11px] text-ink-3">{ordinal(rank)} of {total} in league</div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Horizontal stacked bar of who carries a team's points — top-N players plus a
+ * muted "rest of squad" tail — with a legend. Segments are normalised to the
+ * total, so it reads as reliance risk at a glance (one dominant block = one-man
+ * team; even blocks = spread).
+ */
+export function ConcentrationBar({
+  segments,
+  rest = 0,
+  restLabel = 'Rest of squad',
+  height = 16,
+}: {
+  segments: { label: string; value: number; color?: string }[]
+  rest?: number
+  restLabel?: string
+  height?: number
+}) {
+  const clean = segments.filter((s) => s.value > 0)
+  const restVal = rest > 0 ? rest : 0
+  const total = clean.reduce((s, x) => s + x.value, 0) + restVal
+  if (total <= 0) return null
+  const parts = clean.map((s, i) => ({ ...s, color: s.color ?? CHART_COLORS[i % CHART_COLORS.length] }))
+  return (
+    <div>
+      <div className="flex w-full overflow-hidden rounded-full bg-surface-3" style={{ height }}>
+        {parts.map((s, i) => (
+          <div
+            key={i}
+            style={{ width: `${(s.value / total) * 100}%`, background: s.color }}
+            title={`${s.label} — ${Math.round((s.value / total) * 100)}% of team points`}
+          />
+        ))}
+        {restVal > 0 && (
+          <div
+            style={{ width: `${(restVal / total) * 100}%`, background: 'var(--surface-3)' }}
+            title={`${restLabel} — ${Math.round((restVal / total) * 100)}%`}
+          />
+        )}
+      </div>
+      <ul className="mt-2.5 space-y-1">
+        {parts.map((s, i) => (
+          <li key={i} className="flex items-center gap-2 text-xs">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: s.color }} />
+            <span className="w-4 text-ink-3">{i + 1}</span>
+            <span className="min-w-0 flex-1 truncate text-ink-2">{s.label}</span>
+            <span className="font-num tabular-nums text-ink">{Math.round((s.value / total) * 100)}%</span>
+          </li>
+        ))}
+        {restVal > 0 && (
+          <li className="flex items-center gap-2 text-xs">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-sm bg-surface-3" />
+            <span className="w-4" />
+            <span className="min-w-0 flex-1 truncate text-ink-3">{restLabel}</span>
+            <span className="font-num tabular-nums text-ink-3">{Math.round((restVal / total) * 100)}%</span>
+          </li>
+        )}
       </ul>
     </div>
   )

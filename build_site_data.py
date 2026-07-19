@@ -100,6 +100,121 @@ def write_json(name, payload):
     return n
 
 
+# ── Team Attack/Defence ratings ───────────────────────────────────────────────
+# Our own 0–100 team strength ratings (NOT FPL's strength_* fields). Multi-factor
+# composites built from Understat shot-level data (data/understat_shots.csv), with
+# xA and clean-sheet rate borrowed from team_metrics. Per window (4gw/6gw/season):
+# each component is percentile-ranked across the 20 teams, then weighted. The
+# composite is itself ranked to give the league position shown on the card.
+#   ATTACK  = 25% xG · 20% box-shot share · 15% shot volume · 15% (xA + big
+#             chances) · 15% finishing edge (goals−xG) · 10% shot quality (xG/shot)
+#   DEFENCE = 25% xGC · 20% box-shots-conceded share · 15% shots-conceded volume ·
+#             15% clean-sheet rate · 15% keeping edge (goals conceded−xGC) ·
+#             10% shot-quality conceded  (all but CS-rate inverted: worse-for-
+#             opponent = higher score)
+# Set-piece/penalty threat (share of a team's xG from dead balls) rides along as a
+# separate flag, deliberately NOT folded into the attack number.
+BOX_ZONES = {"six_yard", "penalty_area"}
+SET_PIECE_SITUATIONS = {"FromCorner", "SetPiece", "DirectFreekick", "Penalty"}
+BIG_CHANCE_XG = 0.30  # shot-level proxy for a "big chance" (xG ≥ 0.30)
+
+
+def _window_cutoff_date(fixtures, n_gws):
+    """Earliest kickoff DATE (YYYY-MM-DD) among the last n finished GWs.
+    Returns None to mean 'whole season' (no date filter)."""
+    fin = fixtures[fixtures["finished"].astype(str) == "True"].dropna(subset=["kickoff_time"])
+    if fin.empty:
+        return None
+    gws = sorted(fin["gw"].unique())[-n_gws:]
+    ko = pd.to_datetime(fin[fin["gw"].isin(gws)]["kickoff_time"], utc=True, errors="coerce")
+    if ko.isna().all():
+        return None
+    return ko.min().date().isoformat()
+
+
+def _team_raw_metrics(sh, tm_win):
+    """Per-team raw attack/defence metrics from a windowed shots frame, with team_xa
+    and cs_rate pulled from the matching team_metrics window."""
+    tm_lookup = tm_win.set_index("team") if not tm_win.empty else pd.DataFrame().set_index(pd.Index([]))
+    has_xa = "team_xa" in tm_win.columns
+    has_cs = "cs_rate" in tm_win.columns
+    rows = []
+    for t in sorted(set(sh["team"]) | set(sh["conceded_by"])):
+        f = sh[sh["team"] == t]          # shots taken (attack)
+        a = sh[sh["conceded_by"] == t]   # shots faced (defence)
+        nf, na = len(f), len(a)
+        xg_for, xg_against = f["xg"].sum(), a["xg"].sum()
+        goals_for = int((f["result"] == "Goal").sum())
+        goals_against = int((a["result"] == "Goal").sum()) + int((a["result"] == "OwnGoal").sum())
+        sp_xg = f[f["situation"].isin(SET_PIECE_SITUATIONS)]["xg"].sum()
+        team_xa = tm_lookup.loc[t]["team_xa"] if (has_xa and t in tm_lookup.index) else np.nan
+        cs_rate = tm_lookup.loc[t]["cs_rate"] if (has_cs and t in tm_lookup.index) else np.nan
+        rows.append({
+            "team": t,
+            "a_xg": xg_for,
+            "a_box_share": int(f["zone"].isin(BOX_ZONES).sum()) / nf if nf else np.nan,
+            "a_volume": nf,
+            "a_xa": team_xa,
+            "a_big": int((f["xg"] >= BIG_CHANCE_XG).sum()),
+            "a_finish": goals_for - xg_for,
+            "a_quality": xg_for / nf if nf else np.nan,
+            "d_xgc": xg_against,
+            "d_box_share": int(a["zone"].isin(BOX_ZONES).sum()) / na if na else np.nan,
+            "d_volume": na,
+            "d_cs_rate": cs_rate,
+            "d_keep": goals_against - xg_against,
+            "d_quality": xg_against / na if na else np.nan,
+            "sp_xg_share": sp_xg / xg_for if xg_for else np.nan,
+        })
+    return pd.DataFrame(rows)
+
+
+def _pct(s, invert=False):
+    """Percentile rank across teams, 0–100. invert=True => lower raw value scores higher."""
+    return s.rank(pct=True, ascending=not invert) * 100
+
+
+def build_team_ratings(shots, tm, fixtures):
+    """List of {team, window, attack, attack_rank, defence, defence_rank,
+    set_piece_share, set_piece_threat} records over 4gw/6gw/season."""
+    out = []
+    for window, n in [("4gw", 4), ("6gw", 6), ("season", None)]:
+        if n is None:
+            sh = shots
+        else:
+            cutoff = _window_cutoff_date(fixtures, n)
+            sh = shots[shots["kickoff_date"] >= cutoff] if cutoff else shots
+        if sh.empty:
+            continue
+        m = _team_raw_metrics(sh, tm[tm["window"] == window] if "window" in tm.columns else tm.iloc[0:0])
+        if m.empty:
+            continue
+        attack = (0.25 * _pct(m["a_xg"]) + 0.20 * _pct(m["a_box_share"])
+                  + 0.15 * _pct(m["a_volume"])
+                  + 0.15 * (0.5 * _pct(m["a_xa"]) + 0.5 * _pct(m["a_big"]))
+                  + 0.15 * _pct(m["a_finish"]) + 0.10 * _pct(m["a_quality"]))
+        defence = (0.25 * _pct(m["d_xgc"], invert=True)
+                   + 0.20 * _pct(m["d_box_share"], invert=True)
+                   + 0.15 * _pct(m["d_volume"], invert=True)
+                   + 0.15 * _pct(m["d_cs_rate"])
+                   + 0.15 * _pct(m["d_keep"], invert=True)
+                   + 0.10 * _pct(m["d_quality"], invert=True))
+        m["attack"] = attack.round(1)
+        m["defence"] = defence.round(1)
+        m["attack_rank"] = m["attack"].rank(ascending=False, method="min").astype(int)
+        m["defence_rank"] = m["defence"].rank(ascending=False, method="min").astype(int)
+        sp_rank = m["sp_xg_share"].rank(ascending=False, method="min")
+        for i, r in m.iterrows():
+            out.append({
+                "team": r["team"], "window": window,
+                "attack": float(r["attack"]), "attack_rank": int(r["attack_rank"]),
+                "defence": float(r["defence"]), "defence_rank": int(r["defence_rank"]),
+                "set_piece_share": round(float(r["sp_xg_share"]), 3) if pd.notna(r["sp_xg_share"]) else None,
+                "set_piece_threat": bool(pd.notna(sp_rank[i]) and sp_rank[i] <= 6),
+            })
+    return out
+
+
 print("Exporting site tables to JSON...")
 row_counts = {}
 for name, csv_file in SITE_TABLES.items():
@@ -233,9 +348,18 @@ if os.path.exists(SHOTS_FILE):
               f"{len(player_shots)} players")
     else:
         print("  player_id_map_understat.csv not found — skipping player_shots.json")
+
+    # Team Attack/Defence ratings (needs the shots + team_metrics + fixtures loaded above)
+    print("Building team Attack/Defence ratings...")
+    team_ratings = build_team_ratings(shots, tm, fixtures)
+    row_counts["team_ratings"] = write_json("team_ratings", team_ratings)
+    if team_ratings:
+        wins = sorted({r["window"] for r in team_ratings})
+        print(f"  team_ratings: {len(team_ratings)} rows across windows {wins}")
 else:
     print("  data/understat_shots.csv not found — skipping shot map JSON "
           "(run pull_understat_data.py to generate it)")
+    row_counts["team_ratings"] = write_json("team_ratings", [])
 
 # ── Insight-engine tables (My Team report) ────────────────────────────────────
 print("Building insight tables...")

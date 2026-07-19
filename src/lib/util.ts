@@ -29,6 +29,13 @@ export function getPositionEmoji(pos: string): string {
   return ({ GKP: '🧤', DEF: '🛡️', MID: '⚡', FWD: '⚽' } as Record<string, string>)[pos] || '👤'
 }
 
+/** Ordinal suffix: 1 → "1st", 2 → "2nd", 3 → "3rd", 11 → "11th". */
+export function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return n + (s[(v - 20) % 10] || s[v] || s[0])
+}
+
 /** Parse a pipeline star string like "⭐⭐⭐½" into a number, or null. */
 export function starsToNum(s: unknown): number | null {
   if (!s || typeof s !== 'string') return null
