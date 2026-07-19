@@ -13,7 +13,7 @@ import { PageSkeleton } from '../components/Skeleton'
 import { PlayerPhoto as PhotoImg } from '../components/PlayerPhoto'
 import { PlayerScatterMap, PlayerZoneMap } from '../components/ShotMap'
 import { useCore } from '../lib/useData'
-import { num, str } from '../lib/rows'
+import { num, str, bool } from '../lib/rows'
 import { teamFullNames, TOOLTIPS } from '../lib/util'
 import { buildPlayerBundle, buildPlayerVerdict } from '../lib/insights/narrative'
 import type { CoreData, RatingRow, Row } from '../lib/types'
@@ -202,6 +202,8 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
 
   const personas = (p4 && str(p4, 'personas') && str(p4, 'personas') !== 'None') ? String(p4.personas).split(', ') : []
   const flags = p4 && str(p4, 'flags') ? String(p4.flags).split(', ') : []
+  const isPenTaker = bool(r, 'is_pen_taker')
+  const isSpTaker = bool(r, 'is_setpiece_taker')
 
   const tabs: TabDef[] = [
     { id: 'overview', label: 'Overview' },
@@ -244,8 +246,10 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
           <div className="min-w-0 flex-1">
             <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">The verdict</div>
             {verdict.verdict && <div className="mt-0.5 text-lg font-bold text-ink">{verdict.verdict}</div>}
-            {(personas.length > 0 || flags.length > 0) && (
+            {(personas.length > 0 || flags.length > 0 || isPenTaker || isSpTaker) && (
               <div className="mt-2 flex flex-wrap gap-1.5">
+                {isPenTaker && <Tag label="Penalty taker" tip="First-choice penalty taker for their club — extra, high-value goal route." tone="good" />}
+                {isSpTaker && <Tag label="Set-piece taker" tip="Primary corner / free-kick taker for their club — extra assist and goal routes." />}
                 {personas.map((p) => <Tag key={p} label={p} tip={personaTip(p)} />)}
                 {flags.map((f) => <Tag key={f} label={f} tip={personaTip(f)} tone={f.includes('Monster') ? 'good' : 'warn'} />)}
               </div>

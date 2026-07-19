@@ -72,6 +72,16 @@ export interface TooltipDict {
 }
 
 export const TOOLTIPS: TooltipDict = {
+  attack: 'Our 0–100 team attack rating: a percentile blend of xG, box-shot share, shot volume, chance creation, finishing edge and shot quality across the 20 teams. Higher = more dangerous going forward.',
+  defence: 'Our 0–100 team defence rating: a percentile blend of xG conceded, box shots conceded, shots-conceded volume, clean-sheet rate, keeping edge and shot-quality conceded. Higher = harder to score against.',
+  team_xg: 'Total expected goals — the quality-weighted sum of the chances this team has created.',
+  team_xgc: 'Total expected goals conceded — the quality-weighted sum of the chances this team has allowed.',
+  team_xa: 'Total expected assists — the quality-weighted sum of the chances this team has created for teammates.',
+  finish_delta: 'Finishing vs the league: goals scored minus xG, shown relative to the league average. Positive (green) = clinical, converting above expectation; negative = wasteful.',
+  prevent_delta: 'Prevention vs the league: expected goals conceded minus goals conceded, relative to the league average. Positive (green) = keeping out more than expected; negative = leaky.',
+  box_share: 'Share of the team’s shots taken from inside the box (six-yard + penalty area). Higher = better shot locations.',
+  box_share_conceded: 'Share of shots conceded that came from inside the box. Lower = keeping opponents to lower-quality chances.',
+  set_piece_share: 'Share of the team’s expected goals that come from set pieces and penalties. High values flag a set-piece threat.',
   overall: 'Weighted composite of all dimension ratings. Reflects output, consistency and reliability combined into one score.',
   save: 'Based on saves per90 and frequency of earning save points (3+ saves per game). Higher = more active shot-stopper.',
   cs: 'Based on clean sheet rate, xGC per90 and goals conceded vs xGC. Higher = better defensive record.',

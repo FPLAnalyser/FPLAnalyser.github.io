@@ -15,7 +15,7 @@ import { PageSkeleton } from '../components/Skeleton'
 import { Icon } from '../components/Icon'
 import { useCore } from '../lib/useData'
 import { num, str, bool } from '../lib/rows'
-import { teamFullNames } from '../lib/util'
+import { teamFullNames, TOOLTIPS } from '../lib/util'
 import type { FixtureEaseRow, RatingRow, Row, TeamRatingRow } from '../lib/types'
 
 function Tile({ value, label }: { value: ReactNode; label: string }) {
@@ -177,21 +177,21 @@ function AllTeamsTable({
 
   const attackCols: Column<Row>[] = [
     { key: 'team', header: 'Team', align: 'left', sortValue: teamSort, cell: teamCell },
-    { key: 'att', header: 'ATT', sortValue: (r) => rt(r)?.attack ?? -1, cell: (r) => <RatingCell score={rt(r)?.attack ?? null} /> },
-    { key: 'xg', header: 'xG', sortValue: (r) => num(r, 'team_xg'), cell: (r) => <span className="font-num tabular-nums">{fx(num(r, 'team_xg'))}</span> },
-    { key: 'xa', header: 'xA', sortValue: (r) => num(r, 'team_xa'), cell: (r) => <span className="font-num tabular-nums">{fx(num(r, 'team_xa'))}</span> },
-    { key: 'finish', header: 'Finish Δ', sortValue: (r) => { const v = rt(r)?.finish_delta; return v == null ? -999 : v - meanFinish }, cell: (r) => { const v = rt(r)?.finish_delta; return <DeltaCell value={v == null ? null : v - meanFinish} /> } },
-    { key: 'box', header: 'Box %', sortValue: (r) => rt(r)?.box_share ?? -1, cell: (r) => { const v = rt(r)?.box_share; return <span className="font-num tabular-nums">{v == null ? 'N/A' : `${Math.round(v * 100)}%`}</span> } },
-    { key: 'sp', header: 'Set-piece', sortValue: (r) => rt(r)?.set_piece_share ?? -1, cell: (r) => { const rr = rt(r); if (!rr || rr.set_piece_share == null) return <span className="text-ink-3">—</span>; return <span className={`font-num tabular-nums ${rr.set_piece_threat ? 'font-semibold text-warn' : 'text-ink-2'}`}>{Math.round(rr.set_piece_share * 100)}%</span> } },
+    { key: 'att', header: 'ATT', tip: TOOLTIPS.attack as string, sortValue: (r) => rt(r)?.attack ?? -1, cell: (r) => <RatingCell score={rt(r)?.attack ?? null} /> },
+    { key: 'xg', header: 'xG', tip: TOOLTIPS.team_xg as string, sortValue: (r) => num(r, 'team_xg'), cell: (r) => <span className="font-num tabular-nums">{fx(num(r, 'team_xg'))}</span> },
+    { key: 'xa', header: 'xA', tip: TOOLTIPS.team_xa as string, sortValue: (r) => num(r, 'team_xa'), cell: (r) => <span className="font-num tabular-nums">{fx(num(r, 'team_xa'))}</span> },
+    { key: 'finish', header: 'Finish Δ', tip: TOOLTIPS.finish_delta as string, sortValue: (r) => { const v = rt(r)?.finish_delta; return v == null ? -999 : v - meanFinish }, cell: (r) => { const v = rt(r)?.finish_delta; return <DeltaCell value={v == null ? null : v - meanFinish} /> } },
+    { key: 'box', header: 'Box %', tip: TOOLTIPS.box_share as string, sortValue: (r) => rt(r)?.box_share ?? -1, cell: (r) => { const v = rt(r)?.box_share; return <span className="font-num tabular-nums">{v == null ? 'N/A' : `${Math.round(v * 100)}%`}</span> } },
+    { key: 'sp', header: 'Set-piece', tip: TOOLTIPS.set_piece_share as string, sortValue: (r) => rt(r)?.set_piece_share ?? -1, cell: (r) => { const rr = rt(r); if (!rr || rr.set_piece_share == null) return <span className="text-ink-3">—</span>; return <span className={`font-num tabular-nums ${rr.set_piece_threat ? 'font-semibold text-warn' : 'text-ink-2'}`}>{Math.round(rr.set_piece_share * 100)}%</span> } },
   ]
 
   const defenceCols: Column<Row>[] = [
     { key: 'team', header: 'Team', align: 'left', sortValue: teamSort, cell: teamCell },
-    { key: 'def', header: 'DEF', sortValue: (r) => rt(r)?.defence ?? -1, cell: (r) => <RatingCell score={rt(r)?.defence ?? null} /> },
-    { key: 'xgc', header: 'xGC', sortValue: (r) => num(r, 'team_xgc'), cell: (r) => <span className="font-num tabular-nums">{fx(num(r, 'team_xgc'))}</span> },
-    { key: 'cs', header: 'CS %', sortValue: (r) => num(r, 'cs_rate'), cell: (r) => <span className="font-num tabular-nums">{pct(num(r, 'cs_rate'))}</span> },
-    { key: 'prevent', header: 'Prevent Δ', sortValue: (r) => { const v = rt(r)?.xgc_prevented; return v == null ? -999 : v - meanPrevent }, cell: (r) => { const v = rt(r)?.xgc_prevented; return <DeltaCell value={v == null ? null : v - meanPrevent} /> } },
-    { key: 'boxc', header: 'Box % Con', sortValue: (r) => rt(r)?.box_share_conceded ?? -1, cell: (r) => { const v = rt(r)?.box_share_conceded; return <span className="font-num tabular-nums">{v == null ? 'N/A' : `${Math.round(v * 100)}%`}</span> } },
+    { key: 'def', header: 'DEF', tip: TOOLTIPS.defence as string, sortValue: (r) => rt(r)?.defence ?? -1, cell: (r) => <RatingCell score={rt(r)?.defence ?? null} /> },
+    { key: 'xgc', header: 'xGC', tip: TOOLTIPS.team_xgc as string, sortValue: (r) => num(r, 'team_xgc'), cell: (r) => <span className="font-num tabular-nums">{fx(num(r, 'team_xgc'))}</span> },
+    { key: 'cs', header: 'CS %', tip: TOOLTIPS.cs as string, sortValue: (r) => num(r, 'cs_rate'), cell: (r) => <span className="font-num tabular-nums">{pct(num(r, 'cs_rate'))}</span> },
+    { key: 'prevent', header: 'Prevent Δ', tip: TOOLTIPS.prevent_delta as string, sortValue: (r) => { const v = rt(r)?.xgc_prevented; return v == null ? -999 : v - meanPrevent }, cell: (r) => { const v = rt(r)?.xgc_prevented; return <DeltaCell value={v == null ? null : v - meanPrevent} /> } },
+    { key: 'boxc', header: 'Box % Con', tip: TOOLTIPS.box_share_conceded as string, sortValue: (r) => rt(r)?.box_share_conceded ?? -1, cell: (r) => { const v = rt(r)?.box_share_conceded; return <span className="font-num tabular-nums">{v == null ? 'N/A' : `${Math.round(v * 100)}%`}</span> } },
   ]
 
   const isAttack = tab === 'attack'

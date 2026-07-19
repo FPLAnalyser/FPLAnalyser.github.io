@@ -115,127 +115,111 @@ def minutes_scores(group):
     rotation_risk = (1 - start_rate) * 0.6 + early_subs * 0.4
     return round(start_rate, 3), round(mins_90_rate, 3), round(rotation_risk, 3)
 
-# Sustainability factor for goal threat: xG backed by shots in the box and
-# shots on target is repeatable; xG built on pot-shots from range is not.
-# Returns 1.0 (neutral) when Understat data is missing or shot volume too low.
-def goal_sustainability(group, min_shots):
-    shots = valid_sum(group, "us_shots")
-    if pd.isna(shots) or shots < min_shots:
-        return 1.0
-    box = valid_sum(group, "us_shots_six_yard")
-    pen = valid_sum(group, "us_shots_penalty_area")
-    sot = valid_sum(group, "us_sot")
-    box_share = ((box or 0) + (pen or 0)) / shots if not pd.isna(box) and not pd.isna(pen) else np.nan
-    sot_rate = sot / shots if not pd.isna(sot) else np.nan
-    if pd.isna(box_share) and pd.isna(sot_rate):
-        return 1.0
-    # Neutral profile (box_share ~0.62, sot_rate ~0.35) → factor ~1.0;
-    # elite box presence + accuracy → ~1.12; range-shooter profile → ~0.88
-    factor = 1.0
-    if not pd.isna(box_share):
-        factor += 0.20 * (box_share - 0.62)
-    if not pd.isna(sot_rate):
-        factor += 0.10 * (sot_rate - 0.35)
-    return round(min(max(factor, 0.85), 1.15), 4)
-
-def calc_dimension_scores(group, position, mins, window_key="season"):
-    p = lambda col: per90(group, col, mins)
-    dc = dc_hit_rate(group, position)
-    mv = MIN_VALID[window_key]
-    scores = {}
-
-    if position == "GKP":
-        xgc = p("expected_goals_conceded")
-        gc = p("goals_conceded")
-        scores["save_score"] = p("saves") * 0.7 + (group["saves"].mean() / 3) * 0.3
-        scores["cs_score"] = (group["clean_sheets"].mean() * 0.5 +
-            (1 / (xgc + 0.1)) * 0.3 + max(0, xgc - gc) * 0.2)
-        scores["bps_score"] = p("bps") * 0.6 + p("bonus") * 0.4
-
-    elif position == "DEF":
-        xgc = p("expected_goals_conceded")
-        gc = p("goals_conceded")
-        scores["cs_score"] = (group["clean_sheets"].mean() * 0.5 +
-            (1 / (xgc + 0.1)) * 0.3 + max(0, xgc - gc) * 0.2)
-        scores["dc_score"] = (dc * 0.5 + p("tackles") * 0.25 +
-            p("clearances_blocks_interceptions") * 0.25)
-        # CHANGED: box presence and headed threat (set pieces) refine the xG/xA
-        # base when Understat data is available; falls back to the old formula.
-        att_base = p("expected_assists") * 0.8 + p("expected_goals") * 0.2
-        box90 = valid_per90(group, "us_shots_six_yard", mv)
-        pen90 = valid_per90(group, "us_shots_penalty_area", mv)
-        head90 = valid_per90(group, "us_shots_head", mv)
-        if not pd.isna(box90) and not pd.isna(pen90):
-            # ~0.10 xG per box shot, ~0.08 per headed shot: keeps units on the
-            # same scale as the xA/xG base before positional normalisation
-            bonus = (box90 + pen90) * 0.10 + (0 if pd.isna(head90) else head90 * 0.08)
-            att_base = att_base * 0.8 + bonus * 0.2
-        scores["attacking_score"] = att_base
-        scores["bps_score"] = p("bps") * 0.6 + p("bonus") * 0.4
-
-    elif position in ["MID", "FWD"]:
-        # CHANGED: goal threat scaled by shot-profile sustainability — high xG
-        # backed by box shots / shots on target rates above the norm is
-        # boosted (max +15%), pot-shot-driven xG is trimmed (max −15%)
-        base_goal = p("expected_goals") * 0.8 + p("goals_scored") * 0.2
-        scores["goal_score"] = base_goal * goal_sustainability(group, MIN_SHOTS[window_key])
-        # CHANGED: chance creation volume/quality refines the xA base when PL
-        # data is available (chances ≈0.10 xA each, big chances ≈0.35).
-        creative = p("expected_assists") * 0.8 + p("assists") * 0.2
-        chances90 = valid_per90(group, "pl_chances_created", mv)
-        big90 = valid_per90(group, "pl_big_chances_created", mv)
-        if not pd.isna(chances90):
-            creation = chances90 * 0.10 + (0 if pd.isna(big90) else big90 * 0.35)
-            creative = creative * 0.7 + creation * 0.3
-        scores["creative_score"] = creative
-        scores["dc_score"] = (dc * 0.5 + p("tackles") * 0.25 +
-            p("clearances_blocks_interceptions") * 0.25)
-        scores["bps_score"] = p("bps") * 0.6 + p("bonus") * 0.4
-
-    return scores
-
-# ── NEW: enrichment dimension scores ─────────────────────────────────────────
-# NaN-out below minimum thresholds — a player is never scored 0 on missing data.
+# ── Percentile rating: dimensions are blends of scouting-report sub-metrics ───
+# Every dimension score is a weighted average of position-relative PERCENTILES
+# of its underlying stats (mirrors the team Attack/Defence ratings), then mapped
+# back to the 1–5 scale the rest of the app consumes. Robust to outliers and
+# uses (nearly) the whole scouting-report stat set. NaN-out below minimum
+# thresholds — a player is never scored 0 on missing data.
 MIN_VALID = {"season": 450, "gw4": 180}
 MIN_SHOTS = {"season": 10, "gw4": 4}
 
-def calc_enrich_scores(group, position, window_key):
-    scores = {}
-    mv = MIN_VALID[window_key]
+def combined_per90(group, cols, min_valid):
+    """NaN-aware per-90 of the row-wise sum of several source columns."""
+    present = [c for c in cols if c in group.columns]
+    if not present:
+        return np.nan
+    sub = group[present]
+    mask = sub.notna().any(axis=1)
+    vmins = group.loc[mask, "minutes"].sum()
+    if vmins < min_valid:
+        return np.nan
+    return round(sub.loc[mask].fillna(0).sum(axis=1).sum() / vmins * 90, 3)
 
-    if position in ["MID", "FWD", "DEF"]:
-        # Set Piece Involvement: (crosses + corners taken + FK crosses) per 90
-        sp = np.nan
-        mask = group["pl_crosses"].notna()
-        vmins = group.loc[mask, "minutes"].sum()
-        if vmins >= mv:
-            total = (group.loc[mask, "pl_crosses"].sum()
-                     + group.loc[mask, "pl_corners_taken"].sum()
-                     + group.loc[mask, "pl_fk_crosses"].sum())
-            sp = round(total / vmins * 90, 3)
-        scores["set_piece_score"] = sp
+def calc_metrics(group, position, mins, wk):
+    """Raw per-90 (and ratio/sum) sub-metrics for a player-window. Percentiled
+    and blended into dimensions downstream."""
+    p = lambda c: per90(group, c, mins)          # plain per-90 (FPL cols, 0-filled)
+    vp = lambda c: valid_per90(group, c, MIN_VALID[wk])  # NaN-aware (us_/pl_ cols)
+    mv = MIN_VALID[wk]
+    m = {}
+    shots = valid_sum(group, "us_shots")
+    enough = (not pd.isna(shots)) and shots >= MIN_SHOTS[wk]
+    ratio = lambda numer: round(numer / shots, 4) if enough and not pd.isna(numer) else np.nan
 
-    if position in ["MID", "FWD"]:
-        # Shot Quality: npxG per shot (minimum shot volume required)
-        shots = valid_sum(group, "us_shots")
-        npxg = valid_sum(group, "us_npxg")
-        if not pd.isna(shots) and shots >= MIN_SHOTS[window_key] and not pd.isna(npxg):
-            scores["shot_quality_score"] = round(npxg / shots, 4)
-        else:
-            scores["shot_quality_score"] = np.nan
-
-        # Creativity Depth: (xG chain + xG buildup) per 90
-        chain90 = valid_per90(group, "us_xg_chain", mv)
-        buildup90 = valid_per90(group, "us_xg_buildup", mv)
-        scores["creativity_depth_score"] = round(chain90 + buildup90, 3) \
-            if not pd.isna(chain90) and not pd.isna(buildup90) else np.nan
-
-        # Finishing Skill: sustained xG over/underperformance (sum of xg_delta)
+    if position in ("MID", "FWD", "DEF"):
+        m["xg"] = p("expected_goals")
+        m["xa"] = p("expected_assists")
+        m["goals"] = p("goals_scored")
+        m["assists"] = p("assists")
+        m["npxg"] = vp("us_npxg")
+        m["sot"] = vp("us_sot")
+        m["headed"] = vp("us_shots_head")
+        m["touches_box"] = vp("pl_touches_opp_box")
+        m["box_shots"] = combined_per90(group, ["us_shots_six_yard", "us_shots_penalty_area"], mv)
+        m["chances"] = vp("pl_chances_created")
+        m["big_chances"] = vp("pl_big_chances_created")
+        m["creativity_depth"] = combined_per90(group, ["us_xg_chain", "us_xg_buildup"], mv)
+        m["set_piece"] = combined_per90(group, ["pl_crosses", "pl_corners_taken", "pl_fk_crosses"], mv)
+        box = valid_sum(group, "us_shots_six_yard")
+        pen = valid_sum(group, "us_shots_penalty_area")
+        m["shot_quality"] = ratio(valid_sum(group, "us_npxg"))
+        boxpen = (0 if pd.isna(box) else box) + (0 if pd.isna(pen) else pen)
+        m["box_share"] = ratio(boxpen) if not (pd.isna(box) and pd.isna(pen)) else np.nan
+        m["sot_rate"] = ratio(valid_sum(group, "us_sot"))
         played = group[group["minutes"] > 0]
-        scores["finishing_skill_score"] = round(played["xg_delta"].sum(), 3) \
-            if len(played) > 0 else np.nan
+        m["finishing"] = round(played["xg_delta"].sum(), 3) if len(played) else np.nan
+        m["xa_over"] = round(played["xa_delta"].sum(), 3) \
+            if len(played) and played["xa_delta"].notna().any() else np.nan
+        m["tackles"] = p("tackles")
+        m["cbi"] = p("clearances_blocks_interceptions")
+        m["recoveries"] = p("recoveries")
+        m["dc_hit"] = dc_hit_rate(group, position)
+        m["bps"] = p("bps")
+        m["bonus"] = p("bonus")
 
-    return scores
+    if position in ("GKP", "DEF"):
+        m["cs_rate"] = round(group["clean_sheets"].mean(), 4)
+        m["xgc"] = p("expected_goals_conceded")
+        m["prevented"] = round(p("expected_goals_conceded") - p("goals_conceded"), 3)
+
+    if position == "GKP":
+        m["saves"] = p("saves")
+        m["bps"] = p("bps")
+        m["bonus"] = p("bonus")
+        # Shot-load faced by the keeper's defence (team-level, attributed by club).
+        sl = TEAM_SHOTLOAD.get(group["team"].iloc[-1], {})
+        m["shots_faced"] = sl.get("shots_pg", np.nan)
+        m["box_faced"] = sl.get("box_share", np.nan)
+        m["dist_faced"] = sl.get("dist_avg", np.nan)
+    return m
+
+# Dimension = weighted blend of sub-metric percentiles. Weights sum to 1.
+GOAL_BLEND = {"xg": 0.22, "npxg": 0.13, "goals": 0.15, "shot_quality": 0.12,
+              "finishing": 0.13, "box_share": 0.10, "sot_rate": 0.05, "touches_box": 0.10}
+CREATIVE_BLEND = {"xa": 0.25, "assists": 0.12, "chances": 0.15, "big_chances": 0.13,
+                  "creativity_depth": 0.15, "xa_over": 0.10, "set_piece": 0.10}
+DC_BLEND = {"dc_hit": 0.40, "tackles": 0.20, "cbi": 0.20, "recoveries": 0.20}
+ATTACKING_BLEND = {"xa": 0.30, "xg": 0.20, "box_shots": 0.15, "headed": 0.10,
+                   "touches_box": 0.15, "chances": 0.10}
+CS_BLEND = {"cs_rate": 0.45, "xgc": 0.35, "prevented": 0.20}
+SAVE_BLEND = {"saves": 0.30, "prevented": 0.35, "shots_faced": 0.15,
+              "box_faced": 0.10, "dist_faced": 0.10}
+BPS_BLEND = {"bps": 0.6, "bonus": 0.4}
+
+DIM_BLENDS = {
+    "GKP": {"save": SAVE_BLEND, "cs": CS_BLEND, "bps": BPS_BLEND},
+    "DEF": {"cs": CS_BLEND, "dc": DC_BLEND, "attacking": ATTACKING_BLEND, "bps": BPS_BLEND},
+    "MID": {"goal": GOAL_BLEND, "creative": CREATIVE_BLEND, "dc": DC_BLEND, "bps": BPS_BLEND},
+    "FWD": {"goal": GOAL_BLEND, "creative": CREATIVE_BLEND, "dc": DC_BLEND, "bps": BPS_BLEND},
+}
+# Combined MID+FWD attacker pool → the *_att_* overall (cross-position ranking).
+ATT_BLENDS = {"goal": GOAL_BLEND, "creative": CREATIVE_BLEND, "dc": DC_BLEND, "bps": BPS_BLEND}
+# Metrics where a LOWER raw value is better (percentile inverted).
+INVERT = {"xgc", "dist_faced"}
+# Orphan dimensions surfaced on the card AND folded into a parent above.
+ORPHAN_DIMS = {"shot_quality": "shot_quality", "finishing_skill": "finishing",
+               "creativity_depth": "creativity_depth", "set_piece": "set_piece"}
 
 # ── Overall rating weights (UNCHANGED — existing overall ratings identical) ──
 WEIGHTS = {
@@ -245,6 +229,33 @@ WEIGHTS = {
     "FWD": {"goal": 0.25, "creative": 0.20, "dc": 0.10, "bps": 0.15, "reliability": 0.20, "mins90": 0.10},
     "ATT": {"goal": 0.27, "creative": 0.21, "dc": 0.10, "bps": 0.15, "reliability": 0.17, "mins90": 0.10}
 }
+
+# ── Goalkeeper shot-load faced (team-level, attributed to a club's keepers) ───
+# From data/understat_shots.csv: for each defending team, how many shots they
+# face per game, what share are in the box, and the average shot distance faced.
+# distanceYards mirrors src/lib/shotzones.ts / scouting_percentiles.py.
+SHOTS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                          "data", "understat_shots.csv")
+TEAM_SHOTLOAD = {}
+if os.path.exists(SHOTS_FILE):
+    print("Computing goalkeeper shot-load faced...")
+    _sh = pd.read_csv(SHOTS_FILE)
+    _depth = (1 - _sh["x"]) * 105
+    _width = (_sh["y"] - 0.5) * 68
+    _sh["dist_yd"] = np.sqrt(_depth ** 2 + _width ** 2) * 1.09361
+    _sh["is_box"] = _sh["zone"].isin(["six_yard", "penalty_area"])
+    for team, sub in _sh.groupby("conceded_by"):
+        games = sub["understat_match_id"].nunique()
+        if games == 0:
+            continue
+        TEAM_SHOTLOAD[team] = {
+            "shots_pg": round(len(sub) / games, 3),
+            "box_share": round(float(sub["is_box"].mean()), 4),
+            "dist_avg": round(float(sub["dist_yd"].mean()), 3),
+        }
+    print(f"  shot-load for {len(TEAM_SHOTLOAD)} teams")
+else:
+    print("  data/understat_shots.csv not found — GKP shot-load unavailable")
 
 # ── Calculate raw scores ──────────────────────────────────────────────────────
 print("Calculating player scores...")
@@ -271,19 +282,15 @@ for element, group in gw.groupby("element"):
     if not season_ok and not gw4_ok:
         continue
 
-    season_dim = calc_dimension_scores(group, position, total_mins, "season") if season_ok else {}
+    season_m = calc_metrics(group, position, total_mins, "season") if season_ok else {}
     season_start, season_mins90, season_rot = minutes_scores(group) if season_ok else (0, 0, 0)
     season_ppg = pts_per_game(group) if season_ok else 0
     season_value_score = season_ppg / price if price > 0 and season_ok else 0
 
-    gw4_dim = calc_dimension_scores(last4, position, last4_mins, "gw4") if gw4_ok else {}
+    gw4_m = calc_metrics(last4, position, last4_mins, "gw4") if gw4_ok else {}
     gw4_start, gw4_mins90, gw4_rot = minutes_scores(last4) if gw4_ok else (0, 0, 0)
     gw4_ppg = pts_per_game(last4) if gw4_ok else 0
     gw4_value_score = gw4_ppg / price if price > 0 and gw4_ok else 0
-
-    # NEW: enrichment dimensions
-    season_enrich = calc_enrich_scores(group, position, "season") if season_ok else {}
-    gw4_enrich = calc_enrich_scores(last4, position, "gw4") if gw4_ok else {}
 
     row = {
         "element": element,
@@ -307,77 +314,105 @@ for element, group in gw.groupby("element"):
         "gw4_value_score": gw4_value_score,
     }
 
-    for k, v in season_dim.items():
-        row[f"season_{k}"] = v
-    for k, v in gw4_dim.items():
-        row[f"gw4_{k}"] = v
-    for k, v in season_enrich.items():
-        row[f"season_{k}"] = v
-    for k, v in gw4_enrich.items():
-        row[f"gw4_{k}"] = v
+    # Store raw sub-metrics as {prefix}_m_{name}; percentiled + blended below.
+    for k, v in season_m.items():
+        row[f"season_m_{k}"] = v
+    for k, v in gw4_m.items():
+        row[f"gw4_m_{k}"] = v
+    # Orphan display scores (also folded into a parent dimension downstream).
+    for orphan, metric in ORPHAN_DIMS.items():
+        row[f"season_{orphan}_score"] = season_m.get(metric, np.nan)
+        row[f"gw4_{orphan}_score"] = gw4_m.get(metric, np.nan)
+    # value / start / mins90 live in the metric namespace too so they percentile
+    # through the same path (value stays out of the overall weights, though).
+    row["season_m_value"] = season_value_score if season_ok else np.nan
+    row["gw4_m_value"] = gw4_value_score if gw4_ok else np.nan
+    row["season_m_start_rate"] = season_start if season_ok else np.nan
+    row["gw4_m_start_rate"] = gw4_start if gw4_ok else np.nan
+    row["season_m_mins90_rate"] = season_mins90 if season_ok else np.nan
+    row["gw4_m_mins90_rate"] = gw4_mins90 if gw4_ok else np.nan
 
     results.append(row)
 
 df = pd.DataFrame(results)
 print(f"  {len(df)} players processed")
 
-# ── Normalise dimension scores to 1-5 scale within position ───────────────────
-print("Normalising dimension scores...")
+# ── Percentile-rank every sub-metric, then blend into 1-5 dimension scores ────
+print("Percentile-ranking sub-metrics and blending dimensions...")
 
-dim_cols = {
-    "GKP": ["save_score", "cs_score", "bps_score", "value_score"],
-    "DEF": ["cs_score", "dc_score", "attacking_score", "bps_score", "value_score",
-            "set_piece_score"],  # NEW
-    "MID": ["goal_score", "creative_score", "dc_score", "bps_score", "value_score",
-            "shot_quality_score", "creativity_depth_score",   # NEW
-            "set_piece_score", "finishing_skill_score"],       # NEW
-    "FWD": ["goal_score", "creative_score", "dc_score", "bps_score", "value_score",
-            "shot_quality_score", "creativity_depth_score",   # NEW
-            "set_piece_score", "finishing_skill_score"]        # NEW
-}
+# Discover every stored metric name (columns like season_m_<name> / gw4_m_<name>)
+metric_names = set()
+for c in df.columns:
+    for prefix in ("season", "gw4"):
+        pre = f"{prefix}_m_"
+        if c.startswith(pre):
+            metric_names.add(c[len(pre):])
 
-att_dim_cols = ["goal_score", "creative_score", "dc_score", "bps_score", "value_score"]
-att_mask = df["position"].isin(["MID", "FWD"])
-
-for pos, cols in dim_cols.items():
-    pos_mask = df["position"] == pos
-    for col in cols:
-        for prefix in ["season", "gw4"]:
-            raw = f"{prefix}_{col}"
-            norm = f"{prefix}_{col}_norm"
-            ok_col = f"{prefix}_ok"
-            if raw in df.columns:
-                # NEW dims can be NaN (insufficient source data) — normalise
-                # only over players with real values; others stay NaN → "N/A"
-                valid = pos_mask & df[ok_col] & df[raw].notna()
-                if valid.sum() > 1:
-                    df.loc[valid, norm] = normalise_to_5(df.loc[valid, raw])
-
-    # Normalise minutes scores
-    for prefix in ["season", "gw4"]:
-        ok_col = f"{prefix}_ok"
-        valid = pos_mask & df[ok_col]
-        if valid.sum() > 1:
-            df.loc[valid, f"{prefix}_reliability_score_norm"] = normalise_to_5(df.loc[valid, f"{prefix}_start_rate"])
-            df.loc[valid, f"{prefix}_mins90_score_norm"] = normalise_to_5(df.loc[valid, f"{prefix}_mins90_rate"])
-
-# Normalise combined attacker dimensions
-for col in att_dim_cols:
-    for prefix in ["season", "gw4"]:
-        raw = f"{prefix}_{col}"
-        norm = f"{prefix}_att_{col}_norm"
-        ok_col = f"{prefix}_ok"
-        if raw in df.columns:
-            valid = att_mask & df[ok_col] & df[raw].notna()
+def add_percentiles(mask, pool):
+    """Write {prefix}_{pool}_{metric} percentile (0-100) over `mask` per window."""
+    for prefix in ("season", "gw4"):
+        ok = df[f"{prefix}_ok"].fillna(False)
+        for name in metric_names:
+            col = f"{prefix}_m_{name}"
+            if col not in df.columns:
+                continue
+            valid = mask & ok & df[col].notna()
             if valid.sum() > 1:
-                df.loc[valid, norm] = normalise_to_5(df.loc[valid, raw])
+                asc = name not in INVERT
+                df.loc[valid, f"{prefix}_{pool}_{name}"] = (
+                    df.loc[valid, col].rank(pct=True, ascending=asc) * 100)
 
-for prefix in ["season", "gw4"]:
-    ok_col = f"{prefix}_ok"
-    valid = att_mask & df[ok_col]
-    if valid.sum() > 1:
-        df.loc[valid, f"{prefix}_att_reliability_norm"] = normalise_to_5(df.loc[valid, f"{prefix}_start_rate"])
-        df.loc[valid, f"{prefix}_att_mins90_norm"] = normalise_to_5(df.loc[valid, f"{prefix}_mins90_rate"])
+# Position-relative percentiles + a combined MID+FWD "ATT" pool.
+for pos in ("GKP", "DEF", "MID", "FWD"):
+    add_percentiles(df["position"] == pos, "pct")
+add_percentiles(df["position"].isin(["MID", "FWD"]), "attpct")
+
+def blend_to_5(row, prefix, blend, pool):
+    """Weighted mean of sub-metric percentiles → 1-5 (missing metrics drop out,
+    remaining weights rescale — same pattern as calc_overall)."""
+    s = w = 0.0
+    for name, wt in blend.items():
+        col = f"{prefix}_{pool}_{name}"
+        if col in row.index and pd.notna(row[col]):
+            s += float(row[col]) * wt
+            w += wt
+    return round(1 + (s / w) / 100 * 4, 3) if w > 0 else np.nan
+
+pct_to_5 = lambda v: round(1 + float(v) / 100 * 4, 3) if pd.notna(v) else np.nan
+
+for prefix in ("season", "gw4"):
+    ok = df[f"{prefix}_ok"].fillna(False)
+    # Position-cohort dimensions
+    for pos, dims in DIM_BLENDS.items():
+        pm = (df["position"] == pos) & ok
+        if not pm.any():
+            continue
+        for dim, blend in dims.items():
+            norm = df.loc[pm].apply(lambda r: blend_to_5(r, prefix, blend, "pct"), axis=1)
+            df.loc[pm, f"{prefix}_{dim}_score_norm"] = norm
+            # Raw 0-100 composite kept for sort/ranking consumers (Rankings.tsx)
+            df.loc[pm, f"{prefix}_{dim}_score"] = ((norm - 1) / 4 * 100).round(1)
+    # Orphan display dims (percentile of their own metric)
+    for orphan, metric in ORPHAN_DIMS.items():
+        col = f"{prefix}_pct_{metric}"
+        if col in df.columns:
+            df.loc[ok, f"{prefix}_{orphan}_score_norm"] = df.loc[ok, col].apply(pct_to_5)
+    # Value (surfaced, NOT in overall weights) + reliability + mins90
+    for dim, metric in (("value_score", "value"), ("reliability_score", "start_rate"),
+                        ("mins90_score", "mins90_rate")):
+        col = f"{prefix}_pct_{metric}"
+        if col in df.columns:
+            df.loc[ok, f"{prefix}_{dim}_norm"] = df.loc[ok, col].apply(pct_to_5)
+    # Combined attacker pool → *_att_* dimensions used by the ATT overall
+    am = df["position"].isin(["MID", "FWD"]) & ok
+    for dim, blend in ATT_BLENDS.items():
+        df.loc[am, f"{prefix}_att_{dim}_score_norm"] = df.loc[am].apply(
+            lambda r: blend_to_5(r, prefix, blend, "attpct"), axis=1)
+    for metric, out in (("start_rate", "reliability"), ("mins90_rate", "mins90"),
+                        ("value", "value_score")):
+        col = f"{prefix}_attpct_{metric}"
+        if col in df.columns:
+            df.loc[am, f"{prefix}_att_{out}_norm"] = df.loc[am, col].apply(pct_to_5)
 
 # ── Calculate overall score from normalised dimension scores ──────────────────
 # NOTE: overall weights untouched — new dimensions are additive columns only,
@@ -570,6 +605,15 @@ build_next4()
 # Merge photo codes and ownership
 ownership_map = season_summary[["id", "code", "selected_by_percent"]].rename(columns={"id": "element"})
 df = df.merge(ownership_map, on="element", how="left")
+
+# Penalty / set-piece taker FLAGS (Decision #3: surfaced, NOT in the rating —
+# penalties already live inside xG, so a numeric bonus would double-count).
+order_cols = ["penalties_order", "corners_and_indirect_freekicks_order", "direct_freekicks_order"]
+takers = season_summary[["id"] + [c for c in order_cols if c in season_summary.columns]].rename(columns={"id": "element"})
+df = df.merge(takers, on="element", how="left")
+df["is_pen_taker"] = (df.get("penalties_order") == 1)
+df["is_setpiece_taker"] = ((df.get("corners_and_indirect_freekicks_order") == 1) |
+                           (df.get("direct_freekicks_order") == 1))
 
 # GATE: additive-only — every column the website relied on must still exist
 LEGACY_SAMPLE = ["season_overall_rating", "gw4_overall_rating", "season_att_overall_rating",
