@@ -10,6 +10,7 @@ import { InfoTip } from '../components/InfoTip'
 import { Icon, type IconName } from '../components/Icon'
 import { TeamBadge, PositionIcon } from '../components/badges'
 import { PageSkeleton } from '../components/Skeleton'
+import { PlayerPhoto as PhotoImg } from '../components/PlayerPhoto'
 import { PlayerScatterMap, PlayerZoneMap } from '../components/ShotMap'
 import { useCore } from '../lib/useData'
 import { num, str } from '../lib/rows'
@@ -63,17 +64,15 @@ const ATT_COMBINED_DIMS: Dim[] = [
   ['90 Mins', 'season_att_mins90_rating', 'gw4_att_mins90_rating'],
 ]
 
-function playerPhoto(code: number | null): string | null {
-  return code ? `https://resources.premierleague.com/premierleague/photos/players/110x140/p${code}.png` : null
-}
-
 function PlayerPhoto({ code, pos, size }: { code: number | null; pos: string; size: number }) {
-  const [failed, setFailed] = useState(false)
-  const url = playerPhoto(code)
-  if (!url || failed) {
-    return <div className="grid place-items-center rounded-lg bg-surface-3 text-ink-3" style={{ width: size, height: size * 1.25 }}><PositionIcon pos={pos} size={size / 2.5} /></div>
-  }
-  return <img loading="lazy" src={url} alt="" className="rounded-lg object-cover" style={{ width: size, height: size * 1.25 }} onError={() => setFailed(true)} />
+  return (
+    <PhotoImg
+      code={code}
+      className="rounded-lg object-cover object-top"
+      style={{ width: size, height: size * 1.25 }}
+      placeholder={<div className="grid place-items-center rounded-lg bg-surface-3 text-ink-3" style={{ width: size, height: size * 1.25 }}><PositionIcon pos={pos} size={size / 2.5} /></div>}
+    />
+  )
 }
 
 export default function Players() {

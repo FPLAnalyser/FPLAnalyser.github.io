@@ -1,7 +1,8 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageHeader, PageShell } from '../components/PageShell'
 import { PageSkeleton } from '../components/Skeleton'
+import { PlayerPhoto } from '../components/PlayerPhoto'
 import { RadialGauge, MiniBar, type Tone } from '../components/viz'
 import { StarRating } from '../components/StarRating'
 import { FixtureChips } from '../components/FixtureChips'
@@ -16,12 +17,17 @@ import type { CoreData, FixtureEaseRow, RatingRow, Row } from '../lib/types'
 const TONE_TEXT: Record<string, string> = { good: 'text-good', warn: 'text-warn', bad: 'text-bad', info: 'text-info', hot: 'text-hot', cold: 'text-cold' }
 
 function PhotoByCode({ code, size = 40 }: { code: number | null; size?: number }) {
-  const [failed, setFailed] = useState(false)
-  // PL headshots are 110×140 (portrait); match the box aspect so the whole
-  // head-and-shoulders fits instead of cropping a zoomed-in face.
+  // PL headshots are portrait; match the box aspect so the whole head-and-
+  // shoulders fits instead of cropping a zoomed-in face.
   const h = Math.round(size * 1.27)
-  if (!code || failed) return <div className="shrink-0 rounded-md bg-surface-3" style={{ width: size, height: h }} />
-  return <img loading="lazy" src={`https://resources.premierleague.com/premierleague/photos/players/110x140/p${code}.png`} alt="" className="shrink-0 rounded-md object-cover object-top" style={{ width: size, height: h }} onError={() => setFailed(true)} />
+  return (
+    <PlayerPhoto
+      code={code}
+      className="shrink-0 rounded-md object-cover object-top"
+      style={{ width: size, height: h }}
+      placeholder={<div className="shrink-0 rounded-md bg-surface-3" style={{ width: size, height: h }} />}
+    />
+  )
 }
 
 interface DashItem { rank: number; name: string; code: number | null; pos: string; team: string; value: ReactNode }
