@@ -199,7 +199,11 @@ GOAL_BLEND = {"xg": 0.22, "npxg": 0.13, "goals": 0.15, "shot_quality": 0.12,
               "finishing": 0.13, "box_share": 0.10, "sot_rate": 0.05, "touches_box": 0.10}
 CREATIVE_BLEND = {"xa": 0.25, "assists": 0.12, "chances": 0.15, "big_chances": 0.13,
                   "creativity_depth": 0.15, "xa_over": 0.10, "set_piece": 0.10}
-DC_BLEND = {"dc_hit": 0.40, "tackles": 0.20, "cbi": 0.20, "recoveries": 0.20}
+# Recoveries count toward the defensive-contribution threshold only for MID/FWD,
+# NOT defenders (a defender's DC is CBIT: clearances, blocks, interceptions,
+# tackles). So recoveries feed the DC blend for attackers only.
+DC_BLEND_DEF = {"dc_hit": 0.40, "tackles": 0.30, "cbi": 0.30}
+DC_BLEND_ATT = {"dc_hit": 0.40, "tackles": 0.20, "cbi": 0.20, "recoveries": 0.20}
 ATTACKING_BLEND = {"xa": 0.30, "xg": 0.20, "box_shots": 0.15, "headed": 0.10,
                    "touches_box": 0.15, "chances": 0.10}
 CS_BLEND = {"cs_rate": 0.45, "xgc": 0.35, "prevented": 0.20}
@@ -209,12 +213,12 @@ BPS_BLEND = {"bps": 0.6, "bonus": 0.4}
 
 DIM_BLENDS = {
     "GKP": {"save": SAVE_BLEND, "cs": CS_BLEND, "bps": BPS_BLEND},
-    "DEF": {"cs": CS_BLEND, "dc": DC_BLEND, "attacking": ATTACKING_BLEND, "bps": BPS_BLEND},
-    "MID": {"goal": GOAL_BLEND, "creative": CREATIVE_BLEND, "dc": DC_BLEND, "bps": BPS_BLEND},
-    "FWD": {"goal": GOAL_BLEND, "creative": CREATIVE_BLEND, "dc": DC_BLEND, "bps": BPS_BLEND},
+    "DEF": {"cs": CS_BLEND, "dc": DC_BLEND_DEF, "attacking": ATTACKING_BLEND, "bps": BPS_BLEND},
+    "MID": {"goal": GOAL_BLEND, "creative": CREATIVE_BLEND, "dc": DC_BLEND_ATT, "bps": BPS_BLEND},
+    "FWD": {"goal": GOAL_BLEND, "creative": CREATIVE_BLEND, "dc": DC_BLEND_ATT, "bps": BPS_BLEND},
 }
 # Combined MID+FWD attacker pool → the *_att_* overall (cross-position ranking).
-ATT_BLENDS = {"goal": GOAL_BLEND, "creative": CREATIVE_BLEND, "dc": DC_BLEND, "bps": BPS_BLEND}
+ATT_BLENDS = {"goal": GOAL_BLEND, "creative": CREATIVE_BLEND, "dc": DC_BLEND_ATT, "bps": BPS_BLEND}
 # Metrics where a LOWER raw value is better (percentile inverted).
 INVERT = {"xgc", "dist_faced"}
 # Orphan dimensions surfaced on the card AND folded into a parent above.
