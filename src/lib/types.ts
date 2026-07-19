@@ -53,6 +53,16 @@ export interface TeamRatingRow extends Row {
   defence_rank: number
   set_piece_share: number | null
   set_piece_threat: boolean
+  // Underlying components surfaced for the list's Attack/Defence tabs.
+  // finish_delta (goals−xG) and xgc_prevented (xGC−goals conceded) are raw and
+  // carry a dataset-wide xG/goal offset, so the UI shows them relative to the
+  // league mean.
+  finish_delta: number | null
+  xgc_prevented: number | null
+  box_share: number | null
+  box_share_conceded: number | null
+  shots: number | null
+  shots_conceded: number | null
 }
 
 export interface Meta {

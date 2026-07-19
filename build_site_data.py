@@ -205,13 +205,23 @@ def build_team_ratings(shots, tm, fixtures):
         m["defence_rank"] = m["defence"].rank(ascending=False, method="min").astype(int)
         sp_rank = m["sp_xg_share"].rank(ascending=False, method="min")
         for i, r in m.iterrows():
-            out.append({
+            rec = {
                 "team": r["team"], "window": window,
                 "attack": float(r["attack"]), "attack_rank": int(r["attack_rank"]),
                 "defence": float(r["defence"]), "defence_rank": int(r["defence_rank"]),
                 "set_piece_share": round(float(r["sp_xg_share"]), 3) if pd.notna(r["sp_xg_share"]) else None,
                 "set_piece_threat": bool(pd.notna(sp_rank[i]) and sp_rank[i] <= 6),
-            })
+                # Underlying components surfaced for the Attack/Defence table tabs.
+                # finish_delta  = goals − xG      (+ = clinical, − = wasteful)
+                # xgc_prevented = xGC − goals conceded  (+ = kept out chances, − = leaky)
+                "finish_delta": round(float(r["a_finish"]), 1) if pd.notna(r["a_finish"]) else None,
+                "xgc_prevented": round(float(-r["d_keep"]), 1) if pd.notna(r["d_keep"]) else None,
+                "box_share": round(float(r["a_box_share"]), 3) if pd.notna(r["a_box_share"]) else None,
+                "box_share_conceded": round(float(r["d_box_share"]), 3) if pd.notna(r["d_box_share"]) else None,
+                "shots": int(r["a_volume"]) if pd.notna(r["a_volume"]) else None,
+                "shots_conceded": int(r["d_volume"]) if pd.notna(r["d_volume"]) else None,
+            }
+            out.append(rec)
     return out
 
 

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { PageHeader, PageShell, EmptyState } from '../components/PageShell'
 import { SortableTable, type Column } from '../components/SortableTable'
 import { SearchBox } from '../components/SearchBox'
+import { Tabs, type TabDef } from '../components/Tabs'
 import { StarRating } from '../components/StarRating'
 import { AnimatedCounter } from '../components/AnimatedCounter'
 import { Donut, CHART_COLORS, RatingNumber, ConcentrationBar, scoreTone, SCORE_TEXT } from '../components/viz'
@@ -129,6 +130,28 @@ function RatingCell({ score }: { score: number | null }) {
   return <span className={`font-num font-semibold tabular-nums ${SCORE_TEXT[scoreTone(r)]}`}>{r}</span>
 }
 
+/** Signed value coloured by direction (good = green, bad = red). */
+function DeltaCell({ value, digits = 1 }: { value: number | null; digits?: number }) {
+  if (value == null) return <span className="text-ink-3">—</span>
+  const tone = value > 0.05 ? 'text-good' : value < -0.05 ? 'text-bad' : 'text-ink-2'
+  const sign = value > 0 ? '+' : ''
+  return <span className={`font-num tabular-nums ${tone}`}>{sign}{value.toFixed(digits)}</span>
+}
+
+const TEAM_LIST_TABS: TabDef[] = [
+  { id: 'attack', label: 'Attack' },
+  { id: 'defence', label: 'Defence' },
+]
+
+const teamCell = (r: Row): ReactNode => (
+  <span className="flex items-center gap-2 font-medium text-ink">
+    <TeamBadge team={String(r.team)} size={20} />
+    {teamFullNames[String(r.team)] || String(r.team)}
+  </span>
+)
+const teamSort = (r: Row) => teamFullNames[String(r.team)] || String(r.team)
+const fx = (v: number | null, d = 1) => (v == null ? 'N/A' : Number(v).toFixed(d))
+
 function AllTeamsTable({
   rows,
   ratingByTeam,
@@ -138,32 +161,55 @@ function AllTeamsTable({
   ratingByTeam: Map<string, TeamRatingRow>
   onSelect: (team: string) => void
 }) {
-  const columns: Column<Row>[] = [
-    {
-      key: 'team',
-      header: 'Team',
-      align: 'left',
-      sortValue: (r) => teamFullNames[String(r.team)] || String(r.team),
-      cell: (r) => (
-        <span className="flex items-center gap-2 font-medium text-ink">
-          <TeamBadge team={String(r.team)} size={20} />
-          {teamFullNames[String(r.team)] || String(r.team)}
-        </span>
-      ),
-    },
-    { key: 'att', header: 'ATT', sortValue: (r) => ratingByTeam.get(String(r.team))?.attack ?? -1, cell: (r) => <RatingCell score={ratingByTeam.get(String(r.team))?.attack ?? null} /> },
-    { key: 'def', header: 'DEF', sortValue: (r) => ratingByTeam.get(String(r.team))?.defence ?? -1, cell: (r) => <RatingCell score={ratingByTeam.get(String(r.team))?.defence ?? null} /> },
-    { key: 'form', header: 'Form', align: 'left', sortValue: (r) => str(r, 'form_direction'), cell: (r) => <span className="text-xs text-ink-2">{str(r, 'form_direction')}</span> },
-    { key: 'cs', header: 'CS Rate', sortValue: (r) => num(r, 'cs_rate'), cell: (r) => <span className="font-num tabular-nums">{pct(num(r, 'cs_rate'))}</span> },
-    { key: 'home', header: 'Home PPG', sortValue: (r) => num(r, 'home_pts_per_gw'), cell: (r) => <span className="font-num tabular-nums">{num(r, 'home_pts_per_gw') ?? 'N/A'}</span> },
-    { key: 'away', header: 'Away PPG', sortValue: (r) => num(r, 'away_pts_per_gw'), cell: (r) => <span className="font-num tabular-nums">{num(r, 'away_pts_per_gw') ?? 'N/A'}</span> },
-    { key: 'top', header: 'Top Player', align: 'left', sortValue: (r) => str(r, 'top1_player'), cell: (r) => <span className="text-accent">{str(r, 'top1_player') || 'N/A'}</span> },
-    { key: 'pts', header: 'Season Pts', sortValue: (r) => num(r, 'total_pts'), cell: (r) => <span className="font-num font-semibold tabular-nums text-accent">{Math.round(num(r, 'total_pts') ?? 0)}</span> },
+  const [tab, setTab] = useState<'attack' | 'defence'>('attack')
+  const rt = (r: Row) => ratingByTeam.get(String(r.team))
+
+  // Finishing / prevention carry a dataset-wide xG↔goal offset, so present them
+  // relative to the league mean (centred at 0 = league-average conversion).
+  const { meanFinish, meanPrevent } = useMemo(() => {
+    const vals = [...ratingByTeam.values()]
+    const avg = (xs: (number | null)[]) => {
+      const ns = xs.filter((v): v is number => v != null)
+      return ns.length ? ns.reduce((a, b) => a + b, 0) / ns.length : 0
+    }
+    return { meanFinish: avg(vals.map((v) => v.finish_delta)), meanPrevent: avg(vals.map((v) => v.xgc_prevented)) }
+  }, [ratingByTeam])
+
+  const attackCols: Column<Row>[] = [
+    { key: 'team', header: 'Team', align: 'left', sortValue: teamSort, cell: teamCell },
+    { key: 'att', header: 'ATT', sortValue: (r) => rt(r)?.attack ?? -1, cell: (r) => <RatingCell score={rt(r)?.attack ?? null} /> },
+    { key: 'xg', header: 'xG', sortValue: (r) => num(r, 'team_xg'), cell: (r) => <span className="font-num tabular-nums">{fx(num(r, 'team_xg'))}</span> },
+    { key: 'xa', header: 'xA', sortValue: (r) => num(r, 'team_xa'), cell: (r) => <span className="font-num tabular-nums">{fx(num(r, 'team_xa'))}</span> },
+    { key: 'finish', header: 'Finish Δ', sortValue: (r) => { const v = rt(r)?.finish_delta; return v == null ? -999 : v - meanFinish }, cell: (r) => { const v = rt(r)?.finish_delta; return <DeltaCell value={v == null ? null : v - meanFinish} /> } },
+    { key: 'box', header: 'Box %', sortValue: (r) => rt(r)?.box_share ?? -1, cell: (r) => { const v = rt(r)?.box_share; return <span className="font-num tabular-nums">{v == null ? 'N/A' : `${Math.round(v * 100)}%`}</span> } },
+    { key: 'sp', header: 'Set-piece', sortValue: (r) => rt(r)?.set_piece_share ?? -1, cell: (r) => { const rr = rt(r); if (!rr || rr.set_piece_share == null) return <span className="text-ink-3">—</span>; return <span className={`font-num tabular-nums ${rr.set_piece_threat ? 'font-semibold text-warn' : 'text-ink-2'}`}>{Math.round(rr.set_piece_share * 100)}%</span> } },
   ]
+
+  const defenceCols: Column<Row>[] = [
+    { key: 'team', header: 'Team', align: 'left', sortValue: teamSort, cell: teamCell },
+    { key: 'def', header: 'DEF', sortValue: (r) => rt(r)?.defence ?? -1, cell: (r) => <RatingCell score={rt(r)?.defence ?? null} /> },
+    { key: 'xgc', header: 'xGC', sortValue: (r) => num(r, 'team_xgc'), cell: (r) => <span className="font-num tabular-nums">{fx(num(r, 'team_xgc'))}</span> },
+    { key: 'cs', header: 'CS %', sortValue: (r) => num(r, 'cs_rate'), cell: (r) => <span className="font-num tabular-nums">{pct(num(r, 'cs_rate'))}</span> },
+    { key: 'prevent', header: 'Prevent Δ', sortValue: (r) => { const v = rt(r)?.xgc_prevented; return v == null ? -999 : v - meanPrevent }, cell: (r) => { const v = rt(r)?.xgc_prevented; return <DeltaCell value={v == null ? null : v - meanPrevent} /> } },
+    { key: 'boxc', header: 'Box % Con', sortValue: (r) => rt(r)?.box_share_conceded ?? -1, cell: (r) => { const v = rt(r)?.box_share_conceded; return <span className="font-num tabular-nums">{v == null ? 'N/A' : `${Math.round(v * 100)}%`}</span> } },
+  ]
+
+  const isAttack = tab === 'attack'
   return (
     <>
-      <h2 className="mb-3 text-sm font-semibold tracking-wide text-ink-2 uppercase">All Teams</h2>
-      <SortableTable rows={rows} columns={columns} initialSort="pts" initialDir="desc" rowKey={(r) => String(r.team)} onRowClick={(r) => onSelect(String(r.team))} />
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold tracking-wide text-ink-2 uppercase">All Teams</h2>
+        <Tabs tabs={TEAM_LIST_TABS} active={tab} onChange={(id) => setTab(id as 'attack' | 'defence')} layoutId="team-list" />
+      </div>
+      <SortableTable
+        key={tab}
+        rows={rows}
+        columns={isAttack ? attackCols : defenceCols}
+        initialSort={isAttack ? 'att' : 'def'}
+        initialDir="desc"
+        rowKey={(r) => String(r.team)}
+        onRowClick={(r) => onSelect(String(r.team))}
+      />
     </>
   )
 }
