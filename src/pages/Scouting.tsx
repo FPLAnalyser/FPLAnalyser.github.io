@@ -130,11 +130,15 @@ export default function Scouting() {
       const g = games.size || 1
       if (n > 0) stat.set(team, { dist: dist / n, shots: n / g, box: box / g, games: g })
     }
-    // percentile helpers: asc = higher value ranks higher; desc inverts it.
-    const pctIn = (vals: number[], v: number, invert: boolean) => {
-      if (vals.length < 2) return 50
-      const below = vals.filter((x) => x < v).length / (vals.length - 1)
-      return Math.round((invert ? 1 - below : below) * 100)
+    // Rank-based percentile (spans ~3–98, never exactly 0/100 so the worst
+    // team doesn't render an empty "0" bar that looks like a bug). invert =
+    // lower raw value is better (fewer shots conceded → greener).
+    const pctIn = (sortedAsc: number[], v: number, invert: boolean) => {
+      const n = sortedAsc.length
+      if (n < 2) return 50
+      const below = sortedAsc.filter((x) => x < v).length
+      const p = (below + 0.5) / n
+      return Math.round((invert ? 1 - p : p) * 100)
     }
     const dists = [...stat.values()].map((s) => s.dist).sort((a, b) => a - b)
     const shotsA = [...stat.values()].map((s) => s.shots).sort((a, b) => a - b)
@@ -485,18 +489,64 @@ function ScoutReport({
   const multi = shown.length > 1
   const gridCols = `repeat(${shown.length}, minmax(0,1fr))`
 
-  // Per-player strengths / weaknesses from the visible metric percentiles —
-  // this is the "insight behind the data" the numbers alone don't give.
-  const profiles = shown.map((s) => {
-    if (!s.row) return { strong: [] as { label: string; pct: number }[], weak: [] as { label: string; pct: number }[] }
-    const scored = rows
-      .map((m) => ({ label: labelOf(m), pct: scoutPct(s.row!, str(m, 'key')!) }))
-      .filter((x): x is { label: string; pct: number } => x.pct != null)
-    const strong = [...scored].filter((x) => x.pct >= 75).sort((a, b) => b.pct - a.pct).slice(0, 3)
-    const weak = [...scored].filter((x) => x.pct <= 28).sort((a, b) => a.pct - b.pct).slice(0, 2)
-    return { strong, weak }
-  })
-  const listPhrase = (arr: { label: string; pct: number }[]) => arr.map((x) => `${x.label} (${x.pct})`).join(', ')
+  // Plain-English, FPL-points-first read on a player — always framed around
+  // how they actually score (or don't): minutes, then the route to returns.
+  const fplInsight = (sel: SelPlayer, row: Row): string => {
+    const pc = (k: string) => scoutPct(row, k)
+    const hi = (k: string, t = 70) => { const v = pc(k); return v != null && v >= t }
+    const lo = (k: string, t = 30) => { const v = pc(k); return v != null && v <= t }
+    const td = teamDef.get(sel.team)
+    const starts = metaByEl.get(sel.element)?.starts ?? null
+    const share = starts == null ? null : starts / 38
+
+    // Availability — the first thing that matters for points.
+    let avail: string
+    if (share == null) avail = 'plays for'
+    else if (share >= 0.85) avail = 'is nailed on for'
+    else if (share >= 0.6) avail = 'is a regular for'
+    else if (share >= 0.35) avail = 'is in and out of'
+    else avail = 'is a fringe pick at'
+    const startTag = starts != null ? ` (${starts}/38 starts)` : ''
+
+    const sentences: string[] = []
+    const csOdds = td ? (td.shotsPct >= 66 ? 'strong' : td.shotsPct <= 34 ? 'poor' : 'average') : null
+
+    if (sel.position === 'GKP') {
+      const busy = (td && td.shotsPct <= 45) || hi('saves', 66)
+      sentences.push(`${avail} ${teamFullNames[sel.team] || sel.team}${startTag}.`)
+      if (busy && csOdds === 'poor') sentences.push("Behind a leaky defence he'll rack up save points and the odd bonus, but clean sheets are rare — treat him as a cheap enabler or matchup punt, not a set-and-forget.")
+      else if (csOdds === 'strong' && !busy) sentences.push('Sits behind a mean defence, so clean-sheet points are the whole appeal; save volume is low, so returns come in lumps when the shutouts land.')
+      else if (csOdds === 'strong' && busy) sentences.push('Rare profile — a busy keeper behind a strong defence, so both save points and clean sheets are on the table.')
+      else sentences.push('A middle-of-the-road keeper: some save points, the occasional clean sheet, nothing that forces him into your side.')
+      if (hi('xgc_prevented', 75)) sentences.push('Shot-stopping is running above expectation, so the underlying quality looks real.')
+      else if (lo('xgc_prevented', 25)) sentences.push('Shot-stopping has run below par, a mild red flag.')
+    } else if (sel.position === 'DEF') {
+      const attack = hi('xgi', 74) || hi('npxg', 74) || hi('goals', 74)
+      const setPiece = hi('headed_shots', 68) || hi('box_shots', 70)
+      const dc = hi('def_contrib', 66)
+      sentences.push(`${avail} ${teamFullNames[sel.team] || sel.team}${startTag}.`)
+      if (csOdds === 'strong') sentences.push("Sits in one of the league's stingier defences, so clean-sheet points are the floor.")
+      else if (csOdds === 'poor') sentences.push("Plays behind a leaky defence, so don't bank on clean sheets — his points have to come another way.")
+      else sentences.push('Average clean-sheet odds, so returns will lean on the extras.')
+      if (attack) sentences.push(`Carries genuine attacking upside for a defender${setPiece ? ' from set pieces' : ''} (top-quartile goal threat) — that's the differential that lifts a defender above a bench-warmer.`)
+      if (dc) sentences.push('Reliably hits the defensive-contribution threshold too, adding a 2-point floor most weeks.')
+      else if (!attack && csOdds !== 'strong') sentences.push('Little attacking or defensive-contribution output, so he needs the clean sheet to pay off.')
+    } else {
+      // MID / FWD
+      const goals = hi('npxg', 72) || hi('goals', 72)
+      const creator = hi('xa', 72) || hi('chances_created', 72) || hi('big_chances', 72)
+      const dc = hi('def_contrib', 66)
+      sentences.push(`${avail} ${teamFullNames[sel.team] || sel.team}${startTag}.`)
+      if (goals && creator) sentences.push('An all-round attacking threat — real goal volume and elite creation, so points can land as goals or assists in any given week.')
+      else if (goals) sentences.push('Gets his points chiefly from goals, with high-quality shot volume in dangerous areas — a captaincy-adjacent scorer when fixtures suit.')
+      else if (creator) sentences.push('An assist-first pick: elite chance creation, but the goals are secondary, so returns hinge on teammates finishing.')
+      else sentences.push("Underlying attacking numbers are modest — the xG and xA don't point to consistent returns, so he's a punt rather than a plan.")
+      if (lo('xg_delta', 22)) sentences.push('Has been finishing below expectation, so some positive regression may be coming.')
+      else if (hi('xg_delta', 78)) sentences.push('And has been clinical, converting above his xG.')
+      if (sel.position === 'MID' && dc) sentences.push('Chips in defensive-contribution points too — a handy floor for a midfielder.')
+    }
+    return sentences.join(' ')
+  }
 
   // Who-wins tally across contested categories.
   const wins = shown.map(() => 0)
@@ -522,16 +572,9 @@ function ScoutReport({
     if (r == null) return null
     return <span className={`ml-1 inline-block rounded-md px-1.5 py-0.5 font-num text-[11px] font-semibold tabular-nums ${ratingTier(r)}`}>{r}<span className="opacity-60">/100</span></span>
   }
-  const rotationNote = (el: number) => {
-    const meta = metaByEl.get(el)
-    if (!meta || meta.starts == null) return ''
-    const share = meta.starts / 38
-    if (share < 0.55) return ` Rotation risk — started only ${meta.starts} of 38.`
-    if (share >= 0.9) return ` Nailed-on starter (${meta.starts}/38).`
-    return ''
-  }
 
-  // Detailed analysis block: who wins + a plain-language profile per player.
+  // Detailed analysis block: who wins + a plain-English, FPL-points profile per
+  // player (see fplInsight — always framed around the route to points).
   const analysis = (
     <div className="mb-5 rounded-xl border border-line bg-surface-1/70 p-4">
       {multi && contested >= 4 && (
@@ -544,29 +587,17 @@ function ScoutReport({
           )}
         </div>
       )}
-      <ul className="space-y-2.5 text-sm">
-        {shown.map((s, i) => {
-          const p = profiles[i]
-          return (
-            <li key={i} className="flex gap-2">
-              <span className="mt-1.5 size-2.5 shrink-0 rounded-full" style={{ background: multi ? SCOUT_COLORS[i] : 'var(--accent)' }} />
-              <span className="text-ink-2">
-                <strong className="text-ink">{s.sel.web_name}</strong>
-                <RatingBadge el={s.sel.element} />
-                {' '}
-                {!s.row ? (
-                  <>has no {WINDOW_LABELS[win]} sample.</>
-                ) : p.strong.length ? (
-                  <>ranks top-quartile for <span className="text-ink">{listPhrase(p.strong)}</span></>
-                ) : (
-                  <>has no standout metric in this profile</>
-                )}
-                {s.row && p.weak.length ? <>; weakest at <span className="text-ink">{listPhrase(p.weak)}</span>.</> : s.row ? '.' : ''}
-                <span className="text-ink-3">{rotationNote(s.sel.element)}</span>
-              </span>
-            </li>
-          )
-        })}
+      <ul className="space-y-3 text-sm">
+        {shown.map((s, i) => (
+          <li key={i} className="flex gap-2">
+            <span className="mt-1.5 size-2.5 shrink-0 rounded-full" style={{ background: multi ? SCOUT_COLORS[i] : 'var(--accent)' }} />
+            <span className="leading-relaxed text-ink-2">
+              <strong className="text-ink">{s.sel.web_name}</strong>
+              <RatingBadge el={s.sel.element} />{' '}
+              {s.row ? fplInsight(s.sel, s.row) : `has no ${WINDOW_LABELS[win]} sample yet.`}
+            </span>
+          </li>
+        ))}
       </ul>
     </div>
   )
@@ -580,13 +611,31 @@ function ScoutReport({
     else last.metrics.push(m)
   })
 
-  // Label column: label left, info icon pinned right so every ⓘ lines up.
+  // Label column: label left (wraps on mobile), info icon pinned right so
+  // every ⓘ lines up in a single column down the page.
   const LabelCell = ({ children, tip }: { children: React.ReactNode; tip?: string }) => (
-    <div className="flex w-36 shrink-0 items-center justify-between gap-1 text-sm text-ink-2 md:w-44">
-      <span className="min-w-0 truncate">{children}</span>
+    <div className="flex w-32 shrink-0 items-center justify-between gap-1 text-sm leading-tight text-ink-2 sm:w-36 md:w-44">
+      <span className="min-w-0">{children}</span>
       {tip ? <InfoTip text={tip} /> : <span className="w-3.5 shrink-0" />}
     </div>
   )
+
+  // Playing-time cell: raw figure (left) + share % (right) + a coloured bar.
+  const PtCell = ({ i, left, right, pct }: { i: number; left: React.ReactNode; right: React.ReactNode; pct: number | null }) => {
+    const color = multi ? SCOUT_COLORS[i] : pctColor(pct)
+    return (
+      <div className="min-w-0">
+        <div className="flex items-baseline justify-between text-xs">
+          <span className="font-num font-medium tabular-nums text-ink">{left}</span>
+          <span className="font-num tabular-nums text-ink-2">{right}</span>
+        </div>
+        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-3">
+          <div className="h-full rounded-full" style={{ width: `${pct ?? 0}%`, background: `linear-gradient(90deg, color-mix(in srgb, ${color} 72%, transparent), ${color})` }} />
+        </div>
+      </div>
+    )
+  }
+  const winGames = win === 'season' ? 38 : win === 'l6' ? 6 : 4
 
   // A value + percentile bar cell.
   const BarCell = ({ i, value, pct }: { i: number; value: string; pct: number | null }) => {
@@ -630,7 +679,7 @@ function ScoutReport({
 
       {analysis}
 
-      {/* Playing time & headline rating */}
+      {/* Playing time & headline rating — each as a value + share bar */}
       <div className="mb-4">
         <div className="mb-1.5 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Playing Time & Rating</div>
         <div className="flex flex-col">
@@ -639,30 +688,29 @@ function ScoutReport({
             <div className="grid flex-1 gap-3" style={{ gridTemplateColumns: gridCols }}>
               {shown.map((s, i) => {
                 const r = metaByEl.get(s.sel.element)?.rating
-                return <div key={i} className="min-w-0 font-num text-sm font-semibold tabular-nums" style={{ color: r == null ? 'var(--ink-3)' : pctColor(r) }}>{r ?? '—'}{r != null && <span className="text-[10px] text-ink-3">/100</span>}</div>
+                return r == null ? <NaCell key={i} /> : <PtCell key={i} i={i} left={r} right="/100" pct={r} />
               })}
             </div>
           </div>
           <div className="flex items-center gap-3 border-b border-line py-2">
-            <LabelCell tip={`Minutes played in the selected window (${WINDOW_LABELS[win]}).`}>Minutes ({win === 'season' ? 'season' : win.toUpperCase()})</LabelCell>
+            <LabelCell tip={`Minutes played in the selected window (${WINDOW_LABELS[win]}), with the share of the ${winGames * 90} available minutes. Low = rotation or injury.`}>Minutes ({win === 'season' ? 'season' : win.toUpperCase()})</LabelCell>
             <div className="grid flex-1 gap-3" style={{ gridTemplateColumns: gridCols }}>
-              {shown.map((s, i) => <div key={i} className="min-w-0 font-num text-sm tabular-nums text-ink">{s.row ? (num(s.row, 'minutes') ?? '—') : '—'}</div>)}
+              {shown.map((s, i) => {
+                const mins = s.row ? num(s.row, 'minutes') : null
+                if (mins == null) return <NaCell key={i} />
+                const share = Math.min(100, Math.round((mins / (winGames * 90)) * 100))
+                return <PtCell key={i} i={i} left={mins} right={`${share}%`} pct={share} />
+              })}
             </div>
           </div>
           <div className="flex items-center gap-3 border-b border-line py-2 last:border-0">
             <LabelCell tip="Games started this season out of 38, with the share of available games. Low = a rotation or bench risk.">Starts (season)</LabelCell>
             <div className="grid flex-1 gap-3" style={{ gridTemplateColumns: gridCols }}>
               {shown.map((s, i) => {
-                const m = metaByEl.get(s.sel.element)
-                if (!m || m.starts == null) return <div key={i} className="min-w-0 text-sm text-ink-3">—</div>
-                const share = Math.round((m.starts / 38) * 100)
-                return (
-                  <div key={i} className="min-w-0">
-                    <span className="font-num text-sm font-medium tabular-nums text-ink">{m.starts}</span>
-                    <span className="font-num text-xs tabular-nums text-ink-3">/38</span>
-                    <span className="ml-1.5 font-num text-xs tabular-nums" style={{ color: pctColor(share) }}>{share}%</span>
-                  </div>
-                )
+                const st = metaByEl.get(s.sel.element)?.starts
+                if (st == null) return <NaCell key={i} />
+                const share = Math.round((st / 38) * 100)
+                return <PtCell key={i} i={i} left={`${st}/38`} right={`${share}%`} pct={share} />
               })}
             </div>
           </div>
