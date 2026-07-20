@@ -124,6 +124,16 @@ def minutes_scores(group):
 MIN_VALID = {"season": 450, "gw4": 180}
 MIN_SHOTS = {"season": 10, "gw4": 4}
 
+# ── 4-factor model: fundamentals + realized output + risk/reliability ──────────
+# The overall rating is an EXPECTED-FORWARD-RETURN estimate: the underlying
+# dimension quality (fundamentals) is the predictive core; realized output is
+# credited but DISCOUNTED for how far it runs ahead of the underlying process
+# (quality of earnings), and a risk factor rewards steady, blank-avoiding
+# returns. Value is deliberately kept OUT (surfaced separately).
+FUND_W, OUTPUT_W, RISK_W = 0.72, 0.18, 0.10
+PTS_PER_GI = 4.0        # blended points per goal-involvement (goal+assist)
+SUSTAIN_LAMBDA = 0.5    # fade on xGI overperformance (0 = trust output, 1 = trust xG)
+
 def combined_per90(group, cols, min_valid):
     """NaN-aware per-90 of the row-wise sum of several source columns."""
     present = [c for c in cols if c in group.columns]
@@ -192,11 +202,27 @@ def calc_metrics(group, position, mins, wk):
         m["shots_faced"] = sl.get("shots_pg", np.nan)
         m["box_faced"] = sl.get("box_share", np.nan)
         m["dist_faced"] = sl.get("dist_avg", np.nan)
+
+    # ── Realized output, quality-adjusted for sustainability (all positions) ──
+    # pts/90 minus a fade on the portion of goal-involvements that ran ahead of
+    # expected (xGI overperformance = likely to regress).
+    if mins > 0:
+        pts = group["total_points"].sum()
+        gi = group["goals_scored"].sum() + group["assists"].sum()
+        xgi = group["expected_goals"].sum() + group["expected_assists"].sum()
+        over90 = max(0.0, gi - xgi) / (mins / 90) * PTS_PER_GI
+        m["output"] = round(pts / (mins / 90) - SUSTAIN_LAMBDA * over90, 3)
+    # Risk/reliability metric (Sortino) is merged in from advanced_metrics after
+    # the per-player loop — see RISK_MERGE below.
     return m
 
 # Dimension = weighted blend of sub-metric percentiles. Weights sum to 1.
-GOAL_BLEND = {"xg": 0.22, "npxg": 0.13, "goals": 0.15, "shot_quality": 0.12,
-              "finishing": 0.13, "box_share": 0.10, "sot_rate": 0.05, "touches_box": 0.10}
+# NOTE: finishing (xg_delta) is deliberately NOT in the goal blend — rewarding
+# xG overperformance here would contradict the sustainability haircut applied to
+# the output factor. Goal threat is xG/quality-led; overperformance is handled
+# (faded) at the output-factor level. `finishing` stays a surfaced sub-metric.
+GOAL_BLEND = {"xg": 0.27, "npxg": 0.16, "goals": 0.15, "shot_quality": 0.14,
+              "box_share": 0.12, "sot_rate": 0.06, "touches_box": 0.10}
 CREATIVE_BLEND = {"xa": 0.25, "assists": 0.12, "chances": 0.15, "big_chances": 0.13,
                   "creativity_depth": 0.15, "xa_over": 0.10, "set_piece": 0.10}
 # Recoveries count toward the defensive-contribution threshold only for MID/FWD,
@@ -341,6 +367,26 @@ for element, group in gw.groupby("element"):
 df = pd.DataFrame(results)
 print(f"  {len(df)} players processed")
 
+# ── RISK_MERGE: risk/reliability factor = Sortino from advanced_metrics ───────
+# advanced_metrics.py (alpha ÷ downside-deviation) is the finance-grade
+# risk-adjusted return; it depends only on the GW + season-summary data (no
+# dependency on ratings), so the pipeline runs it BEFORE this step. Optional —
+# players without it get a neutral risk factor (blend drops it).
+ADV_FILE = os.path.join(DATA_DIR, "advanced_metrics.csv")
+if os.path.exists(ADV_FILE):
+    adv = pd.read_csv(ADV_FILE)
+    keep = {"season": "sortino_season", "gw4": "sortino_4gw"}
+    have = [c for c in keep.values() if c in adv.columns]
+    if "element" in adv.columns and have:
+        df = df.merge(adv[["element"] + have].drop_duplicates("element"), on="element", how="left")
+        for prefix, col in keep.items():
+            if col in df.columns:
+                df[f"{prefix}_m_reliability_risk"] = df[col]
+        print(f"  risk factor from advanced_metrics (Sortino) — coverage "
+              f"{df['season_m_reliability_risk'].notna().sum() if 'season_m_reliability_risk' in df.columns else 0}/{len(df)}")
+else:
+    print("  advanced_metrics.csv not found — risk factor neutral (run advanced_metrics.py first)")
+
 # ── Percentile-rank every sub-metric, then blend into 1-5 dimension scores ────
 print("Percentile-ranking sub-metrics and blending dimensions...")
 
@@ -401,9 +447,11 @@ for prefix in ("season", "gw4"):
         col = f"{prefix}_pct_{metric}"
         if col in df.columns:
             df.loc[ok, f"{prefix}_{orphan}_score_norm"] = df.loc[ok, col].apply(pct_to_5)
-    # Value (surfaced, NOT in overall weights) + reliability + mins90
+    # Value (surfaced, NOT in overall weights) + reliability + mins90 + the two
+    # new 4-factor inputs: sustainable output and risk/reliability.
     for dim, metric in (("value_score", "value"), ("reliability_score", "start_rate"),
-                        ("mins90_score", "mins90_rate")):
+                        ("mins90_score", "mins90_rate"),
+                        ("output_score", "output"), ("risk_score", "reliability_risk")):
         col = f"{prefix}_pct_{metric}"
         if col in df.columns:
             df.loc[ok, f"{prefix}_{dim}_norm"] = df.loc[ok, col].apply(pct_to_5)
@@ -413,15 +461,29 @@ for prefix in ("season", "gw4"):
         df.loc[am, f"{prefix}_att_{dim}_score_norm"] = df.loc[am].apply(
             lambda r: blend_to_5(r, prefix, blend, "attpct"), axis=1)
     for metric, out in (("start_rate", "reliability"), ("mins90_rate", "mins90"),
-                        ("value", "value_score")):
+                        ("value", "value_score"),
+                        ("output", "output_score"), ("reliability_risk", "risk_score")):
         col = f"{prefix}_attpct_{metric}"
         if col in df.columns:
             df.loc[am, f"{prefix}_att_{out}_norm"] = df.loc[am, col].apply(pct_to_5)
 
-# ── Calculate overall score from normalised dimension scores ──────────────────
-# NOTE: overall weights untouched — new dimensions are additive columns only,
-# so all existing overall ratings on the site remain identical.
+# ── Calculate overall score: 4-factor blend ───────────────────────────────────
+# fundamentals (weighted dimension norms) 72% · sustainable output 18% · risk 10%.
+# Missing factors drop out and the present weights rescale.
 print("Calculating overall scores...")
+
+def _blend_factors(row, prefix, fund, ap):
+    """Combine the fundamentals score with the output + risk factors."""
+    parts = [(fund, FUND_W)]
+    out = row.get(f"{prefix}_{ap}output_score_norm")
+    risk = row.get(f"{prefix}_{ap}risk_score_norm")
+    if pd.notna(out):
+        parts.append((float(out), OUTPUT_W))
+    if pd.notna(risk):
+        parts.append((float(risk), RISK_W))
+    s = sum(v * w for v, w in parts)
+    tw = sum(w for _, w in parts)
+    return round(s / tw, 3) if tw > 0 else np.nan
 
 def calc_overall(row, position, prefix, weights):
     w = weights.get(position, {})
@@ -436,14 +498,15 @@ def calc_overall(row, position, prefix, weights):
         "reliability": f"{prefix}_reliability_score_norm",
         "mins90": f"{prefix}_mins90_score_norm"
     }
-    score = 0
-    total_weight = 0
+    fs = fw = 0.0
     for dim, weight in w.items():
         col = mapping.get(dim)
         if col and col in row.index and pd.notna(row[col]):
-            score += float(row[col]) * weight
-            total_weight += weight
-    return round(score / total_weight, 3) if total_weight > 0 else np.nan
+            fs += float(row[col]) * weight
+            fw += weight
+    if fw == 0:
+        return np.nan
+    return _blend_factors(row, prefix, fs / fw, "")
 
 def calc_att_overall(row, prefix, weights):
     w = weights.get("ATT", {})
@@ -455,14 +518,15 @@ def calc_att_overall(row, prefix, weights):
         "reliability": f"{prefix}_att_reliability_norm",
         "mins90": f"{prefix}_att_mins90_norm"
     }
-    score = 0
-    total_weight = 0
+    fs = fw = 0.0
     for dim, weight in w.items():
         col = mapping.get(dim)
         if col and col in row.index and pd.notna(row[col]):
-            score += float(row[col]) * weight
-            total_weight += weight
-    return round(score / total_weight, 3) if total_weight > 0 else np.nan
+            fs += float(row[col]) * weight
+            fw += weight
+    if fw == 0:
+        return np.nan
+    return _blend_factors(row, prefix, fs / fw, "att_")
 
 for prefix in ["season", "gw4"]:
     ok_col = f"{prefix}_ok"

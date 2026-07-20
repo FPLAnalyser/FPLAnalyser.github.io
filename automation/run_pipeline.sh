@@ -54,9 +54,11 @@ fi
 
 run_step enrich_player_gw.py
 run_step rolling_calculations.py
+# advanced_metrics runs BEFORE rating: the rating's risk factor consumes its
+# Sortino (advanced_metrics depends only on the GW data, not on ratings).
+run_step advanced_metrics.py
 run_step fpl_analyser_rating.py
 run_step persona_assignment.py
-run_step advanced_metrics.py
 run_step scouting_percentiles.py
 run_step build_site_data.py
 
