@@ -2,12 +2,84 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>FPL Analyser | Data Driven FPL</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css">
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#07090C">
+<meta name="theme-color" content="#0c0b09">
+<script>
+  // Apply the saved (or system-preferred) theme before first paint to avoid a flash.
+  (function () {
+    try {
+      var root = document.documentElement;
+      var accent = localStorage.getItem('fpl_accent');
+      if (accent !== 'aurum' && accent !== 'frost' && accent !== 'verdant') accent = 'aurum';
+      var mode = localStorage.getItem('fpl_mode');
+      if (mode !== 'light' && mode !== 'dark') {
+        mode = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      root.dataset.accent = accent;
+      root.dataset.mode = mode;
+    } catch (e) {
+      document.documentElement.dataset.accent = 'aurum';
+      document.documentElement.dataset.mode = 'dark';
+    }
+  })();
+</script>
+<script>
+  // 1) Purge the pre-migration service worker and its caches. A zombie legacy
+  //    worker (script now deleted → 404 on update checks) can fall back to the
+  //    OLD cached shell on a slow network, whose js/ files no longer exist —
+  //    a broken page until refresh. Kill it and its 'fpl-analyser-*' caches.
+  (function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          regs.forEach(function (reg) {
+            var sw = reg.active || reg.waiting || reg.installing;
+            if (sw && /service-worker\.js/.test(sw.scriptURL)) reg.unregister();
+          });
+        }).catch(function () {});
+      }
+      if (window.caches && caches.keys) {
+        caches.keys().then(function (keys) {
+          keys.forEach(function (k) { if (k.indexOf('fpl-analyser-') === 0) caches.delete(k); });
+        }).catch(function () {});
+      }
+    } catch (e) { /* best effort */ }
+  })();
+
+  // Collect runtime errors from the very start so the #/debug page can show
+  // them even when they happen before React mounts.
+  (function () {
+    window.__errlog = [];
+    function log(kind, msg) {
+      if (window.__errlog.length < 30) window.__errlog.push(new Date().toISOString().slice(11, 19) + ' [' + kind + '] ' + msg);
+    }
+    window.addEventListener('error', function (e) {
+      log('error', (e.message || 'unknown') + (e.filename ? ' @ ' + e.filename.split('/').pop() + ':' + e.lineno : ''));
+    });
+    window.addEventListener('unhandledrejection', function (e) {
+      var r = e.reason; log('promise', (r && (r.message || String(r))) || 'unknown');
+    });
+  })();
+
+  // 2) Start the core data downloads NOW, during HTML parse — the app's data
+  //    layer picks these promises up, cutting the JS-download-then-fetch chain
+  //    out of the critical path (worth seconds on a phone connection).
+  (function () {
+    try {
+      window.__early = {};
+      [
+        'ratings', 'personas_4gw', 'advanced_metrics', 'team_metrics',
+        'season_to_date', 'player_tiers', 'fixture_ease', 'meta',
+        'benchmarks', 'replacement_pool', 'persona_shifts', 'price_risk', 'player_form'
+      ].forEach(function (n) {
+        window.__early[n] = fetch('site_data/' + n + '.json');
+        window.__early[n].catch(function () {}); // avoid unhandled-rejection noise
+      });
+    } catch (e) { /* the data layer falls back to its own fetches */ }
+  })();
+</script>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -48,159 +120,11 @@
   <symbol id="i-crown" viewBox="0 0 24 24"><path d="M2 6.5l4.3 3.7a1 1 0 0 0 1.52-.29L12 3.5l4.18 6.41a1 1 0 0 0 1.52.29L22 6.5l-2.5 11a1 1 0 0 1-.98.78H5.48a1 1 0 0 1-.98-.78z"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></symbol>
 </svg>
 
-<nav>
-  <div class="nav-logo">
-  <img src="logo.png" alt="FPL Analyser" style="height:48px;vertical-align:middle;margin-right:8px;">
-</div>
-  <ul class="nav-links">
-    <li class="nav-kicker" aria-hidden="true">Analytics</li>
-    <li><a href="#home" class="active" onclick="showPage('home', this)">Briefing</a></li>
-    <li><a href="#player" onclick="showPage('player', this)">Players</a></li>
-    <li><a href="#teams" onclick="showPage('teams', this)">Teams</a></li>
-    <li><a href="#rankings" onclick="showPage('rankings', this)">Rankings</a></li>
-    <li class="nav-kicker" aria-hidden="true">Tools</li>
-    <li><a href="#loadteam" onclick="showPage('loadteam', this)">My Team</a></li>
-    <li><a href="#scout" onclick="showPage('scout', this)">Scouting</a></li>
-    <li><a href="#" id="nav-help" class="nav-help" title="How it works" aria-label="How it works"><svg class="icon" width="16" height="16"><use href="#i-info"/></svg></a></li>
-  </ul>
-</nav>
-
-<div class="stale-banner" id="stale-banner"></div>
-
-<main>
-
-  <!-- ── HOME PAGE ── -->
-  <div id="page-home" class="page active">
-    <div class="page-title">FPL Analyser</div>
-    <div class="page-subtitle">What matters this week — fixtures, form and captaincy, driven by the data</div>
-
-    <div id="home-content">
-      <div class="skel-card"><div class="skel-block">
-        <div class="skel" style="height:20px;width:38%"></div>
-        <div class="skel" style="height:12px;width:60%"></div>
-        <div class="skel" style="height:48px"></div>
-        <div class="skel" style="height:48px"></div>
-        <div class="skel" style="height:48px"></div>
-      </div></div>
-    </div>
-  </div>
-
-  <!-- ── PLAYER PAGE ── -->
-  <div id="page-player" class="page">
-    <div class="page-title">Player Search</div>
-    <div class="page-subtitle">Search for any player to see their FPL Analyser ratings, stats and form</div>
-
-    <div class="search-wrap">
-      <input type="text" id="player-search" placeholder="Search player name..." autocomplete="off">
-      <div class="search-dropdown" id="player-dropdown"></div>
-    </div>
-
-    <div id="player-result">
-      <div class="empty-state">
-        <div class="empty-icon"><svg class="icon" width="44" height="44"><use href="#i-search"/></svg></div>
-        <div>Search for a player to see their analysis</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── TEAMS PAGE ── -->
-  <div id="page-teams" class="page">
-    <div class="page-title">Team Search</div>
-    <div class="page-subtitle">Search for a team to see their metrics and player ratings</div>
-
-    <div class="search-wrap">
-      <input type="text" id="team-search" placeholder="Search team name..." autocomplete="off">
-      <div class="search-dropdown" id="team-dropdown"></div>
-    </div>
-
-    <div id="team-result">
-      <div class="empty-state">
-        <div class="empty-icon"><svg class="icon" width="44" height="44"><use href="#i-pitch"/></svg></div>
-        <div>Search for a team to see their analysis</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── LOAD YOUR TEAM PAGE ── -->
-  <div id="page-loadteam" class="page">
-    <div class="page-title">My Team</div>
-    <div class="page-subtitle">Enter your FPL Team ID for your squad, ratings and a personalised weekly report</div>
-
-    <div style="display:flex;gap:8px;max-width:500px;margin-bottom:8px;">
-      <input type="text" id="team-id-input" class="team-id-input" placeholder="Enter your FPL Team ID..." autocomplete="off" inputmode="numeric" onkeydown="if(event.key==='Enter') loadMyTeam()">
-      <button class="btn-primary" onclick="loadMyTeam()">Load</button>
-    </div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:32px;">
-      Find your Team ID in the URL when viewing your team on the official FPL site — e.g. fantasy.premierleague.com/entry/<strong>1234567</strong>/event/1
-    </div>
-
-    <div id="loadteam-result">
-      <div class="empty-state">
-        <div class="empty-icon"><svg class="icon" width="44" height="44"><use href="#i-users"/></svg></div>
-        <div>Enter your Team ID to load your squad</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── RANKINGS PAGE ── -->
-  <div id="page-rankings" class="page">
-    <div class="page-title">Rankings</div>
-    <div class="page-subtitle">Top players across all metrics</div>
-
-    <div class="rankings-tabs">
-      <button class="rankings-tab active" onclick="showRankingsTab('top-rated', this)"><svg class="icon" width="13" height="13"><use href="#i-star"/></svg> Top Rated</button>
-      <button class="rankings-tab" onclick="showRankingsTab('goal-threats', this)"><svg class="icon" width="13" height="13"><use href="#i-target"/></svg> Goal Threats</button>
-      <button class="rankings-tab" onclick="showRankingsTab('creators', this)"><svg class="icon" width="13" height="13"><use href="#i-bolt"/></svg> Creators</button>
-      <button class="rankings-tab" onclick="showRankingsTab('clean-sheets', this)"><svg class="icon" width="13" height="13"><use href="#i-shield"/></svg> Clean Sheets</button>
-      <button class="rankings-tab" onclick="showRankingsTab('value', this)"><svg class="icon" width="13" height="13"><use href="#i-coin"/></svg> Value Picks</button>
-      <button class="rankings-tab" onclick="showRankingsTab('form', this)"><svg class="icon" width="13" height="13"><use href="#i-flame"/></svg> Form</button>
-      <button class="rankings-tab" onclick="showRankingsTab('next4', this)"><svg class="icon" width="13" height="13"><use href="#i-calendar"/></svg> Next 4 GWs</button>
-    </div>
-
-    <div id="rankings-content">
-      <div class="skel-card"><div class="skel-block">
-        <div class="skel" style="height:14px;width:30%"></div>
-        <div class="skel" style="height:40px"></div>
-        <div class="skel" style="height:40px"></div>
-        <div class="skel" style="height:40px"></div>
-        <div class="skel" style="height:40px"></div>
-        <div class="skel" style="height:40px"></div>
-      </div></div>
-    </div>
-  </div>
-
-  <!-- ── SCOUTING PAGE ── -->
-  <div id="page-scout" class="page">
-    <div class="page-title">Scouting Report</div>
-    <div class="page-subtitle">Per-90 percentiles vs positional peers — compare up to 4 players side by side</div>
-
-    <div class="scout-picker">
-      <input type="text" id="scout-search" placeholder="Search player… (up to 4)" autocomplete="off">
-      <div class="scout-suggestions" id="scout-suggestions"></div>
-    </div>
-    <div class="rankings-tabs" id="scout-window-tabs" style="margin-bottom:12px">
-      <button class="rankings-tab active" onclick="setScoutWindow('season', this)">Season</button>
-      <button class="rankings-tab" onclick="setScoutWindow('l6', this)">Last 6 GWs</button>
-      <button class="rankings-tab" onclick="setScoutWindow('l4', this)">Last 4 GWs</button>
-    </div>
-    <div class="rankings-tabs" id="scout-peer-tabs" style="margin-bottom:16px">
-      <button class="rankings-tab active" onclick="setScoutPeer('pooled', this)">MID + FWD pooled</button>
-      <button class="rankings-tab" onclick="setScoutPeer('position', this)">By position</button>
-    </div>
-    <div class="scout-chips" id="scout-chips"></div>
-    <div class="scout-warn" id="scout-warn"></div>
-
-    <div class="scout-report" id="scout-report">
-      <div class="scout-empty">Search for a player to build their scouting report.<br>
-      <span>Percentiles ranked within peer group (attackers pooled MID+FWD, min 600 minutes), season to date.</span></div>
-    </div>
-  </div>
-
-</main>
-
-
-<script type="module" src="js/app.js"></script>
+<div id="root"></div>
+<script type="module" src="/src/main.tsx"></script>
 </body>
 </html>
