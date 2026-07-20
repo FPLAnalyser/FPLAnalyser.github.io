@@ -124,15 +124,30 @@ def minutes_scores(group):
 MIN_VALID = {"season": 450, "gw4": 180}
 MIN_SHOTS = {"season": 10, "gw4": 4}
 
-# ── 4-factor model: fundamentals + realized output + risk/reliability ──────────
-# The overall rating is an EXPECTED-FORWARD-RETURN estimate: the underlying
-# dimension quality (fundamentals) is the predictive core; realized output is
-# credited but DISCOUNTED for how far it runs ahead of the underlying process
-# (quality of earnings), and a risk factor rewards steady, blank-avoiding
-# returns. Value is deliberately kept OUT (surfaced separately).
-FUND_W, OUTPUT_W, RISK_W = 0.72, 0.18, 0.10
-PTS_PER_GI = 4.0        # blended points per goal-involvement (goal+assist)
-SUSTAIN_LAMBDA = 0.5    # fade on xGI overperformance (0 = trust output, 1 = trust xG)
+# ── Expected-points model ─────────────────────────────────────────────────────
+# The overall rating is availability-adjusted EXPECTED FPL POINTS PER GAME,
+# built bottom-up from the underlying data at each source's real point value:
+#   goal xPts   = xG/90 × goal value × quality modifier (npxG/shot, box share,
+#                 SoT rate, touches-in-box — refines xG, never overrides it)
+#   assist xPts = xA/90 × 3 × creative modifier (big chances, creativity depth,
+#                 set-piece delivery, touches-in-box)
+#   CS xPts     = P(clean sheet) from xGC + CS-rate × value, refined by the
+#                 shot-load the defence faces (volume / box share / distance)
+#   + DC threshold pts, saves (GKP), expected bonus, appearance pts.
+# Sustainability is inherent: it prices xG/xA, not realized finishing streaks.
+# headline = percentile of (xPts/game × start_rate^AVAIL_EXP) within position.
+# Value and the finance ratios (Sortino etc.) stay OUT — surfaced separately.
+GOAL_VALUE = {"GKP": 6, "DEF": 6, "MID": 5, "FWD": 4}   # FPL pts per goal
+CS_VALUE = {"GKP": 4, "DEF": 4, "MID": 1, "FWD": 0}     # FPL pts per clean sheet
+ASSIST_VALUE = 3
+DC_PTS = 2                # defensive-contribution threshold bonus
+SAVE_PTS_PER_SAVE = 1 / 3
+APPEARANCE_PTS = 2.0      # a starter's appearance points
+AVAIL_EXP = 0.75          # availability curve: ×start_rate^0.75 — missing games
+                          # always cost rating, but never more than the points
+                          # they actually forfeit (full ×start over-punished)
+QUALITY_SWING = 0.30      # attacking quality modifier range 0.85–1.15
+DEFENCE_SWING = 0.20      # defensive shot-load modifier range 0.90–1.10
 
 def combined_per90(group, cols, min_valid):
     """NaN-aware per-90 of the row-wise sum of several source columns."""
@@ -198,23 +213,17 @@ def calc_metrics(group, position, mins, wk):
         m["saves"] = p("saves")
         m["bps"] = p("bps")
         m["bonus"] = p("bonus")
-        # Shot-load faced by the keeper's defence (team-level, attributed by club).
+
+    if position in ("GKP", "DEF"):
+        # Shot-load faced by the player's defence (team-level, attributed by
+        # club) — feeds the GKP save dimension and the CS xPts modifier.
         sl = TEAM_SHOTLOAD.get(group["team"].iloc[-1], {})
         m["shots_faced"] = sl.get("shots_pg", np.nan)
         m["box_faced"] = sl.get("box_share", np.nan)
         m["dist_faced"] = sl.get("dist_avg", np.nan)
 
-    # ── Realized output, quality-adjusted for sustainability (all positions) ──
-    # pts/90 minus a fade on the portion of goal-involvements that ran ahead of
-    # expected (xGI overperformance = likely to regress).
-    if mins > 0:
-        pts = group["total_points"].sum()
-        gi = group["goals_scored"].sum() + group["assists"].sum()
-        xgi = group["expected_goals"].sum() + group["expected_assists"].sum()
-        over90 = max(0.0, gi - xgi) / (mins / 90) * PTS_PER_GI
-        m["output"] = round(pts / (mins / 90) - SUSTAIN_LAMBDA * over90, 3)
     # Risk/reliability metric (Sortino) is merged in from advanced_metrics after
-    # the per-player loop — see RISK_MERGE below.
+    # the per-player loop — see RISK_MERGE below (surfaced, not in the rating).
     return m
 
 # Dimension = weighted blend of sub-metric percentiles. Weights sum to 1.
@@ -251,19 +260,6 @@ INVERT = {"xgc", "dist_faced"}
 # Orphan dimensions surfaced on the card AND folded into a parent above.
 ORPHAN_DIMS = {"shot_quality": "shot_quality", "finishing_skill": "finishing",
                "creativity_depth": "creativity_depth", "set_piece": "set_piece"}
-
-# ── Overall rating weights (UNCHANGED — existing overall ratings identical) ──
-# Weights nudged toward the total-points correlations (availability lifted; GKP
-# save trimmed as it barely predicts vs cs; DC eased where it's a floor not a
-# differentiator; bps kept moderate — it's semi-mechanical, and output already
-# counts delivered points). MID gains a small cs weight.
-WEIGHTS = {
-    "GKP": {"save": 0.18, "cs": 0.42, "bps": 0.15, "reliability": 0.15, "mins90": 0.10},
-    "DEF": {"cs": 0.30, "dc": 0.15, "attacking": 0.15, "bps": 0.15, "reliability": 0.18, "mins90": 0.07},
-    "MID": {"goal": 0.26, "creative": 0.20, "cs": 0.06, "dc": 0.08, "bps": 0.14, "reliability": 0.16, "mins90": 0.10},
-    "FWD": {"goal": 0.25, "creative": 0.20, "dc": 0.08, "bps": 0.15, "reliability": 0.22, "mins90": 0.10},
-    "ATT": {"goal": 0.26, "creative": 0.20, "dc": 0.08, "bps": 0.15, "reliability": 0.19, "mins90": 0.12}
-}
 
 # ── Goalkeeper shot-load faced (team-level, attributed to a club's keepers) ───
 # From data/understat_shots.csv: for each defending team, how many shots they
@@ -452,105 +448,93 @@ for prefix in ("season", "gw4"):
         col = f"{prefix}_pct_{metric}"
         if col in df.columns:
             df.loc[ok, f"{prefix}_{orphan}_score_norm"] = df.loc[ok, col].apply(pct_to_5)
-    # Value (surfaced, NOT in overall weights) + reliability + mins90 + the two
-    # new 4-factor inputs: sustainable output and risk/reliability.
+    # Value + Sortino risk (both surfaced, NOT in the rating) + reliability + mins90
     for dim, metric in (("value_score", "value"), ("reliability_score", "start_rate"),
-                        ("mins90_score", "mins90_rate"),
-                        ("output_score", "output"), ("risk_score", "reliability_risk")):
+                        ("mins90_score", "mins90_rate"), ("risk_score", "reliability_risk")):
         col = f"{prefix}_pct_{metric}"
         if col in df.columns:
             df.loc[ok, f"{prefix}_{dim}_norm"] = df.loc[ok, col].apply(pct_to_5)
-    # Combined attacker pool → *_att_* dimensions used by the ATT overall
+    # Combined attacker pool → *_att_* dimensions (cross-position MID+FWD view)
     am = df["position"].isin(["MID", "FWD"]) & ok
     for dim, blend in ATT_BLENDS.items():
         df.loc[am, f"{prefix}_att_{dim}_score_norm"] = df.loc[am].apply(
             lambda r: blend_to_5(r, prefix, blend, "attpct"), axis=1)
     for metric, out in (("start_rate", "reliability"), ("mins90_rate", "mins90"),
-                        ("value", "value_score"),
-                        ("output", "output_score"), ("reliability_risk", "risk_score")):
+                        ("value", "value_score")):
         col = f"{prefix}_attpct_{metric}"
         if col in df.columns:
             df.loc[am, f"{prefix}_att_{out}_norm"] = df.loc[am, col].apply(pct_to_5)
 
-# ── Calculate overall score: 4-factor blend ───────────────────────────────────
-# fundamentals (weighted dimension norms) 72% · sustainable output 18% · risk 10%.
-# Missing factors drop out and the present weights rescale.
-print("Calculating overall scores...")
+# ── Overall rating: availability-adjusted expected points per game ────────────
+print("Calculating expected-points overalls...")
 
-def _blend_factors(row, prefix, fund, ap):
-    """Combine the fundamentals score with the output + risk factors."""
-    parts = [(fund, FUND_W)]
-    out = row.get(f"{prefix}_{ap}output_score_norm")
-    risk = row.get(f"{prefix}_{ap}risk_score_norm")
-    if pd.notna(out):
-        parts.append((float(out), OUTPUT_W))
-    if pd.notna(risk):
-        parts.append((float(risk), RISK_W))
-    s = sum(v * w for v, w in parts)
-    tw = sum(w for _, w in parts)
-    return round(s / tw, 3) if tw > 0 else np.nan
+def _q(prefix, name):
+    """Quality percentile as 0–1, neutral 0.5 when a player lacks the data."""
+    col = f"{prefix}_pct_{name}"
+    if col not in df.columns:
+        return pd.Series(0.5, index=df.index)
+    return (df[col] / 100.0).fillna(0.5)
 
-def calc_overall(row, position, prefix, weights):
-    w = weights.get(position, {})
-    mapping = {
-        "goal": f"{prefix}_goal_score_norm",
-        "creative": f"{prefix}_creative_score_norm",
-        "dc": f"{prefix}_dc_score_norm",
-        "cs": f"{prefix}_cs_score_norm",
-        "save": f"{prefix}_save_score_norm",
-        "attacking": f"{prefix}_attacking_score_norm",
-        "bps": f"{prefix}_bps_score_norm",
-        "reliability": f"{prefix}_reliability_score_norm",
-        "mins90": f"{prefix}_mins90_score_norm"
+def calc_xpts(prefix):
+    ok = df[f"{prefix}_ok"].fillna(False)
+    mcol = lambda name: pd.to_numeric(
+        df.get(f"{prefix}_m_{name}", pd.Series(np.nan, index=df.index)),
+        errors="coerce").fillna(0.0)
+
+    # Quality modifiers: refine xG/xA with the richer data, bounded so they can
+    # never override the volume signal (a poacher's pristine profile must not
+    # outrank an elite high-volume shooter's larger xG).
+    q_goal = (_q(prefix, "shot_quality") + _q(prefix, "box_share")
+              + _q(prefix, "sot_rate") + _q(prefix, "touches_box")) / 4
+    q_cre = (_q(prefix, "big_chances") + _q(prefix, "creativity_depth")
+             + _q(prefix, "set_piece") + _q(prefix, "touches_box")) / 4
+    # Defensive shot-load ease: fewer shots faced, fewer from the box, from
+    # further out → clean sheets safer than xGC alone implies. (pct directions:
+    # shots/box ascending, dist inverted-closer, so 1−pct = easier throughout.)
+    ease = ((1 - _q(prefix, "shots_faced")) + (1 - _q(prefix, "box_faced"))
+            + (1 - _q(prefix, "dist_faced"))) / 3
+
+    mg = 0.85 + QUALITY_SWING * q_goal
+    mc = 0.85 + QUALITY_SWING * q_cre
+    md = pd.Series(np.where(df["position"].isin(["GKP", "DEF"]),
+                            0.9 + DEFENCE_SWING * ease, 1.0), index=df.index)
+    xgc = mcol("xgc")
+    # P(clean sheet): Poisson zero from xGC blended with the realized CS rate
+    cs_prob = pd.Series(np.where(xgc > 0, 0.5 * np.exp(-xgc) + 0.5 * mcol("cs_rate"),
+                                 mcol("cs_rate")), index=df.index)
+    comp = {
+        "goal": mcol("xg") * df["position"].map(GOAL_VALUE) * mg,
+        "assist": mcol("xa") * ASSIST_VALUE * mc,
+        "cs": cs_prob * df["position"].map(CS_VALUE) * md,
+        "dc": mcol("dc_hit") * DC_PTS,
+        "save": pd.Series(np.where(df["position"] == "GKP",
+                                   mcol("saves") * SAVE_PTS_PER_SAVE, 0.0), index=df.index),
+        "bonus": mcol("bonus"),
     }
-    fs = fw = 0.0
-    for dim, weight in w.items():
-        col = mapping.get(dim)
-        if col and col in row.index and pd.notna(row[col]):
-            fs += float(row[col]) * weight
-            fw += weight
-    if fw == 0:
-        return np.nan
-    return _blend_factors(row, prefix, fs / fw, "")
+    xpg = sum(comp.values()) + APPEARANCE_PTS
+    adj = xpg * df[f"{prefix}_start_rate"].clip(0, 1) ** AVAIL_EXP
 
-def calc_att_overall(row, prefix, weights):
-    w = weights.get("ATT", {})
-    mapping = {
-        "goal": f"{prefix}_att_goal_score_norm",
-        "creative": f"{prefix}_att_creative_score_norm",
-        "dc": f"{prefix}_att_dc_score_norm",
-        "bps": f"{prefix}_att_bps_score_norm",
-        "reliability": f"{prefix}_att_reliability_norm",
-        "mins90": f"{prefix}_att_mins90_norm"
-    }
-    fs = fw = 0.0
-    for dim, weight in w.items():
-        col = mapping.get(dim)
-        if col and col in row.index and pd.notna(row[col]):
-            fs += float(row[col]) * weight
-            fw += weight
-    if fw == 0:
-        return np.nan
-    return _blend_factors(row, prefix, fs / fw, "att_")
+    for k, v in comp.items():
+        df.loc[ok, f"{prefix}_xpts_{k}"] = np.round(v[ok], 3)
+    df.loc[ok, f"{prefix}_xpts_per_game"] = np.round(xpg[ok], 3)
+    df.loc[ok, f"{prefix}_xpts_adjusted"] = np.round(adj[ok], 3)
+
+    # Headline = percentile of adjusted xPts within position → 1–5 (existing
+    # app contract); the ATT variant ranks MID+FWD together.
+    overall = pd.Series(np.nan, index=df.index)
+    for pos in ["GKP", "DEF", "MID", "FWD"]:
+        m = ok & (df["position"] == pos) & df[f"{prefix}_xpts_adjusted"].notna()
+        if m.sum() > 1:
+            overall[m] = 1 + df.loc[m, f"{prefix}_xpts_adjusted"].rank(pct=True) * 4
+    df[f"{prefix}_overall_score"] = np.round(overall, 3)
+    att = pd.Series(np.nan, index=df.index)
+    am = ok & df["position"].isin(["MID", "FWD"]) & df[f"{prefix}_xpts_adjusted"].notna()
+    if am.sum() > 1:
+        att[am] = 1 + df.loc[am, f"{prefix}_xpts_adjusted"].rank(pct=True) * 4
+    df[f"{prefix}_att_overall_score"] = np.round(att, 3)
 
 for prefix in ["season", "gw4"]:
-    ok_col = f"{prefix}_ok"
-    overall_scores = []
-    att_overall_scores = []
-
-    for _, row in df.iterrows():
-        if row[ok_col]:
-            overall_scores.append(calc_overall(row, row["position"], prefix, WEIGHTS))
-        else:
-            overall_scores.append(np.nan)
-
-        if row["position"] in ["MID", "FWD"] and row[ok_col]:
-            att_overall_scores.append(calc_att_overall(row, prefix, WEIGHTS))
-        else:
-            att_overall_scores.append(np.nan)
-
-    df[f"{prefix}_overall_score"] = overall_scores
-    df[f"{prefix}_att_overall_score"] = att_overall_scores
+    calc_xpts(prefix)
 
 # ── Apply star ratings to all normalised scores ───────────────────────────────
 print("Applying star ratings...")

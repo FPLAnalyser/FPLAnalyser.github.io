@@ -324,6 +324,7 @@ function OverviewTab({ r, std, m, pos, isAtt }: { r: RatingRow; std: Row | null;
       <Section title="Key Stats (Season)">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
           <Tile value={num(r, 'season_ppg') != null ? <AnimatedCounter value={num(r, 'season_ppg')!} format="1dp" /> : 'N/A'} label="Pts / Game" />
+          <Tile value={num(r, 'season_xpts_per_game') != null ? <AnimatedCounter value={num(r, 'season_xpts_per_game')!} format="1dp" /> : 'N/A'} label={<>xPts / Game <InfoTip text={TOOLTIPS.xpts as string} /></>} />
           <Tile value={std && num(std, 'pts_per90_season') != null ? <AnimatedCounter value={num(std, 'pts_per90_season')!} format="2dp" /> : 'N/A'} label="Pts / 90" />
           <Tile value={num(r, 'total_mins') != null ? <AnimatedCounter value={num(r, 'total_mins')!} /> : 'N/A'} label="Total Mins" />
           <Tile value={num(r, 'season_start_rate') != null ? <AnimatedCounter value={num(r, 'season_start_rate')! * 100} suffix="%" /> : 'N/A'} label="Start Rate" />
