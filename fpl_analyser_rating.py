@@ -188,10 +188,11 @@ def calc_metrics(group, position, mins, wk):
         m["bps"] = p("bps")
         m["bonus"] = p("bonus")
 
-    if position in ("GKP", "DEF"):
-        m["cs_rate"] = round(group["clean_sheets"].mean(), 4)
-        m["xgc"] = p("expected_goals_conceded")
-        m["prevented"] = round(p("expected_goals_conceded") - p("goals_conceded"), 3)
+    # Clean-sheet metrics computed for all outfield + GKP (midfielders earn 1 pt
+    # for a clean sheet, so MID now has a cs dimension too).
+    m["cs_rate"] = round(group["clean_sheets"].mean(), 4)
+    m["xgc"] = p("expected_goals_conceded")
+    m["prevented"] = round(p("expected_goals_conceded") - p("goals_conceded"), 3)
 
     if position == "GKP":
         m["saves"] = p("saves")
@@ -217,22 +218,21 @@ def calc_metrics(group, position, mins, wk):
     return m
 
 # Dimension = weighted blend of sub-metric percentiles. Weights sum to 1.
-# NOTE: finishing (xg_delta) is deliberately NOT in the goal blend — rewarding
-# xG overperformance here would contradict the sustainability haircut applied to
-# the output factor. Goal threat is xG/quality-led; overperformance is handled
-# (faded) at the output-factor level. `finishing` stays a surfaced sub-metric.
-GOAL_BLEND = {"xg": 0.27, "npxg": 0.16, "goals": 0.15, "shot_quality": 0.14,
-              "box_share": 0.12, "sot_rate": 0.06, "touches_box": 0.10}
-CREATIVE_BLEND = {"xa": 0.25, "assists": 0.12, "chances": 0.15, "big_chances": 0.13,
-                  "creativity_depth": 0.15, "xa_over": 0.10, "set_piece": 0.10}
+# FUNDAMENTALS ARE UNDERLYING/PREDICTIVE ONLY. Realized goals & assists and any
+# over-performance (finishing, xA-over) live in the OUTPUT factor, so they are
+# not double-counted here. Raw chance COUNT is dropped for quality-weighted xA.
+GOAL_BLEND = {"xg": 0.32, "npxg": 0.20, "shot_quality": 0.16,
+              "box_share": 0.14, "sot_rate": 0.08, "touches_box": 0.10}
+CREATIVE_BLEND = {"xa": 0.40, "big_chances": 0.25, "creativity_depth": 0.20, "set_piece": 0.15}
 # Recoveries count toward the defensive-contribution threshold only for MID/FWD,
 # NOT defenders (a defender's DC is CBIT: clearances, blocks, interceptions,
 # tackles). So recoveries feed the DC blend for attackers only.
 DC_BLEND_DEF = {"dc_hit": 0.40, "tackles": 0.30, "cbi": 0.30}
 DC_BLEND_ATT = {"dc_hit": 0.40, "tackles": 0.20, "cbi": 0.20, "recoveries": 0.20}
-ATTACKING_BLEND = {"xa": 0.30, "xg": 0.20, "box_shots": 0.15, "headed": 0.10,
-                   "touches_box": 0.15, "chances": 0.10}
-CS_BLEND = {"cs_rate": 0.45, "xgc": 0.35, "prevented": 0.20}
+ATTACKING_BLEND = {"xa": 0.35, "xg": 0.22, "box_shots": 0.17, "headed": 0.11, "touches_box": 0.15}
+# `prevented` (goals conceded below xGC) is keeper shot-stopping skill → SAVE only,
+# not clean sheets (where it double-counted and credited defenders for keeper luck).
+CS_BLEND = {"cs_rate": 0.55, "xgc": 0.45}
 SAVE_BLEND = {"saves": 0.30, "prevented": 0.35, "shots_faced": 0.15,
               "box_faced": 0.10, "dist_faced": 0.10}
 BPS_BLEND = {"bps": 0.6, "bonus": 0.4}
@@ -240,7 +240,8 @@ BPS_BLEND = {"bps": 0.6, "bonus": 0.4}
 DIM_BLENDS = {
     "GKP": {"save": SAVE_BLEND, "cs": CS_BLEND, "bps": BPS_BLEND},
     "DEF": {"cs": CS_BLEND, "dc": DC_BLEND_DEF, "attacking": ATTACKING_BLEND, "bps": BPS_BLEND},
-    "MID": {"goal": GOAL_BLEND, "creative": CREATIVE_BLEND, "dc": DC_BLEND_ATT, "bps": BPS_BLEND},
+    # MID gains a cs dimension — midfielders score 1 pt for a clean sheet.
+    "MID": {"goal": GOAL_BLEND, "creative": CREATIVE_BLEND, "cs": CS_BLEND, "dc": DC_BLEND_ATT, "bps": BPS_BLEND},
     "FWD": {"goal": GOAL_BLEND, "creative": CREATIVE_BLEND, "dc": DC_BLEND_ATT, "bps": BPS_BLEND},
 }
 # Combined MID+FWD attacker pool → the *_att_* overall (cross-position ranking).
@@ -252,12 +253,16 @@ ORPHAN_DIMS = {"shot_quality": "shot_quality", "finishing_skill": "finishing",
                "creativity_depth": "creativity_depth", "set_piece": "set_piece"}
 
 # ── Overall rating weights (UNCHANGED — existing overall ratings identical) ──
+# Weights nudged toward the total-points correlations (availability lifted; GKP
+# save trimmed as it barely predicts vs cs; DC eased where it's a floor not a
+# differentiator; bps kept moderate — it's semi-mechanical, and output already
+# counts delivered points). MID gains a small cs weight.
 WEIGHTS = {
-    "GKP": {"save": 0.25, "cs": 0.35, "bps": 0.15, "reliability": 0.15, "mins90": 0.10},
-    "DEF": {"cs": 0.30, "dc": 0.20, "attacking": 0.15, "bps": 0.15, "reliability": 0.15, "mins90": 0.05},
-    "MID": {"goal": 0.28, "creative": 0.22, "dc": 0.10, "bps": 0.15, "reliability": 0.15, "mins90": 0.10},
-    "FWD": {"goal": 0.25, "creative": 0.20, "dc": 0.10, "bps": 0.15, "reliability": 0.20, "mins90": 0.10},
-    "ATT": {"goal": 0.27, "creative": 0.21, "dc": 0.10, "bps": 0.15, "reliability": 0.17, "mins90": 0.10}
+    "GKP": {"save": 0.18, "cs": 0.42, "bps": 0.15, "reliability": 0.15, "mins90": 0.10},
+    "DEF": {"cs": 0.30, "dc": 0.15, "attacking": 0.15, "bps": 0.15, "reliability": 0.18, "mins90": 0.07},
+    "MID": {"goal": 0.26, "creative": 0.20, "cs": 0.06, "dc": 0.08, "bps": 0.14, "reliability": 0.16, "mins90": 0.10},
+    "FWD": {"goal": 0.25, "creative": 0.20, "dc": 0.08, "bps": 0.15, "reliability": 0.22, "mins90": 0.10},
+    "ATT": {"goal": 0.26, "creative": 0.20, "dc": 0.08, "bps": 0.15, "reliability": 0.19, "mins90": 0.12}
 }
 
 # ── Goalkeeper shot-load faced (team-level, attributed to a club's keepers) ───
