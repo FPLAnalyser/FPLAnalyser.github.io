@@ -519,12 +519,13 @@ def calc_xpts(prefix):
     df.loc[ok, f"{prefix}_xpts_per_game"] = np.round(xpg[ok], 3)
     df.loc[ok, f"{prefix}_xpts_adjusted"] = np.round(adj[ok], 3)
 
-    # Headline = STANDARD SCORE of adjusted xPts within position (50 + 15z on
-    # the 0–100 display scale), NOT a percentile rank — a rank is uniform, so
-    # ~10% of every position lands 90+ and each position's best hits 100. The
-    # z-mapping restores a bell curve (most ≈ 35–65, elite ≈ 85–95, only a
-    # truly exceptional season nears 99) and lets the SIZE of the gap between
-    # players show in the number. Stored on the app's 1–5 contract (÷20).
+    # Headline = STANDARD SCORE of adjusted xPts across ALL eligible players
+    # (50 + 15z on the 0–100 display scale, clipped 1–99), NOT a percentile
+    # rank (uniform → too many 90s) and NOT position-relative: FPL points are
+    # worth the same whoever scores them, and the game is choosing which 11
+    # highest-expected scorers a formation allows. A bell curve results (most
+    # ≈ 35–65, elite 80s–90s) and gap SIZE shows in the number. The ATT
+    # variant keeps its MID+FWD pool. Stored on the app's 1–5 contract (÷20).
     def zscale(mask):
         vals = df.loc[mask, f"{prefix}_xpts_adjusted"]
         if len(vals) < 2 or vals.std(ddof=0) == 0:
@@ -533,10 +534,9 @@ def calc_xpts(prefix):
         return ((50 + 15 * z).clip(1, 99)) / 20.0
 
     overall = pd.Series(np.nan, index=df.index)
-    for pos in ["GKP", "DEF", "MID", "FWD"]:
-        m = ok & (df["position"] == pos) & df[f"{prefix}_xpts_adjusted"].notna()
-        if m.sum() > 1:
-            overall[m] = zscale(m)
+    m = ok & df[f"{prefix}_xpts_adjusted"].notna()
+    if m.sum() > 1:
+        overall[m] = zscale(m)
     df[f"{prefix}_overall_score"] = np.round(overall, 3)
     att = pd.Series(np.nan, index=df.index)
     am = ok & df["position"].isin(["MID", "FWD"]) & df[f"{prefix}_xpts_adjusted"].notna()

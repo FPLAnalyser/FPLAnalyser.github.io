@@ -226,8 +226,8 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
             {streak === '🧊 Cold' && <span className="flex items-center gap-1 text-cold"><Icon name="snow" size={12} /> Cold Streak</span>}
           </div>
           <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
-            <RatingBlock label={<>Season (Position) <InfoTip text={TOOLTIPS.overall as string} /></>} value={num(r, 'season_overall_score')} />
-            <RatingBlock label="Last 4GW (Position)" value={num(r, 'gw4_overall_score')} />
+            <RatingBlock label={<>Season <InfoTip text={TOOLTIPS.overall as string} /></>} value={num(r, 'season_overall_score')} />
+            <RatingBlock label="Last 4GW" value={num(r, 'gw4_overall_score')} />
             <RatingBlock label={<>Next 4GW (Fixtures) <InfoTip text={TOOLTIPS.next4 as string} /></>} value={str(r, 'next4_overall_rating')} />
             {isAtt && <RatingBlock label="Season (Attacker)" value={num(r, 'season_att_overall_score')} />}
             {isAtt && <RatingBlock label="Last 4GW (Attacker)" value={num(r, 'gw4_att_overall_score')} />}
