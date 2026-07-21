@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PageHeader, PageShell, EmptyState } from '../components/PageShell'
 import { SearchBox } from '../components/SearchBox'
-import { Tabs, type TabDef } from '../components/Tabs'
 import { StarRating, ratingTo100 } from '../components/StarRating'
-import { RadialGauge, Radar, type Tone } from '../components/viz'
+import { RadialGauge, Radar, MiniBar, ConcentrationBar, CHART_COLORS, type Tone } from '../components/viz'
 import { AnimatedCounter } from '../components/AnimatedCounter'
 import { InfoTip } from '../components/InfoTip'
 import { Icon, type IconName } from '../components/Icon'
@@ -187,8 +186,6 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
   const name = String(r.web_name)
   const pos = r.position
   const isAtt = pos === 'MID' || pos === 'FWD'
-  const [tab, setTab] = useState('overview')
-  useEffect(() => setTab('overview'), [name])
 
   const p4 = data.personas4.find((p) => p.web_name === name) ?? null
   const m = data.metrics.find((p) => p.web_name === name) ?? null
@@ -205,11 +202,11 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
   const isPenTaker = bool(r, 'is_pen_taker')
   const isSpTaker = bool(r, 'is_setpiece_taker')
 
-  const tabs: TabDef[] = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'form', label: 'Form & Fixtures' },
-    ...(pos !== 'GKP' ? [{ id: 'shots', label: 'Shots' }] : []),
-  ]
+  const dims = pos === 'GKP' ? GKP_DIMS : pos === 'DEF' ? DEF_DIMS : ATT_POS_DIMS
+  const ptsDelta = std ? num(std, 'pts_delta') : null
+  const xgShare = m ? num(m, 'xg_share_4gw') : null
+  const xaShare = m ? num(m, 'xa_share_4gw') : null
+  const n2 = (v: number | null, f: 1 | 2 = 2) => (v != null ? <AnimatedCounter value={v} format={f === 1 ? '1dp' : '2dp'} /> : 'N/A')
 
   return (
     <div className="rounded-xl border border-line bg-surface-1/50 p-5 md:p-6">
@@ -269,19 +266,152 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
         </div>
       )}
 
-      <div className="mt-5 mb-5">
-        <Tabs tabs={tabs} active={tab} onChange={setTab} layoutId={`player-${r.element}`} />
-      </div>
+      {/* Single scroll — every section visible, no tabs. Order mirrors the
+          rating's own construction: receipts → stats → profile → underlying →
+          reliability → context → shots. */}
+      <div className="mt-6">
+        <PointsEngine r={r} />
 
-      {tab === 'overview' && <OverviewTab r={r} std={std} m={m} pos={pos} isAtt={isAtt} />}
-      {tab === 'form' && <FormFixturesTab r={r} m={m} std={std} name={name} tierPerf={data.tierPerf} />}
-      {tab === 'shots' && pos !== 'GKP' && (
-        <div>
-          <Section title="Shot Map"><PlayerScatterMap element={r.element} /></Section>
-          <Section title="Shot Zones"><PlayerZoneMap element={r.element} name={name} /></Section>
+        <Section title="Key Stats (Season)">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <Tile value={num(r, 'season_ppg') != null ? <AnimatedCounter value={num(r, 'season_ppg')!} format="1dp" /> : 'N/A'} label="Pts / Game" />
+            <Tile value={std && num(std, 'pts_per90_season') != null ? <AnimatedCounter value={num(std, 'pts_per90_season')!} format="2dp" /> : 'N/A'} label="Pts / 90" />
+            <Tile value={num(r, 'total_mins') != null ? <AnimatedCounter value={num(r, 'total_mins')!} /> : 'N/A'} label="Total Mins" />
+            <Tile value={ptsDelta != null ? `${ptsDelta > 0 ? '+' : ''}${ptsDelta.toFixed(2)}` : 'N/A'} label="Form Delta" />
+          </div>
+        </Section>
+
+        <Section title={`Rating Profile — vs ${pos} players`}>
+          <div className="grid gap-5 lg:grid-cols-[300px_1fr] lg:items-center">
+            <Radar axes={radarAxes(r, dims)} seriesALabel="Season" seriesBLabel="Last 4GW" />
+            <DimBars r={r} dims={dims} overall={['season_overall_score', 'gw4_overall_score']} />
+          </div>
+        </Section>
+
+        <UnderlyingQuality r={r} pos={pos} />
+
+        {isAtt && (
+          <Section title="Attacking Share (Last 4GW)">
+            <div className="grid grid-cols-2 gap-2">
+              <Tile value={xgShare != null ? `${(xgShare * 100).toFixed(1)}%` : 'N/A'} label="Team xG Share" />
+              <Tile value={xaShare != null ? `${(xaShare * 100).toFixed(1)}%` : 'N/A'} label="Team xA Share" />
+            </div>
+          </Section>
+        )}
+        {isAtt && (
+          <Section title="Attacker Ratings — vs all MID & FWD players">
+            <DimBars r={r} dims={ATT_COMBINED_DIMS} overall={['season_att_overall_score', 'gw4_att_overall_score']} />
+          </Section>
+        )}
+
+        <Section title="Reliability & Risk">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <Tile value={num(r, 'season_start_rate') != null ? <AnimatedCounter value={num(r, 'season_start_rate')! * 100} suffix="%" /> : 'N/A'} label="Start Rate" />
+            <Tile value={num(r, 'season_mins90_rate') != null ? <AnimatedCounter value={num(r, 'season_mins90_rate')! * 100} suffix="%" /> : 'N/A'} label="90 Mins Rate" />
+            <Tile value={n2(m ? num(m, 'sortino_4gw') : null)} label={<>Sortino <InfoTip text={TOOLTIPS.sortino as string} /></>} />
+            <Tile value={n2(m ? num(m, 'consistency_4gw') : null)} label={<>Consistency <InfoTip text={TOOLTIPS.consistency as string} /></>} />
+            <Tile value={n2(m ? num(m, 'alpha_4gw') : null)} label={<>Alpha <InfoTip text={TOOLTIPS.alpha as string} /></>} />
+            <Tile value={n2(m ? num(m, 'sharpe_4gw') : null)} label={<>Sharpe <InfoTip text={TOOLTIPS.sharpe as string} /></>} />
+            <Tile value={n2(m ? num(m, 'home_avg_season') : null, 1)} label="Home Avg Pts" />
+            <Tile value={n2(m ? num(m, 'away_avg_season') : null, 1)} label="Away Avg Pts" />
+          </div>
+        </Section>
+
+        <TierTable name={name} tierPerf={data.tierPerf} />
+
+        {pos !== 'GKP' && (
+          <>
+            <Section title="Shot Map"><PlayerScatterMap element={r.element} /></Section>
+            <Section title="Shot Zones"><PlayerZoneMap element={r.element} name={name} /></Section>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** The rating's receipts: expected points per game by source, the availability
+ * adjustment, and how actual output compares (sustainability read). */
+function PointsEngine({ r }: { r: RatingRow }) {
+  const xpg = num(r, 'season_xpts_per_game')
+  const adj = num(r, 'season_xpts_adjusted')
+  const ppg = num(r, 'season_ppg')
+  const start = num(r, 'season_start_rate')
+  if (xpg == null) return null
+  const availFactor = start != null ? Math.pow(Math.max(0, Math.min(1, start)), 0.75) : null
+  const parts: [string, number | null][] = [
+    ['Goals', num(r, 'season_xpts_goal')],
+    ['Assists', num(r, 'season_xpts_assist')],
+    ['Clean sheets', num(r, 'season_xpts_cs')],
+    ['Def contribution', num(r, 'season_xpts_dc')],
+    ['Saves', num(r, 'season_xpts_save')],
+    ['Bonus', num(r, 'season_xpts_bonus')],
+    ['Appearance', 2],
+  ]
+  const segments = parts
+    .filter(([, v]) => (v ?? 0) > 0.01)
+    .map(([label, v], i) => ({ label: `${label} — ${(v as number).toFixed(2)}`, value: v as number, color: CHART_COLORS[i % CHART_COLORS.length] }))
+  const delta = ppg != null ? ppg - xpg : null
+  const sustain =
+    delta == null ? null
+    : delta > 0.35 ? { cls: 'text-warn', icon: 'flame' as IconName, text: `Actual output is running ${delta.toFixed(1)} pts/game above expected — hot finishing that may cool.` }
+    : delta < -0.35 ? { cls: 'text-good', icon: 'snow' as IconName, text: `Actual output is ${Math.abs(delta).toFixed(1)} pts/game below expected — the underlying numbers suggest an uptick is due.` }
+    : { cls: 'text-ink-3', icon: 'target' as IconName, text: 'Delivering right in line with expected points — sustainable output.' }
+  return (
+    <Section title={<span className="inline-flex items-center gap-1">Points Engine <InfoTip text={TOOLTIPS.xpts as string} /></span>}>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Tile value={xpg.toFixed(2)} label="xPts / Game" />
+        <Tile value={availFactor != null ? `×${availFactor.toFixed(2)}` : '—'} label="Availability Factor" />
+        <Tile value={adj != null ? adj.toFixed(2) : '—'} label="Adjusted xPts" />
+        <Tile value={ppg != null ? ppg.toFixed(2) : '—'} label="Actual Pts / Game" />
+      </div>
+      {segments.length > 0 && (
+        <div className="mt-4">
+          <div className="mb-2 text-[11px] tracking-wide text-ink-3 uppercase">Where the expected points come from</div>
+          <ConcentrationBar segments={segments} />
         </div>
       )}
-    </div>
+      {sustain && (
+        <div className={`mt-3 flex items-start gap-2 text-sm ${sustain.cls}`}>
+          <span className="mt-0.5"><Icon name={sustain.icon} size={14} /></span>
+          <span>{sustain.text}</span>
+        </div>
+      )}
+    </Section>
+  )
+}
+
+/** Season per-90 quality metrics — the data layer beneath the xPts model. */
+function UnderlyingQuality({ r, pos }: { r: RatingRow; pos: string }) {
+  const f = (k: string, d = 2) => { const v = num(r, `season_m_${k}`); return v == null ? 'N/A' : v.toFixed(d) }
+  const pc = (k: string) => { const v = num(r, `season_m_${k}`); return v == null ? 'N/A' : `${Math.round(v * 100)}%` }
+  if (pos === 'GKP') {
+    return (
+      <Section title="Underlying Quality (Season)">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <Tile value={f('saves')} label="Saves / 90" />
+          <Tile value={f('xgc')} label="xGC / 90" />
+          <Tile value={f('prevented')} label="Goals Prevented / 90" />
+          <Tile value={f('shots_faced', 1)} label="Shots Faced / Game" />
+          <Tile value={pc('box_faced')} label="Box Share Faced" />
+          <Tile value={`${f('dist_faced', 1)} yd`} label="Avg Shot Dist Faced" />
+        </div>
+      </Section>
+    )
+  }
+  return (
+    <Section title="Underlying Quality (Season)">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Tile value={f('xg')} label="xG / 90" />
+        <Tile value={f('xa')} label="xA / 90" />
+        <Tile value={f('shot_quality', 3)} label={<>npxG / Shot <InfoTip text={TOOLTIPS.shot_quality as string} /></>} />
+        <Tile value={pc('box_share')} label="Box Shot %" />
+        <Tile value={pc('sot_rate')} label="Shots on Target %" />
+        <Tile value={f('touches_box', 1)} label="Touches in Box / 90" />
+        <Tile value={f('big_chances')} label="Big Chances / 90" />
+        <Tile value={f('set_piece', 1)} label="SP Deliveries / 90" />
+      </div>
+    </Section>
   )
 }
 
@@ -314,109 +444,36 @@ function radarAxes(r: RatingRow, dims: Dim[]) {
   return dims.map(([label, sCol, gCol]) => ({ label: RADAR_SHORT[label] ?? label, a: ratingTo100(str(r, sCol)), b: ratingTo100(str(r, gCol)) }))
 }
 
-function OverviewTab({ r, std, m, pos, isAtt }: { r: RatingRow; std: Row | null; m: Row | null; pos: string; isAtt: boolean }) {
-  const ptsDelta = std ? num(std, 'pts_delta') : null
-  const xgShare = m ? num(m, 'xg_share_4gw') : null
-  const xaShare = m ? num(m, 'xa_share_4gw') : null
-  const dims = pos === 'GKP' ? GKP_DIMS : pos === 'DEF' ? DEF_DIMS : ATT_POS_DIMS
+/** Dimension breakdown as glanceable 0–100 bars (season) with the compact
+ * last-4GW badge alongside — replaces the old star table. */
+function DimBars({ r, dims, overall }: { r: RatingRow; dims: Dim[]; overall: [string, string] }) {
+  const toneFor = (v: number | null): Tone => (v == null ? 'accent' : v >= 80 ? 'accent' : v >= 65 ? 'good' : v >= 50 ? 'info' : 'bad')
   return (
-    <div>
-      <Section title="Key Stats (Season)">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
-          <Tile value={num(r, 'season_ppg') != null ? <AnimatedCounter value={num(r, 'season_ppg')!} format="1dp" /> : 'N/A'} label="Pts / Game" />
-          <Tile value={num(r, 'season_xpts_per_game') != null ? <AnimatedCounter value={num(r, 'season_xpts_per_game')!} format="1dp" /> : 'N/A'} label={<>xPts / Game <InfoTip text={TOOLTIPS.xpts as string} /></>} />
-          <Tile value={std && num(std, 'pts_per90_season') != null ? <AnimatedCounter value={num(std, 'pts_per90_season')!} format="2dp" /> : 'N/A'} label="Pts / 90" />
-          <Tile value={num(r, 'total_mins') != null ? <AnimatedCounter value={num(r, 'total_mins')!} /> : 'N/A'} label="Total Mins" />
-          <Tile value={num(r, 'season_start_rate') != null ? <AnimatedCounter value={num(r, 'season_start_rate')! * 100} suffix="%" /> : 'N/A'} label="Start Rate" />
-          <Tile value={num(r, 'season_mins90_rate') != null ? <AnimatedCounter value={num(r, 'season_mins90_rate')! * 100} suffix="%" /> : 'N/A'} label="90 Mins Rate" />
-          <Tile value={ptsDelta != null ? `${ptsDelta > 0 ? '+' : ''}${ptsDelta.toFixed(2)}` : 'N/A'} label="Form Delta" />
-        </div>
-      </Section>
-
-      <Section title={`Rating Profile — vs ${pos} players`}>
-        <div className="grid gap-5 lg:grid-cols-[300px_1fr] lg:items-center">
-          <Radar axes={radarAxes(r, dims)} seriesALabel="Season" seriesBLabel="Last 4GW" />
-          <DimTable r={r} dims={dims} overall={['season_overall_score', 'gw4_overall_score']} />
-        </div>
-      </Section>
-
-      {isAtt && (
-        <Section title="Attacking Share (Last 4GW)">
-          <div className="grid grid-cols-2 gap-2">
-            <Tile value={xgShare != null ? `${(xgShare * 100).toFixed(1)}%` : 'N/A'} label="Team xG Share" />
-            <Tile value={xaShare != null ? `${(xaShare * 100).toFixed(1)}%` : 'N/A'} label="Team xA Share" />
+    <div className="rounded-xl border border-line">
+      <div className="flex items-center justify-between gap-3 border-b border-line-mid px-4 py-2.5 text-[11px] tracking-[0.1em] text-ink-3 uppercase">
+        <span>Dimension · Season</span>
+        <span>4GW</span>
+      </div>
+      <div className="flex items-center gap-3 border-b border-line px-4 py-2.5">
+        <span className="w-28 shrink-0 text-sm font-semibold text-ink sm:w-32">Overall</span>
+        <div className="min-w-0 flex-1"><StarRating value={num(r, overall[0])} /></div>
+        <span className="shrink-0"><StarRating value={num(r, overall[1])} size={10} /></span>
+      </div>
+      {dims.map(([label, sCol, gCol, tipKey]) => {
+        const s = ratingTo100(str(r, sCol))
+        return (
+          <div key={label} className="flex items-center gap-3 border-b border-line px-4 py-2.5 last:border-0">
+            <span className="inline-flex w-28 shrink-0 items-center gap-1 text-sm text-ink-2 sm:w-32">
+              {label}
+              {tipKey && metricTip(tipKey) && <InfoTip text={metricTip(tipKey)!} />}
+            </span>
+            <div className="min-w-0 flex-1">
+              <MiniBar value={s} max={100} tone={toneFor(s)} text={s == null ? 'N/A' : String(s)} />
+            </div>
+            <span className="shrink-0"><StarRating value={str(r, gCol)} size={10} /></span>
           </div>
-        </Section>
-      )}
-      {isAtt && (
-        <Section title="Attacker Ratings — vs all MID & FWD players">
-          <DimTable r={r} dims={ATT_COMBINED_DIMS} overall={['season_att_overall_score', 'gw4_att_overall_score']} />
-        </Section>
-      )}
-    </div>
-  )
-}
-
-function DimTable({ r, dims, overall }: { r: RatingRow; dims: Dim[]; overall: [string, string] }) {
-  // `overall` holds the two continuous *_score columns for the header row.
-  return (
-    <div className="overflow-x-auto rounded-xl border border-line">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-line-mid text-[11px] tracking-[0.1em] text-ink-3 uppercase">
-            <th className="px-4 py-3 text-left font-semibold">Dimension</th>
-            <th className="px-4 py-3 text-left font-semibold">Season</th>
-            <th className="px-4 py-3 text-left font-semibold">Last 4GW</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr className="border-b border-line">
-            <td className="px-4 py-3 font-semibold text-ink">Overall</td>
-            <td className="px-4 py-3"><StarRating value={num(r, overall[0])} /></td>
-            <td className="px-4 py-3"><StarRating value={num(r, overall[1])} /></td>
-          </tr>
-          {dims.map(([label, sCol, gCol, tipKey]) => (
-            <tr key={label} className="border-b border-line last:border-0">
-              <td className="px-4 py-3">
-                <span className="inline-flex items-center gap-1 text-ink-2">{label}{tipKey && metricTip(tipKey) && <InfoTip text={metricTip(tipKey)!} />}</span>
-              </td>
-              <td className="px-4 py-3"><StarRating value={str(r, sCol)} /></td>
-              <td className="px-4 py-3"><StarRating value={str(r, gCol)} /></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function FormFixturesTab({ r, m, std, name, tierPerf }: { r: RatingRow; m: Row | null; std: Row | null; name: string; tierPerf: Row[] }) {
-  void r
-  const n2 = (v: number | null, f: 1 | 2 = 2) => (v != null ? <AnimatedCounter value={v} format={f === 1 ? '1dp' : '2dp'} /> : 'N/A')
-  return (
-    <div>
-      <Section title="Per 90 Stats (Season)">
-        <div className="grid grid-cols-2 gap-2">
-          <Tile value={n2(std ? num(std, 'xg_per90_season') : null)} label="xG per 90" />
-          <Tile value={n2(std ? num(std, 'xa_per90_season') : null)} label="xA per 90" />
-        </div>
-      </Section>
-      <Section title="Finance Metrics (Last 4GW)">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Tile value={n2(m ? num(m, 'alpha_4gw') : null)} label={<>Alpha <InfoTip text={TOOLTIPS.alpha as string} /></>} />
-          <Tile value={n2(m ? num(m, 'sharpe_4gw') : null)} label={<>Sharpe <InfoTip text={TOOLTIPS.sharpe as string} /></>} />
-          <Tile value={n2(m ? num(m, 'sortino_4gw') : null)} label={<>Sortino <InfoTip text={TOOLTIPS.sortino as string} /></>} />
-          <Tile value={n2(m ? num(m, 'consistency_4gw') : null)} label={<>Consistency <InfoTip text={TOOLTIPS.consistency as string} /></>} />
-        </div>
-      </Section>
-      <Section title="Home vs Away (Season)">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <Tile value={n2(m ? num(m, 'home_avg_season') : null, 1)} label="Home Avg Pts" />
-          <Tile value={n2(m ? num(m, 'away_avg_season') : null, 1)} label="Away Avg Pts" />
-          <Tile value={<span className="text-sm">{m ? str(m, 'form_direction') || '—' : '—'}</span>} label="Form Direction" />
-        </div>
-      </Section>
-      <TierTable name={name} tierPerf={tierPerf} />
+        )
+      })}
     </div>
   )
 }
