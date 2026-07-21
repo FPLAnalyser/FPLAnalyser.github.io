@@ -519,18 +519,29 @@ def calc_xpts(prefix):
     df.loc[ok, f"{prefix}_xpts_per_game"] = np.round(xpg[ok], 3)
     df.loc[ok, f"{prefix}_xpts_adjusted"] = np.round(adj[ok], 3)
 
-    # Headline = percentile of adjusted xPts within position → 1–5 (existing
-    # app contract); the ATT variant ranks MID+FWD together.
+    # Headline = STANDARD SCORE of adjusted xPts within position (50 + 15z on
+    # the 0–100 display scale), NOT a percentile rank — a rank is uniform, so
+    # ~10% of every position lands 90+ and each position's best hits 100. The
+    # z-mapping restores a bell curve (most ≈ 35–65, elite ≈ 85–95, only a
+    # truly exceptional season nears 99) and lets the SIZE of the gap between
+    # players show in the number. Stored on the app's 1–5 contract (÷20).
+    def zscale(mask):
+        vals = df.loc[mask, f"{prefix}_xpts_adjusted"]
+        if len(vals) < 2 or vals.std(ddof=0) == 0:
+            return pd.Series(np.nan, index=vals.index)
+        z = (vals - vals.mean()) / vals.std(ddof=0)
+        return ((50 + 15 * z).clip(1, 99)) / 20.0
+
     overall = pd.Series(np.nan, index=df.index)
     for pos in ["GKP", "DEF", "MID", "FWD"]:
         m = ok & (df["position"] == pos) & df[f"{prefix}_xpts_adjusted"].notna()
         if m.sum() > 1:
-            overall[m] = 1 + df.loc[m, f"{prefix}_xpts_adjusted"].rank(pct=True) * 4
+            overall[m] = zscale(m)
     df[f"{prefix}_overall_score"] = np.round(overall, 3)
     att = pd.Series(np.nan, index=df.index)
     am = ok & df["position"].isin(["MID", "FWD"]) & df[f"{prefix}_xpts_adjusted"].notna()
     if am.sum() > 1:
-        att[am] = 1 + df.loc[am, f"{prefix}_xpts_adjusted"].rank(pct=True) * 4
+        att[am] = zscale(am)
     df[f"{prefix}_att_overall_score"] = np.round(att, 3)
 
 for prefix in ["season", "gw4"]:
