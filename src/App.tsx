@@ -32,6 +32,7 @@ const PAGE_LOADERS = {
   myteam: () => import('./pages/MyTeam'),
   scouting: () => import('./pages/Scouting'),
   fixtures: () => import('./pages/Fixtures'),
+  compare: () => import('./pages/Compare'),
 }
 
 const Home = lazyRetry(PAGE_LOADERS.home)
@@ -41,6 +42,7 @@ const Rankings = lazyRetry(PAGE_LOADERS.rankings)
 const MyTeam = lazyRetry(PAGE_LOADERS.myteam)
 const Scouting = lazyRetry(PAGE_LOADERS.scouting)
 const Fixtures = lazyRetry(PAGE_LOADERS.fixtures)
+const Compare = lazyRetry(PAGE_LOADERS.compare)
 const Debug = lazyRetry(() => import('./pages/Debug'))
 
 // Every route is wrapped so a render throw OR a stale-chunk import failure
@@ -63,6 +65,7 @@ const router = createHashRouter([
       { path: 'teams', element: page(<Teams />) },
       { path: 'players', element: page(<Rankings />) },
       { path: 'rankings', element: <Navigate to="/players" replace /> },
+      { path: 'compare', element: page(<Compare />) },
       { path: 'fixtures', element: page(<Fixtures />) },
       { path: 'loadteam', element: page(<MyTeam />) },
       { path: 'scout', element: page(<Scouting />) },
