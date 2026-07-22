@@ -1,3 +1,4 @@
+import json
 import pandas as pd
 import numpy as np
 import os
@@ -362,6 +363,20 @@ for element, group in gw.groupby("element"):
     row["gw4_m_start_rate"] = gw4_start if gw4_ok else np.nan
     row["season_m_mins90_rate"] = season_mins90 if season_ok else np.nan
     row["gw4_m_mins90_rate"] = gw4_mins90 if gw4_ok else np.nan
+
+    # Season totals + biggest hauls for the player-hero display.
+    played = group[group["minutes"] > 0]
+    row["season_total_points"] = int(group["total_points"].sum())
+    row["season_total_goals"] = int(group["goals_scored"].sum())
+    row["season_total_assists"] = int(group["assists"].sum())
+    row["season_total_xg"] = round(float(group["expected_goals"].sum()), 1)
+    row["season_total_xa"] = round(float(group["expected_assists"].sum()), 1)
+    if len(played):
+        row["season_hauls"] = json.dumps([
+            {"gw": int(h["gw_from_fixture"]), "pts": int(h["total_points"]),
+             "home": str(h.get("was_home")) in ("True", "true", "1"),
+             "g": int(h["goals_scored"]), "a": int(h["assists"])}
+            for _, h in played.nlargest(3, "total_points").iterrows()])
 
     results.append(row)
 
