@@ -4,6 +4,7 @@ import { PageHeader, PageShell, EmptyState } from '../components/PageShell'
 import { SortableTable, type Column } from '../components/SortableTable'
 import { SearchBox } from '../components/SearchBox'
 import { Tabs, type TabDef } from '../components/Tabs'
+import { ClubCard, TeamMatchup } from '../components/ClubCard'
 import { StarRating } from '../components/StarRating'
 import { AnimatedCounter } from '../components/AnimatedCounter'
 import { Donut, CHART_COLORS, RatingNumber, ConcentrationBar, scoreTone, SCORE_TEXT } from '../components/viz'
@@ -70,6 +71,15 @@ export default function Teams() {
     for (const r of teamRatings) if (r.window === 'season') m.set(r.team, r)
     return m
   }, [teamRatings])
+  const gw4ByTeam = useMemo(() => {
+    const m = new Map<string, TeamRatingRow>()
+    for (const r of teamRatings) if (r.window === '4gw') m.set(r.team, r)
+    return m
+  }, [teamRatings])
+  const clubOrder = useMemo(
+    () => [...ratingByTeam.values()].sort((a, b) => ((num(b, 'attack') ?? 0) + (num(b, 'defence') ?? 0)) - ((num(a, 'attack') ?? 0) + (num(a, 'defence') ?? 0))).map((r) => r.team),
+    [ratingByTeam],
+  )
 
   const selectTeam = (team: string) => {
     setParams(team ? { team } : {})
@@ -110,15 +120,29 @@ export default function Teams() {
       </div>
 
       {selected && seasonByTeam.has(selected) ? (
-        <TeamCard
-          team={selected}
-          metricRows={teamMetrics.filter((t) => String(t.team) === selected)}
-          ratingRows={teamRatings.filter((t) => t.team === selected)}
-          ratings={ratings}
-          fixtureEase={fixtureEase}
-        />
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <ClubCard team={selected} season={ratingByTeam.get(selected)} gw4={gw4ByTeam.get(selected)} fixtureEase={fixtureEase} />
+            <TeamMatchup team={selected} ratingByTeam={ratingByTeam} fixtureEase={fixtureEase} />
+          </div>
+          <TeamCard
+            team={selected}
+            metricRows={teamMetrics.filter((t) => String(t.team) === selected)}
+            ratingRows={teamRatings.filter((t) => t.team === selected)}
+            ratings={ratings}
+            fixtureEase={fixtureEase}
+          />
+        </div>
       ) : (
-        <AllTeamsTable rows={seasonRows} ratingByTeam={ratingByTeam} onSelect={selectTeam} />
+        <>
+          <div className="mb-3 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">All clubs</div>
+          <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {clubOrder.map((t) => (
+              <ClubCard key={t} team={t} season={ratingByTeam.get(t)} gw4={gw4ByTeam.get(t)} fixtureEase={fixtureEase} onClick={() => selectTeam(t)} />
+            ))}
+          </div>
+          <AllTeamsTable rows={seasonRows} ratingByTeam={ratingByTeam} onSelect={selectTeam} />
+        </>
       )}
     </PageShell>
   )
