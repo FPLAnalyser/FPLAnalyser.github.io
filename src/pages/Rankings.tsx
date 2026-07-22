@@ -394,28 +394,36 @@ export default function Rankings() {
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <PillGroup options={posOptions} active={pos} onChange={setPos} />
-        {showSearch && (
-          <div className="relative w-full sm:w-64">
-            <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-3">
-              <Icon name="search" size={15} />
-            </span>
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search players…"
-              className="min-h-10 w-full rounded-lg border border-line-mid bg-surface-1 pr-8 pl-9 text-sm text-ink placeholder:text-ink-3 focus:border-line-strong focus:outline-none"
-            />
-            {query && (
-              <button
-                onClick={() => setQuery('')}
-                aria-label="Clear search"
-                className="absolute top-1/2 right-2 -translate-y-1/2 px-1 text-lg leading-none text-ink-3 hover:text-ink"
-              >
-                ×
-              </button>
-            )}
-          </div>
-        )}
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          {showSearch && (
+            <div className="relative w-full sm:w-64">
+              <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-3">
+                <Icon name="search" size={15} />
+              </span>
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search players…"
+                className="min-h-10 w-full rounded-lg border border-line-mid bg-surface-1 pr-8 pl-9 text-sm text-ink placeholder:text-ink-3 focus:border-line-strong focus:outline-none"
+              />
+              {query && (
+                <button
+                  onClick={() => setQuery('')}
+                  aria-label="Clear search"
+                  className="absolute top-1/2 right-2 -translate-y-1/2 px-1 text-lg leading-none text-ink-3 hover:text-ink"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          )}
+          <button
+            onClick={() => navigate('/compare')}
+            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-line-mid px-4 text-sm font-semibold text-ink transition-colors hover:border-line-strong"
+          >
+            <Icon name="users" size={15} /> Compare
+          </button>
+        </div>
       </div>
 
       {tab === 'form' ? (
