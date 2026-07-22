@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { createHashRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { Layout } from './components/Layout'
+import { IntroSplash } from './components/IntroSplash'
 import { PageSkeleton } from './components/Skeleton'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { DataProvider } from './lib/useData'
@@ -85,6 +86,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <DataProvider>
+        <IntroSplash />
         <RouterProvider router={router} />
       </DataProvider>
     </ThemeProvider>
