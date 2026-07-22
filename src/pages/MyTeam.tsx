@@ -4,13 +4,12 @@ import { PageHeader, PageShell, EmptyState } from '../components/PageShell'
 import { SkeletonBlock } from '../components/Skeleton'
 import { StarRating } from '../components/StarRating'
 import { Tabs, type TabDef } from '../components/Tabs'
-import { PlayerPhoto } from '../components/PlayerPhoto'
-import { FixtureChips } from '../components/FixtureChips'
 import { TeamBadge } from '../components/badges'
+import { FifaCard, MiniFifaCard } from '../components/FifaCard'
 import { Icon, type IconName } from '../components/Icon'
 import { useCore } from '../lib/useData'
 import { str } from '../lib/rows'
-import { teamFullNames, avgRatingField, starsToNum } from '../lib/util'
+import { teamFullNames, avgRatingField } from '../lib/util'
 import { fplFetch, getCurrentGwFallback, fetchEntry, fetchEntryHistory, fetchLeagueStandings, fetchPicksCached } from '../lib/api'
 import { buildContext, runRules, SEVERITY_META } from '../lib/insights/engine'
 import { RULES } from '../lib/insights/rules'
@@ -101,6 +100,7 @@ interface Enriched { pick: any; r: RatingRow | undefined; p4: Row | undefined; s
 function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
   const { picksData, gw, historyData, entryData, teamId } = loaded
   const [tab, setTab] = useState<SquadTab>('squad')
+  const [selected, setSelected] = useState<Enriched | null>(null)
   const picks: any[] = picksData.picks || []
   const entryHistory = picksData.entry_history || {}
 
@@ -157,25 +157,34 @@ function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
           <Report picksData={picksData} historyData={historyData} data={data} ownedElements={ownedElements} />
 
           <SectionHeader>Starting XI — Gameweek {gw}</SectionHeader>
-          <div className="relative overflow-hidden rounded-2xl p-2 pt-4 md:p-5 md:pt-7" style={{ background: 'var(--shotmap-surface)' }}>
+          <p className="mb-3 -mt-1 text-sm text-ink-3">Tap any player for their full card — overall plus the sub-ratings that matter for their position.</p>
+          <div
+            className="relative overflow-hidden rounded-3xl p-3 pt-7 md:p-8 md:pt-12"
+            style={{
+              background:
+                'radial-gradient(120% 80% at 50% 0%, rgba(0,0,0,0) 45%, rgba(0,0,0,0.45) 100%), repeating-linear-gradient(90deg, #10281c 0 9%, #123021 9% 18%), linear-gradient(180deg, #123021, #0e2318)',
+            }}
+          >
             <PitchLines />
-            <div className="relative">
+            <div className="relative flex flex-col justify-between gap-3 md:gap-7" style={{ minHeight: 460 }}>
               {posGroups.map((rows, i) => rows.length > 0 && (
-                <div key={i} className="flex justify-center gap-1.5 py-1.5 md:gap-3">
-                  {rows.map((e, j) => <PitchCard key={j} e={e} data={data} />)}
+                <div key={i} className="flex justify-center gap-2 md:gap-5">
+                  {rows.map((e, j) => <PitchToken key={j} e={e} onSelect={setSelected} />)}
                 </div>
               ))}
             </div>
           </div>
 
           {bench.length > 0 && (
-            <div className="mt-3 rounded-xl border border-line bg-surface-1/60 p-2 md:p-3">
-              <div className="mb-2 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Bench</div>
-              <div className="flex justify-center gap-1.5 md:gap-3">
-                {bench.map((e, j) => <PitchCard key={j} e={e} data={data} bench />)}
+            <div className="mt-3 rounded-2xl border border-line bg-surface-1/60 p-3 md:p-4">
+              <div className="mb-2.5 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Bench</div>
+              <div className="flex justify-center gap-2 md:gap-4">
+                {bench.map((e, j) => <PitchToken key={j} e={e} onSelect={setSelected} bench />)}
               </div>
             </div>
           )}
+
+          {selected?.r && <FifaCardModal e={selected} onClose={() => setSelected(null)} />}
         </>
       ) : (
         <MiniLeague entryData={entryData} teamId={teamId} gw={gw} ownedElements={ownedElements} data={data} />
@@ -227,38 +236,71 @@ function RatingStat({ label, node }: { label: string; node: ReactNode }) {
   )
 }
 
-function PitchCard({ e, data, bench }: { e: Enriched; data: CoreData; bench?: boolean }) {
-  const navigate = useNavigate()
-  const { pick, r, p4, std } = e
+/** A pitch token — mini FIFA card, or a placeholder when a player has no rating. */
+function PitchToken({ e, onSelect, bench }: { e: Enriched; onSelect: (e: Enriched) => void; bench?: boolean }) {
+  const { pick, r, std } = e
   if (!r) {
-    return <div className="min-w-0 max-w-[104px] flex-1 basis-0 rounded-lg border border-line bg-surface-2 p-1.5 text-center text-[10px] text-ink-3">ID {pick.element}</div>
+    return <div className="min-w-0 max-w-[112px] flex-1 basis-0 rounded-xl border border-line bg-surface-2 p-1.5 text-center text-[10px] text-ink-3">ID {pick.element}</div>
   }
+  return (
+    <MiniFifaCard
+      r={r}
+      onClick={() => onSelect(e)}
+      captain={pick.is_captain}
+      viceCaptain={pick.is_vice_captain}
+      streak={std ? str(std, 'streak') : ''}
+      bench={bench}
+    />
+  )
+}
+
+/** Full FIFA card in a modal, opened by tapping a pitch token. */
+function FifaCardModal({ e, onClose }: { e: Enriched; onClose: () => void }) {
+  const navigate = useNavigate()
+  useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => ev.key === 'Escape' && onClose()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+  const { pick, r, std } = e
+  if (!r) return null
   const streak = std ? str(std, 'streak') : ''
-  const personas = p4 && str(p4, 'personas') && str(p4, 'personas') !== 'None' ? String(p4.personas).split(', ') : []
-  const seasonN = starsToNum(str(r, 'season_overall_rating'))
-  const gw4N = starsToNum(str(r, 'gw4_overall_rating'))
 
   return (
-    <button
-      onClick={() => navigate(`/player?name=${encodeURIComponent(String(r.web_name))}`)}
-      className={`group relative min-w-0 max-w-[104px] flex-1 basis-0 rounded-lg border p-1.5 text-center transition-colors md:p-2 ${bench ? 'border-line bg-surface-1/70' : 'border-line-mid bg-surface-1/90'} hover:border-accent`}
-      title={`${r.web_name} · ${r.position} · ${teamFullNames[String(r.team)] || r.team} · £${r.price}m · Season ${seasonN != null ? seasonN.toFixed(1) + '★' : 'N/A'} · 4GW ${gw4N != null ? gw4N.toFixed(1) + '★' : 'N/A'}${personas.length ? ' · ' + personas.join(', ') : ''}`}
+    <div
+      className="fixed inset-0 z-[200] grid place-items-center bg-black/70 p-4 backdrop-blur-sm"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
     >
-      {pick.is_captain && <span className="absolute top-0.5 left-0.5 grid size-4 place-items-center rounded-full bg-accent text-[9px] font-bold text-accent-contrast">C</span>}
-      {pick.is_vice_captain && <span className="absolute top-0.5 left-0.5 grid size-4 place-items-center rounded-full bg-surface-3 text-[9px] font-bold text-ink">V</span>}
-      {streak === '🔥 Hot' && <span className="absolute top-0.5 right-0.5 text-hot"><Icon name="flame" size={10} solid /></span>}
-      {streak === '🧊 Cold' && <span className="absolute top-0.5 right-0.5 text-cold"><Icon name="snow" size={10} /></span>}
-      <PlayerPhoto
-        code={r.code}
-        element={r.element}
-        className="mx-auto h-9 w-7 object-cover object-top"
-        placeholder={<div className="mx-auto grid h-9 w-7 place-items-center text-ink-3"><Icon name="users" size={13} /></div>}
-      />
-      <div className="mt-1 truncate text-[11px] font-semibold text-ink">{String(r.web_name)}</div>
-      <div className="truncate text-[9px] text-ink-2">{r.position} · £{r.price}m</div>
-      <div className="mt-1 flex justify-center"><FixtureChips fixtureEase={data.fixtureEase} team={String(r.team)} n={3} /></div>
-      <div className="mt-1.5 flex justify-center"><StarRating value={str(r, 'season_overall_rating')} size={11} /></div>
-    </button>
+      <div className="w-full max-w-[380px]" onClick={(ev) => ev.stopPropagation()}>
+        <FifaCard
+          r={r}
+          badge={
+            <>
+              {pick?.is_captain && <span className="absolute top-3 right-3 z-10 grid size-6 place-items-center rounded-full bg-accent text-[11px] font-bold text-accent-contrast">C</span>}
+              {pick?.is_vice_captain && <span className="absolute top-3 right-3 z-10 grid size-6 place-items-center rounded-full bg-surface-3 text-[11px] font-bold text-ink">V</span>}
+              {streak === '🔥 Hot' && <span className="absolute top-3 right-11 z-10 text-hot"><Icon name="flame" size={16} solid /></span>}
+              {streak === '🧊 Cold' && <span className="absolute top-3 right-11 z-10 text-cold"><Icon name="snow" size={16} /></span>}
+            </>
+          }
+        />
+        <div className="mt-3 flex items-center justify-center gap-2">
+          <button
+            onClick={() => navigate(`/player?name=${encodeURIComponent(String(r.web_name))}`)}
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent-strong"
+          >
+            Full profile <Icon name="trend-up" size={15} />
+          </button>
+          <button
+            onClick={onClose}
+            className="inline-flex min-h-10 items-center rounded-lg border border-line-mid px-4 text-sm font-semibold text-ink transition-colors hover:border-line-strong"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
