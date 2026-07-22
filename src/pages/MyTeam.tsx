@@ -5,7 +5,7 @@ import { SkeletonBlock } from '../components/Skeleton'
 import { StarRating } from '../components/StarRating'
 import { Tabs, type TabDef } from '../components/Tabs'
 import { TeamBadge } from '../components/badges'
-import { FifaCard } from '../components/FifaCard'
+import { FifaCard, type RatingWindow } from '../components/FifaCard'
 import { Icon, type IconName } from '../components/Icon'
 import { useCore } from '../lib/useData'
 import { str } from '../lib/rows'
@@ -13,7 +13,7 @@ import { teamFullNames, avgRatingField } from '../lib/util'
 import { fplFetch, getCurrentGwFallback, fetchEntry, fetchEntryHistory, fetchLeagueStandings, fetchPicksCached } from '../lib/api'
 import { buildContext, runRules, SEVERITY_META } from '../lib/insights/engine'
 import { RULES } from '../lib/insights/rules'
-import type { CoreData, RatingRow, Row } from '../lib/types'
+import type { CoreData, FixtureEaseRow, RatingRow, Row } from '../lib/types'
 
 const TEAM_ID_KEY = 'fpl_team_id'
 
@@ -100,6 +100,7 @@ interface Enriched { pick: any; r: RatingRow | undefined; p4: Row | undefined; s
 function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
   const { picksData, gw, historyData, entryData, teamId } = loaded
   const [tab, setTab] = useState<SquadTab>('squad')
+  const [ratingWin, setRatingWin] = useState<RatingWindow>('season')
   const picks: any[] = picksData.picks || []
   const entryHistory = picksData.entry_history || {}
 
@@ -155,8 +156,11 @@ function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
 
           <Report picksData={picksData} historyData={historyData} data={data} ownedElements={ownedElements} />
 
-          <SectionHeader>Starting XI — Gameweek {gw}</SectionHeader>
-          <p className="mb-3 -mt-1 text-sm text-ink-3">Your XI as FIFA-style cards — overall plus the sub-ratings that matter for each position. Tap a card for the full profile.</p>
+          <div className="mt-8 mb-3 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold tracking-wide text-ink-2 uppercase">Starting XI — Gameweek {gw}</h2>
+            <RatingWindowToggle value={ratingWin} onChange={setRatingWin} />
+          </div>
+          <p className="mb-3 -mt-1 text-sm text-ink-3">Your XI as FIFA-style cards — overall plus the sub-ratings that matter for each position, and the next-4 fixtures. Tap a card for the full profile.</p>
           <div
             className="relative overflow-hidden rounded-3xl p-3 md:p-6"
             style={{
@@ -168,7 +172,7 @@ function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
             <div className="relative flex flex-col gap-4 md:gap-6">
               {posGroups.map((rows, i) => rows.length > 0 && (
                 <div key={i} className="flex flex-wrap justify-center gap-3 md:gap-4">
-                  {rows.map((e, j) => <PlayerCardSlot key={j} e={e} />)}
+                  {rows.map((e, j) => <PlayerCardSlot key={j} e={e} win={ratingWin} fixtureEase={data.fixtureEase} />)}
                 </div>
               ))}
             </div>
@@ -178,7 +182,7 @@ function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
             <div className="mt-3 rounded-2xl border border-line bg-surface-1/60 p-3 md:p-4">
               <div className="mb-3 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Bench</div>
               <div className="flex flex-wrap justify-center gap-3 md:gap-4">
-                {bench.map((e, j) => <PlayerCardSlot key={j} e={e} bench />)}
+                {bench.map((e, j) => <PlayerCardSlot key={j} e={e} win={ratingWin} fixtureEase={data.fixtureEase} bench />)}
               </div>
             </div>
           )}
@@ -233,11 +237,29 @@ function RatingStat({ label, node }: { label: string; node: ReactNode }) {
   )
 }
 
+/** Small season / last-4 toggle for the card ratings. */
+function RatingWindowToggle({ value, onChange }: { value: RatingWindow; onChange: (w: RatingWindow) => void }) {
+  const opt = (id: RatingWindow, label: string) => (
+    <button
+      onClick={() => onChange(id)}
+      className={`min-h-8 rounded-md px-3 text-[12px] font-semibold transition-colors ${value === id ? 'bg-accent text-accent-contrast' : 'text-ink-2 hover:text-ink'}`}
+    >
+      {label}
+    </button>
+  )
+  return (
+    <div className="inline-flex items-center gap-1 rounded-lg border border-line-mid bg-surface-1 p-1">
+      {opt('season', 'Season')}
+      {opt('gw4', 'Last 4')}
+    </div>
+  )
+}
+
 /**
  * One player slot in the formation — a full (compact) FIFA card that links to
  * the detail page, or a placeholder when the player has no rating row.
  */
-function PlayerCardSlot({ e }: { e: Enriched; bench?: boolean }) {
+function PlayerCardSlot({ e, win, fixtureEase }: { e: Enriched; win: RatingWindow; fixtureEase: FixtureEaseRow[]; bench?: boolean }) {
   const navigate = useNavigate()
   const { pick, r, std } = e
   const wrap = 'w-[calc(50%-0.375rem)] sm:w-[224px] lg:w-[240px]'
@@ -249,6 +271,8 @@ function PlayerCardSlot({ e }: { e: Enriched; bench?: boolean }) {
       <FifaCard
         r={r}
         compact
+        window={win}
+        fixtureEase={fixtureEase}
         onClick={() => navigate(`/player?name=${encodeURIComponent(String(r.web_name))}`)}
         captain={pick.is_captain}
         viceCaptain={pick.is_vice_captain}
