@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { PageHeader, PageShell } from '../components/PageShell'
 import { Tabs, PillGroup, type TabDef } from '../components/Tabs'
 import { SortableTable, type Column } from '../components/SortableTable'
@@ -11,20 +12,26 @@ import { PageSkeleton } from '../components/Skeleton'
 import { EmptyState } from '../components/PageShell'
 import { useCore } from '../lib/useData'
 import { num, str, bool } from '../lib/rows'
-import { ratingToNum, TOOLTIPS } from '../lib/util'
+import { ratingToNum, norm, TOOLTIPS } from '../lib/util'
 import type { RatingRow, Row } from '../lib/types'
+
+// This is the app's "Players" hub: sortable leaderboards across every metric,
+// with an on-page search and click-through to each player's detail dashboard.
+// (Kept as Rankings.tsx / <Rankings> internally; surfaced as "Players".)
 
 const TABS: TabDef[] = [
   { id: 'top-rated', label: 'Top Rated', icon: <Icon name="star" size={13} /> },
   { id: 'goal-threats', label: 'Goal Threats', icon: <Icon name="target" size={13} /> },
   { id: 'creators', label: 'Creators', icon: <Icon name="bolt" size={13} /> },
   { id: 'clean-sheets', label: 'Clean Sheets', icon: <Icon name="shield" size={13} /> },
+  { id: 'def-con', label: 'Def Con', icon: <Icon name="shield" size={13} /> },
   { id: 'value', label: 'Value Picks', icon: <Icon name="coin" size={13} /> },
   { id: 'form', label: 'Form', icon: <span className="text-hot"><Icon name="flame" size={13} solid /></span> },
   { id: 'next4', label: 'Next 4 GWs', icon: <Icon name="calendar" size={13} /> },
 ]
 
 const TOP_N = 30
+const SEARCH_CAP = 60
 
 // # column: static rank from the tab's default metric order. Sorting by it
 // (ascending, the table default) reproduces that metric ranking exactly.
@@ -111,63 +118,87 @@ function ppgCol(rows: Row[]): Column<Row> {
   }
 }
 
-/** Rank rows by a numeric metric, take the top N, annotate a static _rank. */
-function ranked(rows: Row[], metricKey: string): Row[] {
-  return [...rows]
-    .sort((a, b) => (num(b, metricKey) ?? 0) - (num(a, metricKey) ?? 0))
-    .slice(0, TOP_N)
+// ── Raw-metric columns (the ingredients behind each rating) ──────────────────
+const dash = <span className="text-ink-3">—</span>
+/** Plain numeric per-90 / ratio metric, N decimals. */
+const numCol = (key: string, header: string, tip: string, digits = 2): Column<Row> => ({
+  key,
+  header,
+  tip,
+  align: 'right',
+  sortValue: (r) => num(r, key),
+  cell: (r) => {
+    const v = num(r, key)
+    return v == null ? dash : <span className="font-num tabular-nums">{v.toFixed(digits)}</span>
+  },
+})
+/** A 0–1 fraction rendered as a percentage. */
+const pctCol = (key: string, header: string, tip: string): Column<Row> => ({
+  key,
+  header,
+  tip,
+  align: 'right',
+  sortValue: (r) => num(r, key),
+  cell: (r) => {
+    const v = num(r, key)
+    return v == null ? dash : <span className="font-num tabular-nums">{(v * 100).toFixed(0)}%</span>
+  },
+})
+
+/** Sort a pool by a metric, stamp global rank, then either take the top N or
+ *  (when searching) keep every name match with its true rank preserved. */
+function rankedPool(rows: Row[], metricKey: string, query: string): Row[] {
+  const sorted: Row[] = [...rows]
+    .sort((a, b) => (num(b, metricKey) ?? -Infinity) - (num(a, metricKey) ?? -Infinity))
     .map((r, i) => ({ ...r, _rank: i + 1 }))
+  if (query) {
+    const q = norm(query)
+    return sorted.filter((r) => norm(r.web_name).includes(q)).slice(0, SEARCH_CAP)
+  }
+  return sorted.slice(0, TOP_N)
 }
 
 interface TabView {
-  narrative?: React.ReactNode
   columns: Column<Row>[]
   rows: Row[]
 }
 
 export default function Rankings() {
   const { data, error: coreError } = useCore()
+  const navigate = useNavigate()
   const [tab, setTab] = useState('top-rated')
   const [pos, setPos] = useState('ALL')
+  const [query, setQuery] = useState('')
 
   const ratings = (data?.ratings ?? []) as RatingRow[]
   const metrics = data?.metrics ?? []
   const seasonToDate = data?.seasonToDate ?? []
 
-  const metricByName = useMemo(() => {
-    const m = new Map<string, Row>()
-    for (const row of metrics) m.set(String(row.web_name), row)
-    return m
-  }, [metrics])
+  const toPlayer = (name: string) => navigate(`/player?name=${encodeURIComponent(name)}`)
 
   // Position filter options depend on the tab (att-only tabs hide GKP/DEF; def-only hides MID/FWD).
   const isAttOnly = tab === 'goal-threats' || tab === 'creators'
   const isDefOnly = tab === 'clean-sheets'
+  const isOutfield = tab === 'def-con'
   const posOptions = useMemo(() => {
-    const all = [{ id: 'ALL', label: 'All' }]
-    if (!isAttOnly) all.push({ id: 'GKP', label: 'GKP' }, { id: 'DEF', label: 'DEF' })
-    if (!isDefOnly) all.push({ id: 'MID', label: 'MID' }, { id: 'FWD', label: 'FWD' })
-    return all
-  }, [isAttOnly, isDefOnly])
+    const ALL = { id: 'ALL', label: 'All' }
+    const GKP = { id: 'GKP', label: 'GKP' }
+    const DEF = { id: 'DEF', label: 'DEF' }
+    const MID = { id: 'MID', label: 'MID' }
+    const FWD = { id: 'FWD', label: 'FWD' }
+    if (isAttOnly) return [ALL, MID, FWD]
+    if (isDefOnly) return [ALL, GKP, DEF]
+    if (isOutfield) return [ALL, DEF, MID, FWD]
+    return [ALL, GKP, DEF, MID, FWD]
+  }, [isAttOnly, isDefOnly, isOutfield])
 
   const view: TabView | null = useMemo(() => {
     const seasonOk = ratings.filter((p) => bool(p, 'season_ok'))
     const applyPos = (rows: Row[]) => (pos === 'ALL' ? rows : rows.filter((p) => p.position === pos))
 
-    const shareCol = (key: string, header: string, tip?: string): Column<Row> => ({
-      key,
-      header,
-      tip,
-      sortValue: (r) => num(metricByName.get(String(r.web_name)) ?? {}, key),
-      cell: (r) => {
-        const v = num(metricByName.get(String(r.web_name)) ?? {}, key)
-        return <span className="font-num tabular-nums">{v == null ? 'N/A' : `${(v * 100).toFixed(1)}%`}</span>
-      },
-    })
-
     switch (tab) {
       case 'top-rated': {
-        const rows = ranked(applyPos(seasonOk), 'season_overall_score')
+        const rows = rankedPool(applyPos(seasonOk), 'season_overall_score', query)
         return {
           columns: [
             rankCol(),
@@ -177,6 +208,7 @@ export default function Rankings() {
             priceCol,
             scoreCol('season_overall_score', 'Season Rating', TOOLTIPS.overall as string),
             windowScoreCol('gw4_overall_score', '4GW Rating', 'The same composite rating measured over the last 4 gameweeks only — a form snapshot.'),
+            numCol('season_total_points', 'Pts', 'Total FPL points scored this season.', 0),
             ppgCol(rows),
           ],
           rows,
@@ -185,17 +217,20 @@ export default function Rankings() {
       case 'goal-threats': {
         const att = seasonOk.filter((p) => p.position === 'MID' || p.position === 'FWD')
         const filtered = pos === 'MID' || pos === 'FWD' ? att.filter((p) => p.position === pos) : att
-        const rows = ranked(filtered, 'season_goal_score')
+        const rows = rankedPool(filtered, 'season_goal_score', query)
         return {
           columns: [
             rankCol(),
             playerCol,
             posCol,
             teamCol,
-            starCol('season_goal_score_rating', 'Goal Rating (Pos)', TOOLTIPS.goal as string),
-            starCol('season_att_goal_score_rating', 'Goal Rating (ATT)', 'The same goal-threat rating, but ranked against all midfielders and forwards pooled together.'),
-            shareCol('xg_share_4gw', 'xG Share 4GW', "Share of their team's expected goals over the last 4 gameweeks."),
-            shareCol('xg_share_season', 'xG Share Season', "Share of their team's expected goals across the whole season."),
+            scoreCol('season_goal_score_norm', 'Goal Threat', TOOLTIPS.goal as string),
+            numCol('season_total_xg', 'xG', 'Total expected goals this season (FPL).', 1),
+            numCol('season_m_xg', 'xG/90', 'Expected goals per 90 minutes — the core of the goal-threat rating.'),
+            numCol('season_m_npxg', 'npxG/90', 'Non-penalty expected goals per 90 (Understat) — threat stripped of penalties.'),
+            numCol('season_m_box_shots', 'Box Sh/90', 'Shots taken from inside the box per 90 minutes.', 1),
+            pctCol('season_m_sot_rate', 'SoT%', 'Share of this player’s shots that are on target.'),
+            numCol('season_m_shot_quality', 'Shot Q', TOOLTIPS.shot_quality as string, 3),
           ],
           rows,
         }
@@ -203,17 +238,19 @@ export default function Rankings() {
       case 'creators': {
         const att = seasonOk.filter((p) => p.position === 'MID' || p.position === 'FWD')
         const filtered = pos === 'MID' || pos === 'FWD' ? att.filter((p) => p.position === pos) : att
-        const rows = ranked(filtered, 'season_creative_score')
+        const rows = rankedPool(filtered, 'season_creative_score', query)
         return {
           columns: [
             rankCol(),
             playerCol,
             posCol,
             teamCol,
-            starCol('season_creative_score_rating', 'Creative Rating (Pos)', TOOLTIPS.creative as string),
-            starCol('season_att_creative_score_rating', 'Creative Rating (ATT)', 'The same creativity rating, but ranked against all midfielders and forwards pooled together.'),
-            shareCol('xa_share_4gw', 'xA Share 4GW', "Share of their team's expected assists over the last 4 gameweeks."),
-            shareCol('xa_share_season', 'xA Share Season', "Share of their team's expected assists across the whole season."),
+            scoreCol('season_creative_score_norm', 'Creativity', TOOLTIPS.creative as string),
+            numCol('season_total_xa', 'xA', 'Total expected assists this season (FPL).', 1),
+            numCol('season_m_xa', 'xA/90', 'Expected assists per 90 minutes — the core of the creativity rating.'),
+            numCol('season_m_big_chances', 'Big Ch/90', 'Big chances created per 90 minutes.'),
+            numCol('season_m_creativity_depth', 'xGChain/90', TOOLTIPS.creativity_depth as string),
+            numCol('season_m_set_piece', 'Set P/90', TOOLTIPS.set_piece as string),
           ],
           rows,
         }
@@ -221,21 +258,44 @@ export default function Rankings() {
       case 'clean-sheets': {
         const def = seasonOk.filter((p) => p.position === 'GKP' || p.position === 'DEF')
         const filtered = pos === 'GKP' || pos === 'DEF' ? def.filter((p) => p.position === pos) : def
-        const rows = ranked(filtered, 'season_cs_score')
+        const rows = rankedPool(filtered, 'season_cs_score', query)
         return {
           columns: [
             rankCol(),
             playerCol,
             posCol,
             teamCol,
-            starCol('season_cs_score_rating', 'CS Rating', TOOLTIPS.cs as string),
-            scoreCol('season_overall_score', 'Overall Rating', TOOLTIPS.overall as string),
+            scoreCol('season_cs_score_norm', 'Clean Sheet', TOOLTIPS.cs as string),
+            pctCol('season_m_cs_rate', 'CS%', 'Share of appearances that ended in a clean sheet.'),
+            numCol('season_m_xgc', 'xGC/90', 'Expected goals conceded per 90 while on the pitch — lower is better.'),
+            numCol('season_m_saves', 'Saves/90', 'Saves per 90 minutes (keepers).', 1),
+            numCol('season_m_prevented', 'Prev/90', 'Goals prevented vs expected per 90 (shot-stopping edge).'),
+            scoreCol('season_overall_score', 'Overall', TOOLTIPS.overall as string),
+          ],
+          rows,
+        }
+      }
+      case 'def-con': {
+        const out = seasonOk.filter((p) => p.position === 'DEF' || p.position === 'MID' || p.position === 'FWD')
+        const filtered = pos !== 'ALL' && pos !== 'GKP' ? out.filter((p) => p.position === pos) : out
+        const rows = rankedPool(filtered, 'season_dc_score', query)
+        return {
+          columns: [
+            rankCol(),
+            playerCol,
+            posCol,
+            teamCol,
+            scoreCol('season_dc_score_norm', 'Def Con', TOOLTIPS.dc as string),
+            pctCol('season_m_dc_hit', 'DC Hit%', 'How often the player hits FPL’s defensive-contribution threshold (2 pts): 10 CBIT for defenders, 12 incl. recoveries for MID/FWD.'),
+            numCol('season_m_tackles', 'Tkl/90', 'Tackles per 90 minutes.', 1),
+            numCol('season_m_cbi', 'CBI/90', 'Clearances, blocks and interceptions per 90 minutes.', 1),
+            numCol('season_m_recoveries', 'Rec/90', 'Ball recoveries per 90. Counts toward the DC threshold for MID/FWD only — not defenders.', 1),
           ],
           rows,
         }
       }
       case 'value': {
-        const rows = ranked(applyPos(seasonOk), 'season_value_score')
+        const rows = rankedPool(applyPos(seasonOk), 'season_value_score', query)
         return {
           columns: [
             rankCol(),
@@ -243,7 +303,8 @@ export default function Rankings() {
             posCol,
             teamCol,
             priceCol,
-            starCol('season_value_score_rating', 'Value Rating', TOOLTIPS.value as string),
+            scoreCol('season_value_score_norm', 'Value Rating', TOOLTIPS.value as string),
+            numCol('season_total_points', 'Pts', 'Total FPL points scored this season.', 0),
             ppgCol(rows),
           ],
           rows,
@@ -252,7 +313,7 @@ export default function Rankings() {
       case 'next4': {
         const rated = applyPos(seasonOk).filter((p) => num(p, 'next4_score') != null)
         if (!rated.length) return null
-        const rows = ranked(rated, 'next4_score')
+        const rows = rankedPool(rated, 'next4_score', query)
         return {
           columns: [
             rankCol(),
@@ -264,6 +325,7 @@ export default function Rankings() {
               key: 'ease',
               header: 'Fixture Ease',
               tip: 'Opponent-difficulty multiplier over the next 4 gameweeks. Above ×1.00 = an easier-than-average run.',
+              align: 'right',
               sortValue: (r) => num(r, 'next4_fixture_factor'),
               cell: (r) => {
                 const f = num(r, 'next4_fixture_factor')
@@ -272,7 +334,6 @@ export default function Rankings() {
               },
             },
             scoreCol('season_overall_score', 'Season Rating', TOOLTIPS.overall as string),
-            scoreCol('gw4_overall_score', '4GW Rating', 'The same composite rating measured over the last 4 gameweeks only — a form snapshot.'),
           ],
           rows,
         }
@@ -280,7 +341,7 @@ export default function Rankings() {
       default:
         return null
     }
-  }, [tab, pos, ratings, metricByName])
+  }, [tab, pos, query, ratings])
 
   // Per-tab narrative lead line.
   const narrative = useMemo(() => buildNarrative(tab, ratings, metrics, seasonToDate), [tab, ratings, metrics, seasonToDate])
@@ -288,15 +349,17 @@ export default function Rankings() {
   if (!data) {
     return (
       <PageShell>
-        <PageHeader title="Rankings" subtitle="Top players across all metrics" />
+        <PageHeader title="Players" subtitle="Every player ranked — search, sort and dig into the numbers" />
         <PageSkeleton error={coreError} />
       </PageShell>
     )
   }
 
+  const showSearch = tab !== 'form'
+
   return (
     <PageShell>
-      <PageHeader title="Rankings" subtitle="Top players across all metrics" />
+      <PageHeader title="Players" subtitle="Every player ranked — search, sort and dig into the numbers" />
       {/* Desktop: tab strip. Mobile: a reliable native dropdown (tabs were
           hard to reach in a horizontal scroller on a phone). */}
       <div className="mb-4 hidden md:block">
@@ -329,21 +392,50 @@ export default function Rankings() {
         </div>
       )}
 
-      <div className="mb-4">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <PillGroup options={posOptions} active={pos} onChange={setPos} />
+        {showSearch && (
+          <div className="relative w-full sm:w-64">
+            <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-3">
+              <Icon name="search" size={15} />
+            </span>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search players…"
+              className="min-h-10 w-full rounded-lg border border-line-mid bg-surface-1 pr-8 pl-9 text-sm text-ink placeholder:text-ink-3 focus:border-line-strong focus:outline-none"
+            />
+            {query && (
+              <button
+                onClick={() => setQuery('')}
+                aria-label="Clear search"
+                className="absolute top-1/2 right-2 -translate-y-1/2 px-1 text-lg leading-none text-ink-3 hover:text-ink"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {tab === 'form' ? (
-        <FormTables rows={seasonToDate} pos={pos} />
+        <FormTables rows={seasonToDate} pos={pos} onPlayer={toPlayer} />
       ) : view ? (
-        <SortableTable
-          rows={view.rows}
-          columns={view.columns}
-          initialSort="rank"
-          initialDir="asc"
-          rowKey={(r) => String(r.element)}
-          featured
-        />
+        view.rows.length ? (
+          <SortableTable
+            rows={view.rows}
+            columns={view.columns}
+            initialSort="rank"
+            initialDir="asc"
+            rowKey={(r) => String(r.element)}
+            onRowClick={(r) => toPlayer(String(r.web_name))}
+            featured={!query}
+          />
+        ) : (
+          <EmptyState icon={<Icon name="search" size={44} />}>
+            No players match “{query}” in this ranking. Try another tab or clear the search.
+          </EmptyState>
+        )
       ) : (
         <EmptyState icon={<Icon name="calendar" size={44} />}>
           Next 4 GW ratings aren't available yet — they appear once upcoming fixtures exist for the season.
@@ -353,7 +445,7 @@ export default function Rankings() {
   )
 }
 
-function FormTables({ rows, pos }: { rows: Row[]; pos: string }) {
+function FormTables({ rows, pos, onPlayer }: { rows: Row[]; pos: string; onPlayer: (n: string) => void }) {
   const posFilter = (r: Row) => pos === 'ALL' || r.position === pos
   const hot = rows
     .filter((p) => str(p, 'streak') === '🔥 Hot' && posFilter(p))
@@ -390,7 +482,11 @@ function FormTables({ rows, pos }: { rows: Row[]; pos: string }) {
           </thead>
           <tbody>
             {list.map((p) => (
-              <tr key={String(p.element)} className="border-b border-line/60 last:border-0">
+              <tr
+                key={String(p.element)}
+                onClick={() => onPlayer(String(p.web_name))}
+                className="cursor-pointer border-b border-line/60 transition-colors last:border-0 hover:bg-surface-2/70"
+              >
                 <td className="px-2.5 py-2 md:px-3">
                   <PlayerNameCell name={String(p.web_name)} />
                 </td>
@@ -453,7 +549,7 @@ function buildNarrative(tab: string, ratings: RatingRow[], metrics: Row[], seaso
       const ppg = num(p, 'season_ppg')
       return (
         <>
-          {b(String(p.web_name))} leads the overall ratings — {ppg ? `${ppg.toFixed(1)} points per game` : 'the strongest all-round profile'} at £{p.price}m. Ratings blend output, consistency and reliability within each position.
+          {b(String(p.web_name))} leads the overall ratings — {ppg ? `${ppg.toFixed(1)} points per game` : 'the strongest all-round profile'} at £{p.price}m. Ratings are availability-adjusted expected points on one absolute scale. Tap any row for the full breakdown.
         </>
       )
     }
@@ -464,7 +560,7 @@ function buildNarrative(tab: string, ratings: RatingRow[], metrics: Row[], seaso
       const share = m && num(m, 'xg_share_season')
       return (
         <>
-          {b(String(p.web_name))} is the league's biggest goal threat{share ? <> — taking {b(`${(share * 100).toFixed(0)}%`)} of {p.team}'s xG</> : ''}. Sustainable threat comes from box shots, not long-range volume.
+          {b(String(p.web_name))} tops the goal-threat rating{share ? <> — taking {b(`${(share * 100).toFixed(0)}%`)} of {p.team}'s xG</> : ''}. The columns show the ingredients: sustainable threat comes from box shots and shot quality, not long-range volume.
         </>
       )
     }
@@ -475,7 +571,7 @@ function buildNarrative(tab: string, ratings: RatingRow[], metrics: Row[], seaso
       const share = m && num(m, 'xa_share_season')
       return (
         <>
-          {b(String(p.web_name))} creates more than anyone{share ? <> — {b(`${(share * 100).toFixed(0)}%`)} of {p.team}'s xA runs through them</> : ''}. Assist points follow chance creation.
+          {b(String(p.web_name))} creates more than anyone{share ? <> — {b(`${(share * 100).toFixed(0)}%`)} of {p.team}'s xA runs through them</> : ''}. Assist points follow chance creation: xA, big chances and set-piece delivery.
         </>
       )
     }
@@ -485,6 +581,15 @@ function buildNarrative(tab: string, ratings: RatingRow[], metrics: Row[], seaso
       return (
         <>
           {b(String(p.web_name))} anchors the strongest defensive numbers in the league. Clean-sheet ratings weigh xGC, not just results — they find defences that deserve their record.
+        </>
+      )
+    }
+    case 'def-con': {
+      const p = lead(rated.filter((x) => x.position !== 'GKP').sort((a, b) => (num(b, 'season_dc_score') ?? 0) - (num(a, 'season_dc_score') ?? 0)))
+      if (!p) return null
+      return (
+        <>
+          {b(String(p.web_name))} tops the defensive-contribution rating — how reliably a player hits FPL’s DC threshold for the 2-point bonus. Defenders count CBIT (10); midfielders and forwards also count recoveries (12).
         </>
       )
     }

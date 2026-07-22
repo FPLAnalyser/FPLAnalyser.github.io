@@ -534,6 +534,44 @@ def calc_xpts(prefix):
     df.loc[ok, f"{prefix}_xpts_per_game"] = np.round(xpg[ok], 3)
     df.loc[ok, f"{prefix}_xpts_adjusted"] = np.round(adj[ok], 3)
 
+    # ── Dimension ratings, unified with the overall philosophy ───────────────
+    # Each core dimension = availability-adjusted EXPECTED POINTS from that one
+    # source (goals, assists, clean sheets, defensive contribution, saves),
+    # standard-scored (50 + 15z) on the same absolute scale as the overall —
+    # NOT a percentile of per-90 rates. Minutes are priced in exactly like the
+    # overall, so a player who barely starts can't top a dimension on rate alone
+    # (fixes e.g. a 29%-start winger showing an elite goal-threat rating). The
+    # per-90 stats that drive each source are surfaced as columns, not the score.
+    # This OVERWRITES the percentile-blend dimension scores computed earlier.
+    avail = df[f"{prefix}_start_rate"].clip(0, 1) ** AVAIL_EXP
+
+    def _stdscore(adj_series, poolmask, score_col, norm_col):
+        valid = ok & poolmask & adj_series.notna()
+        vals = adj_series[valid]
+        if len(vals) < 2 or vals.std(ddof=0) == 0:
+            return
+        z = (vals - vals.mean()) / vals.std(ddof=0)
+        sc = (50 + 15 * z).clip(1, 99)
+        df.loc[valid, score_col] = np.round(sc, 1)
+        df.loc[valid, norm_col] = np.round(sc / 20.0, 3)
+
+    ismf = df["position"].isin(["MID", "FWD"])
+    isgd = df["position"].isin(["GKP", "DEF"])
+    isout = df["position"].isin(["DEF", "MID", "FWD"])
+    # dim -> (expected-points component, scoring pool)
+    dim_specs = [
+        ("goal", comp["goal"], ismf),
+        ("creative", comp["assist"], ismf),
+        ("cs", comp["cs"], isgd),
+        ("dc", comp["dc"], isout),
+        ("save", comp["save"], df["position"] == "GKP"),
+    ]
+    for dim, base, poolmask in dim_specs:
+        _stdscore(base * avail, poolmask, f"{prefix}_{dim}_score", f"{prefix}_{dim}_score_norm")
+    # Keep the combined-attacker (ATT) variants coherent via the same method.
+    for dim, base in (("goal", comp["goal"]), ("creative", comp["assist"]), ("dc", comp["dc"])):
+        _stdscore(base * avail, ismf, f"{prefix}_att_{dim}_score", f"{prefix}_att_{dim}_score_norm")
+
     # Headline = STANDARD SCORE of adjusted xPts across ALL eligible players
     # (50 + 15z on the 0–100 display scale, clipped 1–99), NOT a percentile
     # rank (uniform → too many 90s) and NOT position-relative: FPL points are
