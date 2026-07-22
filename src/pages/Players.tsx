@@ -1,9 +1,9 @@
-import { useMemo, type ReactNode } from 'react'
+import { useMemo, type CSSProperties, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PageHeader, PageShell, EmptyState } from '../components/PageShell'
 import { SearchBox } from '../components/SearchBox'
 import { StarRating, ratingTo100 } from '../components/StarRating'
-import { RadialGauge, Radar, MiniBar, ConcentrationBar, CHART_COLORS, type Tone } from '../components/viz'
+import { Radar, MiniBar, ConcentrationBar, CHART_COLORS, type Tone } from '../components/viz'
 import { AnimatedCounter } from '../components/AnimatedCounter'
 import { InfoTip } from '../components/InfoTip'
 import { Icon, type IconName } from '../components/Icon'
@@ -13,7 +13,7 @@ import { PlayerPhoto as PhotoImg } from '../components/PlayerPhoto'
 import { PlayerScatterMap, PlayerZoneMap } from '../components/ShotMap'
 import { useCore } from '../lib/useData'
 import { num, str, bool } from '../lib/rows'
-import { teamFullNames, TOOLTIPS } from '../lib/util'
+import { teamFullNames, teamColors, TOOLTIPS } from '../lib/util'
 import { buildPlayerBundle, buildPlayerVerdict } from '../lib/insights/narrative'
 import type { CoreData, RatingRow, Row } from '../lib/types'
 
@@ -208,78 +208,27 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
   const xaShare = m ? num(m, 'xa_share_4gw') : null
   const n2 = (v: number | null, f: 1 | 2 = 2) => (v != null ? <AnimatedCounter value={v} format={f === 1 ? '1dp' : '2dp'} /> : 'N/A')
 
-  return (
-    <div className="rounded-xl border border-line bg-surface-1/50 p-5 md:p-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-start gap-4">
-        <PlayerPhoto code={r.code} element={r.element} pos={pos} size={72} />
-        <div className="min-w-0 flex-1">
-          <div className="text-2xl font-extrabold tracking-tight text-ink">{name}</div>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
-            <span className="rounded bg-surface-3 px-2 py-0.5 font-semibold text-ink-2">{pos}</span>
-            <span className="flex items-center gap-1 rounded bg-surface-3 px-2 py-0.5 text-ink-2"><TeamBadge team={String(r.team)} size={12} />{teamFullNames[String(r.team)] || r.team}</span>
-            <span className="rounded bg-surface-3 px-2 py-0.5 text-ink-2">£{r.price}m</span>
-            {streak === '🔥 Hot' && <span className="flex items-center gap-1 text-hot"><Icon name="flame" size={12} solid /> Hot Streak</span>}
-            {streak === '🧊 Cold' && <span className="flex items-center gap-1 text-cold"><Icon name="snow" size={12} /> Cold Streak</span>}
-          </div>
-          <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
-            <RatingBlock label={<>Season <InfoTip text={TOOLTIPS.overall as string} /></>} value={num(r, 'season_overall_score')} />
-            <RatingBlock label="Last 4GW" value={num(r, 'gw4_overall_score')} />
-            <RatingBlock label={<>Next 4GW (Fixtures) <InfoTip text={TOOLTIPS.next4 as string} /></>} value={str(r, 'next4_overall_rating')} />
-            {isAtt && <RatingBlock label="Season (Attacker)" value={num(r, 'season_att_overall_score')} />}
-            {isAtt && <RatingBlock label="Last 4GW (Attacker)" value={num(r, 'gw4_att_overall_score')} />}
-          </div>
-        </div>
-      </div>
+  const xptsRank = useMemo(() => {
+    const v = num(r, 'season_xpts_per_game')
+    if (v == null) return null
+    let ahead = 0
+    for (const p of data.ratings) { const x = num(p, 'season_xpts_per_game'); if (x != null && x > v) ahead++ }
+    return ahead + 1
+  }, [data.ratings, r])
 
-      {/* Verdict hero */}
-      {verdict && (verdict.score != null || verdict.bullets.length > 0) && (
-        <div className="mt-5 flex flex-col gap-4 rounded-xl border border-line bg-surface-2/50 p-4 sm:flex-row sm:items-center">
-          {verdict.score != null && (
-            <div className="shrink-0">
-              <RadialGauge value={verdict.score} max={100} label={verdict.scoreLabel} tone={(verdict.tone === 'info' ? 'accent' : verdict.tone) as Tone} />
-            </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">The verdict</div>
-            {verdict.verdict && <div className="mt-0.5 text-lg font-bold text-ink">{verdict.verdict}</div>}
-            {(personas.length > 0 || flags.length > 0 || isPenTaker || isSpTaker) && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {isPenTaker && <Tag label="Penalty taker" tip="First-choice penalty taker for their club — extra, high-value goal route." tone="good" />}
-                {isSpTaker && <Tag label="Set-piece taker" tip="Primary corner / free-kick taker for their club — extra assist and goal routes." />}
-                {personas.map((p) => <Tag key={p} label={p} tip={personaTip(p)} />)}
-                {flags.map((f) => <Tag key={f} label={f} tip={personaTip(f)} tone={f.includes('Monster') ? 'good' : 'warn'} />)}
-              </div>
-            )}
-            {verdict.bullets.length > 0 && (
-              <ul className="mt-3 space-y-1.5 text-sm text-ink-2">
-                {verdict.bullets.map((b: { iconId: string; tone: string; html: string }, i: number) => (
-                  <li key={i} className="flex gap-2">
-                    <span className={`mt-0.5 ${TONE_TEXT[b.tone] || 'text-info'}`}><Icon name={b.iconId as IconName} size={14} /></span>
-                    <span dangerouslySetInnerHTML={{ __html: b.html }} />
-                  </li>
-                ))}
-              </ul>
-            )}
-            {verdict.financeLine && <div className="mt-2 text-xs text-ink-3" dangerouslySetInnerHTML={{ __html: verdict.financeLine }} />}
-          </div>
-        </div>
-      )}
+  return (
+    <div className="overflow-hidden rounded-xl border border-line bg-surface-1/50">
+      <PlayerHero r={r} verdict={verdict} personas={personas} flags={flags} isPenTaker={isPenTaker} isSpTaker={isSpTaker} streak={streak} isAtt={isAtt} />
 
       {/* Single scroll — every section visible, no tabs. Order mirrors the
           rating's own construction: receipts → stats → profile → underlying →
           reliability → context → shots. */}
-      <div className="mt-6">
-        <PointsEngine r={r} />
+      <div className="px-5 pb-5 md:px-6 md:pb-6">
+        <div className="relative z-10 -mt-12 mb-8 flex flex-wrap justify-center gap-3">
+          {heroChips(r, xptsRank).map((c) => <BigChip key={c.k} label={c.k} value={c.v} sub={c.sub} />)}
+        </div>
 
-        <Section title="Key Stats (Season)">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Tile value={num(r, 'season_ppg') != null ? <AnimatedCounter value={num(r, 'season_ppg')!} format="1dp" /> : 'N/A'} label="Pts / Game" />
-            <Tile value={std && num(std, 'pts_per90_season') != null ? <AnimatedCounter value={num(std, 'pts_per90_season')!} format="2dp" /> : 'N/A'} label="Pts / 90" />
-            <Tile value={num(r, 'total_mins') != null ? <AnimatedCounter value={num(r, 'total_mins')!} /> : 'N/A'} label="Total Mins" />
-            <Tile value={ptsDelta != null ? `${ptsDelta > 0 ? '+' : ''}${ptsDelta.toFixed(2)}` : 'N/A'} label="Form Delta" />
-          </div>
-        </Section>
+        <PointsEngine r={r} />
 
         <Section title={`Rating Profile — vs ${pos} players`}>
           <div className="grid gap-5 lg:grid-cols-[300px_1fr] lg:items-center">
@@ -314,6 +263,8 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
             <Tile value={n2(m ? num(m, 'sharpe_4gw') : null)} label={<>Sharpe <InfoTip text={TOOLTIPS.sharpe as string} /></>} />
             <Tile value={n2(m ? num(m, 'home_avg_season') : null, 1)} label="Home Avg Pts" />
             <Tile value={n2(m ? num(m, 'away_avg_season') : null, 1)} label="Away Avg Pts" />
+            <Tile value={std && num(std, 'pts_per90_season') != null ? <AnimatedCounter value={num(std, 'pts_per90_season')!} format="2dp" /> : 'N/A'} label="Pts / 90" />
+            <Tile value={ptsDelta != null ? `${ptsDelta > 0 ? '+' : ''}${ptsDelta.toFixed(2)}` : 'N/A'} label="Form Delta" />
           </div>
         </Section>
 
@@ -415,21 +366,211 @@ function UnderlyingQuality({ r, pos }: { r: RatingRow; pos: string }) {
   )
 }
 
-function Tag({ label, tip, tone }: { label: string; tip?: string; tone?: 'good' | 'warn' }) {
-  const cls = tone === 'good' ? 'border-good/40 text-good' : tone === 'warn' ? 'border-warn/40 text-warn' : 'border-line-mid text-ink-2'
+/* ═══ Editorial player hero ═══════════════════════════════════════════════
+   Always-dark cinematic band (like the shot maps): club-coloured glow, ghost
+   watermark + rating numeral, display-type name, PL cutout figure, season
+   numbers, biggest hauls and the verdict as headlines. */
+
+const POS_LABEL: Record<string, string> = { GKP: 'Goalkeeper', DEF: 'Defender', MID: 'Midfielder', FWD: 'Forward' }
+const HERO_DIM = '#8e94a3'
+const HERO_INK = '#f1efe9'
+const HERO_GOLD = '#e6c36a'
+const HERO_PANEL: CSSProperties = { borderColor: 'rgba(230,195,106,.16)', background: 'rgba(16,20,30,.72)', backdropFilter: 'blur(10px)' }
+
+function HeroSilhouette() {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs ${cls}`}>
-      {label}
-      {tip && <InfoTip text={tip} />}
-    </span>
+    <svg viewBox="0 0 200 300" className="h-[92%]" aria-hidden="true">
+      <path d="M100 20 a34 34 0 1 1 0 68 a34 34 0 1 1 0-68 M40 300 C40 210 62 160 100 160 C138 160 160 210 160 300 Z" fill="#151a24" />
+    </svg>
   )
 }
 
-function RatingBlock({ label, value }: { label: ReactNode; value: number | string | null }) {
+function HeroPill({ children, gold, warn, title }: { children: ReactNode; gold?: boolean; warn?: boolean; title?: string }) {
+  const base = 'font-cond inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold tracking-[.14em] uppercase'
+  if (gold) return <span title={title} className={`${base} font-extrabold text-[#10131b]`} style={{ background: 'linear-gradient(120deg,#f7e3ad,#e6c36a)' }}>{children}</span>
+  return <span title={title} className={base} style={{ border: '1px solid rgba(230,195,106,.18)', color: warn ? '#e8b04a' : '#cfd3db', background: 'rgba(255,255,255,.02)' }}>{children}</span>
+}
+
+function BigNum({ v, sub, k }: { v: ReactNode; sub?: string; k: string }) {
   return (
     <div>
-      <div className="mb-1 flex items-center gap-1 text-[11px] tracking-wide text-ink-3 uppercase">{label}</div>
-      <StarRating value={value} />
+      <div className="font-cond text-[30px] leading-none font-extrabold md:text-[38px]" style={{ color: HERO_INK }}>
+        {v}{sub && <span className="ml-1.5 text-[14px] font-semibold md:text-[16px]" style={{ color: HERO_GOLD }}>{sub}</span>}
+      </div>
+      <div className="font-cond mt-1 text-[10px] font-semibold tracking-[.28em] uppercase" style={{ color: HERO_DIM }}>{k}</div>
+    </div>
+  )
+}
+
+function MiniRating({ k, v }: { k: string; v: number | null }) {
+  const c = v == null ? HERO_DIM : v >= 80 ? HERO_GOLD : v >= 65 ? '#3ddc7a' : v >= 50 ? HERO_INK : '#f0736f'
+  return (
+    <div className="font-cond flex items-baseline gap-2">
+      <span className="text-[10px] font-semibold tracking-[.24em] uppercase" style={{ color: HERO_DIM }}>{k}</span>
+      <span className="text-[19px] font-extrabold" style={{ color: c }}>{v ?? '—'}</span>
+    </div>
+  )
+}
+
+function BigChip({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="min-w-[150px] max-w-[240px] flex-1 rounded-2xl p-px" style={{ background: 'linear-gradient(160deg, rgba(230,195,106,.7), rgba(230,195,106,.08) 45%, rgba(230,195,106,.35))' }}>
+      <div className="rounded-[15px] px-4 py-3 text-center" style={{ background: 'linear-gradient(180deg,#12161f,#0c0f16)' }}>
+        <div className="font-cond text-[10px] font-semibold tracking-[.28em] uppercase" style={{ color: HERO_DIM }}>{label}</div>
+        <div className="font-cond mt-1 text-[26px] leading-none font-extrabold md:text-[30px]" style={{ color: HERO_INK }}>
+          {value}{sub && <small className="ml-1 text-[15px] font-semibold" style={{ color: HERO_GOLD }}>{sub}</small>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function heroChips(r: RatingRow, xptsRank: number | null): { k: string; v: string; sub?: string }[] {
+  const f = (k: string, d = 1) => { const v = num(r, `season_m_${k}`); return v == null ? null : v.toFixed(d) }
+  const pcv = (k: string) => { const v = num(r, `season_m_${k}`); return v == null ? null : String(Math.round(v * 100)) }
+  const chips: { k: string; v: string; sub?: string }[] = []
+  const xp = num(r, 'season_xpts_per_game')
+  if (xp != null) chips.push({ k: 'xPts / Game', v: xp.toFixed(2), sub: xptsRank != null ? `#${xptsRank}` : undefined })
+  if (r.position === 'GKP') {
+    const s = f('saves', 2); if (s) chips.push({ k: 'Saves / 90', v: s })
+    const sf = f('shots_faced', 1); if (sf) chips.push({ k: 'Shots Faced / Gm', v: sf })
+    const pr = f('prevented', 2); if (pr) chips.push({ k: 'Goals Prevented / 90', v: pr })
+  } else if (r.position === 'DEF') {
+    const cs = pcv('cs_rate'); if (cs) chips.push({ k: 'Clean Sheets', v: cs, sub: '%' })
+    const xgc = f('xgc', 2); if (xgc) chips.push({ k: 'xGC / 90', v: xgc })
+    const tb = f('touches_box', 1); if (tb) chips.push({ k: 'Touches in Box / 90', v: tb })
+  } else {
+    const b = pcv('box_share'); if (b) chips.push({ k: 'Box Shots', v: b, sub: '%' })
+    const s = pcv('sot_rate'); if (s) chips.push({ k: 'Shots on Target', v: s, sub: '%' })
+    const tb = f('touches_box', 1); if (tb) chips.push({ k: 'Touches in Box / 90', v: tb })
+  }
+  return chips
+}
+
+function PlayerHero({ r, verdict, personas, flags, isPenTaker, isSpTaker, streak, isAtt }: {
+  r: RatingRow
+  verdict: ReturnType<typeof buildPlayerVerdict>
+  personas: string[]
+  flags: string[]
+  isPenTaker: boolean
+  isSpTaker: boolean
+  streak: string
+  isAtt: boolean
+}) {
+  const name = String(r.web_name)
+  const team = String(r.team)
+  const tc = teamColors[team] ?? '#7ad1ff'
+  const pos = r.position
+  const isGk = pos === 'GKP'
+  const rating = ratingTo100(num(r, 'season_overall_score'))
+  const gw4 = ratingTo100(num(r, 'gw4_overall_score'))
+  const next4 = ratingTo100(str(r, 'next4_overall_rating'))
+  const att = ratingTo100(num(r, 'season_att_overall_score'))
+  const tp = num(r, 'season_total_points')
+  const tg = num(r, 'season_total_goals'), txg = num(r, 'season_total_xg')
+  const ta = num(r, 'season_total_assists'), txa = num(r, 'season_total_xa')
+  const mins = num(r, 'total_mins')
+  const hauls: { gw: number; pts: number; home: boolean; g: number; a: number }[] = (() => {
+    try { const s = str(r, 'season_hauls'); return s ? JSON.parse(s) : [] } catch { return [] }
+  })()
+  const bullets = verdict?.bullets ?? []
+
+  return (
+    <div className="relative overflow-hidden pb-20" style={{ background: `radial-gradient(900px 620px at 86% 22%, ${tc}30, transparent 62%), radial-gradient(700px 520px at 4% 100%, rgba(230,195,106,.12), transparent 60%), linear-gradient(118deg,#0d1119 0%,#0a0d13 52%,#070a10 100%)` }}>
+      <div className="pointer-events-none absolute inset-0 opacity-50" style={{ background: 'repeating-linear-gradient(118deg, transparent 0 140px, rgba(255,255,255,.016) 140px 142px)' }} />
+      <div className="font-display pointer-events-none absolute -left-2 top-2 leading-none whitespace-nowrap uppercase select-none" style={{ fontSize: 'clamp(70px,15vw,168px)', color: 'transparent', WebkitTextStroke: '1px rgba(255,255,255,.05)' }}>{teamFullNames[team] || team}</div>
+      {rating != null && (
+        <div className="font-display pointer-events-none absolute right-[3%] -bottom-8 leading-[.8] select-none" style={{ fontSize: 'clamp(160px,28vw,340px)', color: 'transparent', WebkitTextStroke: '2px rgba(230,195,106,.15)' }}>{rating}</div>
+      )}
+
+      <div className="relative z-10 grid items-end gap-x-4 px-5 pt-6 md:grid-cols-[1.2fr_.9fr] md:px-8">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="font-cond rounded-[3px] px-3 py-1 text-[11px] font-extrabold tracking-[.3em] uppercase text-[#10131b]" style={{ background: 'linear-gradient(120deg,#f7e3ad,#e6c36a)' }}>{POS_LABEL[pos] ?? pos}</span>
+            <span className="font-cond text-[12.5px] font-semibold tracking-[.16em] uppercase" style={{ color: HERO_DIM }}>
+              <b style={{ color: tc }}>{teamFullNames[team] || team}</b> · £{r.price}m · {r.selected_by_percent}% owned
+            </span>
+            {streak === '🔥 Hot' && <span className="flex items-center gap-1 text-[12px] text-hot"><Icon name="flame" size={12} solid /> Hot</span>}
+            {streak === '🧊 Cold' && <span className="flex items-center gap-1 text-[12px] text-cold"><Icon name="snow" size={12} /> Cold</span>}
+          </div>
+
+          <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-3">
+            <h1 className="font-display leading-[.9] tracking-[-.015em] uppercase" style={{ fontSize: 'clamp(44px,8vw,92px)', background: 'linear-gradient(180deg,#fff 12%,#e4e6ea 48%,#8f96a5 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', filter: 'drop-shadow(0 10px 34px rgba(0,0,0,.65))' }}>{name}</h1>
+            {rating != null && (
+              <div className="relative grid h-16 w-16 flex-none place-items-center rounded-full" style={{ background: 'radial-gradient(circle at 32% 26%, #202636, #10141d 70%)', boxShadow: '0 0 0 1.5px #e6c36a, 0 0 0 6px rgba(10,13,19,.9), 0 0 0 7px rgba(230,195,106,.25), 0 0 42px rgba(230,195,106,.3)' }}>
+                <b className="font-display text-[23px]" style={{ color: '#f7e3ad' }}>{rating}</b>
+                <span className="font-cond absolute bottom-2 text-[6.5px] font-semibold tracking-[.3em] uppercase" style={{ color: HERO_DIM }}>Rating</span>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-2 text-[15px]" style={{ color: '#c9cdd6' }}>
+            {verdict?.verdict && <>{verdict.verdict}. </>}
+            {!isGk && tg != null && txg != null && <span className="font-semibold" style={{ color: HERO_GOLD }}>{tg} goals from {txg} xG</span>}
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {isPenTaker && <HeroPill gold title="First-choice penalty taker — extra, high-value goal route.">ⓒ Penalty taker</HeroPill>}
+            {isSpTaker && <HeroPill title="Primary corner / free-kick taker — extra assist and goal routes.">Set-piece taker</HeroPill>}
+            {personas.slice(0, 3).map((p) => <HeroPill key={p} title={personaTip(p)}>{p}</HeroPill>)}
+            {flags.map((f) => <HeroPill key={f} warn={!f.includes('Monster')} title={personaTip(f)}>{f}</HeroPill>)}
+          </div>
+
+          <div className="mt-7 grid w-max grid-cols-3 gap-x-8 gap-y-4 md:gap-x-11">
+            <BigNum v={tp ?? '—'} k="Points" />
+            {!isGk && <BigNum v={tg ?? '—'} sub={txg != null ? `/ ${txg} xG` : undefined} k="Goals" />}
+            {!isGk && <BigNum v={ta ?? '—'} sub={txa != null ? `/ ${txa} xA` : undefined} k="Assists" />}
+            <BigNum v={mins != null ? mins.toLocaleString() : '—'} k="Minutes" />
+            <BigNum v={num(r, 'total_starts') ?? '—'} k="Starts" />
+            <BigNum v={num(r, 'season_ppg')?.toFixed(2) ?? '—'} k="Pts / Game" />
+          </div>
+
+          <div className="font-cond mt-6 flex flex-wrap gap-x-8 gap-y-2">
+            <MiniRating k="Last 4GW" v={gw4} />
+            <MiniRating k="Next 4 · Fixtures" v={next4} />
+            {isAtt && <MiniRating k="vs Attackers" v={att} />}
+          </div>
+
+          {(hauls.length > 0 || bullets.length > 0) && (
+            <div className="mt-7 grid max-w-2xl gap-3 lg:grid-cols-[236px_1fr]">
+              {hauls.length > 0 && (
+                <div className="rounded-xl border p-3.5" style={HERO_PANEL}>
+                  <h4 className="font-cond mb-1.5 text-[11px] font-extrabold tracking-[.34em] uppercase" style={{ color: HERO_GOLD }}>Biggest Hauls</h4>
+                  {hauls.map((h) => (
+                    <div key={h.gw} className="flex items-center gap-3 border-t border-white/5 py-1.5 first:border-0">
+                      <div className="font-cond w-11 text-[24px] leading-none font-extrabold" style={{ color: tc }}>{h.pts}<small className="text-[11px] font-semibold" style={{ color: HERO_DIM }}>pts</small></div>
+                      <div className="font-cond text-[13px] font-semibold tracking-wide uppercase" style={{ color: '#cfd3db' }}>
+                        Gameweek {h.gw}
+                        <small className="block text-[10px] tracking-[.2em]" style={{ color: HERO_DIM }}>{h.home ? 'Home' : 'Away'} · {h.g}G · {h.a}A</small>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {bullets.length > 0 && (
+                <div className="rounded-xl border p-3.5" style={HERO_PANEL}>
+                  <h4 className="font-cond mb-1.5 text-[11px] font-extrabold tracking-[.34em] uppercase" style={{ color: HERO_GOLD }}>Headlines</h4>
+                  {bullets.map((b: { iconId: string; tone: string; html: string }, i: number) => (
+                    <div key={i} className="flex gap-2.5 border-t border-white/5 py-1.5 text-[13.5px] first:border-0" style={{ color: '#c9cdd6' }}>
+                      <span className={`mt-0.5 ${TONE_TEXT[b.tone] || 'text-info'}`}><Icon name={b.iconId as IconName} size={13} /></span>
+                      <span dangerouslySetInnerHTML={{ __html: b.html }} />
+                    </div>
+                  ))}
+                  {verdict?.financeLine && <div className="mt-2 border-t border-white/5 pt-2 text-xs" style={{ color: HERO_DIM }} dangerouslySetInnerHTML={{ __html: verdict.financeLine }} />}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="relative order-first h-[250px] md:order-none md:h-[500px]" aria-hidden="true">
+          <div className="absolute bottom-6 left-1/2 h-[min(56vw,400px)] w-[min(56vw,400px)] -translate-x-1/2 rounded-full border" style={{ borderColor: `${tc}3d`, background: `radial-gradient(circle at 50% 38%, ${tc}22, ${tc}08 58%, transparent 72%)` }} />
+          <div className="absolute bottom-2 left-1/2 h-12 w-3/4 -translate-x-1/2 rounded-[50%]" style={{ background: 'radial-gradient(closest-side, rgba(0,0,0,.7), transparent)' }} />
+          <div className="absolute inset-x-0 bottom-3 flex items-end justify-center">
+            <PhotoImg hero code={r.code} element={r.element} className="max-h-[235px] object-contain md:max-h-[480px]" style={{ filter: 'drop-shadow(0 24px 44px rgba(0,0,0,.6))' }} placeholder={<HeroSilhouette />} />
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

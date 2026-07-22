@@ -7,6 +7,13 @@
 @font-face { font-family: 'Manrope'; font-style: normal; font-weight: 700; font-display: swap; src: url('./fonts/manrope-700.woff2') format('woff2'); }
 @font-face { font-family: 'Manrope'; font-style: normal; font-weight: 800; font-display: swap; src: url('./fonts/manrope-800.woff2') format('woff2'); }
 
+/* Editorial display faces for the hero treatments (player/team pages) */
+@font-face { font-family: 'Archivo Black'; font-style: normal; font-weight: 400; font-display: swap; src: url('./fonts/archivo-black-400.woff2') format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 600; font-display: swap; src: url('./fonts/barlow-cond-600.woff2') format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 800; font-display: swap; src: url('./fonts/barlow-cond-800.woff2') format('woff2'); }
+.font-display { font-family: 'Archivo Black', 'Arial Black', 'Manrope', sans-serif; }
+.font-cond { font-family: 'Barlow Condensed', 'Arial Narrow', 'Manrope', sans-serif; }
+
 /* ════════════════════════════════════════════════════════════════════════
    Theme token system — two independent axes:
      data-mode:   dark | light        (surfaces, ink, lines, shadows)
