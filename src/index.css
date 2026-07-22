@@ -11,8 +11,13 @@
 @font-face { font-family: 'Archivo Black'; font-style: normal; font-weight: 400; font-display: swap; src: url('./fonts/archivo-black-400.woff2') format('woff2'); }
 @font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 600; font-display: swap; src: url('./fonts/barlow-cond-600.woff2') format('woff2'); }
 @font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 800; font-display: swap; src: url('./fonts/barlow-cond-800.woff2') format('woff2'); }
+/* Brand wordmark face — Montserrat (elegant geometric sans; the intro + brand lockup) */
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 400; font-display: swap; src: url('./fonts/montserrat-400.woff2') format('woff2'); }
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 500; font-display: swap; src: url('./fonts/montserrat-500.woff2') format('woff2'); }
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 600; font-display: swap; src: url('./fonts/montserrat-600.woff2') format('woff2'); }
 .font-display { font-family: 'Archivo Black', 'Arial Black', 'Manrope', sans-serif; }
 .font-cond { font-family: 'Barlow Condensed', 'Arial Narrow', 'Manrope', sans-serif; }
+.font-brand { font-family: 'Montserrat', 'Manrope', system-ui, sans-serif; }
 
 /* ════════════════════════════════════════════════════════════════════════
    Theme token system — two independent axes:
@@ -230,11 +235,11 @@ body {
 
 .intro-lock { position: relative; z-index: 5; text-align: center; padding: 0 16px; }
 .intro-title {
-  font-family: 'Manrope', system-ui, sans-serif; font-weight: 600; color: #f4f2ea;
+  font-family: 'Montserrat', 'Manrope', system-ui, sans-serif; font-weight: 500; color: #f4f2ea;
   text-transform: uppercase; font-size: clamp(34px,8.4vw,82px); line-height: 1;
-  letter-spacing: .08em; white-space: nowrap; text-shadow: 0 2px 26px rgba(0,0,0,.65);
+  letter-spacing: .07em; white-space: nowrap; text-shadow: 0 2px 26px rgba(0,0,0,.65);
 }
-.intro-title .intro-gold { color: #e6c36a; font-weight: 700; }
+.intro-title .intro-gold { color: #e6c36a; font-weight: 600; }
 .intro-title span {
   display: inline-block; opacity: 0; filter: blur(6px); transform: translateY(6px);
   animation: intro-letter .5s cubic-bezier(.2,.7,.3,1) forwards;
@@ -251,13 +256,13 @@ body {
 .intro-rule-l { transform-origin: right; }
 @keyframes intro-rule { to { transform: scaleX(1); } }
 .intro-tag {
-  font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-weight: 600;
-  font-size: clamp(11px,2.4vw,17px); letter-spacing: .62em; text-indent: .62em;
+  font-family: 'Montserrat', 'Manrope', system-ui, sans-serif; font-weight: 500;
+  font-size: clamp(10px,2.2vw,15px); letter-spacing: .5em; text-indent: .5em;
   color: #cfd6c9; text-transform: uppercase; opacity: 0;
   animation: intro-tag 1s ease-out 1.85s forwards;
 }
-.intro-tag b { color: #e6c36a; font-weight: 800; }
-@keyframes intro-tag { from { opacity: 0; letter-spacing: .95em; } to { opacity: 1; letter-spacing: .62em; } }
+.intro-tag b { color: #e6c36a; font-weight: 600; }
+@keyframes intro-tag { from { opacity: 0; letter-spacing: .8em; } to { opacity: 1; letter-spacing: .5em; } }
 
 .intro-streak {
   position: absolute; top: -20%; bottom: -20%; left: -30%; width: 26%; z-index: 9; pointer-events: none;
