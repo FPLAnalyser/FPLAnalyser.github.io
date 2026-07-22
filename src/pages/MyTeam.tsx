@@ -5,7 +5,7 @@ import { SkeletonBlock } from '../components/Skeleton'
 import { StarRating } from '../components/StarRating'
 import { Tabs, type TabDef } from '../components/Tabs'
 import { TeamBadge } from '../components/badges'
-import { FifaCard, MiniFifaCard } from '../components/FifaCard'
+import { FifaCard } from '../components/FifaCard'
 import { Icon, type IconName } from '../components/Icon'
 import { useCore } from '../lib/useData'
 import { str } from '../lib/rows'
@@ -100,7 +100,6 @@ interface Enriched { pick: any; r: RatingRow | undefined; p4: Row | undefined; s
 function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
   const { picksData, gw, historyData, entryData, teamId } = loaded
   const [tab, setTab] = useState<SquadTab>('squad')
-  const [selected, setSelected] = useState<Enriched | null>(null)
   const picks: any[] = picksData.picks || []
   const entryHistory = picksData.entry_history || {}
 
@@ -157,19 +156,19 @@ function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
           <Report picksData={picksData} historyData={historyData} data={data} ownedElements={ownedElements} />
 
           <SectionHeader>Starting XI — Gameweek {gw}</SectionHeader>
-          <p className="mb-3 -mt-1 text-sm text-ink-3">Tap any player for their full card — overall plus the sub-ratings that matter for their position.</p>
+          <p className="mb-3 -mt-1 text-sm text-ink-3">Your XI as FIFA-style cards — overall plus the sub-ratings that matter for each position. Tap a card for the full profile.</p>
           <div
-            className="relative overflow-hidden rounded-3xl p-3 pt-7 md:p-8 md:pt-12"
+            className="relative overflow-hidden rounded-3xl p-3 md:p-6"
             style={{
               background:
-                'radial-gradient(120% 80% at 50% 0%, rgba(0,0,0,0) 45%, rgba(0,0,0,0.45) 100%), repeating-linear-gradient(90deg, #10281c 0 9%, #123021 9% 18%), linear-gradient(180deg, #123021, #0e2318)',
+                'radial-gradient(120% 80% at 50% 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.5) 100%), repeating-linear-gradient(90deg, #0e2117 0 9%, #10281c 9% 18%), linear-gradient(180deg, #10281c, #0c1c13)',
             }}
           >
             <PitchLines />
-            <div className="relative flex flex-col justify-between gap-3 md:gap-7" style={{ minHeight: 460 }}>
+            <div className="relative flex flex-col gap-4 md:gap-6">
               {posGroups.map((rows, i) => rows.length > 0 && (
-                <div key={i} className="flex justify-center gap-2 md:gap-5">
-                  {rows.map((e, j) => <PitchToken key={j} e={e} onSelect={setSelected} />)}
+                <div key={i} className="flex flex-wrap justify-center gap-3 md:gap-4">
+                  {rows.map((e, j) => <PlayerCardSlot key={j} e={e} />)}
                 </div>
               ))}
             </div>
@@ -177,14 +176,12 @@ function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
 
           {bench.length > 0 && (
             <div className="mt-3 rounded-2xl border border-line bg-surface-1/60 p-3 md:p-4">
-              <div className="mb-2.5 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Bench</div>
-              <div className="flex justify-center gap-2 md:gap-4">
-                {bench.map((e, j) => <PitchToken key={j} e={e} onSelect={setSelected} bench />)}
+              <div className="mb-3 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Bench</div>
+              <div className="flex flex-wrap justify-center gap-3 md:gap-4">
+                {bench.map((e, j) => <PlayerCardSlot key={j} e={e} bench />)}
               </div>
             </div>
           )}
-
-          {selected?.r && <FifaCardModal e={selected} onClose={() => setSelected(null)} />}
         </>
       ) : (
         <MiniLeague entryData={entryData} teamId={teamId} gw={gw} ownedElements={ownedElements} data={data} />
@@ -236,70 +233,27 @@ function RatingStat({ label, node }: { label: string; node: ReactNode }) {
   )
 }
 
-/** A pitch token — mini FIFA card, or a placeholder when a player has no rating. */
-function PitchToken({ e, onSelect, bench }: { e: Enriched; onSelect: (e: Enriched) => void; bench?: boolean }) {
+/**
+ * One player slot in the formation — a full (compact) FIFA card that links to
+ * the detail page, or a placeholder when the player has no rating row.
+ */
+function PlayerCardSlot({ e }: { e: Enriched; bench?: boolean }) {
+  const navigate = useNavigate()
   const { pick, r, std } = e
+  const wrap = 'w-[calc(50%-0.375rem)] sm:w-[224px] lg:w-[240px]'
   if (!r) {
-    return <div className="min-w-0 max-w-[112px] flex-1 basis-0 rounded-xl border border-line bg-surface-2 p-1.5 text-center text-[10px] text-ink-3">ID {pick.element}</div>
+    return <div className={`${wrap} grid place-items-center rounded-2xl border border-line bg-surface-2 p-4 text-center text-[11px] text-ink-3`}>ID {pick.element}</div>
   }
   return (
-    <MiniFifaCard
-      r={r}
-      onClick={() => onSelect(e)}
-      captain={pick.is_captain}
-      viceCaptain={pick.is_vice_captain}
-      streak={std ? str(std, 'streak') : ''}
-      bench={bench}
-    />
-  )
-}
-
-/** Full FIFA card in a modal, opened by tapping a pitch token. */
-function FifaCardModal({ e, onClose }: { e: Enriched; onClose: () => void }) {
-  const navigate = useNavigate()
-  useEffect(() => {
-    const onKey = (ev: KeyboardEvent) => ev.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-  const { pick, r, std } = e
-  if (!r) return null
-  const streak = std ? str(std, 'streak') : ''
-
-  return (
-    <div
-      className="fixed inset-0 z-[200] grid place-items-center bg-black/70 p-4 backdrop-blur-sm"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-    >
-      <div className="w-full max-w-[380px]" onClick={(ev) => ev.stopPropagation()}>
-        <FifaCard
-          r={r}
-          badge={
-            <>
-              {pick?.is_captain && <span className="absolute top-3 right-3 z-10 grid size-6 place-items-center rounded-full bg-accent text-[11px] font-bold text-accent-contrast">C</span>}
-              {pick?.is_vice_captain && <span className="absolute top-3 right-3 z-10 grid size-6 place-items-center rounded-full bg-surface-3 text-[11px] font-bold text-ink">V</span>}
-              {streak === '🔥 Hot' && <span className="absolute top-3 right-11 z-10 text-hot"><Icon name="flame" size={16} solid /></span>}
-              {streak === '🧊 Cold' && <span className="absolute top-3 right-11 z-10 text-cold"><Icon name="snow" size={16} /></span>}
-            </>
-          }
-        />
-        <div className="mt-3 flex items-center justify-center gap-2">
-          <button
-            onClick={() => navigate(`/player?name=${encodeURIComponent(String(r.web_name))}`)}
-            className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent-strong"
-          >
-            Full profile <Icon name="trend-up" size={15} />
-          </button>
-          <button
-            onClick={onClose}
-            className="inline-flex min-h-10 items-center rounded-lg border border-line-mid px-4 text-sm font-semibold text-ink transition-colors hover:border-line-strong"
-          >
-            Close
-          </button>
-        </div>
-      </div>
+    <div className={wrap}>
+      <FifaCard
+        r={r}
+        compact
+        onClick={() => navigate(`/player?name=${encodeURIComponent(String(r.web_name))}`)}
+        captain={pick.is_captain}
+        viceCaptain={pick.is_vice_captain}
+        streak={std ? str(std, 'streak') : ''}
+      />
     </div>
   )
 }

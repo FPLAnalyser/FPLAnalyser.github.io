@@ -7,9 +7,8 @@ import { teamFullNames } from '../lib/util'
 import type { RatingRow } from '../lib/types'
 
 // FIFA-ultimate-team-style player card. Big overall + position + photo + team,
-// and six position-appropriate sub-ratings drawn from our rating engine. Two
-// exports: <FifaCard> (full, for a tap-through / modal) and <MiniFifaCard>
-// (compact pitch token).
+// and six position-appropriate sub-ratings drawn from our rating engine.
+// `compact` shrinks everything so a full XI of cards fits in a formation grid.
 
 const POS_SHORT: Record<string, string> = { GKP: 'GK', DEF: 'DEF', MID: 'MID', FWD: 'FWD' }
 
@@ -65,14 +64,14 @@ export function overall100(r: RatingRow): number | null {
 const PANEL_BG =
   'repeating-linear-gradient(115deg, rgba(255,255,255,0.03) 0 10px, rgba(255,255,255,0) 10px 20px)'
 
-function StatBar({ label, value }: { label: string; value: number | null }) {
+function StatBar({ label, value, compact }: { label: string; value: number | null; compact?: boolean }) {
   return (
     <div>
-      <div className="flex items-baseline justify-between">
-        <span className="text-[11px] font-semibold tracking-[0.12em] text-ink-2 uppercase">{label}</span>
-        <span className="font-display text-[17px] leading-none text-accent tabular-nums">{value ?? '—'}</span>
+      <div className="flex items-baseline justify-between gap-1">
+        <span className={`font-semibold tracking-[0.08em] text-ink-2 uppercase ${compact ? 'text-[9px]' : 'text-[11px] tracking-[0.12em]'}`}>{label}</span>
+        <span className={`font-display leading-none text-accent tabular-nums ${compact ? 'text-[14px]' : 'text-[17px]'}`}>{value ?? '—'}</span>
       </div>
-      <div className="mt-1.5 h-[3px] overflow-hidden rounded-full bg-white/10">
+      <div className={`overflow-hidden rounded-full bg-white/10 ${compact ? 'mt-1 h-[3px]' : 'mt-1.5 h-[3px]'}`}>
         <div
           className="h-full rounded-full"
           style={{ width: `${value ?? 0}%`, background: 'linear-gradient(90deg, var(--accent-strong), var(--accent-2))' }}
@@ -83,131 +82,94 @@ function StatBar({ label, value }: { label: string; value: number | null }) {
 }
 
 /**
- * Full FIFA-style card. `badge` slot lets callers overlay captaincy etc.
+ * Full FIFA-style player card. `compact` fits it into a formation grid; `onClick`
+ * makes the whole card a button (e.g. through to the detail page).
  */
-export function FifaCard({ r, badge, className }: { r: RatingRow; badge?: ReactNode; className?: string }) {
+export function FifaCard({
+  r,
+  badge,
+  className,
+  compact,
+  onClick,
+  captain,
+  viceCaptain,
+  streak,
+}: {
+  r: RatingRow
+  badge?: ReactNode
+  className?: string
+  compact?: boolean
+  onClick?: () => void
+  captain?: boolean
+  viceCaptain?: boolean
+  streak?: string | null
+}) {
   const ov = overall100(r)
   const stats = STAT_SETS[String(r.position)] ?? STAT_SETS.MID
+  const Tag = onClick ? 'button' : 'div'
 
   return (
-    <div
-      className={`relative w-full overflow-hidden rounded-[22px] p-5 shadow-modal ${className ?? ''}`}
+    <Tag
+      onClick={onClick}
+      className={`group relative w-full overflow-hidden text-left ${compact ? 'rounded-2xl p-3' : 'rounded-[22px] p-5 shadow-modal'} ${onClick ? 'transition-transform hover:-translate-y-0.5' : ''} ${className ?? ''}`}
       style={{
         background: 'linear-gradient(165deg, #211d16 0%, #14110c 55%, #0d0b08 100%)',
         border: '1px solid rgba(217,180,92,0.28)',
       }}
     >
-      {/* gold top edge */}
       <div className="absolute inset-x-0 top-0 h-[3px]" style={{ background: 'var(--grad-accent)' }} />
       {badge}
+      {captain && <span className={`absolute z-10 grid place-items-center rounded-full bg-accent font-bold text-accent-contrast ${compact ? 'top-2 right-2 size-5 text-[10px]' : 'top-3 right-3 size-6 text-[11px]'}`}>C</span>}
+      {viceCaptain && <span className={`absolute z-10 grid place-items-center rounded-full bg-surface-3 font-bold text-ink ${compact ? 'top-2 right-2 size-5 text-[10px]' : 'top-3 right-3 size-6 text-[11px]'}`}>V</span>}
+      {!captain && !viceCaptain && streak === '🔥 Hot' && <span className={`absolute z-10 text-hot ${compact ? 'top-2 right-2' : 'top-3 right-3'}`}><Icon name="flame" size={compact ? 13 : 16} solid /></span>}
+      {!captain && !viceCaptain && streak === '🧊 Cold' && <span className={`absolute z-10 text-cold ${compact ? 'top-2 right-2' : 'top-3 right-3'}`}><Icon name="snow" size={compact ? 13 : 16} /></span>}
 
-      <div className="flex gap-4">
+      <div className={`flex ${compact ? 'gap-3' : 'gap-4'}`}>
         {/* overall + position */}
-        <div className="flex shrink-0 flex-col items-center pt-1" style={{ minWidth: 76 }}>
-          <div className="font-display text-[58px] leading-[0.9] text-accent tabular-nums">{ov ?? '—'}</div>
-          <div className="font-display text-[19px] leading-none tracking-[0.06em] text-accent-2">{POS_SHORT[String(r.position)] ?? r.position}</div>
-          <div className="mt-1 text-[10px] font-semibold tracking-[0.2em] text-ink-3 uppercase">Overall</div>
+        <div className="flex shrink-0 flex-col items-center pt-1" style={{ minWidth: compact ? 52 : 76 }}>
+          <div className={`font-display text-accent tabular-nums leading-[0.9] ${compact ? 'text-[40px]' : 'text-[58px]'}`}>{ov ?? '—'}</div>
+          <div className={`font-display leading-none tracking-[0.06em] text-accent-2 ${compact ? 'text-[14px]' : 'text-[19px]'}`}>{POS_SHORT[String(r.position)] ?? r.position}</div>
+          <div className={`mt-1 font-semibold tracking-[0.2em] text-ink-3 uppercase ${compact ? 'text-[8px]' : 'text-[10px]'}`}>Overall</div>
         </div>
 
         {/* photo panel */}
-        <div className="relative flex-1 overflow-hidden rounded-2xl" style={{ background: '#191510', minHeight: 150 }}>
+        <div className="relative flex-1 overflow-hidden rounded-2xl" style={{ background: '#191510', minHeight: compact ? 104 : 150 }}>
           <div className="absolute inset-0" style={{ background: PANEL_BG }} />
           <PlayerPhoto
             code={r.code}
             element={r.element}
             hero
-            className="absolute inset-x-0 bottom-0 mx-auto h-[150px] w-auto object-contain object-bottom drop-shadow-[0_6px_16px_rgba(0,0,0,0.55)]"
+            className={`absolute inset-x-0 bottom-0 mx-auto w-auto object-contain object-bottom drop-shadow-[0_6px_16px_rgba(0,0,0,0.55)] ${compact ? 'h-[104px]' : 'h-[150px]'}`}
             placeholder={
-              <div className="grid h-[150px] w-full place-items-center text-ink-3">
-                <Icon name="users" size={34} />
+              <div className={`grid w-full place-items-center text-ink-3 ${compact ? 'h-[104px]' : 'h-[150px]'}`}>
+                <Icon name="users" size={compact ? 24 : 34} />
               </div>
             }
           />
-          <div className="absolute top-2.5 right-2.5">
-            <TeamBadge team={String(r.team)} size={26} />
+          <div className={compact ? 'absolute top-1.5 right-1.5' : 'absolute top-2.5 right-2.5'}>
+            <TeamBadge team={String(r.team)} size={compact ? 18 : 26} />
           </div>
         </div>
       </div>
 
       {/* name + team */}
-      <div className="mt-4">
-        <div className="font-display text-[26px] leading-none tracking-[0.01em] text-ink uppercase">{String(r.web_name)}</div>
-        <div className="mt-1.5 flex items-center gap-1.5 text-[14px] font-semibold text-accent-2">
-          <TeamBadge team={String(r.team)} size={15} />
-          {teamFullNames[String(r.team)] || r.team}
-          <span className="text-ink-3">· £{r.price}m</span>
+      <div className={compact ? 'mt-2.5' : 'mt-4'}>
+        <div className={`font-display leading-none tracking-[0.01em] text-ink uppercase ${compact ? 'truncate text-[17px]' : 'text-[26px]'}`}>{String(r.web_name)}</div>
+        <div className={`mt-1.5 flex items-center gap-1.5 font-semibold text-accent-2 ${compact ? 'text-[11px]' : 'text-[14px]'}`}>
+          <TeamBadge team={String(r.team)} size={compact ? 12 : 15} />
+          <span className="truncate">{teamFullNames[String(r.team)] || r.team}</span>
+          <span className="shrink-0 text-ink-3">· £{r.price}m</span>
         </div>
       </div>
 
-      <div className="my-4 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(217,180,92,0.35), transparent)' }} />
+      <div className={`h-px ${compact ? 'my-2.5' : 'my-4'}`} style={{ background: 'linear-gradient(90deg, transparent, rgba(217,180,92,0.35), transparent)' }} />
 
       {/* six sub-ratings */}
-      <div className="grid grid-cols-2 gap-x-6 gap-y-3.5">
+      <div className={`grid grid-cols-2 ${compact ? 'gap-x-3 gap-y-2' : 'gap-x-6 gap-y-3.5'}`}>
         {stats.map((s) => (
-          <StatBar key={s.label} label={s.label} value={stat100(r, s)} />
+          <StatBar key={s.label} label={s.label} value={stat100(r, s)} compact={compact} />
         ))}
       </div>
-    </div>
-  )
-}
-
-/**
- * Compact pitch token — a mini FIFA card. Gold overall + position, photo,
- * name and team badge. Click bubbles up via `onClick`.
- */
-export function MiniFifaCard({
-  r,
-  onClick,
-  captain,
-  viceCaptain,
-  streak,
-  bench,
-}: {
-  r: RatingRow
-  onClick?: () => void
-  captain?: boolean
-  viceCaptain?: boolean
-  streak?: string | null
-  bench?: boolean
-}) {
-  const ov = overall100(r)
-  return (
-    <button
-      onClick={onClick}
-      className={`group relative min-w-0 flex-1 basis-0 overflow-hidden rounded-xl p-1.5 text-center transition-transform hover:-translate-y-0.5 md:p-2 ${
-        bench ? 'opacity-95' : ''
-      }`}
-      style={{
-        maxWidth: 112,
-        background: 'linear-gradient(165deg, #221e17 0%, #14110c 60%, #100d09 100%)',
-        border: '1px solid rgba(217,180,92,0.22)',
-        boxShadow: '0 6px 16px rgba(0,0,0,0.35)',
-      }}
-      title={`${r.web_name} · ${r.position} · ${teamFullNames[String(r.team)] || r.team} · £${r.price}m`}
-    >
-      <div className="absolute inset-x-0 top-0 h-[2px]" style={{ background: 'var(--grad-accent)' }} />
-      {/* overall + pos, top-left */}
-      <div className="absolute top-1 left-1.5 z-10 flex flex-col items-center leading-none">
-        <span className="font-display text-[17px] text-accent tabular-nums">{ov ?? '—'}</span>
-        <span className="font-display text-[8px] tracking-[0.06em] text-accent-2">{POS_SHORT[String(r.position)] ?? r.position}</span>
-      </div>
-      {captain && <span className="absolute top-1 right-1 z-10 grid size-4 place-items-center rounded-full bg-accent text-[9px] font-bold text-accent-contrast">C</span>}
-      {viceCaptain && <span className="absolute top-1 right-1 z-10 grid size-4 place-items-center rounded-full bg-surface-3 text-[9px] font-bold text-ink">V</span>}
-      {!captain && !viceCaptain && streak === '🔥 Hot' && <span className="absolute top-1 right-1 z-10 text-hot"><Icon name="flame" size={11} solid /></span>}
-      {!captain && !viceCaptain && streak === '🧊 Cold' && <span className="absolute top-1 right-1 z-10 text-cold"><Icon name="snow" size={11} /></span>}
-
-      <PlayerPhoto
-        code={r.code}
-        element={r.element}
-        hero
-        className="mx-auto h-14 w-auto object-contain object-bottom"
-        placeholder={<div className="mx-auto grid h-14 w-10 place-items-center text-ink-3"><Icon name="users" size={16} /></div>}
-      />
-      <div className="mt-0.5 truncate text-[11px] font-semibold text-ink">{String(r.web_name)}</div>
-      <div className="mt-0.5 flex items-center justify-center gap-1 text-[9px] text-ink-2">
-        <TeamBadge team={String(r.team)} size={11} />
-        £{r.price}m
-      </div>
-    </button>
+    </Tag>
   )
 }
