@@ -10,6 +10,7 @@ import { Icon, type IconName } from '../components/Icon'
 import { TeamBadge, PositionIcon } from '../components/badges'
 import { PageSkeleton } from '../components/Skeleton'
 import { PlayerPhoto as PhotoImg } from '../components/PlayerPhoto'
+import { ShareCard } from '../components/ShareCard'
 import { PlayerScatterMap, PlayerZoneMap } from '../components/ShotMap'
 import { useCore } from '../lib/useData'
 import { num, str, bool } from '../lib/rows'
@@ -224,8 +225,11 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
           rating's own construction: receipts → stats → profile → underlying →
           reliability → context → shots. */}
       <div className="px-5 pb-5 md:px-6 md:pb-6">
-        <div className="relative z-10 -mt-12 mb-8 flex flex-wrap justify-center gap-3">
+        <div className="relative z-10 -mt-12 mb-6 flex flex-wrap justify-center gap-3">
           {heroChips(r, xptsRank).map((c) => <BigChip key={c.k} label={c.k} value={c.v} sub={c.sub} />)}
+        </div>
+        <div className="mb-8 flex justify-center">
+          <ShareCard r={r} fixtureEase={data.fixtureEase} />
         </div>
 
         <PointsEngine r={r} />

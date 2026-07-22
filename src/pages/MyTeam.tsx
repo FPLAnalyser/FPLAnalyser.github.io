@@ -6,6 +6,7 @@ import { StarRating } from '../components/StarRating'
 import { Tabs, type TabDef } from '../components/Tabs'
 import { TeamBadge } from '../components/badges'
 import { FifaCard, type RatingWindow } from '../components/FifaCard'
+import { SquadDNA, SquadMoves } from '../components/SquadInsights'
 import { Icon, type IconName } from '../components/Icon'
 import { useCore } from '../lib/useData'
 import { str } from '../lib/rows'
@@ -99,6 +100,7 @@ interface Enriched { pick: any; r: RatingRow | undefined; p4: Row | undefined; s
 
 function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
   const { picksData, gw, historyData, entryData, teamId } = loaded
+  const navigate = useNavigate()
   const [tab, setTab] = useState<SquadTab>('squad')
   const [ratingWin, setRatingWin] = useState<RatingWindow>('season')
   const picks: any[] = picksData.picks || []
@@ -185,6 +187,16 @@ function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
                 {bench.map((e, j) => <PlayerCardSlot key={j} e={e} win={ratingWin} fixtureEase={data.fixtureEase} bench />)}
               </div>
             </div>
+          )}
+
+          {startingRated.length > 0 && (
+            <>
+              <SectionHeader>Squad DNA & moves</SectionHeader>
+              <div className="grid gap-3 lg:grid-cols-2">
+                <SquadDNA xi={startingRated} />
+                <SquadMoves xi={startingRated} pool={data.ratings} owned={ownedElements} onPlayer={(n) => navigate(`/player?name=${encodeURIComponent(n)}`)} />
+              </div>
+            </>
           )}
         </>
       ) : (
