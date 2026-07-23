@@ -79,7 +79,7 @@
       [
         'ratings', 'personas_4gw', 'advanced_metrics', 'team_metrics',
         'season_to_date', 'player_tiers', 'fixture_ease', 'meta',
-        'benchmarks', 'replacement_pool', 'persona_shifts', 'price_risk', 'player_form'
+        'benchmarks', 'replacement_pool', 'persona_shifts', 'price_risk', 'player_form', 'teams'
       ].forEach(function (n) {
         window.__early[n] = fetch('site_data/' + season + '/' + n + '.json');
         window.__early[n].catch(function () {}); // avoid unhandled-rejection noise

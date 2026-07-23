@@ -2,6 +2,8 @@
 // star parsing, FDR colours, tooltip text. Ported from js/util.js. Rendering
 // (badges, stars, tooltips, fixture chips) lives in components/.
 
+import { teamCodeFor, teamNameFor } from './teamRegistry'
+
 export const teamFullNames: Record<string, string> = {
   ARS: 'Arsenal', AVL: 'Aston Villa', BOU: 'Bournemouth', BRE: 'Brentford', BHA: 'Brighton',
   BUR: 'Burnley', CHE: 'Chelsea', CRY: 'Crystal Palace', EVE: 'Everton', FUL: 'Fulham',
@@ -16,8 +18,14 @@ export const teamCodes: Record<string, number> = {
 }
 
 export function teamBadgeUrl(team: string): string | null {
-  const code = teamCodes[team]
+  // Prefer the code from loaded data (covers promoted clubs) then the fallback map.
+  const code = teamCodeFor(team) ?? teamCodes[team]
   return code ? `https://resources.premierleague.com/premierleague/badges/t${code}.png` : null
+}
+
+/** Full club name — data first (promoted clubs), then the fallback map, then the code. */
+export function teamLabel(team: string): string {
+  return teamNameFor(team) || teamFullNames[team] || team
 }
 
 /** Club accent colours for hero glows/highlights — tuned to read on dark. */

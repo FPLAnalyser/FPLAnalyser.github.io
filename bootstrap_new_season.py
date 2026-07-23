@@ -112,6 +112,11 @@ for fx in fixtures:
 dump("fixture_ease", fe)
 print(f"  fixture_ease.json — {len(fe)} rows")
 
+# 2b. teams.json — short_name → permanent badge code + full name (fixes badges
+#     for promoted clubs the frontend's hardcoded map doesn't know).
+dump("teams", [{"short_name": t["short_name"], "name": t["name"], "code": t["code"]} for t in boot["teams"]])
+print(f"  teams.json — {len(boot['teams'])} clubs")
+
 # 3. team_ratings.json — carry last season for returning clubs; promoted → absent (N/A).
 current_teams = {t["short_name"] for t in boot["teams"]}
 prev_tr = load("team_ratings") or []
