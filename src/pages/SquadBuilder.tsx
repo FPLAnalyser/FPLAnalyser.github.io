@@ -6,6 +6,7 @@ import { Tabs, type TabDef } from '../components/Tabs'
 import { TeamBadge } from '../components/badges'
 import { FixtureChips } from '../components/FixtureChips'
 import { RatingCard } from '../components/RatingCard'
+import { ShareFooter } from '../components/ShareFooter'
 import { Icon } from '../components/Icon'
 import { useCore } from '../lib/useData'
 import { tapHaptic, shareImageNative } from '../lib/native'
@@ -406,6 +407,7 @@ function SquadShare({ chosen, fixtureEase, squadScore, bestXI, spent, unrated, t
           </div>
           <SquadBoard chosen={chosen} fixtureEase={fixtureEase} capture />
           {unrated > 0 && <div className="mt-2 text-center text-[10px] text-ink-3">{unrated} player{unrated > 1 ? 's' : ''} new to the league (unrated)</div>}
+          <ShareFooter />
         </div>
         <div className="mt-3 flex flex-wrap justify-center gap-2">
           <button onClick={save} disabled={busy || total === 0} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent-strong disabled:opacity-60">{busy ? 'Rendering…' : '⭳ Save image'}</button>

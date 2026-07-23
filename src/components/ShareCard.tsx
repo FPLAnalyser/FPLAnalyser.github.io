@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { RatingCard } from './RatingCard'
+import { ShareFooter } from './ShareFooter'
 import { shareImageNative } from '../lib/native'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
@@ -76,8 +77,9 @@ export function ShareCard({ r, fixtureEase }: { r: RatingRow; fixtureEase?: Fixt
       {open && (
         <div className="fixed inset-0 z-[200] grid place-items-center bg-black/70 p-4 backdrop-blur-sm" onClick={() => setOpen(false)} role="dialog" aria-modal="true">
           <div className="w-full max-w-[360px]" onClick={(e) => e.stopPropagation()}>
-            <div ref={cardRef}>
+            <div ref={cardRef} className="bg-[#0c0b09]">
               <RatingCard r={r} fixtureEase={fixtureEase} />
+              <ShareFooter />
             </div>
             <div className="mt-3 flex flex-wrap justify-center gap-2">
               <button onClick={save} disabled={busy} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent-strong disabled:opacity-60">
