@@ -9,6 +9,7 @@
 // a future Capacitor native HTTP layer.
 
 import type { CoreData, Row } from './types'
+import { registerTeams } from './teamRegistry'
 
 declare global {
   interface Window {
@@ -116,6 +117,7 @@ export function loadCore(): Promise<CoreData> {
       personaShifts,
       priceRisk,
       playerForm,
+      teams,
     ] = await Promise.all([
       loadTable('ratings') as Promise<CoreData['ratings']>,
       loadTable('personas_4gw') as Promise<CoreData['personas4']>,
@@ -131,7 +133,12 @@ export function loadCore(): Promise<CoreData> {
       optional<Row[]>('persona_shifts', []),
       optional<Row[]>('price_risk', []),
       optional<Row[]>('player_form', []),
+      optional<Row[]>('teams', []),
     ])
+    // Register team badge codes / names from the season's teams table (covers
+    // promoted clubs the hardcoded fallback map doesn't know) before any UI
+    // renders. Optional table — absent for older seasons, which use the map.
+    registerTeams(teams)
     return {
       ratings,
       personas4,
