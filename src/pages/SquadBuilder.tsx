@@ -4,12 +4,13 @@ import { PageHeader, PageShell } from '../components/PageShell'
 import { PageSkeleton } from '../components/Skeleton'
 import { Tabs, type TabDef } from '../components/Tabs'
 import { TeamBadge, PositionIcon } from '../components/badges'
+import { FixtureChips } from '../components/FixtureChips'
 import { Icon } from '../components/Icon'
 import { StarRating } from '../components/StarRating'
 import { useCore } from '../lib/useData'
 import { num } from '../lib/rows'
 import { teamLabel } from '../lib/util'
-import type { RatingRow } from '../lib/types'
+import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
 type Pos = 'GKP' | 'DEF' | 'MID' | 'FWD'
 const SLOTS: { pos: Pos; count: number }[] = [
@@ -44,6 +45,21 @@ const SORT_TABS: TabDef[] = [
   { id: 'owned', label: 'Owned' },
 ]
 
+// Position-relevant rating dimensions to filter by (the pipeline stores these
+// on a 0–5 scale; the sliders work in 0–100 like every rating on the site).
+const DIMS: Record<Pos, { key: string; label: string }[]> = {
+  GKP: [{ key: 'season_save_score_norm', label: 'Shot Stop' }, { key: 'season_cs_score_norm', label: 'Clean Sheet' }],
+  DEF: [{ key: 'season_cs_score_norm', label: 'Clean Sheet' }, { key: 'season_dc_score_norm', label: 'Def Con' }, { key: 'season_goal_score_norm', label: 'Threat' }],
+  MID: [{ key: 'season_goal_score_norm', label: 'Goal' }, { key: 'season_creative_score_norm', label: 'Creativity' }, { key: 'season_dc_score_norm', label: 'Def Con' }],
+  FWD: [{ key: 'season_goal_score_norm', label: 'Goal' }, { key: 'season_creative_score_norm', label: 'Creativity' }],
+}
+const dim100 = (r: RatingRow, key: string): number | null => {
+  const v = num(r, key)
+  return v == null ? null : Math.round(Math.max(0, Math.min(100, v * 20)))
+}
+const PRICE_MIN = 4.0
+const PRICE_MAX = 15.0
+
 export default function SquadBuilder() {
   const { data, error } = useCore()
   const navigate = useNavigate()
@@ -54,6 +70,12 @@ export default function SquadBuilder() {
   const [sort, setSort] = useState<SortKey>('rating')
   const [query, setQuery] = useState('')
   const [note, setNote] = useState<string | null>(null)
+  const [maxPrice, setMaxPrice] = useState(PRICE_MAX)
+  const [minRating, setMinRating] = useState(0)
+  const [minDim, setMinDim] = useState<Record<string, number>>({})
+  const [showFilters, setShowFilters] = useState(false)
+
+  const fixtureEase = (data?.fixtureEase ?? []) as FixtureEaseRow[]
 
   const pool = useMemo(
     () => ((data?.ratings ?? []) as RatingRow[]).filter(
@@ -123,9 +145,20 @@ export default function SquadBuilder() {
   }
 
   // The filtered, sorted picker list.
+  const dims = DIMS[pickPos]
   const list = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const rows = pool.filter((r) => r.position === pickPos && (!q || String(r.web_name).toLowerCase().includes(q)))
+    const rows = pool.filter((r) => {
+      if (r.position !== pickPos) return false
+      if (q && !String(r.web_name).toLowerCase().includes(q)) return false
+      if (priceOf(r) > maxPrice + 1e-9) return false
+      if (minRating > 0 && (ovOf(r) ?? 0) < minRating) return false
+      for (const d of dims) {
+        const th = minDim[d.key] ?? 0
+        if (th > 0 && (dim100(r, d.key) ?? 0) < th) return false
+      }
+      return true
+    })
     const key = (r: RatingRow) => {
       if (sort === 'price') return priceOf(r)
       if (sort === 'owned') return num(r, 'selected_by_percent') ?? 0
@@ -133,7 +166,10 @@ export default function SquadBuilder() {
       return ovOf(r) ?? -1
     }
     return [...rows].sort((a, b) => key(b) - key(a)).slice(0, 60)
-  }, [pool, pickPos, query, sort])
+  }, [pool, pickPos, query, sort, maxPrice, minRating, minDim, dims])
+
+  const activeFilters = (maxPrice < PRICE_MAX ? 1 : 0) + (minRating > 0 ? 1 : 0) + dims.filter((d) => (minDim[d.key] ?? 0) > 0).length
+  const resetFilters = () => { setMaxPrice(PRICE_MAX); setMinRating(0); setMinDim({}) }
 
   if (!data) {
     return (
@@ -190,12 +226,15 @@ export default function SquadBuilder() {
                     {inPos.map((r) => (
                       <div key={r.element} className="flex items-center gap-2.5 rounded-lg bg-surface-2/50 px-2.5 py-1.5">
                         <TeamBadge team={String(r.team)} size={16} />
-                        <button className="min-w-0 flex-1 text-left" onClick={() => navigate(`/player?name=${encodeURIComponent(String(r.web_name))}`)}>
-                          <div className="truncate text-sm font-medium text-ink hover:text-accent">{String(r.web_name)}</div>
-                          <div className="text-[11px] text-ink-3">{teamLabel(String(r.team))} · £{priceOf(r).toFixed(1)}m</div>
-                        </button>
+                        <div className="min-w-0 flex-1">
+                          <button className="block w-full text-left" onClick={() => navigate(`/player?name=${encodeURIComponent(String(r.web_name))}`)}>
+                            <div className="truncate text-sm font-medium text-ink hover:text-accent">{String(r.web_name)}</div>
+                            <div className="text-[11px] text-ink-3">{teamLabel(String(r.team))} · £{priceOf(r).toFixed(1)}m</div>
+                          </button>
+                          <div className="mt-1"><FixtureChips fixtureEase={fixtureEase} team={String(r.team)} n={4} /></div>
+                        </div>
                         <StarRating value={num(r, 'season_overall_score')} size={12} />
-                        <button aria-label="Remove" onClick={() => remove(r.element)} className="text-ink-3 transition-colors hover:text-bad"><Icon name="x" size={15} /></button>
+                        <button aria-label="Remove" onClick={() => remove(r.element)} className="shrink-0 text-ink-3 transition-colors hover:text-bad"><Icon name="x" size={15} /></button>
                       </div>
                     ))}
                     {Array.from({ length: Math.max(0, count - inPos.length) }).map((_, i) => (
@@ -230,10 +269,32 @@ export default function SquadBuilder() {
             />
             {query && <button aria-label="Clear" onClick={() => setQuery('')} className="text-ink-3 hover:text-ink"><Icon name="x" size={15} /></button>}
           </div>
-          <div className="mb-3 flex items-center gap-2">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
             <span className="text-[11px] font-semibold tracking-[0.1em] text-ink-3 uppercase">Sort</span>
             <Tabs tabs={SORT_TABS} active={sort} onChange={(id) => setSort(id as SortKey)} layoutId="squad-sort" />
+            <button
+              onClick={() => setShowFilters((s) => !s)}
+              className={`ml-auto inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-colors ${
+                activeFilters > 0 ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+              }`}
+            >
+              <Icon name="target" size={13} /> Filters{activeFilters > 0 ? ` (${activeFilters})` : ''} <span className="text-[10px]">{showFilters ? '▴' : '▾'}</span>
+            </button>
           </div>
+
+          {showFilters && (
+            <div className="mb-3 flex flex-col gap-3 rounded-xl border border-line bg-surface-1/50 p-3.5">
+              <RangeRow label="Max price" kind="max" value={maxPrice} min={PRICE_MIN} max={PRICE_MAX} step={0.5} display={`£${maxPrice.toFixed(1)}m`} onChange={setMaxPrice} />
+              <RangeRow label="Min rating" kind="min" value={minRating} min={0} max={100} step={5} display={String(minRating)} onChange={setMinRating} />
+              {dims.map((d) => (
+                <RangeRow key={d.key} label={`Min ${d.label}`} kind="min" value={minDim[d.key] ?? 0} min={0} max={100} step={5} display={String(minDim[d.key] ?? 0)} onChange={(v) => setMinDim((m) => ({ ...m, [d.key]: v }))} />
+              ))}
+              {activeFilters > 0 && (
+                <button onClick={resetFilters} className="self-start text-xs font-semibold text-accent hover:underline">Reset filters</button>
+              )}
+            </div>
+          )}
+
           {note && <div className="mb-2 rounded-lg bg-bad/10 px-3 py-2 text-sm font-medium text-bad">{note}</div>}
           <div className="overflow-hidden rounded-xl border border-line">
             {list.map((r) => {
@@ -242,11 +303,14 @@ export default function SquadBuilder() {
               return (
                 <div key={r.element} className="flex items-center gap-2.5 border-b border-line px-3 py-2 last:border-0">
                   <TeamBadge team={String(r.team)} size={16} />
-                  <button className="min-w-0 flex-1 text-left" onClick={() => navigate(`/player?name=${encodeURIComponent(String(r.web_name))}`)}>
-                    <div className="truncate text-sm font-medium text-ink hover:text-accent">{String(r.web_name)}</div>
-                    <div className="text-[11px] text-ink-3">{teamLabel(String(r.team))} · £{priceOf(r).toFixed(1)}m · {Math.round(num(r, 'selected_by_percent') ?? 0)}% owned</div>
-                  </button>
-                  <span className="w-9 text-right font-num text-sm font-semibold tabular-nums text-ink-2">{o ?? '—'}</span>
+                  <div className="min-w-0 flex-1">
+                    <button className="block w-full text-left" onClick={() => navigate(`/player?name=${encodeURIComponent(String(r.web_name))}`)}>
+                      <div className="truncate text-sm font-medium text-ink hover:text-accent">{String(r.web_name)}</div>
+                      <div className="text-[11px] text-ink-3">{teamLabel(String(r.team))} · £{priceOf(r).toFixed(1)}m · {Math.round(num(r, 'selected_by_percent') ?? 0)}% owned</div>
+                    </button>
+                    <div className="mt-1"><FixtureChips fixtureEase={fixtureEase} team={String(r.team)} n={4} /></div>
+                  </div>
+                  <span className="w-9 shrink-0 text-right font-num text-sm font-semibold tabular-nums text-ink-2">{o ?? '—'}</span>
                   <button
                     onClick={() => add(r)}
                     disabled={!!why}
@@ -260,11 +324,30 @@ export default function SquadBuilder() {
                 </div>
               )
             })}
-            {list.length === 0 && <div className="px-3 py-8 text-center text-sm text-ink-3">No players match.</div>}
+            {list.length === 0 && <div className="px-3 py-8 text-center text-sm text-ink-3">No players match these filters.</div>}
           </div>
         </div>
       </div>
     </PageShell>
+  )
+}
+
+function RangeRow({ label, kind, value, min, max, step, display, onChange }: {
+  label: string; kind: 'min' | 'max'; value: number; min: number; max: number; step: number; display: string; onChange: (v: number) => void
+}) {
+  const off = kind === 'min' ? value <= min : value >= max
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-xs">
+        <span className="font-medium text-ink-2">{label}</span>
+        <span className={`font-num tabular-nums ${off ? 'text-ink-3' : 'font-semibold text-accent'}`}>{off ? 'Any' : display}</span>
+      </div>
+      <input
+        type="range" min={min} max={max} step={step} value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-surface-3 accent-accent"
+      />
+    </div>
   )
 }
 
@@ -306,40 +389,58 @@ function bestElevenScore(squad: RatingRow[]): number | null {
   return best < 0 ? null : Math.round(best / 11)
 }
 
-/** Greedy auto-build: highest rating first, reserving the cheapest price for the
- *  slots still to fill so the squad always completes within budget. */
+/** Auto-build the best-value squad: start from the cheapest legal 15, then
+ *  repeatedly apply the single same-position upgrade with the best rating gain
+ *  per extra pound that still fits the budget. This maximises total squad
+ *  quality for £100m — a strong, balanced, fully-playable side rather than a
+ *  couple of premiums padded out with bench fodder. */
 function autoBuild(pool: RatingRow[]): number[] {
-  const minByPos: Record<Pos, number> = { GKP: Infinity, DEF: Infinity, MID: Infinity, FWD: Infinity }
-  for (const r of pool) {
-    const p = r.position as Pos
-    minByPos[p] = Math.min(minByPos[p], priceOf(r))
-  }
+  const ovN = (r: RatingRow) => ovOf(r) ?? 0
   const need: Record<Pos, number> = { ...NEED }
+  const byPos: Record<Pos, RatingRow[]> = { GKP: [], DEF: [], MID: [], FWD: [] }
+  for (const r of pool) byPos[r.position as Pos].push(r)
+
+  // 1. Cheapest legal squad (respecting the 3-per-club cap).
+  const picked: RatingRow[] = []
+  const pset = new Set<number>()
   const club = new Map<string, number>()
-  const picked: number[] = []
   let spent = 0
-  const ranked = [...pool].sort((a, b) => (ovOf(b) ?? -1) - (ovOf(a) ?? -1))
-
-  const reserve = (excludePos: Pos) => {
-    // cheapest cost to fill all still-needed slots after taking one in excludePos
-    let r = 0
-    for (const p of ['GKP', 'DEF', 'MID', 'FWD'] as Pos[]) {
-      const n = need[p] - (p === excludePos ? 1 : 0)
-      if (n > 0) r += n * minByPos[p]
-    }
-    return r
-  }
-
-  for (const r of ranked) {
+  for (const r of [...pool].sort((a, b) => priceOf(a) - priceOf(b))) {
     const p = r.position as Pos
     if (need[p] <= 0) continue
     if ((club.get(String(r.team)) ?? 0) >= MAX_PER_CLUB) continue
-    if (spent + priceOf(r) + reserve(p) > BUDGET + 1e-9) continue
-    picked.push(r.element)
-    spent += priceOf(r)
-    need[p]--
+    picked.push(r); pset.add(r.element); spent += priceOf(r); need[p]--
     club.set(String(r.team), (club.get(String(r.team)) ?? 0) + 1)
     if (picked.length === 15) break
   }
-  return picked
+  if (picked.length < 15) return picked.map((r) => r.element)
+
+  const clubCount = (team: string, exclEl: number) =>
+    picked.reduce((n, r) => n + (String(r.team) === team && r.element !== exclEl ? 1 : 0), 0)
+
+  // 2. Hill-climb upgrades until no affordable improvement remains.
+  for (let guard = 0; guard < 500; guard++) {
+    const rem = BUDGET - spent
+    let best: { i: number; y: RatingRow; cost: number } | null = null
+    let bestScore = 0
+    for (let i = 0; i < picked.length; i++) {
+      const x = picked[i]
+      const p = x.position as Pos
+      for (const y of byPos[p]) {
+        if (pset.has(y.element)) continue
+        const dov = ovN(y) - ovN(x)
+        if (dov <= 0) continue
+        const dcost = priceOf(y) - priceOf(x)
+        if (dcost > rem + 1e-9) continue
+        if (String(y.team) !== String(x.team) && clubCount(String(y.team), x.element) >= MAX_PER_CLUB) continue
+        const score = dcost > 1e-9 ? dov / dcost : dov * 1000 // free/cheaper upgrades first
+        if (score > bestScore) { bestScore = score; best = { i, y, cost: dcost } }
+      }
+    }
+    if (!best) break
+    const x = picked[best.i]
+    pset.delete(x.element); pset.add(best.y.element)
+    picked[best.i] = best.y; spent += best.cost
+  }
+  return picked.map((r) => r.element)
 }
