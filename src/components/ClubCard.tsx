@@ -1,7 +1,7 @@
 import { TeamBadge } from './badges'
 import { FixtureChips } from './FixtureChips'
 import { num } from '../lib/rows'
-import { teamFullNames, ordinal } from '../lib/util'
+import { teamLabel, ordinal } from '../lib/util'
 import type { FixtureEaseRow, TeamRatingRow } from '../lib/types'
 
 // Club rating card built from our own Attack / Defence team ratings — the
@@ -49,7 +49,7 @@ export function ClubCard({
       <div className="flex items-center gap-3">
         <TeamBadge team={team} size={40} />
         <div className="min-w-0">
-          <div className="truncate font-display text-[19px] leading-none text-ink uppercase">{teamFullNames[team] || team}</div>
+          <div className="truncate font-display text-[19px] leading-none text-ink uppercase">{teamLabel(team)}</div>
           <div className="mt-1 text-[10px] font-semibold tracking-[0.1em] text-ink-3 uppercase">Premier League</div>
         </div>
       </div>
@@ -119,7 +119,7 @@ export function TeamMatchup({
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-1 flex-col items-center gap-1.5 text-center">
           <TeamBadge team={team} size={34} />
-          <div className="text-sm font-semibold text-ink">{teamFullNames[team] || team}</div>
+          <div className="text-sm font-semibold text-ink">{teamLabel(team)}</div>
         </div>
         <div className="text-center">
           <div className="font-display text-[30px] leading-none text-accent tabular-nums">{xgFor.toFixed(1)}</div>
@@ -131,11 +131,11 @@ export function TeamMatchup({
         </div>
         <div className="flex flex-1 flex-col items-center gap-1.5 text-center">
           <TeamBadge team={opp} size={34} />
-          <div className="text-sm font-semibold text-ink">{teamFullNames[opp] || opp}</div>
+          <div className="text-sm font-semibold text-ink">{teamLabel(opp)}</div>
         </div>
       </div>
       <div className="mt-3 text-center text-xs text-ink-2">
-        <span className="rounded-full bg-good/12 px-2.5 py-1 font-semibold text-good">{teamFullNames[team] || team} clean sheet {csPct}%</span>
+        <span className="rounded-full bg-good/12 px-2.5 py-1 font-semibold text-good">{teamLabel(team)} clean sheet {csPct}%</span>
       </div>
     </div>
   )
