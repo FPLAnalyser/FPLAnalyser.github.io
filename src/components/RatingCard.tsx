@@ -6,7 +6,7 @@ import { num } from '../lib/rows'
 import { teamFullNames } from '../lib/util'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
-// FIFA-ultimate-team-style player card. Big overall + position + photo + team,
+// Player rating card. Big overall + position + photo + team,
 // six position-appropriate sub-ratings, next-four fixtures, and a rarity frame
 // driven by the overall (bronze→silver→gold→elite) with a distinct differential
 // treatment for low-owned gems. `window` switches every rating between season
@@ -104,7 +104,7 @@ function StatBar({ label, value, compact }: { label: string; value: number | nul
   )
 }
 
-export function FifaCard({
+export function RatingCard({
   r,
   className,
   compact,

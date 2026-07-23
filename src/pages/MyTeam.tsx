@@ -5,7 +5,7 @@ import { SkeletonBlock } from '../components/Skeleton'
 import { StarRating } from '../components/StarRating'
 import { Tabs, type TabDef } from '../components/Tabs'
 import { TeamBadge } from '../components/badges'
-import { FifaCard, type RatingWindow } from '../components/FifaCard'
+import { RatingCard, type RatingWindow } from '../components/RatingCard'
 import { SquadDNA, SquadMoves } from '../components/SquadInsights'
 import { Icon, type IconName } from '../components/Icon'
 import { useCore } from '../lib/useData'
@@ -162,7 +162,7 @@ function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
             <h2 className="text-sm font-semibold tracking-wide text-ink-2 uppercase">Starting XI — Gameweek {gw}</h2>
             <RatingWindowToggle value={ratingWin} onChange={setRatingWin} />
           </div>
-          <p className="mb-3 -mt-1 text-sm text-ink-3">Your XI as FIFA-style cards — overall plus the sub-ratings that matter for each position, and the next-4 fixtures. Tap a card for the full profile.</p>
+          <p className="mb-3 -mt-1 text-sm text-ink-3">Your XI, card by card — overall plus the sub-ratings that matter for each position, and the next-4 fixtures. Tap a card for the full profile.</p>
           <div
             className="relative overflow-hidden rounded-3xl p-3 md:p-6"
             style={{
@@ -268,7 +268,7 @@ function RatingWindowToggle({ value, onChange }: { value: RatingWindow; onChange
 }
 
 /**
- * One player slot in the formation — a full (compact) FIFA card that links to
+ * One player slot in the formation — a full (compact) rating card that links to
  * the detail page, or a placeholder when the player has no rating row.
  */
 function PlayerCardSlot({ e, win, fixtureEase }: { e: Enriched; win: RatingWindow; fixtureEase: FixtureEaseRow[]; bench?: boolean }) {
@@ -280,7 +280,7 @@ function PlayerCardSlot({ e, win, fixtureEase }: { e: Enriched; win: RatingWindo
   }
   return (
     <div className={wrap}>
-      <FifaCard
+      <RatingCard
         r={r}
         compact
         window={win}

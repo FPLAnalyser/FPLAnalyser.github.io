@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react'
-import { FifaCard } from './FifaCard'
+import { RatingCard } from './RatingCard'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
 /**
- * Share a player's FIFA card. Opens a modal with the card and actions:
+ * Share a player's rating card. Opens a modal with the card and actions:
  * save/share as a PNG (rasterised client-side) or copy a deep link. Image
  * export degrades gracefully — if the cross-origin photo can't be rendered the
  * card still exports without it, and any hard failure falls back to the link.
@@ -73,7 +73,7 @@ export function ShareCard({ r, fixtureEase }: { r: RatingRow; fixtureEase?: Fixt
         <div className="fixed inset-0 z-[200] grid place-items-center bg-black/70 p-4 backdrop-blur-sm" onClick={() => setOpen(false)} role="dialog" aria-modal="true">
           <div className="w-full max-w-[360px]" onClick={(e) => e.stopPropagation()}>
             <div ref={cardRef}>
-              <FifaCard r={r} fixtureEase={fixtureEase} />
+              <RatingCard r={r} fixtureEase={fixtureEase} />
             </div>
             <div className="mt-3 flex flex-wrap justify-center gap-2">
               <button onClick={save} disabled={busy} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent-strong disabled:opacity-60">

@@ -4,7 +4,7 @@ import { num } from '../lib/rows'
 import { teamFullNames, ordinal } from '../lib/util'
 import type { FixtureEaseRow, TeamRatingRow } from '../lib/types'
 
-// FIFA-style club card built from our own Attack / Defence team ratings — the
+// Club rating card built from our own Attack / Defence team ratings — the
 // same visual language as the player cards, applied to the 20 clubs.
 
 function StatBlock({ v, rank, label }: { v: number | null; rank: number | null; label: string }) {
