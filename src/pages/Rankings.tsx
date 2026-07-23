@@ -24,6 +24,7 @@ const TABS: TabDef[] = [
   { id: 'goal-threats', label: 'Goal Threats', icon: <Icon name="target" size={13} /> },
   { id: 'creators', label: 'Creators', icon: <Icon name="bolt" size={13} /> },
   { id: 'clean-sheets', label: 'Clean Sheets', icon: <Icon name="shield" size={13} /> },
+  { id: 'goalkeepers', label: 'Goalkeepers', icon: <Icon name="shield" size={13} /> },
   { id: 'def-con', label: 'Def Con', icon: <Icon name="shield" size={13} /> },
   { id: 'value', label: 'Value Picks', icon: <Icon name="coin" size={13} /> },
   { id: 'form', label: 'Form', icon: <span className="text-hot"><Icon name="flame" size={13} solid /></span> },
@@ -176,21 +177,22 @@ export default function Rankings() {
 
   const toPlayer = (name: string) => navigate(`/player?name=${encodeURIComponent(name)}`)
 
-  // Position filter options depend on the tab (att-only tabs hide GKP/DEF; def-only hides MID/FWD).
+  // Position filter options depend on the tab. Single-position tabs (clean
+  // sheets = defenders, goalkeepers) hide the filter entirely.
   const isAttOnly = tab === 'goal-threats' || tab === 'creators'
-  const isDefOnly = tab === 'clean-sheets'
   const isOutfield = tab === 'def-con'
+  const singlePos = tab === 'clean-sheets' || tab === 'goalkeepers'
   const posOptions = useMemo(() => {
     const ALL = { id: 'ALL', label: 'All' }
     const GKP = { id: 'GKP', label: 'GKP' }
     const DEF = { id: 'DEF', label: 'DEF' }
     const MID = { id: 'MID', label: 'MID' }
     const FWD = { id: 'FWD', label: 'FWD' }
+    if (singlePos) return [ALL]
     if (isAttOnly) return [ALL, MID, FWD]
-    if (isDefOnly) return [ALL, GKP, DEF]
     if (isOutfield) return [ALL, DEF, MID, FWD]
     return [ALL, GKP, DEF, MID, FWD]
-  }, [isAttOnly, isDefOnly, isOutfield])
+  }, [isAttOnly, isOutfield, singlePos])
 
   const view: TabView | null = useMemo(() => {
     const seasonOk = ratings.filter((p) => bool(p, 'season_ok'))
@@ -256,21 +258,39 @@ export default function Rankings() {
         }
       }
       case 'clean-sheets': {
-        const def = seasonOk.filter((p) => p.position === 'GKP' || p.position === 'DEF')
-        const filtered = pos === 'GKP' || pos === 'DEF' ? def.filter((p) => p.position === pos) : def
-        const rows = rankedPool(filtered, 'season_cs_score', query)
+        const def = seasonOk.filter((p) => p.position === 'DEF')
+        const rows = rankedPool(def, 'season_cs_score', query)
         return {
           columns: [
             rankCol(),
             playerCol,
-            posCol,
             teamCol,
+            priceCol,
             scoreCol('season_cs_score_norm', 'Clean Sheet', TOOLTIPS.cs as string),
             pctCol('season_m_cs_rate', 'CS%', 'Share of appearances that ended in a clean sheet.'),
             numCol('season_m_xgc', 'xGC/90', 'Expected goals conceded per 90 while on the pitch — lower is better.'),
-            numCol('season_m_saves', 'Saves/90', 'Saves per 90 minutes (keepers).', 1),
-            numCol('season_m_prevented', 'Prev/90', 'Goals prevented vs expected per 90 (shot-stopping edge).'),
+            scoreCol('season_dc_score_norm', 'Def Con', TOOLTIPS.dc as string),
             scoreCol('season_overall_score', 'Overall', TOOLTIPS.overall as string),
+          ],
+          rows,
+        }
+      }
+      case 'goalkeepers': {
+        const gk = seasonOk.filter((p) => p.position === 'GKP')
+        const rows = rankedPool(gk, 'season_overall_score', query)
+        return {
+          columns: [
+            rankCol(),
+            playerCol,
+            teamCol,
+            priceCol,
+            scoreCol('season_overall_score', 'Rating', TOOLTIPS.overall as string),
+            scoreCol('season_cs_score_norm', 'Clean Sheet', TOOLTIPS.cs as string),
+            scoreCol('season_save_score_norm', 'Shot Stop', TOOLTIPS.save as string),
+            pctCol('season_m_cs_rate', 'CS%', 'Share of appearances that ended in a clean sheet.'),
+            numCol('season_m_xgc', 'xGC/90', 'Expected goals conceded per 90 while on the pitch — lower is better.'),
+            numCol('season_m_saves', 'Saves/90', 'Saves per 90 minutes.', 1),
+            numCol('season_m_prevented', 'Prev/90', 'Goals prevented vs expected per 90 (shot-stopping edge).'),
           ],
           rows,
         }
@@ -393,7 +413,7 @@ export default function Rankings() {
       )}
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <PillGroup options={posOptions} active={pos} onChange={setPos} />
+        {posOptions.length > 1 ? <PillGroup options={posOptions} active={pos} onChange={setPos} /> : <div />}
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           {showSearch && (
             <div className="relative w-full sm:w-64">
@@ -584,11 +604,20 @@ function buildNarrative(tab: string, ratings: RatingRow[], metrics: Row[], seaso
       )
     }
     case 'clean-sheets': {
-      const p = lead(rated.filter((x) => x.position === 'GKP' || x.position === 'DEF').sort((a, b) => (num(b, 'season_cs_score') ?? 0) - (num(a, 'season_cs_score') ?? 0)))
+      const p = lead(rated.filter((x) => x.position === 'DEF').sort((a, b) => (num(b, 'season_cs_score') ?? 0) - (num(a, 'season_cs_score') ?? 0)))
       if (!p) return null
       return (
         <>
-          {b(String(p.web_name))} anchors the strongest defensive numbers in the league. Clean-sheet ratings weigh xGC, not just results — they find defences that deserve their record.
+          {b(String(p.web_name))} anchors the strongest defensive numbers in the league. Clean-sheet ratings weigh xGC, not just results — they find defences that deserve their record. (Keepers have their own tab.)
+        </>
+      )
+    }
+    case 'goalkeepers': {
+      const p = lead(rated.filter((x) => x.position === 'GKP').sort((a, b) => (num(b, 'season_overall_score') ?? 0) - (num(a, 'season_overall_score') ?? 0)))
+      if (!p) return null
+      return (
+        <>
+          {b(String(p.web_name))} is the top-rated goalkeeper — clean sheets and shot-stopping combined. The columns split the two: some keepers earn on saves behind a busy defence, others on clean sheets behind a stingy one.
         </>
       )
     }

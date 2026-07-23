@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { Icon } from './Icon'
-import { OnboardingModal, hasSeenOnboarding } from './OnboardingModal'
+import { OnboardingModal } from './OnboardingModal'
 import { ThemeSwitcher } from './ThemeSwitcher'
 import { GlobalSearch, SearchSheet } from './GlobalSearch'
 import { BottomNav } from './BottomNav'
@@ -19,7 +19,8 @@ const LINKS: { to: string; label: string }[] = [
 ]
 
 export function Layout() {
-  const [helpOpen, setHelpOpen] = useState(() => !hasSeenOnboarding())
+  // Onboarding no longer auto-opens; it's only reachable from the info button.
+  const [helpOpen, setHelpOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const { data } = useCore()
 
