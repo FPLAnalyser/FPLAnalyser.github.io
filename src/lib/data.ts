@@ -22,6 +22,13 @@ declare global {
 
 const BASE = 'https://raw.githubusercontent.com/stefcourt2004-png/fpl-analyser/main/'
 
+// In the native (Capacitor) app the web assets — and their bundled copy of
+// site_data — are frozen at build time, so we fetch the published data FIRST
+// (fresh, updated by the pipeline pushes) and fall back to the bundled copy only
+// when offline. On the web we keep the local-first order (same-origin, fastest).
+const IS_NATIVE = typeof window !== 'undefined'
+  && !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
+
 // Data is namespaced by season on disk: site_data/<season>/<name>.json. The
 // active season is resolved once per page load (index.html sets window.__season
 // from localStorage or the build-time default; switching seasons reloads).
@@ -45,7 +52,9 @@ const cache = new Map<string, Promise<unknown>>()
 async function fetchTable<T>(name: string): Promise<T> {
   // Use the download index.html already started, if there is one — it began
   // during HTML parse, long before this module was even downloaded.
-  const early = typeof window !== 'undefined' ? window.__early?.[name] : undefined
+  // Skip the index.html eager fetch on native — it targets the bundled (frozen)
+  // copy, and we want the fresh published data there.
+  const early = !IS_NATIVE && typeof window !== 'undefined' ? window.__early?.[name] : undefined
   if (early) {
     delete window.__early![name]
     try {
@@ -58,7 +67,9 @@ async function fetchTable<T>(name: string): Promise<T> {
   let lastErr: unknown
   for (let attempt = 0; attempt < 3; attempt++) {
     const seg = seasonSeg()
-    for (const url of [`site_data/${seg}/${name}.json`, `${BASE}site_data/${seg}/${name}.json`]) {
+    const local = `site_data/${seg}/${name}.json`
+    const remote = `${BASE}site_data/${seg}/${name}.json`
+    for (const url of IS_NATIVE ? [remote, local] : [local, remote]) {
       try {
         // Default HTTP caching: the service worker (stale-while-revalidate)
         // owns freshness; forcing revalidation here made mobile loads crawl.

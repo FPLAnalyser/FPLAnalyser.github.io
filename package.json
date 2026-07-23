@@ -7,9 +7,19 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "app:sync": "npm run build && npx cap sync",
+    "app:ios": "npm run build && npx cap sync ios && npx cap open ios",
+    "app:android": "npm run build && npx cap sync android && npx cap open android"
   },
   "dependencies": {
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/app": "^6.0.3",
+    "@capacitor/cli": "^6.2.1",
+    "@capacitor/core": "^6.2.1",
+    "@capacitor/ios": "^6.2.1",
+    "@capacitor/splash-screen": "^6.0.4",
+    "@capacitor/status-bar": "^6.0.3",
     "framer-motion": "^11.18.2",
     "html2canvas-pro": "^2.3.1",
     "react": "^18.3.1",
