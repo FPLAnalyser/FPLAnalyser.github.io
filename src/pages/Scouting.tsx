@@ -154,18 +154,26 @@ export default function Scouting() {
     return out
   }, [concededQ.data])
 
-  // element -> core rating info (price for Discover; rating/starts/mins for the report).
+  // code -> core rating info (price for Discover; rating/starts/mins for the
+  // report). Keyed by the PERMANENT player `code`, not the FPL `element` id:
+  // element ids are re-issued each season, so a scouting row and its core
+  // ratings row can carry different elements for the same player at a season
+  // boundary — joining on element would then pull the wrong player's rating.
   const priceMap = useMemo(() => {
     const m = new Map<number, number>()
-    for (const r of (core?.ratings ?? []) as RatingRow[]) if (r.element != null && r.price != null) m.set(r.element, r.price)
+    for (const r of (core?.ratings ?? []) as RatingRow[]) {
+      const c = num(r, 'code')
+      if (c != null && r.price != null) m.set(c, num(r, 'price')!)
+    }
     return m
   }, [core])
-  const metaByEl = useMemo(() => {
+  const metaByCode = useMemo(() => {
     const m = new Map<number, PlayerMeta>()
     for (const r of (core?.ratings ?? []) as RatingRow[]) {
-      if (r.element == null) continue
+      const c = num(r, 'code')
+      if (c == null) continue
       const s = num(r, 'season_overall_score')
-      m.set(r.element, {
+      m.set(c, {
         rating: s == null ? null : Math.round(Math.max(0, Math.min(100, s * 20))),
         starts: num(r, 'total_starts'),
         mins: num(r, 'total_mins'),
@@ -174,6 +182,8 @@ export default function Scouting() {
     }
     return m
   }, [core])
+  const metaOf = (sel: SelPlayer): PlayerMeta | undefined =>
+    sel.code != null ? metaByCode.get(sel.code) : undefined
 
   // Team clean-sheet rate (season) from core team_metrics — the headline
   // defensive outcome for defenders. Higher is better.
@@ -301,7 +311,7 @@ export default function Scouting() {
           <div className="mt-1 text-sm text-ink-3">Percentiles ranked within peer group, {WINDOW_LABELS[win]}.</div>
         </div>
       ) : (
-        <ScoutReport selected={selected} scoutMeta={scoutMeta} scoutRow={scoutRow} scoutPct={scoutPct} teamDef={teamDef} teamCS={teamCS} metaByEl={metaByEl} win={win} />
+        <ScoutReport selected={selected} scoutMeta={scoutMeta} scoutRow={scoutRow} scoutPct={scoutPct} teamDef={teamDef} teamCS={teamCS} metaOf={metaOf} win={win} />
       )}
       </>
       )}
@@ -345,7 +355,7 @@ function Discover({
       if (pos === 'GKP') { if (p.position !== 'GKP') continue }
       else if (pos === 'All') { if (p.position === 'GKP') continue }
       else if (p.position !== pos) continue
-      const price = priceMap.get(p.element) ?? null
+      const price = (p.code != null ? priceMap.get(p.code) : null) ?? null
       if (price != null && price > maxPrice) continue
       const row = scoutRow(p.element)
       if (!row) continue
@@ -481,7 +491,7 @@ function Discover({
 }
 
 function ScoutReport({
-  selected, scoutMeta, scoutRow, scoutPct, teamDef, teamCS, metaByEl, win,
+  selected, scoutMeta, scoutRow, scoutPct, teamDef, teamCS, metaOf, win,
 }: {
   selected: SelPlayer[]
   scoutMeta: Row[]
@@ -489,7 +499,7 @@ function ScoutReport({
   scoutPct: (row: Row, key: string) => number | null
   teamDef: Map<string, TeamDef>
   teamCS: Map<string, TeamCS>
-  metaByEl: Map<number, PlayerMeta>
+  metaOf: (sel: SelPlayer) => PlayerMeta | undefined
   win: ScoutWin
 }) {
   const warnings: string[] = []
@@ -515,7 +525,7 @@ function ScoutReport({
     const hi = (k: string, t = 70) => { const v = pc(k); return v != null && v >= t }
     const lo = (k: string, t = 30) => { const v = pc(k); return v != null && v <= t }
     const td = teamDef.get(sel.team)
-    const starts = metaByEl.get(sel.element)?.starts ?? null
+    const starts = metaOf(sel)?.starts ?? null
     const share = starts == null ? null : starts / 38
 
     // Availability — the first thing that matters for points.
@@ -585,8 +595,8 @@ function ScoutReport({
   const order = wins.map((w, i) => [w, i] as [number, number]).sort((a, b) => b[0] - a[0])
 
   const ratingTier = (r: number) => (r >= 80 ? 'text-accent bg-accent-soft' : r >= 65 ? 'text-good bg-good/10' : r >= 50 ? 'text-ink-2 bg-surface-3' : 'text-bad bg-bad/10')
-  const RatingBadge = ({ el }: { el: number }) => {
-    const r = metaByEl.get(el)?.rating
+  const RatingBadge = ({ sel }: { sel: SelPlayer }) => {
+    const r = metaOf(sel)?.rating
     if (r == null) return null
     return <span className={`ml-1 inline-block rounded-md px-1.5 py-0.5 font-num text-[11px] font-semibold tabular-nums ${ratingTier(r)}`}>{r}<span className="opacity-60">/100</span></span>
   }
@@ -611,7 +621,7 @@ function ScoutReport({
             <span className="mt-1.5 size-2.5 shrink-0 rounded-full" style={{ background: multi ? SCOUT_COLORS[i] : 'var(--accent)' }} />
             <span className="leading-relaxed text-ink-2">
               <strong className="text-ink">{s.sel.web_name}</strong>
-              <RatingBadge el={s.sel.element} />{' '}
+              <RatingBadge sel={s.sel} />{' '}
               {s.row ? fplInsight(s.sel, s.row) : `has no ${WINDOW_LABELS[win]} sample yet.`}
             </span>
           </li>
@@ -705,7 +715,7 @@ function ScoutReport({
             <LabelCell tip="FPL Analyser's overall season rating out of 100 — the same figure shown on the player and rankings pages.">FPL Analyser Rating</LabelCell>
             <div className="grid flex-1 gap-3" style={{ gridTemplateColumns: gridCols }}>
               {shown.map((s, i) => {
-                const r = metaByEl.get(s.sel.element)?.rating
+                const r = metaOf(s.sel)?.rating
                 return r == null ? <NaCell key={i} /> : <PtCell key={i} i={i} left={r} right="/100" pct={r} />
               })}
             </div>
@@ -725,7 +735,7 @@ function ScoutReport({
             <LabelCell tip="Games started this season out of 38, with the share of available games. Low = a rotation or bench risk.">Starts (season)</LabelCell>
             <div className="grid flex-1 gap-3" style={{ gridTemplateColumns: gridCols }}>
               {shown.map((s, i) => {
-                const st = metaByEl.get(s.sel.element)?.starts
+                const st = metaOf(s.sel)?.starts
                 if (st == null) return <NaCell key={i} />
                 const share = Math.round((st / 38) * 100)
                 return <PtCell key={i} i={i} left={`${st}/38`} right={`${share}%`} pct={share} />

@@ -3,16 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { PageHeader, PageShell } from '../components/PageShell'
 import { PageSkeleton } from '../components/Skeleton'
 import { PlayerPhoto } from '../components/PlayerPhoto'
-import { RadialGauge, MiniBar, type Tone } from '../components/viz'
+import { RadialGauge, type Tone } from '../components/viz'
 import { StarRating } from '../components/StarRating'
-import { FixtureChips } from '../components/FixtureChips'
 import { TeamBadge } from '../components/badges'
 import { Icon, type IconName } from '../components/Icon'
 import { useCore } from '../lib/useData'
 import { num, str } from '../lib/rows'
 import { teamFullNames } from '../lib/util'
 import { buildLeagueStories } from '../lib/insights/narrative'
-import type { CoreData, FixtureEaseRow, RatingRow, Row } from '../lib/types'
+import type { CoreData, RatingRow, Row } from '../lib/types'
 
 const TONE_TEXT: Record<string, string> = { good: 'text-good', warn: 'text-warn', bad: 'text-bad', info: 'text-info', hot: 'text-hot', cold: 'text-cold' }
 
@@ -139,7 +138,6 @@ export default function Home() {
       )}
 
       <GwPanel data={data} onPlayer={toPlayer} />
-      <FixtureTicker fixtureEase={data.fixtureEase} onTeam={toTeam} />
       <FormWatch seasonToDate={data.seasonToDate} ratings={data.ratings} onPlayer={toPlayer} />
     </PageShell>
   )
@@ -235,40 +233,6 @@ function GwPanel({ data, onPlayer }: { data: CoreData; onPlayer: (n: string) => 
           onPlayer={onPlayer}
         />
       )}
-    </>
-  )
-}
-
-function FixtureTicker({ fixtureEase, onTeam }: { fixtureEase: FixtureEaseRow[]; onTeam: (t: string) => void }) {
-  const rows = useMemo(() => {
-    const teams = [...new Set(fixtureEase.map((f) => f.team))]
-    return teams
-      .map((team) => {
-        const next = fixtureEase.filter((f) => f.team === team).sort((a, b) => a.gw - b.gw).slice(0, 3)
-        const avgEase = next.reduce((s, f) => s + (num(f, 'att_ease') ?? 1), 0) / (next.length || 1)
-        return { team, avgEase }
-      })
-      .sort((a, b) => b.avgEase - a.avgEase)
-  }, [fixtureEase])
-
-  if (!rows.length) return null
-  const maxEase = Math.max(...rows.map((r) => r.avgEase), 1)
-  return (
-    <>
-      <SectionHeader>Fixture Ticker — next 3, easiest run first</SectionHeader>
-      <div className="overflow-x-auto rounded-xl border border-line">
-        <table className="w-full text-sm">
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.team} onClick={() => onTeam(r.team)} className="cursor-pointer border-b border-line last:border-0 transition-colors hover:bg-surface-2/50">
-                <td className="px-4 py-3"><span className="flex items-center gap-2 font-medium text-ink"><TeamBadge team={r.team} size={16} />{teamFullNames[r.team] || r.team}</span></td>
-                <td className="px-4 py-3"><FixtureChips fixtureEase={fixtureEase} team={r.team} n={3} /></td>
-                <td className="px-4 py-3"><MiniBar value={+r.avgEase.toFixed(2)} max={maxEase} tone={r.avgEase >= 1 ? 'good' : 'bad'} text={`×${r.avgEase.toFixed(2)}`} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
     </>
   )
 }
