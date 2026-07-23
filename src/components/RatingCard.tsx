@@ -4,7 +4,10 @@ import { FixtureChips } from './FixtureChips'
 import { Icon } from './Icon'
 import { num } from '../lib/rows'
 import { teamFullNames } from '../lib/util'
+import { useSeason } from '../lib/season'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
+
+const shortSeason = (id?: string) => (id && id.length >= 7 ? `${id.slice(2, 4)}/${id.slice(5)}` : '')
 
 // Player rating card. Big overall + position + photo + team,
 // six position-appropriate sub-ratings, next-four fixtures, and a rarity frame
@@ -125,6 +128,8 @@ export function RatingCard({
   window?: RatingWindow
   fixtureEase?: FixtureEaseRow[]
 }) {
+  const { info } = useSeason()
+  const carried = Boolean(info?.provisional) && r.ratings_carried === true
   const prefix = window === 'gw4' ? 'gw4' : 'season'
   const ov = overallOf(r, prefix)
   const ownership = num(r, 'selected_by_percent')
@@ -168,7 +173,10 @@ export function RatingCard({
           <div className={`font-display text-accent tabular-nums leading-[0.9] ${compact ? 'text-[40px]' : 'text-[58px]'}`}>{ov ?? '—'}</div>
           <div className={`font-display leading-none tracking-[0.06em] text-accent-2 ${compact ? 'text-[14px]' : 'text-[19px]'}`}>{POS_SHORT[String(r.position)] ?? r.position}</div>
           <div className={`mt-1 font-semibold tracking-[0.2em] text-ink-3 uppercase ${compact ? 'text-[8px]' : 'text-[10px]'}`}>{window === 'gw4' ? 'Last 4' : 'Overall'}</div>
-          {thinSample && (
+          {carried && (
+            <span className="mt-1 rounded bg-white/10 px-1 py-0.5 text-[8px] font-bold tracking-wide text-ink-2 tabular-nums" title={`Rating carried over from ${shortSeason(info!.ratings_season)}`}>{shortSeason(info!.ratings_season)}</span>
+          )}
+          {thinSample && !carried && (
             <span className="mt-1 inline-block size-[7px] rounded-full bg-warn" title={mins != null ? `Thin sample — ${Math.round(mins)} mins played` : 'Thin sample'} />
           )}
         </div>
