@@ -259,24 +259,28 @@ function combos<T>(arr: T[], k: number): T[][] {
   return res
 }
 
-const ROT_SIZES = [2, 3, 4] as const
+const ROT_SIZES = [2, 3, 4, 5] as const
 const ROT_WINDOWS = [4, 6, 8] as const
+const LENS_LABEL_ROT: Record<Lens, string> = { overall: 'Overall', attack: 'Attack', defence: 'Defence' }
+const mean = (ds: number[]) => (ds.length ? ds.reduce((a, b) => a + b, 0) / ds.length : null)
 
 /* ── Rotation planner: pick teams and see who to start each gameweek ──────
-   Difficulty is OUR own rating (opponent strength on our team ratings), in the
-   chosen lens; we start the team with the kindest fixture each gameweek. With
-   nothing picked we surface the best-rotating combinations of the chosen size. */
+   Difficulty is OUR own rating (opponent strength on our team ratings) in the
+   chosen lens. You set how many teams are in the rotation (N) and how many you
+   actually start each week (K) — every gameweek we start the K with the kindest
+   fixtures. With nothing picked we surface the best-rotating groups of size N. */
 function RotationPlanner({ ratings: _ratings, fixtureEase, seasonRating }: { ratings: RatingRow[]; fixtureEase: FixtureEaseRow[]; seasonRating: Map<string, TeamRatingRow> }) {
   const [teams, setTeams] = useState<string[]>([])
   const [size, setSize] = useState<(typeof ROT_SIZES)[number]>(2)
+  const [startK, setStartK] = useState(1)
   const [windowN, setWindowN] = useState<(typeof ROT_WINDOWS)[number]>(6)
   const [lens, setLens] = useState<Lens>('overall')
 
   const allTeams = useMemo(() => [...new Set(fixtureEase.map((f) => f.team))].sort(), [fixtureEase])
   const gws = useMemo(() => [...new Set(fixtureEase.map((f) => f.gw))].sort((a, b) => a - b).slice(0, windowN), [fixtureEase, windowN])
 
-  // A team's (easier, if a double) fixture + our difficulty for one gameweek,
-  // in the selected lens. Cached; the cache resets when the lens/window change.
+  // A team's (easier, if a double) fixture + our difficulty for one gameweek, in
+  // the selected lens. Cached; the cache resets when the lens/window change.
   const cellFor = useMemo(() => {
     const cache = new Map<string, { f: FixtureEaseRow; diff: number } | null>()
     return (team: string, gw: number) => {
@@ -291,59 +295,83 @@ function RotationPlanner({ ratings: _ratings, fixtureEase, seasonRating }: { rat
     }
   }, [fixtureEase, seasonRating, lens])
 
-  // Keep the manual selection within the chosen rotation size.
+  const changeSize = (n: (typeof ROT_SIZES)[number]) => {
+    setSize(n)
+    setTeams((s) => s.slice(0, n))
+    setStartK((k) => Math.min(k, n - 1))
+  }
   const toggle = (t: string) => setTeams((s) => (s.includes(t) ? s.filter((x) => x !== t) : s.length >= size ? s : [...s, t]))
-  const changeSize = (n: (typeof ROT_SIZES)[number]) => { setSize(n); setTeams((s) => s.slice(0, n)) }
-  const avg = (ds: number[]) => (ds.length ? ds.reduce((a, b) => a + b, 0) / ds.length : null)
-  const combinedOf = (group: string[]) => {
+
+  // Sorted (kindest first) fixtures for a group in one gameweek.
+  const rankGw = (group: string[], gw: number) =>
+    group.map((t) => ({ t, diff: cellFor(t, gw)?.diff })).filter((x): x is { t: string; diff: number } => x.diff != null).sort((a, b) => a.diff - b.diff)
+
+  // Combined difficulty if you start the best K of `group` each week.
+  const startKAvg = (group: string[], k: number) => {
     const ds: number[] = []
     for (const gw of gws) {
-      let best = Infinity
-      for (const t of group) { const c = cellFor(t, gw); if (c && c.diff < best) best = c.diff }
-      if (Number.isFinite(best)) ds.push(best)
+      const r = rankGw(group, gw)
+      if (!r.length) continue
+      const take = r.slice(0, Math.min(k, r.length))
+      ds.push(take.reduce((a, b) => a + b.diff, 0) / take.length)
     }
-    return avg(ds)
+    return mean(ds)
+  }
+  // Best you'd do committing to a FIXED K of the group (no rotation) — the
+  // yardstick the rotation improves on.
+  const fixedKAvg = (group: string[], k: number) => {
+    let best: number | null = null
+    for (const sub of combos(group, k)) {
+      const ds: number[] = []
+      for (const gw of gws) {
+        const dd = sub.map((t) => cellFor(t, gw)?.diff).filter((v): v is number => v != null)
+        if (dd.length) ds.push(dd.reduce((a, b) => a + b, 0) / dd.length)
+      }
+      const a = mean(ds)
+      if (a != null && (best == null || a < best)) best = a
+    }
+    return best
   }
 
-  // Who to start each gameweek among the selected teams (kindest fixture).
-  const bestByGw = new Map<number, string>()
-  for (const gw of gws) {
-    let best: { t: string; diff: number } | null = null
-    for (const t of teams) { const c = cellFor(t, gw); if (c && (!best || c.diff < best.diff)) best = { t, diff: c.diff } }
-    if (best) bestByGw.set(gw, best.t)
-  }
-  const rotAvg = combinedOf(teams)
-  const soloAvg = (t: string) => avg(gws.map((gw) => cellFor(t, gw)?.diff).filter((v): v is number => v != null))
-  const bestSolo = teams.length ? teams.reduce((a, b) => ((soloAvg(a) ?? 9) <= (soloAvg(b) ?? 9) ? a : b)) : null
-  const bestSoloAvg = bestSolo ? soloAvg(bestSolo) : null
+  // Which teams to START each gameweek (the K kindest fixtures).
+  const startByGw = new Map<number, Set<string>>()
+  for (const gw of gws) startByGw.set(gw, new Set(rankGw(teams, gw).slice(0, startK).map((x) => x.t)))
 
-  // Top rotating groups of the chosen size (lowest combined difficulty).
+  const rotAvg = startKAvg(teams, startK)
+  const fixedAvg = teams.length ? fixedKAvg(teams, startK) : null
+
+  // Top rotating groups of size N, ranked by the start-K combined difficulty.
   const topGroups = useMemo(() => {
     const out: { group: string[]; combined: number }[] = []
     for (const group of combos(allTeams, size)) {
-      const c = combinedOf(group)
+      const c = startKAvg(group, startK)
       if (c != null) out.push({ group, combined: c })
     }
     return out.sort((x, y) => x.combined - y.combined).slice(0, 8)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allTeams, size, gws, cellFor])
+  }, [allTeams, size, startK, gws, cellFor])
 
   const headCls = 'px-2 py-2 text-center text-[11px] font-semibold tracking-wide text-ink-3 uppercase'
   const pill = (active: boolean) => `min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${active ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`
+  const startOpts = Array.from({ length: size - 1 }, (_, i) => i + 1) // 1 … N-1
 
   return (
     <div>
       <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold tracking-wide text-ink-2 uppercase">
         Rotation Planner
-        <InfoTip text="Difficulty is our own rating — opponent strength on our team Attack/Defence ratings, in the lens you choose (Attack uses the opponent's defence, Defence their attack). Pick teams to rotate, or start from the best combinations we list by default." />
+        <InfoTip text="Difficulty is our own rating — opponent strength on our team Attack/Defence ratings, in the lens you choose. Set how many teams are in the rotation and how many you start each week; we always start the ones with the kindest fixtures." />
       </h2>
-      <p className="mb-3 text-sm text-ink-3">Set how many to rotate, the window and the lens — then tap teams, or pick one of the top combinations.</p>
+      <p className="mb-3 text-sm text-ink-3">Choose the rotation size, how many to start, the window and the lens — then tap teams, or pick a top combination.</p>
 
       {/* Controls */}
       <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-3">
         <div className="flex items-center gap-1.5">
           <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Rotate</span>
           {ROT_SIZES.map((n) => <button key={n} onClick={() => changeSize(n)} className={pill(size === n)}>{n}</button>)}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Start</span>
+          {startOpts.map((k) => <button key={k} onClick={() => setStartK(k)} className={pill(startK === k)}>{k}</button>)}
         </div>
         <div className="flex items-center gap-1.5">
           <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Window</span>
@@ -383,7 +411,7 @@ function RotationPlanner({ ratings: _ratings, fixtureEase, seasonRating }: { rat
 
       {teams.length < 2 ? (
         <div>
-          <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Top {size}-team rotations · next {gws.length} · {LENS_LABEL_ROT[lens]}</div>
+          <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Top rotations · start {startK} of {size} · next {gws.length} · {LENS_LABEL_ROT[lens]}</div>
           <div className="overflow-hidden rounded-xl border border-line">
             {topGroups.map((g, i) => (
               <button key={g.group.join('')} onClick={() => setTeams(g.group)} className="flex w-full items-center gap-3 border-b border-line px-3 py-2.5 text-left transition-colors last:border-0 hover:bg-surface-2/50">
@@ -401,16 +429,16 @@ function RotationPlanner({ ratings: _ratings, fixtureEase, seasonRating }: { rat
             ))}
             {topGroups.length === 0 && <div className="px-3 py-8 text-center text-sm text-ink-3">No fixtures to rank yet.</div>}
           </div>
-          <p className="mt-2 text-xs text-ink-3">Lower is kinder — the combined difficulty if you always start whichever team in the group has the best fixture.</p>
+          <p className="mt-2 text-xs text-ink-3">Lower is kinder — the combined difficulty if you always start the {startK} kindest fixture{startK > 1 ? 's' : ''} in the group.</p>
         </div>
       ) : (
         <>
-          {rotAvg != null && bestSoloAvg != null && (
+          {rotAvg != null && fixedAvg != null && (
             <div className="mb-4 rounded-xl border border-line bg-surface-1/60 p-4 text-sm">
-              Rotating these {teams.length} gives an average fixture difficulty of{' '}
-              <strong className="text-good">{rotAvg.toFixed(1)}</strong> over the next {gws.length} — versus{' '}
-              <strong className="text-ink">{bestSoloAvg.toFixed(1)}</strong> for {teamLabel(bestSolo!)} alone.
-              {rotAvg < bestSoloAvg - 0.1 ? ' The rotation is the smoother run.' : ' They barely improve on the best single team here.'}
+              Starting the best {startK} of these {teams.length} each week averages{' '}
+              <strong className="text-good">{rotAvg.toFixed(1)}</strong> difficulty over the next {gws.length} — versus{' '}
+              <strong className="text-ink">{fixedAvg.toFixed(1)}</strong> if you fixed the best {startK} and never rotated.
+              {rotAvg < fixedAvg - 0.1 ? ' The rotation is the smoother run.' : ' Rotation adds little over just holding the best here.'}
             </div>
           )}
           <div className="overflow-x-auto rounded-xl border border-line">
@@ -429,12 +457,12 @@ function RotationPlanner({ ratings: _ratings, fixtureEase, seasonRating }: { rat
                     </td>
                     {gws.map((gw) => {
                       const c = cellFor(t, gw)
-                      const start = bestByGw.get(gw) === t
+                      const start = startByGw.get(gw)?.has(t)
                       if (!c) return <td key={gw} className="px-1.5 py-1.5 text-center text-ink-3">—</td>
                       const [bg, fg] = FDR_COLORS[Math.max(1, Math.min(5, Math.round(c.diff)))] || FDR_COLORS[3]
                       return (
                         <td key={gw} className="px-1.5 py-1.5 text-center">
-                          <span className={`inline-block w-full min-w-[54px] rounded px-1 py-1 text-[11px] font-semibold whitespace-nowrap ${start ? 'ring-2 ring-accent ring-offset-1 ring-offset-surface-1' : ''}`} style={{ background: bg, color: fg }} title={`${c.f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(c.f.opponent)} — difficulty ${c.diff.toFixed(1)}${start ? ' · START' : ''}`}>
+                          <span className={`inline-block w-full min-w-[54px] rounded px-1 py-1 text-[11px] font-semibold whitespace-nowrap ${start ? 'ring-2 ring-accent ring-offset-1 ring-offset-surface-1' : 'opacity-55'}`} style={{ background: bg, color: fg }} title={`${c.f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(c.f.opponent)} — difficulty ${c.diff.toFixed(1)}${start ? ' · START' : ''}`}>
                             {c.f.opponent} <span className="opacity-70">({c.f.venue})</span>
                           </span>
                         </td>
@@ -443,12 +471,16 @@ function RotationPlanner({ ratings: _ratings, fixtureEase, seasonRating }: { rat
                   </tr>
                 ))}
                 <tr className="bg-surface-1/60">
-                  <td className="sticky left-0 z-10 bg-surface-1 px-3 py-2 text-[11px] font-semibold tracking-wide text-accent uppercase">Start</td>
+                  <td className="sticky left-0 z-10 bg-surface-1 px-3 py-2 text-[11px] font-semibold tracking-wide text-accent uppercase">Start {startK}</td>
                   {gws.map((gw) => {
-                    const t = bestByGw.get(gw)
+                    const starters = [...(startByGw.get(gw) ?? [])]
                     return (
                       <td key={gw} className="px-1.5 py-2 text-center">
-                        {t ? <span className="inline-flex items-center gap-1 text-xs font-medium text-ink"><TeamBadge team={t} size={13} />{t}</span> : <span className="text-ink-3">—</span>}
+                        {starters.length ? (
+                          <span className="flex flex-wrap items-center justify-center gap-1">
+                            {starters.map((t) => <span key={t} className="inline-flex items-center gap-0.5 text-[11px] font-medium text-ink"><TeamBadge team={t} size={12} />{t}</span>)}
+                          </span>
+                        ) : <span className="text-ink-3">—</span>}
                       </td>
                     )
                   })}
@@ -459,15 +491,13 @@ function RotationPlanner({ ratings: _ratings, fixtureEase, seasonRating }: { rat
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-ink-3">
             <span>Difficulty:</span>
             {([1, 2, 3, 4, 5] as const).map((d) => { const [bg, fg] = FDR_COLORS[d]; return <span key={d} className="rounded px-1.5 py-0.5 font-semibold" style={{ background: bg, color: fg }}>{d}</span> })}
-            <span>· the ringed cell is who to start that week</span>
+            <span>· ringed = starting that week (the rest are benched)</span>
           </div>
         </>
       )}
     </div>
   )
 }
-
-const LENS_LABEL_ROT: Record<Lens, string> = { overall: 'Overall', attack: 'Attack', defence: 'Defence' }
 
 /* ── Fixture grid: one column per gameweek, orderable by any week ──────────────
    Rows are teams; each gameweek is its own column showing the opponent, coloured
