@@ -121,10 +121,17 @@ dump("team_ratings", [r for r in prev_tr if r.get("team") in current_teams])
 #    players who aren't in the new season; new players simply have no row).
 def rekey(name):
     rows = load(name)
-    if not rows:
+    if rows is None:
+        return
+    # Some tables are dict-shaped or not lists of row dicts — copy those as-is.
+    if not (isinstance(rows, list) and rows and isinstance(rows[0], dict)):
+        dump(name, rows)
+        print(f"  {name}.json — copied as-is")
         return
     out = []
     for r in rows:
+        if not isinstance(r, dict):
+            continue
         code = old_elem_to_code.get(r.get("element"))
         ne = code_to_new_elem.get(code) if code is not None else None
         if ne is None:
@@ -144,7 +151,7 @@ for name in ("team_metrics", "scouting", "scouting_meta", "benchmarks", "shots_f
     data = load(name)
     if data is None:
         continue
-    if isinstance(data, list) and data and "team" in data[0]:
+    if isinstance(data, list) and data and isinstance(data[0], dict) and "team" in data[0]:
         data = [r for r in data if r.get("team") in current_teams]
     dump(name, data)
 
