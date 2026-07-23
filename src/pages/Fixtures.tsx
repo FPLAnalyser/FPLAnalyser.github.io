@@ -2,6 +2,7 @@ import { Fragment, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageHeader, PageShell, EmptyState } from '../components/PageShell'
 import { Tabs, type TabDef } from '../components/Tabs'
+import { SearchBox } from '../components/SearchBox'
 import { TeamBadge, PositionIcon } from '../components/badges'
 import { InfoTip } from '../components/InfoTip'
 import { Icon } from '../components/Icon'
@@ -27,9 +28,10 @@ const WINDOWS = [4, 6, 8] as const
 
 const VIEW_TABS: TabDef[] = [
   { id: 'difficulty', label: 'Difficulty' },
+  { id: 'rotation', label: 'Rotation Planner' },
   { id: 'matchup', label: 'Matchup Explorer' },
 ]
-type View = 'difficulty' | 'matchup'
+type View = 'difficulty' | 'rotation' | 'matchup'
 
 /* Our own fixture difficulty is driven by opponent strength from our team
    ratings, split into three lenses. It falls back to FPL's FDR only when the
@@ -230,10 +232,165 @@ export default function Fixtures() {
             <div className="mt-1 text-sm text-ink-3">The Matchup Explorer tab already works on this season's full shot data.</div>
           </EmptyState>
         )
+      ) : view === 'rotation' ? (
+        hasFixtures ? (
+          <RotationPlanner ratings={data.ratings as RatingRow[]} fixtureEase={fixtureEase} seasonRating={seasonRating} />
+        ) : (
+          <EmptyState icon={<Icon name="calendar" size={44} />}>The rotation planner switches on when the fixtures are published.</EmptyState>
+        )
       ) : (
         <MatchupExplorer ratings={data.ratings as RatingRow[]} />
       )}
     </PageShell>
+  )
+}
+
+/* ── Rotation planner: pick 2–4 players and see who to start each gameweek ──────
+   For every gameweek we start the player with the kindest fixture (our own
+   difficulty), so a pair of rotating picks covers a smoother run than either
+   alone. */
+function RotationPlanner({ ratings, fixtureEase, seasonRating }: { ratings: RatingRow[]; fixtureEase: FixtureEaseRow[]; seasonRating: Map<string, TeamRatingRow> }) {
+  const navigate = useNavigate()
+  const [ids, setIds] = useState<number[]>([])
+
+  const byEl = useMemo(() => {
+    const m = new Map<number, RatingRow>()
+    for (const r of ratings) if (r.element != null) m.set(r.element, r)
+    return m
+  }, [ratings])
+  const pool = useMemo(() => ratings.filter((r) => r.element != null && r.web_name), [ratings])
+  const players = ids.map((id) => byEl.get(id)).filter(Boolean) as RatingRow[]
+  const add = (r: RatingRow) => setIds((s) => (s.includes(r.element) || s.length >= 4 ? s : [...s, r.element]))
+  const removeP = (el: number) => setIds((s) => s.filter((x) => x !== el))
+
+  const gws = useMemo(() => [...new Set(fixtureEase.map((f) => f.gw))].sort((a, b) => a - b).slice(0, 8), [fixtureEase])
+
+  // A team's (easier, if a double) fixture + our difficulty for one gameweek.
+  const cellFor = (team: string, gw: number) => {
+    const fs = fixtureEase.filter((f) => f.team === team && f.gw === gw)
+    if (!fs.length) return null
+    return fs
+      .map((f) => ({ f, diff: analyserDiff(seasonRating.get(f.opponent), 'overall', f.venue, f.fdr).diff }))
+      .sort((a, b) => a.diff - b.diff)[0]
+  }
+
+  // Who to start each gameweek (kindest fixture among the picks).
+  const bestByGw = new Map<number, number>()
+  for (const gw of gws) {
+    let best: { el: number; diff: number } | null = null
+    for (const p of players) {
+      const c = cellFor(String(p.team), gw)
+      if (c && (!best || c.diff < best.diff)) best = { el: p.element, diff: c.diff }
+    }
+    if (best) bestByGw.set(gw, best.el)
+  }
+  const avg = (ds: number[]) => (ds.length ? ds.reduce((a, b) => a + b, 0) / ds.length : null)
+  const rotAvg = avg(gws.map((gw) => { const el = bestByGw.get(gw); return el == null ? null : cellFor(String(byEl.get(el)!.team), gw)!.diff }).filter((v): v is number => v != null))
+  const soloAvg = (p: RatingRow) => avg(gws.map((gw) => cellFor(String(p.team), gw)?.diff).filter((v): v is number => v != null))
+  const bestSolo = players.length ? players.reduce((a, b) => ((soloAvg(a) ?? 9) <= (soloAvg(b) ?? 9) ? a : b)) : null
+  const bestSoloAvg = bestSolo ? soloAvg(bestSolo) : null
+
+  const headCls = 'px-2 py-2 text-center text-[11px] font-semibold tracking-wide text-ink-3 uppercase'
+
+  return (
+    <div>
+      <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold tracking-wide text-ink-2 uppercase">
+        Rotation Planner
+        <InfoTip text="Pick two or more players (usually cheap defenders or keepers) and we’ll show who to start each gameweek — always the one with the kindest fixture on our difficulty. A good rotation pair turns two patchy runs into one smooth one." />
+      </h2>
+      <p className="mb-3 text-sm text-ink-3">Add 2–4 players who share a slot and we’ll pick who starts each week for the best combined run.</p>
+
+      <div className="mb-3 max-w-md">
+        <SearchBox<RatingRow>
+          items={pool}
+          getLabel={(r) => String(r.web_name)}
+          renderItem={(r) => (
+            <span className="flex items-center gap-2"><TeamBadge team={String(r.team)} size={14} />{String(r.web_name)}<span className="text-ink-3">· {r.position} · {teamLabel(String(r.team))}</span></span>
+          )}
+          onSelect={add}
+          clearOnSelect
+          placeholder="Add a player to the rotation…"
+        />
+      </div>
+
+      {players.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {players.map((p) => (
+            <span key={p.element} className="inline-flex items-center gap-1.5 rounded-full border border-line-mid bg-surface-1 px-2.5 py-1 text-sm">
+              <TeamBadge team={String(p.team)} size={14} />{String(p.web_name)}
+              <button aria-label={`Remove ${p.web_name}`} onClick={() => removeP(p.element)} className="text-ink-3 hover:text-bad"><Icon name="x" size={13} /></button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {players.length < 2 ? (
+        <EmptyState icon={<Icon name="calendar" size={40} />}>Add at least two players to compare their fixtures and build a rotation.</EmptyState>
+      ) : (
+        <>
+          {rotAvg != null && bestSoloAvg != null && (
+            <div className="mb-4 rounded-xl border border-line bg-surface-1/60 p-4 text-sm">
+              Rotating these {players.length} gives an average fixture difficulty of{' '}
+              <strong className="text-good">{rotAvg.toFixed(1)}</strong> over the next {gws.length} — versus{' '}
+              <strong className="text-ink">{bestSoloAvg.toFixed(1)}</strong> for {String(bestSolo!.web_name)} alone.
+              {rotAvg < bestSoloAvg - 0.1 ? ' The rotation is the smoother run.' : ' They barely improve on the best single pick here.'}
+            </div>
+          )}
+          <div className="overflow-x-auto rounded-xl border border-line">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-line bg-surface-1">
+                  <th className="sticky left-0 z-10 bg-surface-1 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-ink-3 uppercase">Player</th>
+                  {gws.map((gw) => <th key={gw} className={headCls}>GW{gw}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {players.map((p) => (
+                  <tr key={p.element} className="border-b border-line last:border-0">
+                    <td className="sticky left-0 z-10 bg-surface-1 px-3 py-2">
+                      <button onClick={() => navigate(`/player?name=${encodeURIComponent(String(p.web_name))}`)} className="flex items-center gap-2 font-medium whitespace-nowrap text-ink hover:text-accent">
+                        <TeamBadge team={String(p.team)} size={16} />{String(p.web_name)}
+                      </button>
+                    </td>
+                    {gws.map((gw) => {
+                      const c = cellFor(String(p.team), gw)
+                      const start = bestByGw.get(gw) === p.element
+                      if (!c) return <td key={gw} className="px-1.5 py-1.5 text-center text-ink-3">—</td>
+                      const [bg, fg] = FDR_COLORS[Math.max(1, Math.min(5, Math.round(c.diff)))] || FDR_COLORS[3]
+                      return (
+                        <td key={gw} className="px-1.5 py-1.5 text-center">
+                          <span className={`relative inline-block w-full min-w-[54px] rounded px-1 py-1 text-[11px] font-semibold whitespace-nowrap ${start ? 'ring-2 ring-accent ring-offset-1 ring-offset-surface-1' : ''}`} style={{ background: bg, color: fg }} title={`${c.f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(c.f.opponent)} — difficulty ${c.diff.toFixed(1)}${start ? ' · START' : ''}`}>
+                            {c.f.opponent} <span className="opacity-70">({c.f.venue})</span>
+                          </span>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+                {/* Who to start */}
+                <tr className="bg-surface-1/60">
+                  <td className="sticky left-0 z-10 bg-surface-1 px-3 py-2 text-[11px] font-semibold tracking-wide text-accent uppercase">Start</td>
+                  {gws.map((gw) => {
+                    const el = bestByGw.get(gw)
+                    const p = el != null ? byEl.get(el) : null
+                    return (
+                      <td key={gw} className="px-1.5 py-2 text-center">
+                        {p ? <span className="inline-flex items-center gap-1 text-xs font-medium text-ink"><TeamBadge team={String(p.team)} size={13} />{String(p.web_name).split(' ').slice(-1)[0]}</span> : <span className="text-ink-3">—</span>}
+                      </td>
+                    )
+                  })}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-ink-3">
+            <span>Difficulty:</span>
+            {([1, 2, 3, 4, 5] as const).map((d) => { const [bg, fg] = FDR_COLORS[d]; return <span key={d} className="rounded px-1.5 py-0.5 font-semibold" style={{ background: bg, color: fg }}>{d}</span> })}
+            <span>· the ringed cell is who to start that week</span>
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 
