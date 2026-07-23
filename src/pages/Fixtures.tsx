@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageHeader, PageShell, EmptyState } from '../components/PageShell'
-import { SortableTable, type Column } from '../components/SortableTable'
-import { FixtureChips } from '../components/FixtureChips'
+import { Tabs, type TabDef } from '../components/Tabs'
 import { TeamBadge, PositionIcon } from '../components/badges'
 import { InfoTip } from '../components/InfoTip'
 import { Icon } from '../components/Icon'
@@ -10,23 +9,27 @@ import { PageSkeleton } from '../components/Skeleton'
 import { useCore, useLazyTable } from '../lib/useData'
 import { classifyZone, toPitch } from '../lib/shotzones'
 import { num, str } from '../lib/rows'
-import { teamFullNames } from '../lib/util'
+import { teamFullNames, FDR_COLORS } from '../lib/util'
 import type { FixtureEaseRow, RatingRow, Row } from '../lib/types'
 
-/* ── Custom difficulty model ─────────────────────────────────────────────────
-   Per fixture the pipeline publishes att_ease (opponent xGC vs league — how
-   attackable they are) and def_ease (league xG vs opponent xG — how blunt
-   their attack is), both home/away adjusted. We aggregate those into three
-   lenses per team window: Overall, Attackers, Defenders. */
+/* ── Difficulty model ────────────────────────────────────────────────────────
+   Every fixture carries FPL's own 1–5 difficulty (fdr). When the richer
+   pipeline metrics are available (att_ease / def_ease — opponent xGC and xG vs
+   the league, home/away adjusted) we use them; otherwise we derive an ease
+   from the FDR so the grid still ranks and colours sensibly out of season. */
+const FDR_EASE: Record<number, number> = { 1: 1.3, 2: 1.15, 3: 1.0, 4: 0.85, 5: 0.7 }
+const easeFromFdr = (fdr: number) => FDR_EASE[fdr] ?? 1
+const attEase = (f: FixtureEaseRow) => num(f, 'att_ease') ?? easeFromFdr(f.fdr)
+const defEase = (f: FixtureEaseRow) => num(f, 'def_ease') ?? easeFromFdr(f.fdr)
+const overallEase = (f: FixtureEaseRow) => (attEase(f) + defEase(f)) / 2
 
 const WINDOWS = [4, 6, 8] as const
-type Lens = 'overall' | 'att' | 'def'
-const LENS_LABEL: Record<Lens, string> = { overall: 'Overall', att: 'Attackers', def: 'Defenders' }
-const LENS_TIP: Record<Lens, string> = {
-  overall: 'Average of the attacker and defender ease across the window — a single difficulty score for the run.',
-  att: "Ease for this team's attackers: how many goals their upcoming opponents concede vs the league average, adjusted for home/away. Above ×1.00 = softer than average.",
-  def: "Ease for this team's defenders and keeper: how blunt their upcoming opponents' attacks are vs the league average, adjusted for home/away. Above ×1.00 = friendlier for clean sheets.",
-}
+
+const VIEW_TABS: TabDef[] = [
+  { id: 'difficulty', label: 'Difficulty' },
+  { id: 'matchup', label: 'Matchup Explorer' },
+]
+type View = 'difficulty' | 'matchup'
 
 /* Shot-profile categories used to match player strengths to opponent
    weaknesses. Channels come from the shot-zone geometry (attacker's view);
@@ -73,13 +76,13 @@ function profileOf(shots: Row[], withHead: boolean): Profile {
 
 export default function Fixtures() {
   const { data, error: coreError } = useCore()
+  const [view, setView] = useState<View>('difficulty')
   const [windowN, setWindowN] = useState<(typeof WINDOWS)[number]>(4)
-  const [lens, setLens] = useState<Lens>('overall')
 
   if (!data) {
     return (
       <PageShell>
-        <PageHeader title="Fixture Analysis" subtitle="Our own difficulty ratings for every upcoming game — overall, for attackers and for defenders" />
+        <PageHeader title="Fixture Analysis" subtitle="Our own difficulty ratings for every upcoming game — grid, chips and matchups" />
         <PageSkeleton error={coreError} />
       </PageShell>
     )
@@ -91,104 +94,184 @@ export default function Fixtures() {
 
   return (
     <PageShell>
-      <PageHeader title="Fixture Analysis" subtitle="Our own difficulty ratings for every upcoming game — overall, for attackers and for defenders" />
+      <PageHeader title="Fixture Analysis" subtitle="Our own difficulty ratings for every upcoming game — grid, chips and matchups" />
 
-      {/* Window + lens controls */}
-      <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-3">
-        <div className="flex items-center gap-1.5">
-          <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Window</span>
-          {WINDOWS.map((w) => (
-            <button
-              key={w}
-              onClick={() => setWindowN(w)}
-              className={`min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${
-                windowN === w ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
-              }`}
-            >
-              Next {w}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Rank by</span>
-          {(Object.keys(LENS_LABEL) as Lens[]).map((l) => (
-            <span key={l} className="flex items-center gap-1">
-              <button
-                onClick={() => setLens(l)}
-                className={`min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${
-                  lens === l ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
-                }`}
-              >
-                {LENS_LABEL[l]}
-              </button>
-              <InfoTip text={LENS_TIP[l]} />
-            </span>
-          ))}
-        </div>
-      </div>
-      {hasFixtures && horizon < windowN && (
-        <p className="mb-3 -mt-1 text-xs text-ink-3">The data pipeline currently publishes {horizon} gameweeks ahead — showing all {horizon}.</p>
-      )}
+      <div className="mb-4"><Tabs tabs={VIEW_TABS} active={view} onChange={(id) => setView(id as View)} layoutId="fx-view" /></div>
 
-      {hasFixtures ? (
-        <>
-          <DifficultyMatrix fixtureEase={fixtureEase} windowN={windowN} lens={lens} />
-          <ChipPlanner fixtureEase={fixtureEase} ratings={data.ratings as RatingRow[]} />
-        </>
+      {view === 'difficulty' ? (
+        hasFixtures ? (
+          <>
+            {/* Window control */}
+            <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-3">
+              <div className="flex items-center gap-1.5">
+                <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Window</span>
+                {WINDOWS.map((w) => (
+                  <button
+                    key={w}
+                    onClick={() => setWindowN(w)}
+                    className={`min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${
+                      windowN === w ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+                    }`}
+                  >
+                    Next {w}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {horizon < windowN && (
+              <p className="mb-3 -mt-1 text-xs text-ink-3">The data pipeline currently publishes {horizon} gameweeks ahead — showing all {horizon}.</p>
+            )}
+
+            <FixtureGrid fixtureEase={fixtureEase} windowN={windowN} />
+            <ChipPlanner fixtureEase={fixtureEase} ratings={data.ratings as RatingRow[]} />
+          </>
+        ) : (
+          <EmptyState icon={<Icon name="calendar" size={44} />}>
+            The difficulty grid and chip planner switch on when next season's fixtures are published.
+            <div className="mt-1 text-sm text-ink-3">The Matchup Explorer tab already works on this season's full shot data.</div>
+          </EmptyState>
+        )
       ) : (
-        <EmptyState icon={<Icon name="calendar" size={44} />}>
-          The difficulty matrix and chip planner switch on when next season's fixtures are published.
-          <div className="mt-1 text-sm text-ink-3">The matchup explorer below already works on this season's full shot data.</div>
-        </EmptyState>
+        <MatchupExplorer ratings={data.ratings as RatingRow[]} />
       )}
-
-      <MatchupExplorer ratings={data.ratings as RatingRow[]} />
     </PageShell>
   )
 }
 
-/* ── Difficulty matrix ── */
-function DifficultyMatrix({ fixtureEase, windowN, lens }: { fixtureEase: FixtureEaseRow[]; windowN: number; lens: Lens }) {
+/* ── Fixture grid: one column per gameweek, orderable by any week ──────────────
+   Rows are teams; each gameweek is its own column showing the opponent, coloured
+   by FPL difficulty. Click any GW header (or the Run column) to rank teams by
+   how kind that week is; the first click puts the easiest teams on top. */
+function FixtureGrid({ fixtureEase, windowN }: { fixtureEase: FixtureEaseRow[]; windowN: number }) {
+  const [sortKey, setSortKey] = useState<number | 'run'>('run')
+  const [dir, setDir] = useState<'asc' | 'desc'>('asc') // asc = easiest (lowest FDR) first
+
+  const gws = useMemo(
+    () => [...new Set(fixtureEase.map((f) => f.gw))].sort((a, b) => a - b).slice(0, windowN),
+    [fixtureEase, windowN],
+  )
+  const gwSet = useMemo(() => new Set(gws), [gws])
+
   const rows = useMemo(() => {
     const teams = [...new Set(fixtureEase.map((f) => f.team))]
     return teams.map((team) => {
-      const next = fixtureEase.filter((f) => f.team === team).sort((a, b) => a.gw - b.gw).slice(0, windowN)
-      const avg = (key: string) => next.reduce((s, f) => s + (num(f, key) ?? 1), 0) / (next.length || 1)
-      const att = avg('att_ease')
-      const def = avg('def_ease')
-      return { team, att, def, overall: (att + def) / 2, n: next.length }
+      const byGw = new Map<number, FixtureEaseRow[]>()
+      let sum = 0
+      let count = 0
+      for (const f of fixtureEase) {
+        if (f.team !== team || !gwSet.has(f.gw)) continue
+        if (!byGw.has(f.gw)) byGw.set(f.gw, [])
+        byGw.get(f.gw)!.push(f)
+        sum += f.fdr
+        count++
+      }
+      return { team, byGw, run: count ? sum / count : null }
     })
-  }, [fixtureEase, windowN])
+  }, [fixtureEase, gwSet])
 
-  const easeCell = (v: number) => (
-    <span className={`font-num tabular-nums ${v >= 1.05 ? 'text-good' : v <= 0.95 ? 'text-bad' : 'text-ink-2'}`}>×{v.toFixed(2)}</span>
-  )
+  // Mean FDR for a team in one gameweek (handles blanks → null, doubles → avg).
+  const gwFdr = (r: (typeof rows)[number], gw: number): number | null => {
+    const fs = r.byGw.get(gw)
+    if (!fs || !fs.length) return null
+    return fs.reduce((s, f) => s + f.fdr, 0) / fs.length
+  }
 
-  const columns: Column<(typeof rows)[number]>[] = [
-    {
-      key: 'team',
-      header: 'Team',
-      align: 'left',
-      sortValue: (r) => r.team,
-      cell: (r) => <span className="flex items-center gap-2 font-medium text-ink"><TeamBadge team={r.team} size={16} />{teamFullNames[r.team] || r.team}</span>,
-    },
-    {
-      key: 'fixtures',
-      header: `Next ${windowN}`,
-      align: 'left',
-      tip: 'Upcoming opponents, coloured by FPL fixture difficulty (green = easy, red = hard). H = home, A = away.',
-      cell: (r) => <FixtureChips fixtureEase={fixtureEase} team={r.team} n={windowN} />,
-    },
-    { key: 'overall', header: 'Overall', tip: LENS_TIP.overall, sortValue: (r) => r.overall, cell: (r) => easeCell(r.overall) },
-    { key: 'att', header: 'ATT', tip: LENS_TIP.att, sortValue: (r) => r.att, cell: (r) => easeCell(r.att) },
-    { key: 'def', header: 'DEF', tip: LENS_TIP.def, sortValue: (r) => r.def, cell: (r) => easeCell(r.def) },
-  ]
+  const sorted = useMemo(() => {
+    const val = (r: (typeof rows)[number]) => (sortKey === 'run' ? r.run : gwFdr(r, sortKey))
+    return [...rows].sort((a, b) => {
+      const av = val(a)
+      const bv = val(b)
+      if (av == null && bv == null) return a.team.localeCompare(b.team)
+      if (av == null) return 1 // teams with no fixture that week sink to the bottom
+      if (bv == null) return -1
+      return dir === 'asc' ? av - bv : bv - av
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, sortKey, dir])
+
+  const clickHeader = (key: number | 'run') => {
+    if (sortKey === key) setDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else {
+      setSortKey(key)
+      setDir('asc')
+    }
+  }
+  const arrow = (key: number | 'run') => (sortKey === key ? (dir === 'asc' ? ' ↑' : ' ↓') : '')
+
+  const headCls = 'cursor-pointer select-none px-2 py-2 text-center text-[11px] font-semibold tracking-wide text-ink-3 uppercase transition-colors hover:text-ink'
 
   return (
     <div className="mb-8">
-      <SortableTable rows={rows} columns={columns} initialSort={lens} initialDir="desc" rowKey={(r) => r.team} featured />
+      <div className="mb-2 flex items-center gap-1.5 text-[11px] text-ink-3">
+        <span>Tap a gameweek to sort by that week’s difficulty.</span>
+        <InfoTip text="Rows are teams; each column is a gameweek. Cells show the opponent and venue (H/A), coloured by FPL's 1–5 fixture difficulty (green = easy, red = hard). The Run column is the average difficulty across the window — lower is kinder." />
+      </div>
+      <div className="overflow-x-auto rounded-xl border border-line">
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-line bg-surface-1">
+              <th className="sticky left-0 z-10 bg-surface-1 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-ink-3 uppercase">Team</th>
+              {gws.map((gw) => (
+                <th key={gw} onClick={() => clickHeader(gw)} className={headCls}>GW{gw}{arrow(gw)}</th>
+              ))}
+              <th onClick={() => clickHeader('run')} className={headCls}>Run{arrow('run')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((r) => (
+              <tr key={r.team} className="border-b border-line last:border-0">
+                <td className="sticky left-0 z-10 bg-surface-1 px-3 py-2">
+                  <span className="flex items-center gap-2 font-medium whitespace-nowrap text-ink"><TeamBadge team={r.team} size={16} />{teamFullNames[r.team] || r.team}</span>
+                </td>
+                {gws.map((gw) => {
+                  const fs = r.byGw.get(gw)
+                  return (
+                    <td key={gw} className="px-1.5 py-1.5 text-center">
+                      {fs && fs.length ? (
+                        <span className="flex flex-col items-center gap-1">
+                          {fs.map((f, i) => {
+                            const [bg, fg] = FDR_COLORS[f.fdr] || FDR_COLORS[3]
+                            return (
+                              <span key={i} className="inline-block w-full min-w-[54px] rounded px-1 py-1 text-[11px] font-semibold whitespace-nowrap" style={{ background: bg, color: fg }} title={`GW${gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamFullNames[f.opponent] || f.opponent} (FDR ${f.fdr})`}>
+                                {f.opponent} <span className="opacity-70">({f.venue})</span>
+                              </span>
+                            )
+                          })}
+                        </span>
+                      ) : (
+                        <span className="text-ink-3">—</span>
+                      )}
+                    </td>
+                  )
+                })}
+                <td className="px-2 py-2 text-center">
+                  {r.run == null ? <span className="text-ink-3">—</span> : (
+                    <span className="font-num text-sm font-semibold tabular-nums" style={{ color: runColor(r.run) }}>{r.run.toFixed(1)}</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {/* FDR legend */}
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-ink-3">
+        <span>Difficulty:</span>
+        {([1, 2, 3, 4, 5] as const).map((d) => {
+          const [bg, fg] = FDR_COLORS[d]
+          return <span key={d} className="rounded px-1.5 py-0.5 font-semibold" style={{ background: bg, color: fg }}>{d}</span>
+        })}
+        <span>1 = easiest, 5 = hardest</span>
+      </div>
     </div>
   )
+}
+
+// Colour for the average-FDR "Run" number (1 easy → 5 hard).
+function runColor(fdr: number): string {
+  if (fdr <= 2.2) return 'var(--good)'
+  if (fdr >= 3.6) return 'var(--bad)'
+  return 'var(--ink-2)'
 }
 
 /* ── Chip planner ── */
@@ -201,15 +284,14 @@ function ChipPlanner({ fixtureEase, ratings }: { fixtureEase: FixtureEaseRow[]; 
       if (!byGw.has(f.gw)) byGw.set(f.gw, [])
       byGw.get(f.gw)!.push(f)
     }
-    const overallOf = (f: FixtureEaseRow) => ((num(f, 'att_ease') ?? 1) + (num(f, 'def_ease') ?? 1)) / 2
 
     // Bench Boost: the GW where the most teams have a kind fixture — a deep
     // squad is most likely to have all 15 pointing the right way.
-    const easyCounts = gws.map((gw) => ({ gw, n: (byGw.get(gw) ?? []).filter((f) => overallOf(f) >= 1.05).length }))
+    const easyCounts = gws.map((gw) => ({ gw, n: (byGw.get(gw) ?? []).filter((f) => overallEase(f) >= 1.05).length }))
     const bb = [...easyCounts].sort((a, b) => b.n - a.n)[0]
 
     // Triple Captain: the single softest fixture for one of the league's
-    // strongest attacking teams (top 6 by season xG share of fixtures listed).
+    // strongest attacking teams (top 6 by season points of fixtures listed).
     const strongTeams = new Set(
       [...new Set(fixtureEase.map((f) => f.team))]
         .map((t) => ({ t, xg: ratings.filter((r) => r.team === t).reduce((s, r) => s + (num(r, 'season_ppg') ?? 0), 0) }))
@@ -219,15 +301,15 @@ function ChipPlanner({ fixtureEase, ratings }: { fixtureEase: FixtureEaseRow[]; 
     )
     const tc = [...fixtureEase]
       .filter((f) => strongTeams.has(f.team))
-      .sort((a, b) => (num(b, 'att_ease') ?? 1) - (num(a, 'att_ease') ?? 1))[0]
+      .sort((a, b) => attEase(b) - attEase(a))[0]
 
     // Wildcard: the GW where the set of teams with kind runs shifts the most
-    // over the following 3 GWs vs the previous 3 — a fixture swing point.
+    // over the following GWs vs the previous — a fixture swing point.
     let wc: number | null = null
     let bestSwing = 0
     for (let i = 1; i < gws.length - 1; i++) {
-      const before = new Set((byGw.get(gws[i - 1]) ?? []).filter((f) => overallOf(f) >= 1.05).map((f) => f.team))
-      const after = new Set((byGw.get(gws[i]) ?? []).filter((f) => overallOf(f) >= 1.05).map((f) => f.team))
+      const before = new Set((byGw.get(gws[i - 1]) ?? []).filter((f) => overallEase(f) >= 1.05).map((f) => f.team))
+      const after = new Set((byGw.get(gws[i]) ?? []).filter((f) => overallEase(f) >= 1.05).map((f) => f.team))
       let swing = 0
       after.forEach((t) => { if (!before.has(t)) swing++ })
       if (swing > bestSwing) { bestSwing = swing; wc = gws[i] }
@@ -251,7 +333,7 @@ function ChipPlanner({ fixtureEase, ratings }: { fixtureEase: FixtureEaseRow[]; 
       <h2 className="mb-3 text-sm font-semibold tracking-wide text-ink-2 uppercase">Chip Planner — based on the published fixture window</h2>
       <div className="grid gap-3 md:grid-cols-3">
         {bb && bb.n > 0 && card('Bench Boost', <><strong className="text-ink">GW{bb.gw}</strong> — {bb.n} teams have an easier-than-average fixture, the widest spread in this window.</>, 'Bench Boost wants all 15 players pointing the right way, so we look for the gameweek where the most teams have a kind fixture.')}
-        {tc && card('Triple Captain', <><strong className="text-ink">GW{tc.gw}</strong> — {teamFullNames[tc.team] || tc.team} {tc.venue === 'H' ? 'vs' : 'at'} {teamFullNames[tc.opponent] || tc.opponent}, attacker ease ×{(num(tc, 'att_ease') ?? 1).toFixed(2)}.</>, 'Triple Captain wants the softest single fixture for an elite attacking side — the best chance of a haul from your captain.')}
+        {tc && card('Triple Captain', <><strong className="text-ink">GW{tc.gw}</strong> — {teamFullNames[tc.team] || tc.team} {tc.venue === 'H' ? 'vs' : 'at'} {teamFullNames[tc.opponent] || tc.opponent} (FDR {tc.fdr}).</>, 'Triple Captain wants the softest single fixture for an elite attacking side — the best chance of a haul from your captain.')}
         {wc != null && bestSwing >= 3 && card('Wildcard / Free Hit', <><strong className="text-ink">GW{wc}</strong> — {bestSwing} teams' runs turn kind here; rebuilding into the swing captures it.</>, 'A wildcard lands best just before a fixture swing — when a new group of teams starts an easy run you are not set up for.')}
       </div>
       <p className="mt-2 text-xs text-ink-3">Heuristics over the published window only — they sharpen as more fixtures land.</p>
@@ -353,6 +435,8 @@ function MatchupExplorer({ ratings }: { ratings: RatingRow[] }) {
 
       {loading ? (
         <div className="rounded-xl border border-dashed border-line-mid bg-surface-1/50 px-6 py-10 text-center text-ink-2">Loading shot data…</div>
+      ) : teams.length === 0 ? (
+        <EmptyState icon={<Icon name="target" size={40} />}>Shot data isn’t available for this season yet.</EmptyState>
       ) : (
         <>
           <div className="mb-4 flex flex-wrap gap-1.5">

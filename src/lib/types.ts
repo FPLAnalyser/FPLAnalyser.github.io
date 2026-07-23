@@ -52,6 +52,7 @@ export interface TeamRatingRow extends Row {
   defence: number
   defence_rank: number
   set_piece_share: number | null
+  pen_share: number | null
   set_piece_threat: boolean
   // Underlying components surfaced for the list's Attack/Defence tabs.
   // finish_delta (goals−xG) and xgc_prevented (xGC−goals conceded) are raw and

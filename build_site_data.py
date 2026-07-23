@@ -139,10 +139,13 @@ def write_json(name, payload):
 #             15% clean-sheet rate · 15% keeping edge (goals conceded−xGC) ·
 #             10% shot-quality conceded  (all but CS-rate inverted: worse-for-
 #             opponent = higher score)
-# Set-piece/penalty threat (share of a team's xG from dead balls) rides along as a
-# separate flag, deliberately NOT folded into the attack number.
+# Set-piece / penalty threat (share of a team's xG from dead balls) rides along
+# as a separate flag, deliberately NOT folded into the attack number. Open-play
+# set pieces (corners, free kicks) and penalties are tracked separately so the
+# UI can show each on its own — penalties are a distinct, transferable threat.
 BOX_ZONES = {"six_yard", "penalty_area"}
-SET_PIECE_SITUATIONS = {"FromCorner", "SetPiece", "DirectFreekick", "Penalty"}
+SET_PIECE_SITUATIONS = {"FromCorner", "SetPiece", "DirectFreekick"}
+PENALTY_SITUATIONS = {"Penalty"}
 BIG_CHANCE_XG = 0.30  # shot-level proxy for a "big chance" (xG ≥ 0.30)
 
 
@@ -174,6 +177,7 @@ def _team_raw_metrics(sh, tm_win):
         goals_for = int((f["result"] == "Goal").sum())
         goals_against = int((a["result"] == "Goal").sum()) + int((a["result"] == "OwnGoal").sum())
         sp_xg = f[f["situation"].isin(SET_PIECE_SITUATIONS)]["xg"].sum()
+        pen_xg = f[f["situation"].isin(PENALTY_SITUATIONS)]["xg"].sum()
         team_xa = tm_lookup.loc[t]["team_xa"] if (has_xa and t in tm_lookup.index) else np.nan
         cs_rate = tm_lookup.loc[t]["cs_rate"] if (has_cs and t in tm_lookup.index) else np.nan
         rows.append({
@@ -192,6 +196,7 @@ def _team_raw_metrics(sh, tm_win):
             "d_keep": goals_against - xg_against,
             "d_quality": xg_against / na if na else np.nan,
             "sp_xg_share": sp_xg / xg_for if xg_for else np.nan,
+            "pen_xg_share": pen_xg / xg_for if xg_for else np.nan,
         })
     return pd.DataFrame(rows)
 
@@ -237,6 +242,7 @@ def build_team_ratings(shots, tm, fixtures):
                 "attack": float(r["attack"]), "attack_rank": int(r["attack_rank"]),
                 "defence": float(r["defence"]), "defence_rank": int(r["defence_rank"]),
                 "set_piece_share": round(float(r["sp_xg_share"]), 3) if pd.notna(r["sp_xg_share"]) else None,
+                "pen_share": round(float(r["pen_xg_share"]), 3) if pd.notna(r["pen_xg_share"]) else None,
                 "set_piece_threat": bool(pd.notna(sp_rank[i]) and sp_rank[i] <= 6),
                 # Underlying components surfaced for the Attack/Defence table tabs.
                 # finish_delta  = goals − xG      (+ = clinical, − = wasteful)

@@ -195,7 +195,13 @@ export default function Rankings() {
   }, [isAttOnly, isOutfield, singlePos])
 
   const view: TabView | null = useMemo(() => {
-    const seasonOk = ratings.filter((p) => bool(p, 'season_ok'))
+    // Leaderboards rank only players with enough minutes to earn a rating.
+    // But when the user searches by name, widen to the full pool so newly
+    // promoted clubs and new signings — who have no rating yet (shown N/A) —
+    // are still findable and clickable through to their profile.
+    const seasonOk = query
+      ? ratings
+      : ratings.filter((p) => bool(p, 'season_ok'))
     const applyPos = (rows: Row[]) => (pos === 'ALL' ? rows : rows.filter((p) => p.position === pos))
 
     switch (tab) {
