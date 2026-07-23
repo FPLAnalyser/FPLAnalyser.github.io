@@ -1,12 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageHeader, PageShell } from '../components/PageShell'
 import { PageSkeleton } from '../components/Skeleton'
 import { Tabs, type TabDef } from '../components/Tabs'
-import { TeamBadge, PositionIcon } from '../components/badges'
+import { TeamBadge } from '../components/badges'
 import { FixtureChips } from '../components/FixtureChips'
+import { RatingCard } from '../components/RatingCard'
 import { Icon } from '../components/Icon'
-import { StarRating } from '../components/StarRating'
 import { useCore } from '../lib/useData'
 import { num } from '../lib/rows'
 import { teamLabel } from '../lib/util'
@@ -58,7 +58,7 @@ const dim100 = (r: RatingRow, key: string): number | null => {
   return v == null ? null : Math.round(Math.max(0, Math.min(100, v * 20)))
 }
 const PRICE_MIN = 4.0
-const PRICE_MAX = 15.0
+const PRICE_MAX = 15.5 // a hair above the most expensive player so nobody is filtered out by default
 
 export default function SquadBuilder() {
   const { data, error } = useCore()
@@ -74,6 +74,7 @@ export default function SquadBuilder() {
   const [minRating, setMinRating] = useState(0)
   const [minDim, setMinDim] = useState<Record<string, number>>({})
   const [showFilters, setShowFilters] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
 
   const fixtureEase = (data?.fixtureEase ?? []) as FixtureEaseRow[]
 
@@ -149,13 +150,20 @@ export default function SquadBuilder() {
   const list = useMemo(() => {
     const q = query.trim().toLowerCase()
     const rows = pool.filter((r) => {
-      if (r.position !== pickPos) return false
-      if (q && !String(r.web_name).toLowerCase().includes(q)) return false
+      // A search matches any player in the game, regardless of the active
+      // position tab; with no search we browse just the selected position.
+      if (q) {
+        if (!String(r.web_name).toLowerCase().includes(q)) return false
+      } else if (r.position !== pickPos) {
+        return false
+      }
       if (priceOf(r) > maxPrice + 1e-9) return false
       if (minRating > 0 && (ovOf(r) ?? 0) < minRating) return false
-      for (const d of dims) {
-        const th = minDim[d.key] ?? 0
-        if (th > 0 && (dim100(r, d.key) ?? 0) < th) return false
+      if (!q) {
+        for (const d of dims) {
+          const th = minDim[d.key] ?? 0
+          if (th > 0 && (dim100(r, d.key) ?? 0) < th) return false
+        }
       }
       return true
     })
@@ -197,6 +205,11 @@ export default function SquadBuilder() {
           <Icon name="bolt" size={14} /> Auto-pick best value
         </button>
         {total > 0 && (
+          <button onClick={() => setShareOpen(true)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-line-mid px-3.5 text-sm font-medium text-ink transition-colors hover:border-line-strong">
+            <Icon name="trend-up" size={14} /> Share / download
+          </button>
+        )}
+        {total > 0 && (
           <button onClick={clear} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-line-mid px-3.5 text-sm font-medium text-ink-2 transition-colors hover:border-line-strong hover:text-ink">
             <Icon name="x" size={14} /> Clear
           </button>
@@ -209,55 +222,13 @@ export default function SquadBuilder() {
         {complete && !valid && <span className="text-sm font-medium text-bad">Over budget by £{Math.abs(remaining).toFixed(1)}m</span>}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-        {/* Squad slots */}
-        <div>
-          <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Your squad</div>
-          <div className="flex flex-col gap-3">
-            {SLOTS.map(({ pos, count }) => {
-              const inPos = chosen.filter((r) => r.position === pos)
-              return (
-                <div key={pos} className="rounded-xl border border-line bg-surface-1/50 p-3">
-                  <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-ink-2">
-                    <PositionIcon pos={pos} size={13} /> {POS_LABEL[pos]}
-                    <span className="text-ink-3">{inPos.length}/{count}</span>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    {inPos.map((r) => (
-                      <div key={r.element} className="flex items-center gap-2.5 rounded-lg bg-surface-2/50 px-2.5 py-1.5">
-                        <TeamBadge team={String(r.team)} size={16} />
-                        <div className="min-w-0 flex-1">
-                          <button className="block w-full text-left" onClick={() => navigate(`/player?name=${encodeURIComponent(String(r.web_name))}`)}>
-                            <div className="truncate text-sm font-medium text-ink hover:text-accent">{String(r.web_name)}</div>
-                            <div className="text-[11px] text-ink-3">{teamLabel(String(r.team))} · £{priceOf(r).toFixed(1)}m</div>
-                          </button>
-                          <div className="mt-1"><FixtureChips fixtureEase={fixtureEase} team={String(r.team)} n={4} /></div>
-                        </div>
-                        <StarRating value={num(r, 'season_overall_score')} size={12} />
-                        <button aria-label="Remove" onClick={() => remove(r.element)} className="shrink-0 text-ink-3 transition-colors hover:text-bad"><Icon name="x" size={15} /></button>
-                      </div>
-                    ))}
-                    {Array.from({ length: Math.max(0, count - inPos.length) }).map((_, i) => (
-                      <button
-                        key={`e${i}`}
-                        onClick={() => { setPickPos(pos); setNote(null) }}
-                        className={`flex items-center gap-2 rounded-lg border border-dashed px-2.5 py-2 text-left text-sm transition-colors ${
-                          pickPos === pos ? 'border-accent/60 text-accent' : 'border-line-mid text-ink-3 hover:border-line-strong hover:text-ink-2'
-                        }`}
-                      >
-                        <Icon name="search" size={13} /> Add a {pos === 'GKP' ? 'goalkeeper' : pos === 'DEF' ? 'defender' : pos === 'MID' ? 'midfielder' : 'forward'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+      {/* Pitch view of the squad */}
+      <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Your squad {total > 0 && <span className="text-ink-3 normal-case tracking-normal">· tap an empty slot to add, tap the ✕ to drop</span>}</div>
+      <SquadBoard chosen={chosen} fixtureEase={fixtureEase} pickPos={pickPos} onRemove={remove} onPick={(p) => { setPickPos(p); setNote(null) }} />
 
-        {/* Player picker */}
-        <div>
-          <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Add players</div>
+      {/* Player picker */}
+      <div className="mt-8">
+        <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Add players</div>
           <div className="mb-3"><Tabs tabs={PICK_TABS} active={pickPos} onChange={(id) => setPickPos(id as Pos)} layoutId="squad-pos" /></div>
           <div className="mb-3 flex items-center gap-2 rounded-lg border border-line-mid bg-surface-1 px-3">
             <Icon name="search" size={16} />
@@ -326,9 +297,118 @@ export default function SquadBuilder() {
             })}
             {list.length === 0 && <div className="px-3 py-8 text-center text-sm text-ink-3">No players match these filters.</div>}
           </div>
-        </div>
       </div>
+
+      <SquadShare chosen={chosen} fixtureEase={fixtureEase} squadScore={squadScore} bestXI={bestXI} spent={spent} unrated={unrated} total={total} open={shareOpen} onClose={() => setShareOpen(false)} />
     </PageShell>
+  )
+}
+
+/** The squad laid out on a pitch, one row per position — the same card visual
+ *  as the My Team page. Interactive by default (remove ✕ + empty slots that
+ *  jump the picker to that position); `capture` mode drops those for a clean
+ *  shareable image. */
+function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, capture }: {
+  chosen: RatingRow[]; fixtureEase: FixtureEaseRow[]; pickPos?: Pos; onRemove?: (el: number) => void; onPick?: (p: Pos) => void; capture?: boolean
+}) {
+  const navigate = useNavigate()
+  const wrap = 'relative w-[calc(50%-0.375rem)] sm:w-[168px] lg:w-[188px]'
+  return (
+    <div
+      className="relative overflow-hidden rounded-3xl p-3 md:p-5"
+      style={{ background: 'radial-gradient(120% 80% at 50% 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.5) 100%), repeating-linear-gradient(90deg, #0e2117 0 9%, #10281c 9% 18%), linear-gradient(180deg, #10281c, #0c1c13)' }}
+    >
+      <div className="relative flex flex-col gap-4 md:gap-5">
+        {SLOTS.map(({ pos, count }) => {
+          const players = chosen.filter((r) => r.position === pos)
+          if (capture && !players.length) return null
+          const empties = capture ? 0 : Math.max(0, count - players.length)
+          return (
+            <div key={pos} className="flex flex-wrap justify-center gap-3 md:gap-4">
+              {players.map((r) => (
+                <div key={r.element} className={wrap}>
+                  <RatingCard r={r} compact window="season" fixtureEase={fixtureEase} onClick={capture ? undefined : () => navigate(`/player?name=${encodeURIComponent(String(r.web_name))}`)} />
+                  {onRemove && !capture && (
+                    <button aria-label={`Remove ${r.web_name}`} onClick={() => onRemove(r.element)} className="absolute -top-2 -right-2 z-10 grid size-7 place-items-center rounded-full border border-line bg-surface-1 text-ink-2 shadow-lg transition-colors hover:border-bad hover:text-bad">
+                      <Icon name="x" size={14} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {Array.from({ length: empties }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => onPick?.(pos)}
+                  className={`${wrap} grid min-h-[110px] place-items-center rounded-2xl border-2 border-dashed text-xs font-medium transition-colors ${
+                    pickPos === pos ? 'border-accent/70 text-accent' : 'border-white/20 text-white/75 hover:border-white/45 hover:text-white'
+                  }`}
+                >
+                  <span className="flex flex-col items-center gap-1"><Icon name="search" size={16} /> Add {pos}</span>
+                </button>
+              ))}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/** Share / download the squad as a branded PNG (rasterised client-side). */
+function SquadShare({ chosen, fixtureEase, squadScore, bestXI, spent, unrated, total, open, onClose }: {
+  chosen: RatingRow[]; fixtureEase: FixtureEaseRow[]; squadScore: number | null; bestXI: number | null; spent: number; unrated: number; total: number; open: boolean; onClose: () => void
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+  if (!open) return null
+
+  const save = async () => {
+    if (!ref.current) return
+    setBusy(true); setMsg('')
+    try {
+      const { default: html2canvas } = await import('html2canvas-pro')
+      const canvas = await html2canvas(ref.current, { backgroundColor: '#0c0b09', scale: 2, useCORS: true, logging: false })
+      const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, 'image/png'))
+      if (!blob) throw new Error('render failed')
+      const file = new File([blob], 'fpl-analyser-squad.png', { type: 'image/png' })
+      const nav = navigator as Navigator & { canShare?: (d: unknown) => boolean }
+      if (nav.canShare?.({ files: [file] }) && navigator.share) {
+        await navigator.share({ files: [file], title: 'My FPL squad — FPL Analyser' })
+      } else {
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob); a.download = file.name; a.click(); URL.revokeObjectURL(a.href)
+      }
+    } catch {
+      setMsg('Could not render the image on this device — try a screenshot instead.')
+    } finally {
+      setBusy(false)
+    }
+  }
+  const btn = 'inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-line-mid px-4 text-sm font-semibold text-ink transition-colors hover:border-line-strong'
+
+  return (
+    <div className="fixed inset-0 z-[200] grid place-items-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="w-full max-w-[560px]" onClick={(e) => e.stopPropagation()}>
+        <div ref={ref} className="rounded-3xl bg-[#0c0b09] p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="font-display text-lg leading-none text-ink">FPL <span className="text-accent">Analyser</span><div className="mt-1 text-[10px] font-semibold tracking-[0.14em] text-ink-3 uppercase">My Squad</div></div>
+            <div className="flex gap-4 text-center">
+              <div><div className="font-display text-2xl leading-none text-accent tabular-nums">{squadScore ?? '—'}</div><div className="text-[9px] tracking-[0.1em] text-ink-3 uppercase">Squad</div></div>
+              <div><div className="font-display text-2xl leading-none text-accent tabular-nums">{bestXI ?? '—'}</div><div className="text-[9px] tracking-[0.1em] text-ink-3 uppercase">Best XI</div></div>
+              <div><div className="font-display text-2xl leading-none text-ink tabular-nums">£{spent.toFixed(1)}</div><div className="text-[9px] tracking-[0.1em] text-ink-3 uppercase">Spend</div></div>
+            </div>
+          </div>
+          <SquadBoard chosen={chosen} fixtureEase={fixtureEase} capture />
+          {unrated > 0 && <div className="mt-2 text-center text-[10px] text-ink-3">{unrated} player{unrated > 1 ? 's' : ''} new to the league (unrated)</div>}
+        </div>
+        <div className="mt-3 flex flex-wrap justify-center gap-2">
+          <button onClick={save} disabled={busy || total === 0} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent-strong disabled:opacity-60">{busy ? 'Rendering…' : '⭳ Save image'}</button>
+          <button onClick={onClose} className={btn}>Close</button>
+        </div>
+        {msg && <div className="mt-2 text-center text-xs text-ink-2">{msg}</div>}
+      </div>
+    </div>
   )
 }
 
