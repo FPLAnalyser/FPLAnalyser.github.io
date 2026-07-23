@@ -207,6 +207,7 @@ function AllTeamsTable({
     { key: 'finish', header: 'Finish Δ', tip: TOOLTIPS.finish_delta as string, sortValue: (r) => { const v = rt(r)?.finish_delta; return v == null ? -999 : v - meanFinish }, cell: (r) => { const v = rt(r)?.finish_delta; return <DeltaCell value={v == null ? null : v - meanFinish} /> } },
     { key: 'box', header: 'Box %', tip: TOOLTIPS.box_share as string, sortValue: (r) => rt(r)?.box_share ?? -1, cell: (r) => { const v = rt(r)?.box_share; return <span className="font-num tabular-nums">{v == null ? 'N/A' : `${Math.round(v * 100)}%`}</span> } },
     { key: 'sp', header: 'Set-piece', tip: TOOLTIPS.set_piece_share as string, sortValue: (r) => rt(r)?.set_piece_share ?? -1, cell: (r) => { const rr = rt(r); if (!rr || rr.set_piece_share == null) return <span className="text-ink-3">—</span>; return <span className={`font-num tabular-nums ${rr.set_piece_threat ? 'font-semibold text-warn' : 'text-ink-2'}`}>{Math.round(rr.set_piece_share * 100)}%</span> } },
+    { key: 'pen', header: 'Penalty', tip: TOOLTIPS.pen_share as string, sortValue: (r) => rt(r)?.pen_share ?? -1, cell: (r) => { const rr = rt(r); if (!rr || rr.pen_share == null) return <span className="text-ink-3">—</span>; return <span className="font-num tabular-nums text-ink-2">{Math.round(rr.pen_share * 100)}%</span> } },
   ]
 
   const defenceCols: Column<Row>[] = [
@@ -326,7 +327,7 @@ function TeamCard({
         {rating?.set_piece_threat && (
           <span
             className="inline-flex items-center gap-1.5 rounded-full border border-warn/40 bg-warn/10 px-2.5 py-1 text-xs font-semibold text-warn"
-            title={rating.set_piece_share != null ? `${Math.round(rating.set_piece_share * 100)}% of xG from set pieces & penalties` : 'High set-piece & penalty threat'}
+            title={rating.set_piece_share != null ? `${Math.round(rating.set_piece_share * 100)}% of xG from open-play set pieces (corners & free kicks)` : 'High set-piece threat'}
           >
             <Icon name="target" size={13} /> Set-piece threat
           </span>
