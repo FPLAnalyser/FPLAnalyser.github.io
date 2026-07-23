@@ -16,7 +16,7 @@ import { PageSkeleton } from '../components/Skeleton'
 import { Icon } from '../components/Icon'
 import { useCore } from '../lib/useData'
 import { num, str, bool } from '../lib/rows'
-import { teamFullNames, TOOLTIPS } from '../lib/util'
+import { teamFullNames, teamLabel, TOOLTIPS } from '../lib/util'
 import type { FixtureEaseRow, RatingRow, Row, TeamRatingRow } from '../lib/types'
 
 function Tile({ value, label }: { value: ReactNode; label: string }) {
@@ -132,6 +132,28 @@ export default function Teams() {
             ratings={ratings}
             fixtureEase={fixtureEase}
           />
+        </div>
+      ) : selected ? (
+        <div className="flex flex-col gap-4">
+          <div className="rounded-2xl border border-line bg-surface-1/60 p-6 text-center">
+            <div className="mb-3 flex items-center justify-center gap-2">
+              <TeamBadge team={selected} size={40} />
+              <span className="text-xl font-bold text-ink">{teamLabel(selected)}</span>
+            </div>
+            <div className="mx-auto mb-1 inline-flex items-center gap-1.5 rounded-full border border-line-mid px-3 py-1 text-xs font-semibold text-ink-2">
+              <Icon name="clock" size={13} /> Team report available after GW1
+            </div>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink-2">
+              Our Attack, Defence and set-piece ratings are built from this season’s match data, so they switch on once the
+              opening gameweek has been played. Until then, use the fixtures below to plan your run.
+            </p>
+          </div>
+          {fixtureEase.some((f) => f.team === selected) && (
+            <div className="rounded-2xl border border-line bg-surface-1/60 p-4">
+              <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Next fixtures</div>
+              <FixtureChips fixtureEase={fixtureEase} team={selected} n={6} />
+            </div>
+          )}
         </div>
       ) : (
         <>

@@ -17,6 +17,7 @@ const LINKS: { to: string; label: string }[] = [
   { to: '/teams', label: 'Teams' },
   { to: '/fixtures', label: 'Fixtures' },
   { to: '/scout', label: 'Scouting' },
+  { to: '/squad', label: 'Squad Builder' },
   { to: '/loadteam', label: 'My Team' },
 ]
 

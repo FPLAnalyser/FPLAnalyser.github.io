@@ -9,7 +9,7 @@ import { PageSkeleton } from '../components/Skeleton'
 import { useCore, useLazyTable } from '../lib/useData'
 import { classifyZone, toPitch } from '../lib/shotzones'
 import { num, str } from '../lib/rows'
-import { teamFullNames, FDR_COLORS } from '../lib/util'
+import { teamLabel, FDR_COLORS } from '../lib/util'
 import type { FixtureEaseRow, RatingRow, Row, TeamRatingRow } from '../lib/types'
 
 /* ── Difficulty model ────────────────────────────────────────────────────────
@@ -339,7 +339,7 @@ function FixtureGrid({
                 <tr className="border-b border-line last:border-0">
                   <td className="sticky left-0 z-10 cursor-pointer bg-surface-1 px-3 py-2" onClick={() => setOpen((o) => (o === r.team ? null : r.team))}>
                     <span className="flex items-center gap-2 font-medium whitespace-nowrap text-ink">
-                      <TeamBadge team={r.team} size={16} />{teamFullNames[r.team] || r.team}
+                      <TeamBadge team={r.team} size={16} />{teamLabel(r.team)}
                       <span className="text-[10px] text-ink-3">{open === r.team ? '▴' : '▾'}</span>
                     </span>
                   </td>
@@ -353,7 +353,7 @@ function FixtureGrid({
                               const { diff, ours } = analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr)
                               const [bg, fg] = FDR_COLORS[Math.max(1, Math.min(5, Math.round(diff)))] || FDR_COLORS[3]
                               return (
-                                <span key={i} className="inline-block w-full min-w-[54px] rounded px-1 py-1 text-[11px] font-semibold whitespace-nowrap" style={{ background: bg, color: fg }} title={`GW${gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamFullNames[f.opponent] || f.opponent} — difficulty ${diff.toFixed(1)}${ours ? '' : ' (FPL FDR — opponent unrated)'}`}>
+                                <span key={i} className="inline-block w-full min-w-[54px] rounded px-1 py-1 text-[11px] font-semibold whitespace-nowrap" style={{ background: bg, color: fg }} title={`GW${gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(f.opponent)} — difficulty ${diff.toFixed(1)}${ours ? '' : ' (FPL FDR — opponent unrated)'}`}>
                                   {f.opponent} <span className="opacity-70">({f.venue})</span>{!ours && <span className="opacity-70"> ·</span>}
                                 </span>
                               )
@@ -401,7 +401,7 @@ function RunRead({ team, opponents, profiles, league, usedFdr, n }: { team: stri
   const read = fixtureRead(opponents, profiles, league)
   return (
     <div className="text-sm text-ink-2">
-      <div className="mb-1 flex items-center gap-2 font-semibold text-ink"><TeamBadge team={team} size={15} />Next {n}: {teamFullNames[team] || team}</div>
+      <div className="mb-1 flex items-center gap-2 font-semibold text-ink"><TeamBadge team={team} size={15} />Next {n}: {teamLabel(team)}</div>
       {read ? <p>{read}</p> : <p className="text-ink-3">No shot-concession data for these opponents yet — difficulty is from team strength only.</p>}
       {usedFdr && <p className="mt-1 text-xs text-ink-3">Some opponents have no rating yet (promoted / pre-season); those fixtures use FPL’s FDR.</p>}
     </div>
@@ -474,7 +474,7 @@ function ChipPlanner({ fixtureEase, ratings }: { fixtureEase: FixtureEaseRow[]; 
       <h2 className="mb-3 text-sm font-semibold tracking-wide text-ink-2 uppercase">Chip Planner — based on the published fixture window</h2>
       <div className="grid gap-3 md:grid-cols-3">
         {bb && bb.n > 0 && card('Bench Boost', <><strong className="text-ink">GW{bb.gw}</strong> — {bb.n} teams have an easier-than-average fixture, the widest spread in this window.</>, 'Bench Boost wants all 15 players pointing the right way, so we look for the gameweek where the most teams have a kind fixture.')}
-        {tc && card('Triple Captain', <><strong className="text-ink">GW{tc.gw}</strong> — {teamFullNames[tc.team] || tc.team} {tc.venue === 'H' ? 'vs' : 'at'} {teamFullNames[tc.opponent] || tc.opponent} (FDR {tc.fdr}).</>, 'Triple Captain wants the softest single fixture for an elite attacking side — the best chance of a haul from your captain.')}
+        {tc && card('Triple Captain', <><strong className="text-ink">GW{tc.gw}</strong> — {teamLabel(tc.team)} {tc.venue === 'H' ? 'vs' : 'at'} {teamLabel(tc.opponent)} (FDR {tc.fdr}).</>, 'Triple Captain wants the softest single fixture for an elite attacking side — the best chance of a haul from your captain.')}
         {wc != null && bestSwing >= 3 && card('Wildcard / Free Hit', <><strong className="text-ink">GW{wc}</strong> — {bestSwing} teams' runs turn kind here; rebuilding into the swing captures it.</>, 'A wildcard lands best just before a fixture swing — when a new group of teams starts an easy run you are not set up for.')}
       </div>
       <p className="mt-2 text-xs text-ink-3">Heuristics over the published window only — they sharpen as more fixtures land.</p>
@@ -596,7 +596,7 @@ function MatchupExplorer({ ratings }: { ratings: RatingRow[] }) {
 
           {opp && oProf && leagueProfile.totalXg > 0 && (
             <div className="mb-4 rounded-xl border border-line bg-surface-1/60 p-4">
-              <div className="mb-2 flex items-center gap-2 font-semibold text-ink"><TeamBadge team={opp} size={18} />Where {teamFullNames[opp] || opp} concede their xG</div>
+              <div className="mb-2 flex items-center gap-2 font-semibold text-ink"><TeamBadge team={opp} size={18} />Where {teamLabel(opp)} concede their xG</div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                 {(Object.keys(CAT_LABEL) as Cat[]).map((c) => (
                   <VulnTile key={c} label={CAT_LABEL[c]} share={oProf.shares[c]} league={leagueProfile.shares[c]} />
