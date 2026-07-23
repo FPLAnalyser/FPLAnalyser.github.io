@@ -2,7 +2,6 @@ import { Fragment, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageHeader, PageShell, EmptyState } from '../components/PageShell'
 import { Tabs, type TabDef } from '../components/Tabs'
-import { SearchBox } from '../components/SearchBox'
 import { TeamBadge, PositionIcon } from '../components/badges'
 import { InfoTip } from '../components/InfoTip'
 import { Icon } from '../components/Icon'
@@ -245,50 +244,68 @@ export default function Fixtures() {
   )
 }
 
-/* ── Rotation planner: pick 2–4 players and see who to start each gameweek ──────
-   For every gameweek we start the player with the kindest fixture (our own
-   difficulty), so a pair of rotating picks covers a smoother run than either
-   alone. */
-function RotationPlanner({ ratings, fixtureEase, seasonRating }: { ratings: RatingRow[]; fixtureEase: FixtureEaseRow[]; seasonRating: Map<string, TeamRatingRow> }) {
-  const navigate = useNavigate()
-  const [ids, setIds] = useState<number[]>([])
+/* ── Rotation planner: pick teams and see who to start each gameweek ──────
+   For every gameweek we start the team with the kindest fixture (our own
+   difficulty), so a rotating pair covers a smoother run than either alone.
+   With nothing picked we surface the best-rotating pairs across the league. */
+function RotationPlanner({ ratings: _ratings, fixtureEase, seasonRating }: { ratings: RatingRow[]; fixtureEase: FixtureEaseRow[]; seasonRating: Map<string, TeamRatingRow> }) {
+  const [teams, setTeams] = useState<string[]>([])
 
-  const byEl = useMemo(() => {
-    const m = new Map<number, RatingRow>()
-    for (const r of ratings) if (r.element != null) m.set(r.element, r)
-    return m
-  }, [ratings])
-  const pool = useMemo(() => ratings.filter((r) => r.element != null && r.web_name), [ratings])
-  const players = ids.map((id) => byEl.get(id)).filter(Boolean) as RatingRow[]
-  const add = (r: RatingRow) => setIds((s) => (s.includes(r.element) || s.length >= 4 ? s : [...s, r.element]))
-  const removeP = (el: number) => setIds((s) => s.filter((x) => x !== el))
-
+  const allTeams = useMemo(() => [...new Set(fixtureEase.map((f) => f.team))].sort(), [fixtureEase])
   const gws = useMemo(() => [...new Set(fixtureEase.map((f) => f.gw))].sort((a, b) => a - b).slice(0, 8), [fixtureEase])
 
   // A team's (easier, if a double) fixture + our difficulty for one gameweek.
-  const cellFor = (team: string, gw: number) => {
-    const fs = fixtureEase.filter((f) => f.team === team && f.gw === gw)
-    if (!fs.length) return null
-    return fs
-      .map((f) => ({ f, diff: analyserDiff(seasonRating.get(f.opponent), 'overall', f.venue, f.fdr).diff }))
-      .sort((a, b) => a.diff - b.diff)[0]
-  }
-
-  // Who to start each gameweek (kindest fixture among the picks).
-  const bestByGw = new Map<number, number>()
-  for (const gw of gws) {
-    let best: { el: number; diff: number } | null = null
-    for (const p of players) {
-      const c = cellFor(String(p.team), gw)
-      if (c && (!best || c.diff < best.diff)) best = { el: p.element, diff: c.diff }
+  const cellFor = useMemo(() => {
+    const cache = new Map<string, { f: FixtureEaseRow; diff: number } | null>()
+    return (team: string, gw: number) => {
+      const k = team + ':' + gw
+      if (cache.has(k)) return cache.get(k)!
+      const fs = fixtureEase.filter((f) => f.team === team && f.gw === gw)
+      const v = !fs.length ? null : fs
+        .map((f) => ({ f, diff: analyserDiff(seasonRating.get(f.opponent), 'overall', f.venue, f.fdr).diff }))
+        .sort((a, b) => a.diff - b.diff)[0]
+      cache.set(k, v)
+      return v
     }
-    if (best) bestByGw.set(gw, best.el)
-  }
+  }, [fixtureEase, seasonRating])
+
+  const toggle = (t: string) => setTeams((s) => (s.includes(t) ? s.filter((x) => x !== t) : s.length >= 4 ? s : [...s, t]))
   const avg = (ds: number[]) => (ds.length ? ds.reduce((a, b) => a + b, 0) / ds.length : null)
-  const rotAvg = avg(gws.map((gw) => { const el = bestByGw.get(gw); return el == null ? null : cellFor(String(byEl.get(el)!.team), gw)!.diff }).filter((v): v is number => v != null))
-  const soloAvg = (p: RatingRow) => avg(gws.map((gw) => cellFor(String(p.team), gw)?.diff).filter((v): v is number => v != null))
-  const bestSolo = players.length ? players.reduce((a, b) => ((soloAvg(a) ?? 9) <= (soloAvg(b) ?? 9) ? a : b)) : null
+
+  // Who to start each gameweek among the selected teams (kindest fixture).
+  const bestByGw = new Map<number, string>()
+  for (const gw of gws) {
+    let best: { t: string; diff: number } | null = null
+    for (const t of teams) {
+      const c = cellFor(t, gw)
+      if (c && (!best || c.diff < best.diff)) best = { t, diff: c.diff }
+    }
+    if (best) bestByGw.set(gw, best.t)
+  }
+  const rotAvg = avg(gws.map((gw) => { const t = bestByGw.get(gw); return t == null ? null : cellFor(t, gw)!.diff }).filter((v): v is number => v != null))
+  const soloAvg = (t: string) => avg(gws.map((gw) => cellFor(t, gw)?.diff).filter((v): v is number => v != null))
+  const bestSolo = teams.length ? teams.reduce((a, b) => ((soloAvg(a) ?? 9) <= (soloAvg(b) ?? 9) ? a : b)) : null
   const bestSoloAvg = bestSolo ? soloAvg(bestSolo) : null
+
+  // Top rotating PAIRS across the league (lowest combined difficulty), shown by
+  // default so you can jump straight to a strong rotation.
+  const topPairs = useMemo(() => {
+    const out: { a: string; b: string; combined: number; cover: number }[] = []
+    for (let i = 0; i < allTeams.length; i++) {
+      for (let j = i + 1; j < allTeams.length; j++) {
+        const a = allTeams[i], b = allTeams[j]
+        const ds: number[] = []
+        for (const gw of gws) {
+          const ca = cellFor(a, gw)?.diff
+          const cb = cellFor(b, gw)?.diff
+          const best = Math.min(ca ?? Infinity, cb ?? Infinity)
+          if (Number.isFinite(best)) ds.push(best)
+        }
+        if (ds.length) out.push({ a, b, combined: ds.reduce((x, y) => x + y, 0) / ds.length, cover: ds.length })
+      }
+    }
+    return out.sort((x, y) => x.cover - y.cover || x.combined - y.combined).sort((x, y) => x.combined - y.combined).slice(0, 8)
+  }, [allTeams, gws, cellFor])
 
   const headCls = 'px-2 py-2 text-center text-[11px] font-semibold tracking-wide text-ink-3 uppercase'
 
@@ -296,70 +313,81 @@ function RotationPlanner({ ratings, fixtureEase, seasonRating }: { ratings: Rati
     <div>
       <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold tracking-wide text-ink-2 uppercase">
         Rotation Planner
-        <InfoTip text="Pick two or more players (usually cheap defenders or keepers) and we’ll show who to start each gameweek — always the one with the kindest fixture on our difficulty. A good rotation pair turns two patchy runs into one smooth one." />
+        <InfoTip text="Pick two or more teams (usually where you own cheap defenders or keepers) and we’ll show who to start each gameweek — always the one with the kindest fixture on our difficulty. With nothing picked we list the league’s best-rotating pairs." />
       </h2>
-      <p className="mb-3 text-sm text-ink-3">Add 2–4 players who share a slot and we’ll pick who starts each week for the best combined run.</p>
+      <p className="mb-3 text-sm text-ink-3">Tap teams to build a rotation, or pick one of the top pairs below.</p>
 
-      <div className="mb-3 max-w-md">
-        <SearchBox<RatingRow>
-          items={pool}
-          getLabel={(r) => String(r.web_name)}
-          renderItem={(r) => (
-            <span className="flex items-center gap-2"><TeamBadge team={String(r.team)} size={14} />{String(r.web_name)}<span className="text-ink-3">· {r.position} · {teamLabel(String(r.team))}</span></span>
-          )}
-          onSelect={add}
-          clearOnSelect
-          placeholder="Add a player to the rotation…"
-        />
+      <div className="mb-4 flex flex-wrap gap-1.5">
+        {allTeams.map((t) => (
+          <button
+            key={t}
+            onClick={() => toggle(t)}
+            className={`flex min-h-9 items-center gap-1.5 rounded-full border px-2.5 text-sm font-medium transition-colors ${
+              teams.includes(t) ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+            }`}
+          >
+            <TeamBadge team={t} size={14} />{t}
+          </button>
+        ))}
+        {teams.length > 0 && (
+          <button onClick={() => setTeams([])} className="min-h-9 rounded-full px-2.5 text-sm font-medium text-ink-3 hover:text-ink">Clear</button>
+        )}
       </div>
 
-      {players.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          {players.map((p) => (
-            <span key={p.element} className="inline-flex items-center gap-1.5 rounded-full border border-line-mid bg-surface-1 px-2.5 py-1 text-sm">
-              <TeamBadge team={String(p.team)} size={14} />{String(p.web_name)}
-              <button aria-label={`Remove ${p.web_name}`} onClick={() => removeP(p.element)} className="text-ink-3 hover:text-bad"><Icon name="x" size={13} /></button>
-            </span>
-          ))}
+      {teams.length < 2 ? (
+        <div>
+          <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Top rotation pairs · next {gws.length}</div>
+          <div className="overflow-hidden rounded-xl border border-line">
+            {topPairs.map((p, i) => (
+              <button key={p.a + p.b} onClick={() => setTeams([p.a, p.b])} className="flex w-full items-center gap-3 border-b border-line px-3 py-2.5 text-left transition-colors last:border-0 hover:bg-surface-2/50">
+                <span className="w-5 shrink-0 text-center font-num text-xs tabular-nums text-ink-3">{i + 1}</span>
+                <span className="flex flex-1 items-center gap-2 font-medium text-ink">
+                  <TeamBadge team={p.a} size={16} />{teamLabel(p.a)}
+                  <span className="text-ink-3">+</span>
+                  <TeamBadge team={p.b} size={16} />{teamLabel(p.b)}
+                </span>
+                <span className="shrink-0 text-right">
+                  <span className="font-num text-sm font-semibold tabular-nums" style={{ color: runColor(p.combined) }}>{p.combined.toFixed(1)}</span>
+                  <span className="ml-1 text-[10px] text-ink-3">avg diff</span>
+                </span>
+              </button>
+            ))}
+            {topPairs.length === 0 && <div className="px-3 py-8 text-center text-sm text-ink-3">No fixtures to rank yet.</div>}
+          </div>
+          <p className="mt-2 text-xs text-ink-3">Lower is kinder — the combined difficulty if you always start whichever of the pair has the better fixture.</p>
         </div>
-      )}
-
-      {players.length < 2 ? (
-        <EmptyState icon={<Icon name="calendar" size={40} />}>Add at least two players to compare their fixtures and build a rotation.</EmptyState>
       ) : (
         <>
           {rotAvg != null && bestSoloAvg != null && (
             <div className="mb-4 rounded-xl border border-line bg-surface-1/60 p-4 text-sm">
-              Rotating these {players.length} gives an average fixture difficulty of{' '}
+              Rotating these {teams.length} gives an average fixture difficulty of{' '}
               <strong className="text-good">{rotAvg.toFixed(1)}</strong> over the next {gws.length} — versus{' '}
-              <strong className="text-ink">{bestSoloAvg.toFixed(1)}</strong> for {String(bestSolo!.web_name)} alone.
-              {rotAvg < bestSoloAvg - 0.1 ? ' The rotation is the smoother run.' : ' They barely improve on the best single pick here.'}
+              <strong className="text-ink">{bestSoloAvg.toFixed(1)}</strong> for {teamLabel(bestSolo!)} alone.
+              {rotAvg < bestSoloAvg - 0.1 ? ' The rotation is the smoother run.' : ' They barely improve on the best single team here.'}
             </div>
           )}
           <div className="overflow-x-auto rounded-xl border border-line">
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-line bg-surface-1">
-                  <th className="sticky left-0 z-10 bg-surface-1 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-ink-3 uppercase">Player</th>
+                  <th className="sticky left-0 z-10 bg-surface-1 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-ink-3 uppercase">Team</th>
                   {gws.map((gw) => <th key={gw} className={headCls}>GW{gw}</th>)}
                 </tr>
               </thead>
               <tbody>
-                {players.map((p) => (
-                  <tr key={p.element} className="border-b border-line last:border-0">
+                {teams.map((t) => (
+                  <tr key={t} className="border-b border-line last:border-0">
                     <td className="sticky left-0 z-10 bg-surface-1 px-3 py-2">
-                      <button onClick={() => navigate(`/player?name=${encodeURIComponent(String(p.web_name))}`)} className="flex items-center gap-2 font-medium whitespace-nowrap text-ink hover:text-accent">
-                        <TeamBadge team={String(p.team)} size={16} />{String(p.web_name)}
-                      </button>
+                      <span className="flex items-center gap-2 font-medium whitespace-nowrap text-ink"><TeamBadge team={t} size={16} />{teamLabel(t)}</span>
                     </td>
                     {gws.map((gw) => {
-                      const c = cellFor(String(p.team), gw)
-                      const start = bestByGw.get(gw) === p.element
+                      const c = cellFor(t, gw)
+                      const start = bestByGw.get(gw) === t
                       if (!c) return <td key={gw} className="px-1.5 py-1.5 text-center text-ink-3">—</td>
                       const [bg, fg] = FDR_COLORS[Math.max(1, Math.min(5, Math.round(c.diff)))] || FDR_COLORS[3]
                       return (
                         <td key={gw} className="px-1.5 py-1.5 text-center">
-                          <span className={`relative inline-block w-full min-w-[54px] rounded px-1 py-1 text-[11px] font-semibold whitespace-nowrap ${start ? 'ring-2 ring-accent ring-offset-1 ring-offset-surface-1' : ''}`} style={{ background: bg, color: fg }} title={`${c.f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(c.f.opponent)} — difficulty ${c.diff.toFixed(1)}${start ? ' · START' : ''}`}>
+                          <span className={`inline-block w-full min-w-[54px] rounded px-1 py-1 text-[11px] font-semibold whitespace-nowrap ${start ? 'ring-2 ring-accent ring-offset-1 ring-offset-surface-1' : ''}`} style={{ background: bg, color: fg }} title={`${c.f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(c.f.opponent)} — difficulty ${c.diff.toFixed(1)}${start ? ' · START' : ''}`}>
                             {c.f.opponent} <span className="opacity-70">({c.f.venue})</span>
                           </span>
                         </td>
@@ -367,15 +395,13 @@ function RotationPlanner({ ratings, fixtureEase, seasonRating }: { ratings: Rati
                     })}
                   </tr>
                 ))}
-                {/* Who to start */}
                 <tr className="bg-surface-1/60">
                   <td className="sticky left-0 z-10 bg-surface-1 px-3 py-2 text-[11px] font-semibold tracking-wide text-accent uppercase">Start</td>
                   {gws.map((gw) => {
-                    const el = bestByGw.get(gw)
-                    const p = el != null ? byEl.get(el) : null
+                    const t = bestByGw.get(gw)
                     return (
                       <td key={gw} className="px-1.5 py-2 text-center">
-                        {p ? <span className="inline-flex items-center gap-1 text-xs font-medium text-ink"><TeamBadge team={String(p.team)} size={13} />{String(p.web_name).split(' ').slice(-1)[0]}</span> : <span className="text-ink-3">—</span>}
+                        {t ? <span className="inline-flex items-center gap-1 text-xs font-medium text-ink"><TeamBadge team={t} size={13} />{t}</span> : <span className="text-ink-3">—</span>}
                       </td>
                     )
                   })}
