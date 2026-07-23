@@ -124,11 +124,41 @@ dump("team_ratings", [r for r in prev_tr if r.get("team") in current_teams])
 
 # 4. Re-key the element-keyed secondary tables onto the NEW element ids (drop
 #    players who aren't in the new season; new players simply have no row).
+def _new_element_for(old_el):
+    """Map an old (PREV-season) element id to its NEW-season element via the
+    permanent code. Returns None for players who aren't in the new season."""
+    code = old_elem_to_code.get(old_el)
+    return code_to_new_elem.get(code) if code is not None else None
+
+
 def rekey(name):
     rows = load(name)
     if rows is None:
         return
-    # Some tables are dict-shaped or not lists of row dicts — copy those as-is.
+    # Dict-shaped tables keyed by element id (e.g. player_shots: "<element>" ->
+    # [shots]) must have their KEYS remapped old→new element, NOT copied as-is —
+    # otherwise a returning player's shots surface under whichever NEW player now
+    # holds that old id (the "promoted player has last year's shots" bug).
+    if isinstance(rows, dict):
+        out = {}
+        remapped = passthrough = 0
+        for k, v in rows.items():
+            try:
+                old_el = int(k)
+            except (TypeError, ValueError):
+                out[k] = v  # not element-keyed — carry through untouched
+                passthrough += 1
+                continue
+            ne = _new_element_for(old_el)
+            if ne is None:
+                continue  # player not in the new season → drop (→ N/A on site)
+            out[str(ne)] = v
+            remapped += 1
+        dump(name, out)
+        note = f"{remapped} keys re-keyed" + (f", {passthrough} carried" if passthrough else "")
+        print(f"  {name}.json — {note} (dict)")
+        return
+    # Anything else that isn't a list of row dicts — copy as-is.
     if not (isinstance(rows, list) and rows and isinstance(rows[0], dict)):
         dump(name, rows)
         print(f"  {name}.json — copied as-is")
@@ -137,8 +167,7 @@ def rekey(name):
     for r in rows:
         if not isinstance(r, dict):
             continue
-        code = old_elem_to_code.get(r.get("element"))
-        ne = code_to_new_elem.get(code) if code is not None else None
+        ne = _new_element_for(r.get("element"))
         if ne is None:
             continue
         r = dict(r)
@@ -147,12 +176,16 @@ def rekey(name):
     dump(name, out)
     print(f"  {name}.json — {len(out)} rows re-keyed")
 
+# Element-keyed tables (list- or dict-shaped) — remap element ids by code so they
+# line up with the new-season ratings. scouting carries an element id too, so it
+# belongs here, not in the copy-as-is group below.
 for name in ("personas_4gw", "advanced_metrics", "season_to_date", "player_tiers",
-             "replacement_pool", "persona_shifts", "price_risk", "player_form", "player_shots"):
+             "replacement_pool", "persona_shifts", "price_risk", "player_form",
+             "player_shots", "scouting"):
     rekey(name)
 
 # 5. Team / league tables carry as-is (filtered to current clubs where they carry a team).
-for name in ("team_metrics", "scouting", "scouting_meta", "benchmarks", "shots_for", "shots_conceded"):
+for name in ("team_metrics", "scouting_meta", "benchmarks", "shots_for", "shots_conceded"):
     data = load(name)
     if data is None:
         continue
