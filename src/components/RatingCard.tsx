@@ -3,7 +3,7 @@ import { TeamBadge } from './badges'
 import { FixtureChips } from './FixtureChips'
 import { Icon } from './Icon'
 import { num } from '../lib/rows'
-import { teamFullNames } from '../lib/util'
+import { teamLabel } from '../lib/util'
 import { useSeason } from '../lib/season'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
@@ -206,7 +206,7 @@ export function RatingCard({
         </div>
         <div className={`mt-1.5 flex items-center gap-1.5 font-semibold text-accent-2 ${compact ? 'text-[11px]' : 'text-[14px]'}`}>
           <TeamBadge team={String(r.team)} size={compact ? 12 : 15} />
-          <span className="truncate">{teamFullNames[String(r.team)] || r.team}</span>
+          <span className="truncate">{teamLabel(String(r.team))}</span>
           <span className="shrink-0 text-ink-3">· £{r.price}m</span>
         </div>
       </div>
