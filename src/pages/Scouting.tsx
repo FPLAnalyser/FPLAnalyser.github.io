@@ -333,7 +333,7 @@ function Discover({
   const navigate = useNavigate()
   const [pos, setPos] = useState<(typeof POSITIONS)[number]>('All')
   const [minMins, setMinMins] = useState(0)
-  const [maxPrice, setMaxPrice] = useState(15)
+  const [maxPrice, setMaxPrice] = useState(15.5)
   const [criteria, setCriteria] = useState<{ key: string; min: number }[]>([])
 
   const isGK = pos === 'GKP'
@@ -400,9 +400,9 @@ function Discover({
           <label className="block">
             <div className="mb-1 flex items-center justify-between text-xs text-ink-2">
               <span>Max price</span>
-              <span className="font-num tabular-nums text-ink">{maxPrice >= 15 ? 'Any' : `£${maxPrice.toFixed(1)}m`}</span>
+              <span className="font-num tabular-nums text-ink">{maxPrice >= 15.5 ? 'Any' : `£${maxPrice.toFixed(1)}m`}</span>
             </div>
-            <input type="range" min={4} max={15} step={0.5} value={maxPrice} onChange={(e) => setMaxPrice(Number(e.target.value))} className="w-full accent-[var(--accent)]" />
+            <input type="range" min={4} max={15.5} step={0.5} value={maxPrice} onChange={(e) => setMaxPrice(Number(e.target.value))} className="w-full accent-[var(--accent)]" />
           </label>
         </div>
 
