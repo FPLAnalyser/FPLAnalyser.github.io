@@ -143,6 +143,8 @@ export default function Home() {
     <PageShell>
       <Hero />
 
+      <GameweekCard data={data} onPlayer={toPlayer} />
+
       {stories.length > 0 && (
         <>
           <SectionHeader>The Briefing</SectionHeader>
@@ -199,6 +201,60 @@ function BriefingCard({ st, onPlayer, onTeam }: { st: Story; onPlayer: (n: strin
         </ul>
       )}
     </div>
+  )
+}
+
+/** The gameweek decision card: the model's captain, differential and value
+ *  picks at a glance — the "what do I do this week" moment on the home page. */
+function GameweekCard({ data, onPlayer }: { data: CoreData; onPlayer: (n: string) => void }) {
+  const nextGw = data.meta?.next_gw ?? null
+  const picks = useMemo(() => {
+    const rated = (data.ratings as RatingRow[]).filter(
+      (p) => num(p, 'season_ok') !== 0 && p.season_ok !== false && num(p, 'season_overall_score') != null,
+    )
+    const nextFix = (team: string) => (data.fixtureEase || []).filter((f) => f.team === team).sort((a, b) => a.gw - b.gw)[0]
+    const rating = (p: RatingRow) => (num(p, 'season_overall_score') ?? 0) * 20
+    const fixFactor = (p: RatingRow) => { const f = nextFix(String(p.team)); return f ? (6 - f.fdr) / 5 : 0.6 }
+    const att = rated.filter((p) => p.position === 'MID' || p.position === 'FWD')
+    const captain = [...att].sort((a, b) => rating(b) * fixFactor(b) - rating(a) * fixFactor(a))[0]
+    const diff = [...rated].filter((p) => (num(p, 'selected_by_percent') ?? 100) < 10 && nextFix(String(p.team))).sort((a, b) => rating(b) - rating(a))[0]
+    const value = [...rated].filter((p) => (num(p, 'price') ?? 0) > 0).sort((a, b) => rating(b) / (num(b, 'price') ?? 1) - rating(a) / (num(a, 'price') ?? 1))[0]
+    return { captain, diff, value, nextFix, rating }
+  }, [data])
+
+  if (!picks.captain) return null
+  const fixLabel = (p: RatingRow) => {
+    const f = picks.nextFix(String(p.team))
+    return f ? `${f.venue === 'H' ? 'vs' : '@'} ${f.opponent}` : ''
+  }
+
+  const Pick = ({ label, icon, p, note }: { label: string; icon: IconName; p?: RatingRow; note: string }) => {
+    if (!p) return null
+    return (
+      <button onClick={() => onPlayer(String(p.web_name))} className="flex flex-1 items-center gap-3 rounded-xl border border-line bg-surface-1/60 p-3 text-left transition-colors hover:border-line-mid hover:bg-surface-2/50">
+        <PhotoByCode code={num(p, 'code')} element={num(p, 'element')} size={40} />
+        <div className="min-w-0 flex-1">
+          <div className="mb-0.5 flex items-center gap-1 text-[10px] font-semibold tracking-[0.1em] text-accent uppercase"><Icon name={icon} size={12} />{label}</div>
+          <div className="truncate text-sm font-semibold text-ink">{String(p.web_name)}</div>
+          <div className="truncate text-[11px] text-ink-3">{note} · {fixLabel(p)}</div>
+        </div>
+        <StarRating value={num(p, 'season_overall_score')} size={12} />
+      </button>
+    )
+  }
+
+  return (
+    <section className="mb-10">
+      <div className="mb-3 flex items-center gap-1.5">
+        <h2 className="text-sm font-semibold tracking-wide text-ink-2 uppercase">{nextGw ? `Gameweek ${nextGw} — the model's picks` : "The model's picks"}</h2>
+      </div>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Pick label="Captain" icon="crown" p={picks.captain} note={`${Math.round(picks.rating(picks.captain))} rated`} />
+        <Pick label="Differential" icon="eye" p={picks.diff} note={picks.diff ? `${Math.round(num(picks.diff, 'selected_by_percent') ?? 0)}% owned` : ''} />
+        <Pick label="Value" icon="coin" p={picks.value} note={picks.value ? `£${num(picks.value, 'price')}m` : ''} />
+      </div>
+      <p className="mt-2 text-xs text-ink-3">Highest-rated captaincy for the fixture, a sub-10%-owned differential, and the best rating-per-million — tap for the full profile.</p>
+    </section>
   )
 }
 

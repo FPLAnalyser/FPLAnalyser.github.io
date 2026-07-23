@@ -8,6 +8,7 @@ import { PreseasonBanner } from './PreseasonBanner'
 import { GlobalSearch, SearchSheet } from './GlobalSearch'
 import { BottomNav } from './BottomNav'
 import { PullToRefresh } from './PullToRefresh'
+import { AppOnboarding } from './AppOnboarding'
 import { useCore } from '../lib/useData'
 import { ensureLiveCodes } from '../lib/photoCodes'
 import type { RatingRow } from '../lib/types'
@@ -118,6 +119,7 @@ export function Layout() {
       <BottomNav onSearch={() => setSearchOpen(true)} />
       <SearchSheet open={searchOpen} onClose={() => setSearchOpen(false)} />
       <OnboardingModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <AppOnboarding />
     </div>
   )
 }
