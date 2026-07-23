@@ -60,52 +60,51 @@ function SectionHeader({ children }: { children: ReactNode }) {
 function Hero() {
   const navigate = useNavigate()
   const { info } = useSeason()
-  const savedTeam = (() => { try { return localStorage.getItem('fpl_team_id') } catch { return null } })()
   const preseason = Boolean(info?.provisional)
   const seasonLabel = info?.label ?? '2026/27'
   const ratingsFrom = info?.ratings_season ? info.ratings_season.replace('-', '/') : null
   return (
     <section className="mb-12">
-      <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] text-accent uppercase">
-        {preseason ? `Welcome to the ${seasonLabel} season` : 'Data. Insight. Points.'}
-      </p>
+      <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] text-accent uppercase">Data. Insight. Points.</p>
       <h1 className="max-w-3xl text-3xl leading-[1.08] font-extrabold tracking-[-0.02em] text-ink md:text-5xl">
-        {preseason ? <>Your {seasonLabel} season starts here.</> : 'Turn Premier League data into FPL points.'}
+        Turn Premier League data into FPL points.
       </h1>
       <p className="mt-4 max-w-2xl text-base leading-relaxed text-ink-2 md:text-lg">
-        {preseason ? (
-          <>
+        FPL Analyser rates every player on the numbers that actually predict returns — expected goals, minutes, form and
+        fixtures — then turns them into a plain-language verdict and transfer calls for <em>your</em> team.
+      </p>
+
+      {preseason && (
+        <div className="mt-5 max-w-2xl rounded-xl border border-accent/25 bg-accent-soft/40 p-4">
+          <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.14em] text-accent uppercase">
+            <Icon name="star" size={13} /> Welcome to the {seasonLabel} season
+          </div>
+          <p className="text-sm leading-relaxed text-ink-2">
             New season, fresh squads. Every {seasonLabel} player, price and fixture is loaded and ready to plan around.
             {ratingsFrom ? <> Player and team ratings carry over from <strong>{ratingsFrom}</strong> until GW1 is played, then they switch to live {seasonLabel} form.</> : null}
-          </>
-        ) : (
-          <>
-            FPL Analyser rates every player on the numbers that actually predict returns — expected goals, minutes, form and
-            fixtures — then turns them into a plain-language verdict and transfer calls for <em>your</em> team.
-          </>
-        )}
-      </p>
+          </p>
+        </div>
+      )}
+
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <button
-          onClick={() => navigate('/loadteam')}
+          onClick={() => navigate('/squad')}
           className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-accent px-5 font-semibold text-accent-contrast transition-colors hover:bg-accent-strong"
         >
-          {savedTeam ? 'Open your team report' : 'Load your team'}
-          <Icon name="trend-up" size={16} />
+          <Icon name="pitch" size={16} /> Build your squad
         </button>
         <button
-          onClick={() => navigate('/squad')}
+          onClick={() => navigate('/scout')}
           className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-line-mid px-5 font-semibold text-ink transition-colors hover:border-line-strong"
         >
-          <Icon name="pitch" size={16} /> Build a squad
+          <Icon name="target" size={16} /> Scout players
         </button>
-        {savedTeam && <span className="text-sm text-ink-3">Welcome back — your squad is saved.</span>}
       </div>
 
       <div className="mt-9 grid gap-3 sm:grid-cols-3">
         <Pillar icon="target" title="Data" body="We start with the underlying numbers — expected goals, minutes, percentiles versus peers — not last week's points." />
         <Pillar icon="eye" title="Insight" body="Every player gets a rating out of 100, a persona, and a plain-language verdict you can actually act on." />
-        <Pillar icon="trophy" title="Points" body="Load your squad for personalised alerts, captaincy and transfers — all pointed at one thing: more points." />
+        <Pillar icon="trophy" title="Points" body="Build and rate a squad, scout differentials and plan your fixtures — everything pointed at one thing: more points." />
       </div>
     </section>
   )
