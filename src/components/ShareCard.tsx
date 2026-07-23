@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { RatingCard } from './RatingCard'
+import { shareImageNative } from '../lib/native'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
 /**
@@ -33,7 +34,10 @@ export function ShareCard({ r, fixtureEase }: { r: RatingRow; fixtureEase?: Fixt
       const canvas = await html2canvas(cardRef.current, { backgroundColor: '#0c0b09', scale: 2, useCORS: true, logging: false })
       const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, 'image/png'))
       if (!blob) throw new Error('render failed')
-      const file = new File([blob], `${String(r.web_name).replace(/\s+/g, '-')}-fpl-analyser.png`, { type: 'image/png' })
+      const shareName = `${String(r.web_name).replace(/\s+/g, '-')}-fpl-analyser.png`
+      // Native: hand the PNG to the OS share sheet via Capacitor.
+      if (await shareImageNative(blob, shareName, `${r.web_name} — FPL Analyser`)) return
+      const file = new File([blob], shareName, { type: 'image/png' })
       const nav = navigator as Navigator & { canShare?: (d: unknown) => boolean }
       if (nav.canShare?.({ files: [file] }) && navigator.share) {
         await navigator.share({ files: [file], title: `${r.web_name} — FPL Analyser` })

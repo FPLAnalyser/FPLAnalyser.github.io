@@ -1,4 +1,6 @@
 // api.ts — live FPL API access through CORS proxies
+import { isNative } from './native';
+
 // ── Load Your Team ───────────────────────────────────────────────────────────
 let bootstrapCache: any = null;
 
@@ -9,6 +11,16 @@ const CORS_PROXY_PRIMARY = 'https://corsproxy.io/?';
 const CORS_PROXY_FALLBACK = 'https://api.allorigins.win/raw?url=';
 
 async function fplFetch(url: string): Promise<Response> {
+  // In the native app CapacitorHttp routes fetch through the OS stack, which is
+  // not subject to CORS — so hit the FPL API directly, no proxy needed.
+  if (isNative()) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return res;
+    } catch {
+      /* fall through to the proxy chain as a backstop */
+    }
+  }
   let primaryError: string;
   try {
     const res = await fetch(CORS_PROXY_PRIMARY + url);

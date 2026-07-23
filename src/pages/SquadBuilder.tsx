@@ -8,6 +8,7 @@ import { FixtureChips } from '../components/FixtureChips'
 import { RatingCard } from '../components/RatingCard'
 import { Icon } from '../components/Icon'
 import { useCore } from '../lib/useData'
+import { tapHaptic, shareImageNative } from '../lib/native'
 import { num } from '../lib/rows'
 import { teamLabel } from '../lib/util'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
@@ -124,9 +125,10 @@ export default function SquadBuilder() {
     const why = blockReason(r)
     if (why) { setNote(why); return }
     setNote(null)
+    tapHaptic('light')
     persist([...picked, r.element])
   }
-  const remove = (el: number) => { setNote(null); persist(picked.filter((x) => x !== el)) }
+  const remove = (el: number) => { setNote(null); tapHaptic('light'); persist(picked.filter((x) => x !== el)) }
   const clear = () => { setNote(null); persist([]) }
 
   // Squad rating: average of rated players (unrated shown separately).
@@ -142,6 +144,7 @@ export default function SquadBuilder() {
   // minimum-price reservation for the slots still to fill).
   const autoPick = () => {
     setNote(null)
+    tapHaptic('medium')
     persist(autoBuild(pool))
   }
 
@@ -371,6 +374,8 @@ function SquadShare({ chosen, fixtureEase, squadScore, bestXI, spent, unrated, t
       const canvas = await html2canvas(ref.current, { backgroundColor: '#0c0b09', scale: 2, useCORS: true, logging: false })
       const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, 'image/png'))
       if (!blob) throw new Error('render failed')
+      // Native: hand the PNG to the OS share sheet via Capacitor.
+      if (await shareImageNative(blob, 'fpl-analyser-squad.png', 'My FPL squad — FPL Analyser')) return
       const file = new File([blob], 'fpl-analyser-squad.png', { type: 'image/png' })
       const nav = navigator as Navigator & { canShare?: (d: unknown) => boolean }
       if (nav.canShare?.({ files: [file] }) && navigator.share) {

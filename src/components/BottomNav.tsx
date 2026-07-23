@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { Icon, type IconName } from './Icon'
+import { tapHaptic } from '../lib/native'
 
 const TABS: { to: string; label: string; icon: IconName }[] = [
   { to: '/', label: 'Home', icon: 'bolt' },
@@ -43,6 +44,7 @@ function Tab({ to, label, icon }: { to: string; label: string; icon: IconName })
     <NavLink
       to={to}
       end={to === '/'}
+      onClick={() => tapHaptic('select')}
       className={({ isActive }) =>
         `relative flex min-h-14 flex-col items-center justify-center gap-1 py-2 text-[10px] font-semibold transition-colors ${
           isActive ? 'text-accent' : 'text-ink-3'
