@@ -4,6 +4,7 @@ import { Icon } from './Icon'
 import { OnboardingModal } from './OnboardingModal'
 import { ThemeSwitcher } from './ThemeSwitcher'
 import { SeasonSwitcher } from './SeasonSwitcher'
+import { PreseasonBanner } from './PreseasonBanner'
 import { GlobalSearch, SearchSheet } from './GlobalSearch'
 import { BottomNav } from './BottomNav'
 import { useCore } from '../lib/useData'
@@ -100,6 +101,8 @@ export function Layout() {
           </div>
         </div>
       </nav>
+
+      <PreseasonBanner />
 
       {/* No animated route transition: content must never depend on the
           animation engine to become visible (it silently fails on some WebKit

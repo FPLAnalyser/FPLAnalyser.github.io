@@ -7,8 +7,15 @@ import { BASE, DEFAULT_SEASON, setActiveSeason } from './data'
 // eager preload and every fetch line up on the new folder. The list of
 // available seasons comes from site_data/seasons.json.
 
-export interface SeasonInfo { id: string; label: string }
-interface SeasonContextValue { season: string; seasons: SeasonInfo[]; setSeason: (id: string) => void }
+export interface SeasonInfo {
+  id: string
+  label: string
+  /** Pre-season carry-over: ratings shown are last season's, not yet earned. */
+  provisional?: boolean
+  /** Which season the carried-over ratings come from (e.g. "2025-26"). */
+  ratings_season?: string
+}
+interface SeasonContextValue { season: string; info?: SeasonInfo; seasons: SeasonInfo[]; setSeason: (id: string) => void }
 
 const labelOf = (id: string) => id.replace('-', '/')
 
@@ -28,7 +35,7 @@ export function SeasonProvider({ children }: { children: ReactNode }) {
           if (r.ok) {
             const m = await r.json()
             if (!cancelled && Array.isArray(m?.seasons) && m.seasons.length) {
-              setSeasons(m.seasons.map((s: SeasonInfo) => ({ id: s.id, label: s.label || labelOf(s.id) })))
+              setSeasons(m.seasons.map((s: SeasonInfo) => ({ ...s, label: s.label || labelOf(s.id) })))
               return
             }
           }
@@ -46,7 +53,8 @@ export function SeasonProvider({ children }: { children: ReactNode }) {
     location.reload()
   }
 
-  return <SeasonContext.Provider value={{ season: active, seasons, setSeason }}>{children}</SeasonContext.Provider>
+  const info = seasons.find((s) => s.id === active)
+  return <SeasonContext.Provider value={{ season: active, info, seasons, setSeason }}>{children}</SeasonContext.Provider>
 }
 
 export const useSeason = () => useContext(SeasonContext)
