@@ -9,6 +9,7 @@ import { RatingCard, type RatingWindow } from '../components/RatingCard'
 import { SquadDNA, SquadMoves } from '../components/SquadInsights'
 import { Icon, type IconName } from '../components/Icon'
 import { useCore } from '../lib/useData'
+import { useSeason } from '../lib/season'
 import { str } from '../lib/rows'
 import { teamFullNames, avgRatingField } from '../lib/util'
 import { fplFetch, getCurrentGwFallback, fetchEntry, fetchEntryHistory, fetchLeagueStandings, fetchPicksCached } from '../lib/api'
@@ -23,6 +24,8 @@ interface LoadedTeam { picksData: any; gw: number; historyData: any; entryData: 
 
 export default function MyTeam() {
   const { data } = useCore()
+  const { info } = useSeason()
+  const preseason = Boolean(info?.provisional)
   const [teamId, setTeamId] = useState(() => { try { return localStorage.getItem(TEAM_ID_KEY) ?? '' } catch { return '' } })
   const [state, setState] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle')
   const [error, setError] = useState('')
@@ -49,13 +52,30 @@ export default function MyTeam() {
     }
   }
 
-  // Auto-load the saved team once on mount.
+  // Auto-load the saved team once on mount (skip pre-season — FPL squads
+  // aren't locked in until the season starts).
   useEffect(() => {
-    if (autoTried.current) return
+    if (autoTried.current || preseason) return
     autoTried.current = true
     const saved = (() => { try { return localStorage.getItem(TEAM_ID_KEY) } catch { return null } })()
     if (saved) load(saved)
-  }, [])
+  }, [preseason])
+
+  if (preseason) {
+    return (
+      <PageShell>
+        <PageHeader title="My Team" subtitle="Your squad, ratings and a personalised weekly report" />
+        <div className="rounded-2xl border border-line bg-surface-1/60 p-6 text-center md:p-10">
+          <div className="mx-auto mb-3 grid size-12 place-items-center rounded-full bg-accent-soft text-accent"><Icon name="clock" size={22} /></div>
+          <div className="mb-1 text-lg font-bold text-ink">Available after Gameweek 1</div>
+          <p className="mx-auto max-w-md text-sm leading-relaxed text-ink-2">
+            My Team reads your live FPL squad, so it switches on once the {info?.label ?? 'new'} season kicks off and gameweek 1 is
+            played. Until then, build and rate a squad in the Squad Builder and plan your run in Fixtures.
+          </p>
+        </div>
+      </PageShell>
+    )
+  }
 
   return (
     <PageShell>
