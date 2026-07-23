@@ -14,10 +14,26 @@ declare global {
   interface Window {
     /** Core-table fetches kicked off from index.html during HTML parse. */
     __early?: Record<string, Promise<Response>>
+    /** Season segment resolved synchronously in index.html (localStorage/default). */
+    __season?: string
   }
 }
 
 const BASE = 'https://raw.githubusercontent.com/stefcourt2004-png/fpl-analyser/main/'
+
+// Data is namespaced by season on disk: site_data/<season>/<name>.json. The
+// active season is resolved once per page load (index.html sets window.__season
+// from localStorage or the build-time default; switching seasons reloads).
+export const DEFAULT_SEASON = '2025-26'
+let activeSeason: string | null = null
+export function setActiveSeason(id: string) {
+  activeSeason = id
+}
+function seasonSeg(): string {
+  if (activeSeason) return activeSeason
+  if (typeof window !== 'undefined' && window.__season) return window.__season
+  return DEFAULT_SEASON
+}
 
 // One shared promise per table name → every caller gets the same data and we
 // never fetch a table twice (covers eager core tables and lazy big tables).
@@ -40,7 +56,8 @@ async function fetchTable<T>(name: string): Promise<T> {
   }
   let lastErr: unknown
   for (let attempt = 0; attempt < 3; attempt++) {
-    for (const url of [`site_data/${name}.json`, `${BASE}site_data/${name}.json`]) {
+    const seg = seasonSeg()
+    for (const url of [`site_data/${seg}/${name}.json`, `${BASE}site_data/${seg}/${name}.json`]) {
       try {
         // Default HTTP caching: the service worker (stale-while-revalidate)
         // owns freshness; forcing revalidation here made mobile loads crawl.
