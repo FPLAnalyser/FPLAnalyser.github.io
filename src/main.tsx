@@ -2,10 +2,14 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import { loadCore } from './lib/data'
+import { initNative } from './lib/native'
 import App from './App'
 import './index.css'
 
 registerSW({ immediate: true })
+
+// Native (Capacitor) shell setup — no-op on the web.
+initNative()
 
 // Begin assembling core data immediately (consumes the fetches index.html
 // already started) rather than waiting for React to mount a provider.
