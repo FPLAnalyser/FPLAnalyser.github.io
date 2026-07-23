@@ -7,6 +7,7 @@ import { SeasonSwitcher } from './SeasonSwitcher'
 import { PreseasonBanner } from './PreseasonBanner'
 import { GlobalSearch, SearchSheet } from './GlobalSearch'
 import { BottomNav } from './BottomNav'
+import { PullToRefresh } from './PullToRefresh'
 import { useCore } from '../lib/useData'
 import { ensureLiveCodes } from '../lib/photoCodes'
 import type { RatingRow } from '../lib/types'
@@ -108,9 +109,11 @@ export function Layout() {
       {/* No animated route transition: content must never depend on the
           animation engine to become visible (it silently fails on some WebKit
           versions, leaving pages mounted but at opacity 0). */}
-      <main className="pb-[calc(env(safe-area-inset-bottom)+76px)] md:pb-[env(safe-area-inset-bottom)]">
-        <Outlet />
-      </main>
+      <PullToRefresh>
+        <main className="pb-[calc(env(safe-area-inset-bottom)+76px)] md:pb-[env(safe-area-inset-bottom)]">
+          <Outlet />
+        </main>
+      </PullToRefresh>
 
       <BottomNav onSearch={() => setSearchOpen(true)} />
       <SearchSheet open={searchOpen} onClose={() => setSearchOpen(false)} />
