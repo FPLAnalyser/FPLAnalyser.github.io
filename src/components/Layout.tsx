@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { Icon } from './Icon'
 import { OnboardingModal } from './OnboardingModal'
 import { ThemeSwitcher } from './ThemeSwitcher'
+import { SeasonSwitcher } from './SeasonSwitcher'
 import { GlobalSearch, SearchSheet } from './GlobalSearch'
 import { BottomNav } from './BottomNav'
 import { useCore } from '../lib/useData'
@@ -86,6 +87,7 @@ export function Layout() {
             >
               <Icon name="search" size={18} />
             </button>
+            <SeasonSwitcher />
             <ThemeSwitcher />
             <button
               className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-ink-2 transition-colors hover:text-ink"

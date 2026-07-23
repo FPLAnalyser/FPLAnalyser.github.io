@@ -68,13 +68,20 @@
   //    out of the critical path (worth seconds on a phone connection).
   (function () {
     try {
+      // Data is namespaced by season (site_data/<season>/…). Resolve the active
+      // season synchronously so the eager fetches hit the right folder. Default
+      // is the season current at build time; a stored choice overrides it, and
+      // switching seasons reloads the page. (Update the default at rollover.)
+      var season = '2025-26';
+      try { var stored = localStorage.getItem('fpl_season'); if (stored) season = stored; } catch (e) {}
+      window.__season = season;
       window.__early = {};
       [
         'ratings', 'personas_4gw', 'advanced_metrics', 'team_metrics',
         'season_to_date', 'player_tiers', 'fixture_ease', 'meta',
         'benchmarks', 'replacement_pool', 'persona_shifts', 'price_risk', 'player_form'
       ].forEach(function (n) {
-        window.__early[n] = fetch('site_data/' + n + '.json');
+        window.__early[n] = fetch('site_data/' + season + '/' + n + '.json');
         window.__early[n].catch(function () {}); // avoid unhandled-rejection noise
       });
     } catch (e) { /* the data layer falls back to its own fetches */ }

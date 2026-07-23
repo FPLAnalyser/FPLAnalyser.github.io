@@ -37,9 +37,36 @@ import pandas as pd
 
 DATA_DIR = os.environ.get("FPL_DATA_DIR") or os.path.expanduser(
     "~/Library/CloudStorage/GoogleDrive-stefcourt2004@gmail.com/My Drive/FPL/FPL_2025-26_historical")
-# Site data is published from the repo, so default output next to this script
-OUTPUT_DIR = os.environ.get("FPL_SITE_DATA_DIR") or os.path.join(
+# Site data is published from the repo, so default output next to this script.
+# Data is namespaced by season: site_data/<season>/*.json, with a top-level
+# site_data/seasons.json manifest listing seasons and the current one. Set
+# FPL_SEASON (e.g. "2026-27") to publish under that folder and flip "current".
+SITE_ROOT = os.environ.get("FPL_SITE_DATA_DIR") or os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "site_data")
+SEASON = os.environ.get("FPL_SEASON")  # e.g. "2026-27"
+OUTPUT_DIR = os.path.join(SITE_ROOT, SEASON) if SEASON else SITE_ROOT
+
+
+def update_seasons_manifest():
+    """Add SEASON to site_data/seasons.json (label from the id) and mark it
+    current. Seasons are listed newest-first. No-op when FPL_SEASON is unset."""
+    if not SEASON:
+        return
+    path = os.path.join(SITE_ROOT, "seasons.json")
+    manifest = {"current": SEASON, "seasons": []}
+    if os.path.exists(path):
+        try:
+            with open(path, encoding="utf-8") as f:
+                manifest = json.load(f)
+        except Exception:
+            manifest = {"current": SEASON, "seasons": []}
+    seasons = {s["id"]: s for s in manifest.get("seasons", [])}
+    seasons[SEASON] = {"id": SEASON, "label": SEASON.replace("-", "/")}
+    ordered = sorted(seasons.values(), key=lambda s: s["id"], reverse=True)
+    manifest = {"current": SEASON, "seasons": ordered}
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, ensure_ascii=False, indent=2)
+    print(f"  seasons.json — current={SEASON}, {len(ordered)} season(s)")
 
 # table name -> source CSV (table name = JSON filename and the key the site uses)
 SITE_TABLES = {
@@ -475,4 +502,6 @@ for name in SITE_TABLES:
     if row_counts.get(name, 0) < 1:
         raise RuntimeError(f"GATE FAIL: {name}.json has no records")
 
-print("\nDone! site_data/ is ready to commit alongside the CSVs.")
+update_seasons_manifest()
+
+print(f"\nDone! {OUTPUT_DIR} is ready to commit alongside the CSVs.")

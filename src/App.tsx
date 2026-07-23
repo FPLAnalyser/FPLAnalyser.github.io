@@ -6,6 +6,7 @@ import { PageSkeleton } from './components/Skeleton'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { DataProvider } from './lib/useData'
 import { ThemeProvider } from './lib/theme'
+import { SeasonProvider } from './lib/season'
 
 // Retry a dynamic import a few times so a flaky mobile network (or a
 // mid-deploy chunk miss) doesn't leave a route blank until a manual refresh.
@@ -89,10 +90,12 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <DataProvider>
-        <IntroSplash />
-        <RouterProvider router={router} />
-      </DataProvider>
+      <SeasonProvider>
+        <DataProvider>
+          <IntroSplash />
+          <RouterProvider router={router} />
+        </DataProvider>
+      </SeasonProvider>
     </ThemeProvider>
   )
 }
