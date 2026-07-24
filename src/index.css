@@ -41,10 +41,10 @@
 /* ─── MODE: DARK (surfaces / ink / lines) ─── */
 :root, :root[data-mode="dark"] {
   color-scheme: dark;
-  --bg-0: #0c0b09; --bg-1: #100e0b;
-  --surface-1: #16130f; --surface-2: #1d1913; --surface-3: #272118;
-  --surface-glass: rgba(22, 19, 15, 0.72);
-  --ink-1: #f3eee2; --ink-2: #9a9182; --ink-3: #6c655a;
+  --bg-0: #000000; --bg-1: #070605;
+  --surface-1: #16130e; --surface-2: #201b13; --surface-3: #2a2318;
+  --surface-glass: rgba(16, 13, 9, 0.74);
+  --ink-1: #f4efe3; --ink-2: #b3ab99; --ink-3: #6c655a;
   --line-subtle: rgba(255, 255, 255, 0.07);
   --line-mid: rgba(255, 255, 255, 0.12);
   --line-strong: rgba(255, 255, 255, 0.2);
@@ -68,13 +68,13 @@
   --shadow-3: 0 26px 60px rgba(27,23,18,.16);
 }
 
-/* ─── ACCENT: AURUM (default) ─── */
+/* ─── ACCENT: AURUM (default) — matched to the FPL Analyser logo gold ─── */
 :root, :root[data-accent="aurum"] {
-  --accent: #d9b45c; --accent-2: #e7c877; --accent-strong: #b98f3f;
+  --accent: #c9a227; --accent-2: #ead188; --accent-strong: #9a761c;
   --accent-contrast: #14100a;          /* text on a filled accent */
-  --accent-soft: rgba(217, 180, 92, 0.12);
-  --grad-accent: linear-gradient(135deg, #e7c877 0%, #b98f3f 100%);
-  --glow: rgba(217, 180, 92, 0.10);
+  --accent-soft: rgba(201, 162, 39, 0.14);
+  --grad-accent: linear-gradient(135deg, #ead188 0%, #9a761c 100%);
+  --glow: rgba(201, 162, 39, 0.16);    /* gold glow — turned up to pop on pure black */
 }
 :root[data-mode="light"][data-accent="aurum"] {
   --accent: #9a7b2e; --accent-2: #b8933a; --accent-strong: #7d6120;
