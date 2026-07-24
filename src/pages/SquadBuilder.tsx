@@ -226,13 +226,16 @@ export default function SquadBuilder() {
         {complete && !valid && <span className="text-sm font-medium text-bad">Over budget by £{Math.abs(remaining).toFixed(1)}m</span>}
       </div>
 
-      {/* Pitch view of the squad */}
-      <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Your squad {total > 0 && <span className="text-ink-3 normal-case tracking-normal">· tap an empty slot to add, tap the ✕ to drop</span>}</div>
-      <SquadBoard chosen={chosen} fixtureEase={fixtureEase} pickPos={pickPos} onRemove={remove} onPick={(p) => { setPickPos(p); setNote(null) }} />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+        {/* Pitch view of the squad */}
+        <div>
+          <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Your squad {total > 0 && <span className="text-ink-3 normal-case tracking-normal">· tap an empty slot to add, tap the ✕ to drop</span>}</div>
+          <SquadBoard chosen={chosen} fixtureEase={fixtureEase} pickPos={pickPos} onRemove={remove} onPick={(p) => { setPickPos(p); setNote(null) }} />
+        </div>
 
-      {/* Player picker */}
-      <div className="mt-8">
-        <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Add players</div>
+        {/* Player picker */}
+        <div className="mt-8 lg:mt-0 lg:sticky lg:top-20">
+          <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Add players</div>
           <div className="mb-3"><Tabs tabs={PICK_TABS} active={pickPos} onChange={(id) => setPickPos(id as Pos)} layoutId="squad-pos" /></div>
           <div className="mb-3 flex items-center gap-2 rounded-lg border border-line-mid bg-surface-1 px-3">
             <Icon name="search" size={16} />
@@ -271,7 +274,7 @@ export default function SquadBuilder() {
           )}
 
           {note && <div className="mb-2 rounded-lg bg-bad/10 px-3 py-2 text-sm font-medium text-bad">{note}</div>}
-          <div className="overflow-hidden rounded-xl border border-line">
+          <div className="overflow-hidden rounded-xl border border-line lg:max-h-[calc(100vh-230px)] lg:overflow-y-auto">
             {list.map((r) => {
               const why = blockReason(r)
               const o = ovOf(r)
@@ -301,6 +304,7 @@ export default function SquadBuilder() {
             })}
             {list.length === 0 && <div className="px-3 py-8 text-center text-sm text-ink-3">No players match these filters.</div>}
           </div>
+        </div>
       </div>
 
       <SquadShare chosen={chosen} fixtureEase={fixtureEase} squadScore={squadScore} bestXI={bestXI} spent={spent} unrated={unrated} total={total} open={shareOpen} onClose={() => setShareOpen(false)} />
