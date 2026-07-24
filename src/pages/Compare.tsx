@@ -10,7 +10,7 @@ import { num } from '../lib/rows'
 import { norm } from '../lib/util'
 import type { RatingRow } from '../lib/types'
 
-const A_COLOR = '#e6c36a'
+const A_COLOR = '#ead188'
 const B_COLOR = '#7fb0ff'
 
 interface Metric { label: string; key: string; norm?: boolean }
