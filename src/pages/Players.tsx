@@ -582,7 +582,7 @@ function PlayerHero({ r, verdict, personas, flags, isPenTaker, isSpTaker, streak
           <div className="absolute bottom-6 left-1/2 h-[min(56vw,400px)] w-[min(56vw,400px)] -translate-x-1/2 rounded-full border" style={{ borderColor: `${tc}3d`, background: `radial-gradient(circle at 50% 38%, ${tc}22, ${tc}08 58%, transparent 72%)` }} />
           <div className="absolute bottom-2 left-1/2 h-12 w-3/4 -translate-x-1/2 rounded-[50%]" style={{ background: 'radial-gradient(closest-side, rgba(0,0,0,.7), transparent)' }} />
           <div className="absolute inset-x-0 bottom-3 flex items-end justify-center">
-            <PhotoImg hero code={r.code} element={r.element} className="max-h-[235px] object-contain md:max-h-[480px]" style={{ filter: 'drop-shadow(0 24px 44px rgba(0,0,0,.6))' }} placeholder={<HeroSilhouette />} />
+            <PhotoImg hero code={r.code} element={r.element} className="h-[235px] w-auto object-contain md:h-[480px]" style={{ filter: 'drop-shadow(0 24px 44px rgba(0,0,0,.6))' }} placeholder={<HeroSilhouette />} />
           </div>
         </div>
       </div>
