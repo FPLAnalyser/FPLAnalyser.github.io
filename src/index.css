@@ -203,6 +203,82 @@ body {
 }
 
 /* ════════════════════════════════════════════════════════════════════════
+   Home image windows — large premium photo cards that link into each section.
+   A branded gradient stands in until a real photo (public/home/<key>.jpg)
+   loads over it; scrim + gold hairline keep the title legible on any image.
+   ════════════════════════════════════════════════════════════════════════ */
+.hw-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 0.9rem; }
+@media (min-width: 641px) { .hw-grid { gap: 1.1rem; } }
+.hw-c6, .hw-c3, .hw-c12 { grid-column: span 12; }
+@media (min-width: 521px) { .hw-c3 { grid-column: span 6; } }
+@media (min-width: 821px) { .hw-c6 { grid-column: span 6; } .hw-c3 { grid-column: span 3; } }
+.hw-tall { min-height: clamp(300px, 34vw, 400px); }
+.hw-med  { min-height: clamp(210px, 24vw, 262px); }
+.hw-wide { min-height: 172px; }
+
+.hw-card {
+  position: relative; display: flex; flex-direction: column; justify-content: flex-end;
+  overflow: hidden; border-radius: var(--radius-xl); border: 1px solid var(--line-subtle);
+  background: var(--surface-1); isolation: isolate; width: 100%; text-align: left; cursor: pointer;
+  color: var(--ink-1);
+  transition: transform .3s cubic-bezier(.2,.7,.3,1), border-color .3s, box-shadow .3s;
+}
+.hw-card:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  box-shadow: 0 22px 54px rgba(0,0,0,.55), 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent); }
+.hw-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.hw-photo { position: absolute; inset: 0; z-index: 0; transition: transform .5s ease; }
+.hw-card:hover .hw-photo { transform: scale(1.05); }
+.hw-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .45s ease; }
+.hw-img.is-on { opacity: 1; }
+.hw-card::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(to top, rgba(0,0,0,.9) 0%, rgba(0,0,0,.55) 32%, rgba(0,0,0,0) 62%); }
+.hw-card::after { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; z-index: 3;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 75%, transparent), transparent);
+  opacity: 0; transition: opacity .3s; }
+.hw-card:hover::after { opacity: 1; }
+.hw-body { position: relative; z-index: 2; padding: clamp(1rem, 2vw, 1.35rem); }
+.hw-ghost { position: absolute; z-index: 1; font-weight: 900; line-height: .8; color: transparent;
+  -webkit-text-stroke: 2px rgba(255,255,255,.12); letter-spacing: -.04em; pointer-events: none; user-select: none;
+  font-family: var(--font-ui); }
+.hw-grain { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: .5; mix-blend-mode: overlay;
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,.5), transparent 55%),
+    radial-gradient(1px 1px at 65% 65%, rgba(0,0,0,.6), transparent 55%),
+    radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,.35), transparent 55%),
+    radial-gradient(1px 1px at 85% 20%, rgba(255,255,255,.3), transparent 55%);
+  background-size: 150px 150px; }
+
+/* branded fallbacks — shown until the licensed photo loads */
+.hw-players { background:
+  radial-gradient(70% 55% at 72% 12%, rgba(255,226,196,.34), transparent 55%),
+  repeating-linear-gradient(74deg, rgba(255,255,255,.05) 0 2px, transparent 2px 9px),
+  radial-gradient(130% 120% at 45% 125%, rgba(150,18,24,.95), transparent 72%),
+  linear-gradient(157deg, #6a0f15 0%, #320809 68%, #160405 100%); }
+.hw-teams { background:
+  radial-gradient(90% 45% at 50% 4%, rgba(255,244,236,.22), transparent 52%),
+  linear-gradient(180deg, #050506 0%, #0c0708 40%, #3a0c11 82%, #5a121a 100%); }
+.hw-fixtures { background:
+  radial-gradient(80% 60% at 50% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 55%),
+  repeating-linear-gradient(90deg, #0a2417 0 12.5%, #0c2b1b 12.5% 25%),
+  linear-gradient(180deg, #0a2116, #061109); }
+.hw-scouting { background:
+  radial-gradient(circle at 74% 34%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 26%),
+  radial-gradient(circle at 74% 34%, transparent 30%, color-mix(in srgb, var(--accent) 16%, transparent) 31%, transparent 33%),
+  radial-gradient(circle at 74% 34%, transparent 44%, color-mix(in srgb, var(--accent) 10%, transparent) 45%, transparent 47%),
+  linear-gradient(160deg, #171310, #0a0806); }
+.hw-squad { background:
+  radial-gradient(circle at 30% 34%, rgba(255,255,255,.16) 0 5px, transparent 6px),
+  radial-gradient(circle at 50% 34%, rgba(255,255,255,.16) 0 5px, transparent 6px),
+  radial-gradient(circle at 70% 34%, rgba(255,255,255,.16) 0 5px, transparent 6px),
+  radial-gradient(circle at 40% 58%, rgba(255,255,255,.13) 0 5px, transparent 6px),
+  radial-gradient(circle at 60% 58%, rgba(255,255,255,.13) 0 5px, transparent 6px),
+  linear-gradient(180deg, #0b2417, #07130c); }
+.hw-myteam { background:
+  radial-gradient(75% 65% at 50% 22%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 60%),
+  linear-gradient(160deg, #1c160c, #0a0806); }
+.hw-compare { background: linear-gradient(120deg, #141009, #0a0806); }
+
+/* ════════════════════════════════════════════════════════════════════════
    Intro splash — one-time animated wordmark reveal on floodlit turf.
    Self-contained dark scene (independent of theme tokens); unmounts itself.
    ════════════════════════════════════════════════════════════════════════ */

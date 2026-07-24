@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react'
+import { useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageHeader, PageShell } from '../components/PageShell'
 import { PageSkeleton } from '../components/Skeleton'
@@ -58,13 +58,12 @@ function SectionHeader({ children }: { children: ReactNode }) {
 }
 
 function Hero() {
-  const navigate = useNavigate()
   const { info } = useSeason()
   const preseason = Boolean(info?.provisional)
   const seasonLabel = info?.label ?? '2026/27'
   const ratingsFrom = info?.ratings_season ? info.ratings_season.replace('-', '/') : null
   return (
-    <section className="mb-12">
+    <section className="mb-8">
       <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] text-accent uppercase">Data. Insight. Points.</p>
       <h1 className="max-w-3xl text-3xl leading-[1.08] font-extrabold tracking-[-0.02em] text-ink md:text-5xl">
         Turn Premier League data into FPL points.
@@ -85,40 +84,71 @@ function Hero() {
           </p>
         </div>
       )}
-
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <button
-          onClick={() => navigate('/squad')}
-          className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-accent px-5 font-semibold text-accent-contrast transition-colors hover:bg-accent-strong"
-        >
-          <Icon name="pitch" size={16} /> Build your squad
-        </button>
-        <button
-          onClick={() => navigate('/scout')}
-          className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-line-mid px-5 font-semibold text-ink transition-colors hover:border-line-strong"
-        >
-          <Icon name="target" size={16} /> Scout players
-        </button>
-      </div>
-
-      <div className="mt-9 grid gap-3 sm:grid-cols-3">
-        <Pillar icon="target" title="Data" body="We start with the underlying numbers — expected goals, minutes, percentiles versus peers — not last week's points." />
-        <Pillar icon="eye" title="Insight" body="Every player gets a rating out of 100, a persona, and a plain-language verdict you can actually act on." />
-        <Pillar icon="trophy" title="Points" body="Build and rate a squad, scout differentials and plan your fixtures — everything pointed at one thing: more points." />
-      </div>
     </section>
   )
 }
 
-function Pillar({ icon, title, body }: { icon: IconName; title: string; body: string }) {
+// Base path for site assets (relative build → GitHub Pages sub-path safe).
+const IMG_BASE = import.meta.env.BASE_URL
+
+interface HomeWin { key: string; to: string; kicker: string; title: string; desc: string; stat: string; card: string; ghost?: { text: string; style: CSSProperties } }
+const WINDOWS: HomeWin[] = [
+  { key: 'players', to: '/players', kicker: 'Explore', title: 'Players', desc: 'Every player rated 0–100 — form, value, fixtures and the editorial player hero.', stat: '600+ rated', card: 'hw-c6 hw-tall',
+    ghost: { text: '8', style: { right: '4%', bottom: '-4%', fontSize: 'clamp(150px,20vw,240px)' } } },
+  { key: 'teams', to: '/teams', kicker: 'Explore', title: 'Teams', desc: 'Attack, defence and set-piece ratings for all 20 clubs, with matchup previews.', stat: '20 clubs', card: 'hw-c6 hw-tall',
+    ghost: { text: 'AFC', style: { left: '5%', bottom: '2%', fontSize: 'clamp(90px,11vw,140px)', WebkitTextStroke: '2px rgba(255,255,255,.10)' } } },
+  { key: 'fixtures', to: '/fixtures', kicker: 'Plan', title: 'Fixtures', desc: 'Our own fixture rating and rotation planner.', stat: 'Next 6 GWs', card: 'hw-c3 hw-med' },
+  { key: 'scouting', to: '/scout', kicker: 'Discover', title: 'Scouting', desc: 'Filter the market for your next differential.', stat: 'Find gems', card: 'hw-c3 hw-med' },
+  { key: 'squad', to: '/squad', kicker: 'Build', title: 'Squad Builder', desc: 'Draft an XI and plan the season week by week.', stat: '£100.0m', card: 'hw-c3 hw-med' },
+  { key: 'myteam', to: '/loadteam', kicker: 'Track', title: 'My Team', desc: 'Link your side for a live rated breakdown.', stat: 'Live GW1', card: 'hw-c3 hw-med',
+    ghost: { text: '★', style: { right: '6%', top: '8%', fontSize: 'clamp(80px,10vw,120px)', WebkitTextStroke: '2px color-mix(in srgb, var(--accent) 18%, transparent)' } } },
+  { key: 'compare', to: '/compare', kicker: 'Compare', title: 'Compare', desc: 'Two players, side by side — every metric head-to-head.', stat: 'Head-to-head', card: 'hw-c12 hw-wide',
+    ghost: { text: 'VS', style: { right: '6%', top: '50%', transform: 'translateY(-50%)', fontSize: 'clamp(64px,9vw,116px)', WebkitTextStroke: '2px rgba(255,255,255,.10)' } } },
+]
+
+function ArrowRight() {
   return (
-    <div className="rounded-xl border border-line bg-surface-1/60 p-4">
-      <div className="mb-2 flex items-center gap-2">
-        <span className="grid size-8 place-items-center rounded-lg bg-accent-soft text-accent"><Icon name={icon} size={16} /></span>
-        <span className="text-sm font-bold tracking-wide text-ink uppercase">{title}</span>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-1">
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  )
+}
+
+function WindowCard({ w }: { w: HomeWin }) {
+  const navigate = useNavigate()
+  const [loaded, setLoaded] = useState(false)
+  return (
+    <button type="button" onClick={() => navigate(w.to)} className={`hw-card group ${w.card}`} aria-label={`${w.title} — ${w.desc}`}>
+      <div className={`hw-photo hw-${w.key}`}>
+        <img
+          src={`${IMG_BASE}home/${w.key}.jpg`}
+          alt=""
+          loading="lazy"
+          onLoad={() => setLoaded(true)}
+          onError={(e) => { e.currentTarget.style.display = 'none' }}
+          className={`hw-img ${loaded ? 'is-on' : ''}`}
+        />
       </div>
-      <p className="text-sm leading-relaxed text-ink-2">{body}</p>
-    </div>
+      {w.ghost && <div className="hw-ghost" style={w.ghost.style}>{w.ghost.text}</div>}
+      <div className="hw-grain" />
+      <div className="hw-body">
+        <span className="mb-2 inline-flex items-center gap-1.5 text-[0.62rem] font-extrabold tracking-[0.16em] text-accent-2 uppercase">◆ {w.kicker}</span>
+        <h3 className="font-display text-2xl leading-none text-white uppercase md:text-[1.9rem]">{w.title}</h3>
+        <p className="mt-2 max-w-[34ch] text-sm text-[#d8d2c6]">{w.desc}</p>
+        <div className="mt-3.5 flex items-center justify-between gap-2">
+          <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-sm">{w.stat}</span>
+          <span className="inline-flex items-center gap-1.5 text-sm font-extrabold text-accent-2"><span className="hidden sm:inline">Open</span> <ArrowRight /></span>
+        </div>
+      </div>
+    </button>
+  )
+}
+
+function HomeWindows() {
+  return (
+    <section className="mb-10 hw-grid">
+      {WINDOWS.map((w) => <WindowCard key={w.key} w={w} />)}
+    </section>
   )
 }
 
@@ -142,6 +172,8 @@ export default function Home() {
   return (
     <PageShell>
       <Hero />
+
+      <HomeWindows />
 
       <GameweekCard data={data} onPlayer={toPlayer} />
 
