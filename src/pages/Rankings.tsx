@@ -12,7 +12,7 @@ import { PageSkeleton } from '../components/Skeleton'
 import { EmptyState } from '../components/PageShell'
 import { useCore } from '../lib/useData'
 import { num, str, bool } from '../lib/rows'
-import { ratingToNum, norm, TOOLTIPS } from '../lib/util'
+import { ratingToNum, norm, TOOLTIPS, playerHref } from '../lib/util'
 import type { RatingRow, Row } from '../lib/types'
 
 // This is the app's "Players" hub: sortable leaderboards across every metric,
@@ -51,7 +51,7 @@ const playerCol: Column<Row> = {
   header: 'Player',
   align: 'left',
   sortValue: (r) => str(r, 'web_name'),
-  cell: (r) => <PlayerNameCell name={String(r.web_name)} />,
+  cell: (r) => <PlayerNameCell name={String(r.web_name)} code={num(r, 'code')} />,
 }
 const posCol: Column<Row> = {
   key: 'pos',
@@ -175,7 +175,7 @@ export default function Rankings() {
   const metrics = data?.metrics ?? []
   const seasonToDate = data?.seasonToDate ?? []
 
-  const toPlayer = (name: string) => navigate(`/player?name=${encodeURIComponent(name)}`)
+  const toPlayer = (name: string, code?: number | null) => navigate(playerHref(name, code))
 
   // Position filter options depend on the tab. Single-position tabs (clean
   // sheets = defenders, goalkeepers) hide the filter entirely.
@@ -462,7 +462,7 @@ export default function Rankings() {
             initialSort="rank"
             initialDir="asc"
             rowKey={(r) => String(r.element)}
-            onRowClick={(r) => toPlayer(String(r.web_name))}
+            onRowClick={(r) => toPlayer(String(r.web_name), num(r, 'code'))}
             featured={!query}
           />
         ) : (
@@ -479,7 +479,7 @@ export default function Rankings() {
   )
 }
 
-function FormTables({ rows, pos, onPlayer }: { rows: Row[]; pos: string; onPlayer: (n: string) => void }) {
+function FormTables({ rows, pos, onPlayer }: { rows: Row[]; pos: string; onPlayer: (n: string, code?: number | null) => void }) {
   const posFilter = (r: Row) => pos === 'ALL' || r.position === pos
   const hot = rows
     .filter((p) => str(p, 'streak') === '🔥 Hot' && posFilter(p))
@@ -518,11 +518,11 @@ function FormTables({ rows, pos, onPlayer }: { rows: Row[]; pos: string; onPlaye
             {list.map((p) => (
               <tr
                 key={String(p.element)}
-                onClick={() => onPlayer(String(p.web_name))}
+                onClick={() => onPlayer(String(p.web_name), num(p, 'code'))}
                 className="cursor-pointer border-b border-line/60 transition-colors last:border-0 hover:bg-surface-2/70"
               >
                 <td className="px-2.5 py-2 md:px-3">
-                  <PlayerNameCell name={String(p.web_name)} />
+                  <PlayerNameCell name={String(p.web_name)} code={num(p, 'code')} />
                 </td>
                 <td className="px-2.5 py-2 md:px-3">
                   <TeamCell team={String(p.team)} />
@@ -573,7 +573,7 @@ function FormTables({ rows, pos, onPlayer }: { rows: Row[]; pos: string; onPlaye
 function buildNarrative(tab: string, ratings: RatingRow[], metrics: Row[], seasonToDate: Row[]): React.ReactNode {
   const rated = ratings.filter((p) => bool(p, 'season_ok'))
   const lead = (arr: Row[]) => (arr.length ? arr[0] : null)
-  const metricOf = (name: string) => metrics.find((x) => x.web_name === name)
+  const metricOf = (el: number | null | undefined) => metrics.find((x) => num(x, 'element') === el)
   const b = (s: string) => <strong className="text-ink">{s}</strong>
 
   switch (tab) {
@@ -590,7 +590,7 @@ function buildNarrative(tab: string, ratings: RatingRow[], metrics: Row[], seaso
     case 'goal-threats': {
       const p = lead(rated.filter((x) => x.position === 'MID' || x.position === 'FWD').sort((a, b) => (num(b, 'season_goal_score') ?? 0) - (num(a, 'season_goal_score') ?? 0)))
       if (!p) return null
-      const m = metricOf(String(p.web_name))
+      const m = metricOf(num(p, 'element'))
       const share = m && num(m, 'xg_share_season')
       return (
         <>
@@ -601,7 +601,7 @@ function buildNarrative(tab: string, ratings: RatingRow[], metrics: Row[], seaso
     case 'creators': {
       const p = lead(rated.filter((x) => x.position === 'MID' || x.position === 'FWD').sort((a, b) => (num(b, 'season_creative_score') ?? 0) - (num(a, 'season_creative_score') ?? 0)))
       if (!p) return null
-      const m = metricOf(String(p.web_name))
+      const m = metricOf(num(p, 'element'))
       const share = m && num(m, 'xa_share_season')
       return (
         <>

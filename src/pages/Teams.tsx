@@ -450,7 +450,7 @@ function TeamCard({
         <SortableTable
           rows={teamPlayers}
           columns={[
-            { key: 'player', header: 'Player', align: 'left', sortValue: (r) => str(r, 'web_name'), cell: (r) => <PlayerNameCell name={String(r.web_name)} /> },
+            { key: 'player', header: 'Player', align: 'left', sortValue: (r) => str(r, 'web_name'), cell: (r) => <PlayerNameCell name={String(r.web_name)} code={num(r, 'code')} /> },
             { key: 'pos', header: 'Pos', align: 'left', sortValue: (r) => str(r, 'position'), cell: (r) => <PosBadge pos={String(r.position)} /> },
             { key: 'season', header: 'Season Rating', align: 'left', sortValue: (r) => num(r, 'season_overall_score'), cell: (r) => <StarRating value={str(r, 'season_overall_rating')} /> },
             { key: 'gw4', header: '4GW Rating', align: 'left', sortValue: (r) => str(r, 'gw4_overall_rating'), cell: (r) => <StarRating value={str(r, 'gw4_overall_rating')} /> },

@@ -9,7 +9,7 @@ import { Icon } from '../components/Icon'
 import { useCore, useLazyTable } from '../lib/useData'
 import { distanceYards, toPitch, classifyZone } from '../lib/shotzones'
 import { num, str } from '../lib/rows'
-import { teamFullNames } from '../lib/util'
+import { teamFullNames, playerHref } from '../lib/util'
 import type { RatingRow, Row } from '../lib/types'
 
 // Per-team defensive shot profile from shots_conceded. For distance, higher =
@@ -453,7 +453,7 @@ function Discover({
               {/* Name row — never competes with the metric pills for width. */}
               <div className="flex items-center gap-3">
                 <span className="w-6 shrink-0 text-center font-num text-xs tabular-nums text-ink-3">{idx + 1}</span>
-                <button className="min-w-0 flex-1 text-left" onClick={() => navigate(`/player?name=${encodeURIComponent(p.web_name)}`)}>
+                <button className="min-w-0 flex-1 text-left" onClick={() => navigate(playerHref(p.web_name, p.code))}>
                   <div className="truncate font-medium text-ink hover:text-accent">{p.web_name}</div>
                   <div className="flex items-center gap-1.5 truncate text-[11px] text-ink-3"><TeamBadge team={p.team} size={11} />{p.team} · {p.position} · {price != null ? `£${price.toFixed(1)}m` : '—'} · {mins} mins</div>
                 </button>

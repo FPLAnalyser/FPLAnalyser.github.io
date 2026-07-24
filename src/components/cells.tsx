@@ -1,8 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 import { TeamBadge } from './badges'
+import { playerHref } from '../lib/util'
 
-/** Clickable player name → navigates to the Players page for that player. */
-export function PlayerNameCell({ name }: { name: string }) {
+/** Clickable player name → navigates to the Players page for that player.
+ *  Pass `code` (permanent id) so shared web_names never resolve to the wrong player. */
+export function PlayerNameCell({ name, code }: { name: string; code?: number | null }) {
   const navigate = useNavigate()
   return (
     <button
@@ -10,7 +12,7 @@ export function PlayerNameCell({ name }: { name: string }) {
       className="text-left font-medium text-ink transition-colors hover:text-accent"
       onClick={(e) => {
         e.stopPropagation()
-        navigate(`/player?name=${encodeURIComponent(name)}`)
+        navigate(playerHref(name, code))
       }}
     >
       {name}

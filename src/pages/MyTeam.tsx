@@ -10,8 +10,8 @@ import { SquadDNA, SquadMoves } from '../components/SquadInsights'
 import { Icon, type IconName } from '../components/Icon'
 import { useCore } from '../lib/useData'
 import { useSeason } from '../lib/season'
-import { str } from '../lib/rows'
-import { teamFullNames, avgRatingField } from '../lib/util'
+import { str, num } from '../lib/rows'
+import { teamFullNames, avgRatingField, playerHref } from '../lib/util'
 import { fplFetch, getCurrentGwFallback, fetchEntry, fetchEntryHistory, fetchLeagueStandings, fetchPicksCached } from '../lib/api'
 import { buildContext, runRules, SEVERITY_META } from '../lib/insights/engine'
 import { RULES } from '../lib/insights/rules'
@@ -305,7 +305,7 @@ function PlayerCardSlot({ e, win, fixtureEase }: { e: Enriched; win: RatingWindo
         compact
         window={win}
         fixtureEase={fixtureEase}
-        onClick={() => navigate(`/player?name=${encodeURIComponent(String(r.web_name))}`)}
+        onClick={() => navigate(playerHref(String(r.web_name), num(r, 'code')))}
         captain={pick.is_captain}
         viceCaptain={pick.is_vice_captain}
         streak={std ? str(std, 'streak') : ''}
@@ -397,7 +397,7 @@ function Report({ picksData, historyData, data, ownedElements }: { picksData: an
                   {i.suggestions.map((s: any, si: number) => (
                     <button
                       key={si}
-                      onClick={(ev) => { ev.stopPropagation(); navigate(`/player?name=${encodeURIComponent(s.web_name)}`) }}
+                      onClick={(ev) => { ev.stopPropagation(); navigate(playerHref(s.web_name, num(s, 'code'))) }}
                       className="rounded-lg border border-line bg-surface-2/70 px-3 py-2 text-left text-xs transition-colors hover:border-line-mid"
                     >
                       <div className="font-semibold text-ink">{s.web_name} <span className="font-normal text-ink-3">£{Number(s.price).toFixed(1)}m · {s.team}</span></div>
@@ -508,7 +508,7 @@ function MiniLeagueResult({ leagueName, rivalPicks, ownedElements, ratings }: { 
             const r = ratingByEl.get(el)!
             return (
               <tr key={el} className="border-b border-line last:border-0">
-                <td className="px-3 py-2.5"><button className="font-medium text-ink hover:text-accent" onClick={() => navigate(`/player?name=${encodeURIComponent(String(r.web_name))}`)}>{String(r.web_name)}</button></td>
+                <td className="px-3 py-2.5"><button className="font-medium text-ink hover:text-accent" onClick={() => navigate(playerHref(String(r.web_name), num(r, 'code')))}>{String(r.web_name)}</button></td>
                 <td className="px-3 py-2.5"><span className="flex items-center gap-1 text-ink-2"><TeamBadge team={String(r.team)} size={12} />{r.team}</span></td>
                 <td className="px-3 py-2.5"><span className="rounded bg-surface-3 px-1.5 py-0.5 text-[11px] font-semibold text-ink-2">{r.position}</span></td>
                 <td className="px-3 py-2.5 text-right"><StarRating value={str(r, 'gw4_overall_rating') || str(r, 'season_overall_rating')} size={10} showNum={false} /></td>

@@ -45,12 +45,19 @@ export function PlayerPhoto({
   }, [resolved])
 
   const chain = hero ? HERO_SIZES : PHOTO_SIZES
-  if (!resolved || idx >= chain.length) return <>{placeholder}</>
+  // Cache-bust by the data's build date so a fresh data pull (new kits after a
+  // transfer) re-fetches the headshot instead of a browser-cached one. Each size
+  // is tried versioned first, then plain — so if the CDN ever dislikes the query
+  // param we still fall back to the working URL rather than a placeholder.
+  const ver = (window as unknown as { __photoVer?: string }).__photoVer
+  const base = (size: string) => `https://resources.premierleague.com/premierleague/photos/players/${size}/p${resolved}.png`
+  const urls = chain.flatMap((size) => (ver ? [`${base(size)}?v=${ver}`, base(size)] : [base(size)]))
+  if (!resolved || idx >= urls.length) return <>{placeholder}</>
   return (
     <img
       key={`${resolved}-${idx}`}
       loading="lazy"
-      src={`https://resources.premierleague.com/premierleague/photos/players/${chain[idx]}/p${resolved}.png`}
+      src={urls[idx]}
       alt=""
       className={className}
       style={style}
