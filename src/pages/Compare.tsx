@@ -31,14 +31,14 @@ function val100(r: RatingRow | undefined, m: { key: string; norm?: boolean }): n
 }
 const overall100 = (r?: RatingRow) => val100(r, { key: 'season_overall_score', norm: true })
 
-function Picker({ ratings, color, label, selected, onPick }: { ratings: RatingRow[]; color: string; label: string; selected?: RatingRow; onPick: (name: string) => void }) {
+function Picker({ ratings, color, label, selected, onPick }: { ratings: RatingRow[]; color: string; label: string; selected?: RatingRow; onPick: (code: string) => void }) {
   return (
     <div className="flex-1">
       <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] uppercase" style={{ color }}>{label}</div>
       <SearchBox
         items={ratings}
         getLabel={(r) => String(r.web_name)}
-        onSelect={(r) => onPick(String(r.web_name))}
+        onSelect={(r) => onPick(String(num(r, 'code') ?? r.web_name))}
         placeholder="Search a player…"
         initialValue={selected ? String(selected.web_name) : ''}
         renderItem={(r) => (
@@ -87,12 +87,14 @@ export default function Compare() {
   const [params, setParams] = useSearchParams()
   const ratings = useMemo(() => (data?.ratings ?? []).filter((r) => num(r, 'season_overall_score') != null) as RatingRow[], [data])
 
-  const find = (name: string | null) => (name ? ratings.find((r) => norm(r.web_name) === norm(name)) : undefined)
+  // Resolve by permanent code (unique); fall back to name for older links.
+  const find = (key: string | null) =>
+    key ? ratings.find((r) => String(num(r, 'code')) === key) ?? ratings.find((r) => norm(r.web_name) === norm(key)) : undefined
   const a = find(params.get('a'))
   const b = find(params.get('b'))
-  const setSide = (side: 'a' | 'b', name: string) => {
+  const setSide = (side: 'a' | 'b', key: string) => {
     const next = new URLSearchParams(params)
-    next.set(side, name)
+    next.set(side, key)
     setParams(next, { replace: true })
   }
 

@@ -45,6 +45,13 @@ export function getPositionEmoji(pos: string): string {
   return ({ GKP: '🧤', DEF: '🛡️', MID: '⚡', FWD: '⚽' } as Record<string, string>)[pos] || '👤'
 }
 
+/** Player-detail URL. Always include the permanent `code` when known so two
+ *  players who share a web_name (e.g. two Hendersons) never collide. */
+export function playerHref(name: string | null | undefined, code?: number | null): string {
+  const n = encodeURIComponent(String(name ?? ''))
+  return code != null ? `/player?name=${n}&code=${code}` : `/player?name=${n}`
+}
+
 /** Ordinal suffix: 1 → "1st", 2 → "2nd", 3 → "3rd", 11 → "11th". */
 export function ordinal(n: number): string {
   const s = ['th', 'st', 'nd', 'rd']

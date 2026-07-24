@@ -80,6 +80,7 @@ export default function Players() {
   const { data, error: coreError } = useCore()
   const [params, setParams] = useSearchParams()
   const name = params.get('name')
+  const codeParam = params.get('code')
 
   const ratings = (data?.ratings ?? []) as RatingRow[]
 
@@ -92,8 +93,17 @@ export default function Players() {
     )
   }
 
-  const select = (n: string) => { setParams(n ? { name: n } : {}); window.scrollTo(0, 0) }
-  const selected = name ? ratings.find((p) => p.web_name === name) : null
+  // Resolve by the PERMANENT player code first (web_name collides — e.g. two
+  // Hendersons), with name only as a fallback for older/plain links.
+  const select = (n: string, code?: number | null) => {
+    setParams(code != null ? { name: n, code: String(code) } : n ? { name: n } : {})
+    window.scrollTo(0, 0)
+  }
+  const selected = codeParam
+    ? ratings.find((p) => String(num(p, 'code')) === codeParam) ?? (name ? ratings.find((p) => p.web_name === name) : null)
+    : name
+      ? ratings.find((p) => p.web_name === name)
+      : null
 
   return (
     <PageShell>
@@ -108,7 +118,7 @@ export default function Players() {
               <span className="flex items-center gap-1.5 text-xs text-ink-3">{p.position} · <TeamBadge team={String(p.team)} size={12} />{p.team} · £{p.price}m</span>
             </span>
           )}
-          onSelect={(p) => select(String(p.web_name))}
+          onSelect={(p) => select(String(p.web_name), num(p, 'code'))}
           placeholder="Search player name…"
           initialValue={name ?? ''}
         />
@@ -119,7 +129,7 @@ export default function Players() {
   )
 }
 
-function MostOwned({ ratings, data, onSelect }: { ratings: RatingRow[]; data: CoreData; onSelect: (n: string) => void }) {
+function MostOwned({ ratings, data, onSelect }: { ratings: RatingRow[]; data: CoreData; onSelect: (n: string, code?: number | null) => void }) {
   const top25 = useMemo(
     () => ratings.filter((p) => p.selected_by_percent != null && num(p, 'season_ok') !== 0).filter((p) => p.selected_by_percent).sort((a, b) => (b.selected_by_percent ?? 0) - (a.selected_by_percent ?? 0)).slice(0, 25),
     [ratings],
@@ -139,7 +149,7 @@ function MostOwned({ ratings, data, onSelect }: { ratings: RatingRow[]; data: Co
           return (
             <button
               key={String(p.element)}
-              onClick={() => onSelect(String(p.web_name))}
+              onClick={() => onSelect(String(p.web_name), num(p, 'code'))}
               className="flex items-center gap-3 rounded-xl border border-line bg-surface-1/60 p-3 text-left transition-colors hover:border-line-mid hover:bg-surface-2/60"
             >
               <PlayerPhoto code={p.code} element={p.element} pos={p.position} size={44} />
@@ -188,9 +198,10 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
   const pos = r.position
   const isAtt = pos === 'MID' || pos === 'FWD'
 
-  const p4 = data.personas4.find((p) => p.web_name === name) ?? null
-  const m = data.metrics.find((p) => p.web_name === name) ?? null
-  const std = data.seasonToDate.find((p) => p.web_name === name) ?? null
+  // Key related tables by the player's element (unique), never web_name.
+  const p4 = data.personas4.find((p) => p.element === r.element) ?? null
+  const m = data.metrics.find((p) => p.element === r.element) ?? null
+  const std = data.seasonToDate.find((p) => p.element === r.element) ?? null
   const streak = std ? String(std.streak ?? '') : ''
 
   const verdict = useMemo(() => {
@@ -272,7 +283,7 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
           </div>
         </Section>
 
-        <TierTable name={name} tierPerf={data.tierPerf} />
+        <TierTable element={r.element} tierPerf={data.tierPerf} />
 
         {pos !== 'GKP' && (
           <>
@@ -623,8 +634,8 @@ function DimBars({ r, dims, overall }: { r: RatingRow; dims: Dim[]; overall: [st
   )
 }
 
-function TierTable({ name, tierPerf }: { name: string; tierPerf: Row[] }) {
-  const rows = tierPerf.filter((t) => t.web_name === name)
+function TierTable({ element, tierPerf }: { element: number; tierPerf: Row[] }) {
+  const rows = tierPerf.filter((t) => num(t, 'element') === element)
   const byTier = (t: string) => rows.find((x) => str(x, 'opponent_tier') === t) ?? null
   const tiers: [string, string, Row | null][] = [
     ['Tier 1 — Top 6', 'Tier 1 - Top 6', byTier('Tier 1 - Top 6')],

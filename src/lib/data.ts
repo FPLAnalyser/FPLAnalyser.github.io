@@ -150,6 +150,15 @@ export function loadCore(): Promise<CoreData> {
     // promoted clubs the hardcoded fallback map doesn't know) before any UI
     // renders. Optional table — absent for older seasons, which use the map.
     registerTeams(teams)
+    // Cache-bust token for external player photos: keyed to the data's build
+    // date, so regenerating the data (e.g. after transfers) re-fetches headshots
+    // and picks up new club kits instead of a browser-cached old one.
+    if (typeof window !== 'undefined') {
+      const gen = meta && typeof (meta as { generated_at?: string }).generated_at === 'string'
+        ? (meta as { generated_at?: string }).generated_at!.slice(0, 10)
+        : ''
+      ;(window as unknown as { __photoVer?: string }).__photoVer = gen
+    }
     return {
       ratings,
       personas4,

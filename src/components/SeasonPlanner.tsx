@@ -5,7 +5,7 @@ import { PlayerPhoto } from './PlayerPhoto'
 import { Icon } from './Icon'
 import { tapHaptic } from '../lib/native'
 import { num } from '../lib/rows'
-import { teamLabel, FDR_COLORS } from '../lib/util'
+import { teamLabel, FDR_COLORS, playerHref } from '../lib/util'
 import {
   type PlannerState, type WeekPlan, type Pos, type Chip, CHIP_LABEL,
   squadAt, freeTransfers, pointsHit, chipsUsed, autoLineup, toggleStarter,
@@ -215,7 +215,7 @@ export function SeasonPlanner({ base, byEl, pool, fixtureEase, startGw }: {
           onVice={() => makeVice(sheet)}
           onToggle={() => toggle(sheet)}
           onTransfer={() => { setTransferOut(sheet); setSheet(null) }}
-          onView={() => navigate(`/player?name=${encodeURIComponent(nameOf(sheet))}`)}
+          onView={() => navigate(playerHref(nameOf(sheet), num(byEl.get(sheet) ?? {}, 'code')))}
           onClose={() => setSheet(null)}
         />
       )}

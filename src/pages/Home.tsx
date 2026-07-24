@@ -10,7 +10,7 @@ import { Icon, type IconName } from '../components/Icon'
 import { useCore } from '../lib/useData'
 import { useSeason } from '../lib/season'
 import { num, str } from '../lib/rows'
-import { teamFullNames } from '../lib/util'
+import { teamFullNames, playerHref } from '../lib/util'
 import { buildLeagueStories } from '../lib/insights/narrative'
 import type { CoreData, RatingRow, Row } from '../lib/types'
 
@@ -32,13 +32,13 @@ function PhotoByCode({ code, element, size = 40 }: { code: number | null; elemen
 }
 
 interface DashItem { rank: number; name: string; code: number | null; element?: number | null; pos: string; team: string; value: ReactNode }
-function DashCard({ title, icon, items, onPlayer }: { title: string; icon: ReactNode; items: DashItem[]; onPlayer: (name: string) => void }) {
+function DashCard({ title, icon, items, onPlayer }: { title: string; icon: ReactNode; items: DashItem[]; onPlayer: (name: string, code?: number | null) => void }) {
   return (
     <div className="rounded-xl border border-line bg-surface-1/60 p-4">
       <div className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-ink">{icon}{title}</div>
       <div className="flex flex-col">
         {items.map((it) => (
-          <button key={it.rank} onClick={() => onPlayer(it.name)} className="flex items-center gap-3 border-b border-line py-2 text-left last:border-0 transition-colors hover:bg-surface-2/50">
+          <button key={it.rank} onClick={() => onPlayer(it.name, it.code)} className="flex items-center gap-3 border-b border-line py-2 text-left last:border-0 transition-colors hover:bg-surface-2/50">
             <span className="w-6 font-num text-xs text-ink-3 tabular-nums">#{it.rank}</span>
             <PhotoByCode code={it.code} element={it.element} size={32} />
             <div className="min-w-0 flex-1">
@@ -125,7 +125,7 @@ function Pillar({ icon, title, body }: { icon: IconName; title: string; body: st
 export default function Home() {
   const { data, error: coreError } = useCore()
   const navigate = useNavigate()
-  const toPlayer = (name: string) => navigate(`/player?name=${encodeURIComponent(name)}`)
+  const toPlayer = (name: string, code?: number | null) => navigate(playerHref(name, code))
   const toTeam = (team: string) => navigate(`/teams?team=${team}`)
 
   const stories = useMemo(() => (data ? buildLeagueStories(data) : []), [data])
@@ -168,8 +168,8 @@ interface Story {
   bullets?: StoryBullet[]
 }
 
-function BriefingCard({ st, onPlayer, onTeam }: { st: Story; onPlayer: (n: string) => void; onTeam: (t: string) => void }) {
-  const click = st.player ? () => onPlayer(String(st.player!.web_name)) : st.team ? () => onTeam(st.team!) : undefined
+function BriefingCard({ st, onPlayer, onTeam }: { st: Story; onPlayer: (n: string, code?: number | null) => void; onTeam: (t: string) => void }) {
+  const click = st.player ? () => onPlayer(String(st.player!.web_name), num(st.player!, 'code')) : st.team ? () => onTeam(st.team!) : undefined
   return (
     <div
       onClick={click}
@@ -206,7 +206,7 @@ function BriefingCard({ st, onPlayer, onTeam }: { st: Story; onPlayer: (n: strin
 
 /** The gameweek decision card: the model's captain, differential and value
  *  picks at a glance — the "what do I do this week" moment on the home page. */
-function GameweekCard({ data, onPlayer }: { data: CoreData; onPlayer: (n: string) => void }) {
+function GameweekCard({ data, onPlayer }: { data: CoreData; onPlayer: (n: string, code?: number | null) => void }) {
   const nextGw = data.meta?.next_gw ?? null
   const picks = useMemo(() => {
     const rated = (data.ratings as RatingRow[]).filter(
@@ -231,7 +231,7 @@ function GameweekCard({ data, onPlayer }: { data: CoreData; onPlayer: (n: string
   const Pick = ({ label, icon, p, note }: { label: string; icon: IconName; p?: RatingRow; note: string }) => {
     if (!p) return null
     return (
-      <button onClick={() => onPlayer(String(p.web_name))} className="flex flex-1 items-center gap-3 rounded-xl border border-line bg-surface-1/60 p-3 text-left transition-colors hover:border-line-mid hover:bg-surface-2/50">
+      <button onClick={() => onPlayer(String(p.web_name), num(p, 'code'))} className="flex flex-1 items-center gap-3 rounded-xl border border-line bg-surface-1/60 p-3 text-left transition-colors hover:border-line-mid hover:bg-surface-2/50">
         <PhotoByCode code={num(p, 'code')} element={num(p, 'element')} size={40} />
         <div className="min-w-0 flex-1">
           <div className="mb-0.5 flex items-center gap-1 text-[10px] font-semibold tracking-[0.1em] text-accent uppercase"><Icon name={icon} size={12} />{label}</div>
@@ -258,7 +258,7 @@ function GameweekCard({ data, onPlayer }: { data: CoreData; onPlayer: (n: string
   )
 }
 
-function GwPanel({ data, onPlayer }: { data: CoreData; onPlayer: (n: string) => void }) {
+function GwPanel({ data, onPlayer }: { data: CoreData; onPlayer: (n: string, code?: number | null) => void }) {
   const nextGw = data.meta?.next_gw ?? null
   const metaLine = () => {
     const m = data.meta
@@ -308,7 +308,7 @@ function GwPanel({ data, onPlayer }: { data: CoreData; onPlayer: (n: string) => 
   )
 }
 
-function FormWatch({ seasonToDate, ratings, onPlayer }: { seasonToDate: Row[]; ratings: RatingRow[]; onPlayer: (n: string) => void }) {
+function FormWatch({ seasonToDate, ratings, onPlayer }: { seasonToDate: Row[]; ratings: RatingRow[]; onPlayer: (n: string, code?: number | null) => void }) {
   const codeByName = useMemo(() => {
     const m = new Map<string, number | null>()
     for (const p of ratings) m.set(String(p.web_name), num(p, 'code'))

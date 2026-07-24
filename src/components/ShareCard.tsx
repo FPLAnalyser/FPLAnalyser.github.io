@@ -2,6 +2,8 @@ import { useRef, useState } from 'react'
 import { RatingCard } from './RatingCard'
 import { ShareFooter } from './ShareFooter'
 import { shareImageNative } from '../lib/native'
+import { playerHref } from '../lib/util'
+import { num } from '../lib/rows'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
 /**
@@ -15,7 +17,7 @@ export function ShareCard({ r, fixtureEase }: { r: RatingRow; fixtureEase?: Fixt
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const cardRef = useRef<HTMLDivElement>(null)
-  const url = `${location.origin}${location.pathname}#/player?name=${encodeURIComponent(String(r.web_name))}`
+  const url = `${location.origin}${location.pathname}#${playerHref(String(r.web_name), num(r, 'code'))}`
 
   const copy = async () => {
     try {

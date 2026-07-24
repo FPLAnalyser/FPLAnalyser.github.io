@@ -12,7 +12,7 @@ import { Icon } from '../components/Icon'
 import { useCore } from '../lib/useData'
 import { tapHaptic, shareImageNative } from '../lib/native'
 import { num } from '../lib/rows'
-import { teamLabel } from '../lib/util'
+import { teamLabel, playerHref } from '../lib/util'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
 type Pos = 'GKP' | 'DEF' | 'MID' | 'FWD'
@@ -301,7 +301,7 @@ export default function SquadBuilder() {
                 <div key={r.element} className="flex items-center gap-2.5 border-b border-line px-3 py-2 last:border-0">
                   <TeamBadge team={String(r.team)} size={16} />
                   <div className="min-w-0 flex-1">
-                    <button className="block w-full text-left" onClick={() => navigate(`/player?name=${encodeURIComponent(String(r.web_name))}`)}>
+                    <button className="block w-full text-left" onClick={() => navigate(playerHref(String(r.web_name), num(r, 'code')))}>
                       <div className="truncate text-sm font-medium text-ink hover:text-accent">{String(r.web_name)}</div>
                       <div className="text-[11px] text-ink-3">{teamLabel(String(r.team))} · £{priceOf(r).toFixed(1)}m · {Math.round(num(r, 'selected_by_percent') ?? 0)}% owned</div>
                     </button>
@@ -356,7 +356,7 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, capture }:
             <div key={pos} className="flex flex-wrap justify-center gap-3 md:gap-4">
               {players.map((r) => (
                 <div key={r.element} className={wrap}>
-                  <RatingCard r={r} compact window="season" fixtureEase={fixtureEase} onClick={capture ? undefined : () => navigate(`/player?name=${encodeURIComponent(String(r.web_name))}`)} />
+                  <RatingCard r={r} compact window="season" fixtureEase={fixtureEase} onClick={capture ? undefined : () => navigate(playerHref(String(r.web_name), num(r, 'code')))} />
                   {onRemove && !capture && (
                     <button aria-label={`Remove ${r.web_name}`} onClick={() => onRemove(r.element)} className="absolute -top-2 -right-2 z-10 grid size-7 place-items-center rounded-full border border-line bg-surface-1 text-ink-2 shadow-lg transition-colors hover:border-bad hover:text-bad">
                       <Icon name="x" size={14} />

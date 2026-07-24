@@ -9,7 +9,7 @@ import { PageSkeleton } from '../components/Skeleton'
 import { useCore, useLazyTable } from '../lib/useData'
 import { classifyZone, toPitch } from '../lib/shotzones'
 import { num, str } from '../lib/rows'
-import { teamLabel, FDR_COLORS } from '../lib/util'
+import { teamLabel, FDR_COLORS, playerHref } from '../lib/util'
 import type { FixtureEaseRow, RatingRow, Row, TeamRatingRow } from '../lib/types'
 
 /* ── Difficulty model ────────────────────────────────────────────────────────
@@ -876,7 +876,7 @@ function MatchupExplorer({ ratings }: { ratings: RatingRow[] }) {
               {results.map(({ r, uplift, why }, i) => (
                 <button
                   key={r.element}
-                  onClick={() => navigate(`/player?name=${encodeURIComponent(String(r.web_name))}`)}
+                  onClick={() => navigate(playerHref(String(r.web_name), num(r, 'code')))}
                   className="flex w-full items-center gap-3 border-b border-line px-3 py-2.5 text-left last:border-0 transition-colors hover:bg-surface-2/50"
                 >
                   <span className="w-5 shrink-0 text-center font-num text-xs tabular-nums text-ink-3">{i + 1}</span>

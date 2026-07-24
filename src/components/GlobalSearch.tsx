@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { Icon } from './Icon'
 import { TeamBadge, PositionIcon } from './badges'
 import { useCore } from '../lib/useData'
-import { norm, teamFullNames } from '../lib/util'
+import { norm, teamFullNames, playerHref } from '../lib/util'
+import { num } from '../lib/rows'
 import type { RatingRow } from '../lib/types'
 
-type PlayerItem = { kind: 'player'; label: string; name: string; team: string; pos: string }
+type PlayerItem = { kind: 'player'; label: string; name: string; team: string; pos: string; pcode: number | null }
 type TeamItem = { kind: 'team'; label: string; code: string }
 type Item = PlayerItem | TeamItem
 
@@ -20,7 +21,7 @@ function useSearchIndex(): { players: PlayerItem[]; teams: TeamItem[] } {
     const seen = new Set<string>()
     for (const p of ratings) {
       if (!p.web_name) continue
-      players.push({ kind: 'player', label: String(p.web_name), name: String(p.web_name), team: String(p.team ?? ''), pos: String(p.position ?? '') })
+      players.push({ kind: 'player', label: String(p.web_name), name: String(p.web_name), team: String(p.team ?? ''), pos: String(p.position ?? ''), pcode: num(p, 'code') })
       const t = String(p.team ?? '')
       if (t && !seen.has(t)) {
         seen.add(t)
@@ -34,7 +35,7 @@ function useSearchIndex(): { players: PlayerItem[]; teams: TeamItem[] } {
 
 function itemHref(it: Item): string {
   return it.kind === 'player'
-    ? `/player?name=${encodeURIComponent(it.name)}`
+    ? playerHref(it.name, it.pcode)
     : `/teams?team=${encodeURIComponent(it.code)}`
 }
 
