@@ -7,6 +7,7 @@ import { TeamBadge } from '../components/badges'
 import { FixtureChips } from '../components/FixtureChips'
 import { RatingCard } from '../components/RatingCard'
 import { ShareFooter } from '../components/ShareFooter'
+import { SeasonPlanner } from '../components/SeasonPlanner'
 import { Icon } from '../components/Icon'
 import { useCore } from '../lib/useData'
 import { tapHaptic, shareImageNative } from '../lib/native'
@@ -68,6 +69,7 @@ export default function SquadBuilder() {
   const [picked, setPicked] = useState<number[]>(() => {
     try { const s = localStorage.getItem(STORE_KEY); return s ? JSON.parse(s) : [] } catch { return [] }
   })
+  const [mode, setMode] = useState<'build' | 'plan'>('build')
   const [pickPos, setPickPos] = useState<Pos>('GKP')
   const [sort, setSort] = useState<SortKey>('rating')
   const [query, setQuery] = useState('')
@@ -194,8 +196,25 @@ export default function SquadBuilder() {
 
   return (
     <PageShell>
-      <PageHeader title="Squad Builder" subtitle="Pick a full 15 within £100m — 2 GK, 5 DEF, 5 MID, 3 FWD, max 3 per club — and we’ll rate it" />
+      <PageHeader title="Squad Builder" subtitle="Pick a full 15 within £100m, then plan your gameweeks — transfers, captain and chips" />
 
+      {/* Build / Plan toggle */}
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        <button onClick={() => setMode('build')} className={`min-h-9 rounded-full border px-4 text-sm font-semibold transition-colors ${mode === 'build' ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}>Build squad</button>
+        <button onClick={() => (complete && valid) && setMode('plan')} disabled={!(complete && valid)} className={`min-h-9 rounded-full border px-4 text-sm font-semibold transition-colors ${mode === 'plan' ? 'border-accent bg-accent-soft text-accent' : complete && valid ? 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink' : 'border-line text-ink-3 opacity-40'}`}>Plan gameweeks</button>
+        {!(complete && valid) && <span className="text-xs text-ink-3">Complete a valid 15 to start planning</span>}
+      </div>
+
+      {mode === 'plan' && complete && valid ? (
+        <SeasonPlanner
+          base={picked}
+          byEl={byEl}
+          pool={pool}
+          fixtureEase={fixtureEase}
+          startGw={fixtureEase.length ? Math.min(...fixtureEase.map((f) => f.gw)) : (data.meta?.next_gw ?? 1)}
+        />
+      ) : (
+      <>
       {/* Summary bar */}
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Budget left" value={`£${remaining.toFixed(1)}m`} tone={remaining < 0 ? 'bad' : 'ink'} sub={`of £${BUDGET.toFixed(0)}m`} />
@@ -306,6 +325,8 @@ export default function SquadBuilder() {
           </div>
         </div>
       </div>
+      </>
+      )}
 
       <SquadShare chosen={chosen} fixtureEase={fixtureEase} squadScore={squadScore} bestXI={bestXI} spent={spent} unrated={unrated} total={total} open={shareOpen} onClose={() => setShareOpen(false)} />
     </PageShell>
