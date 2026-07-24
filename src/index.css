@@ -207,15 +207,6 @@ body {
    A branded gradient stands in until a real photo (public/home/<key>.jpg)
    loads over it; scrim + gold hairline keep the title legible on any image.
    ════════════════════════════════════════════════════════════════════════ */
-.hw-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 0.9rem; }
-@media (min-width: 641px) { .hw-grid { gap: 1.1rem; } }
-.hw-c6, .hw-c3, .hw-c12 { grid-column: span 12; }
-@media (min-width: 521px) { .hw-c3 { grid-column: span 6; } }
-@media (min-width: 821px) { .hw-c6 { grid-column: span 6; } .hw-c3 { grid-column: span 3; } }
-.hw-tall { min-height: clamp(300px, 34vw, 400px); }
-.hw-med  { min-height: clamp(210px, 24vw, 262px); }
-.hw-wide { min-height: 172px; }
-
 .hw-card {
   position: relative; display: flex; flex-direction: column; justify-content: flex-end;
   overflow: hidden; border-radius: var(--radius-xl); border: 1px solid var(--line-subtle);
