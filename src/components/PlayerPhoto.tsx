@@ -1,10 +1,23 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react'
 import { liveCodeFor, liveCodesVersion, subscribeLiveCodes } from '../lib/photoCodes'
 
-// Try the size the official FPL app uses first (most complete, incl. newly
-// promoted clubs), then the legacy size, then a placeholder. Both are attempted
-// so we get the union of whatever the CDN has for a player.
+// The Premier League moved current-season headshots to a season-versioned
+// bucket with the bare code as the filename:
+//   .../premierleague25/photos/players/<size>/<code>.png
+// while the legacy bucket (…/premierleague/…/p<code>.png) still holds the OLD
+// photo (e.g. a transferred player's previous club). So we try the new bucket
+// first, then fall back to the legacy one.
+const CDN = 'https://resources.premierleague.com'
 const PHOTO_SIZES = ['250x250', '110x140'] as const
+
+/** Candidate headshot URLs, current-season bucket first, then legacy. */
+function photoUrls(code: number, sizes: readonly string[], ver?: string): string[] {
+  const bust = ver ? `?v=${ver}` : ''
+  const out: string[] = []
+  for (const s of sizes) out.push(`${CDN}/premierleague25/photos/players/${s}/${code}.png${bust}`)
+  for (const s of sizes) out.push(`${CDN}/premierleague/photos/players/${s}/p${code}.png${bust}`)
+  return out
+}
 
 /**
  * Premier League player headshot. Prefers the live FPL photo code for the
@@ -46,12 +59,9 @@ export function PlayerPhoto({
 
   const chain = hero ? HERO_SIZES : PHOTO_SIZES
   // Cache-bust by the data's build date so a fresh data pull (new kits after a
-  // transfer) re-fetches the headshot instead of a browser-cached one. Each size
-  // is tried versioned first, then plain — so if the CDN ever dislikes the query
-  // param we still fall back to the working URL rather than a placeholder.
+  // transfer) re-fetches the headshot instead of a browser-cached one.
   const ver = (window as unknown as { __photoVer?: string }).__photoVer
-  const base = (size: string) => `https://resources.premierleague.com/premierleague/photos/players/${size}/p${resolved}.png`
-  const urls = chain.flatMap((size) => (ver ? [`${base(size)}?v=${ver}`, base(size)] : [base(size)]))
+  const urls = resolved ? photoUrls(resolved, chain, ver) : []
   if (!resolved || idx >= urls.length) return <>{placeholder}</>
   return (
     <img
