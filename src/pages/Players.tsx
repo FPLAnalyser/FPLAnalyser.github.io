@@ -389,8 +389,8 @@ function UnderlyingQuality({ r, pos }: { r: RatingRow; pos: string }) {
 const POS_LABEL: Record<string, string> = { GKP: 'Goalkeeper', DEF: 'Defender', MID: 'Midfielder', FWD: 'Forward' }
 const HERO_DIM = '#8e94a3'
 const HERO_INK = '#f1efe9'
-const HERO_GOLD = '#e6c36a'
-const HERO_PANEL: CSSProperties = { borderColor: 'rgba(230,195,106,.16)', background: 'rgba(16,20,30,.72)', backdropFilter: 'blur(10px)' }
+const HERO_GOLD = '#ead188' // logo-gold highlight (bright, legible on near-black)
+const HERO_PANEL: CSSProperties = { borderColor: 'rgba(201,162,39,.18)', background: 'rgba(16,20,30,.72)', backdropFilter: 'blur(10px)' }
 
 function HeroSilhouette() {
   return (
@@ -402,8 +402,8 @@ function HeroSilhouette() {
 
 function HeroPill({ children, gold, warn, title }: { children: ReactNode; gold?: boolean; warn?: boolean; title?: string }) {
   const base = 'font-cond inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold tracking-[.14em] uppercase'
-  if (gold) return <span title={title} className={`${base} font-extrabold text-[#10131b]`} style={{ background: 'linear-gradient(120deg,#f7e3ad,#e6c36a)' }}>{children}</span>
-  return <span title={title} className={base} style={{ border: '1px solid rgba(230,195,106,.18)', color: warn ? '#e8b04a' : '#cfd3db', background: 'rgba(255,255,255,.02)' }}>{children}</span>
+  if (gold) return <span title={title} className={`${base} font-extrabold text-[#10131b]`} style={{ background: 'linear-gradient(120deg,#ead188,#c9a227)' }}>{children}</span>
+  return <span title={title} className={base} style={{ border: '1px solid rgba(201,162,39,.18)', color: warn ? '#e8b04a' : '#cfd3db', background: 'rgba(255,255,255,.02)' }}>{children}</span>
 }
 
 function BigNum({ v, sub, k }: { v: ReactNode; sub?: string; k: string }) {
@@ -429,7 +429,7 @@ function MiniRating({ k, v }: { k: string; v: number | null }) {
 
 function BigChip({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="min-w-[150px] max-w-[240px] flex-1 rounded-2xl p-px" style={{ background: 'linear-gradient(160deg, rgba(230,195,106,.7), rgba(230,195,106,.08) 45%, rgba(230,195,106,.35))' }}>
+    <div className="min-w-[150px] max-w-[240px] flex-1 rounded-2xl p-px" style={{ background: 'linear-gradient(160deg, rgba(201,162,39,.7), rgba(201,162,39,.08) 45%, rgba(201,162,39,.35))' }}>
       <div className="rounded-[15px] px-4 py-3 text-center" style={{ background: 'linear-gradient(180deg,#12161f,#0c0f16)' }}>
         <div className="font-cond text-[10px] font-semibold tracking-[.28em] uppercase" style={{ color: HERO_DIM }}>{label}</div>
         <div className="font-cond mt-1 text-[26px] leading-none font-extrabold md:text-[30px]" style={{ color: HERO_INK }}>
@@ -491,17 +491,17 @@ function PlayerHero({ r, verdict, personas, flags, isPenTaker, isSpTaker, streak
   const bullets = verdict?.bullets ?? []
 
   return (
-    <div className="relative overflow-hidden pb-20" style={{ background: `radial-gradient(900px 620px at 86% 22%, ${tc}30, transparent 62%), radial-gradient(700px 520px at 4% 100%, rgba(230,195,106,.12), transparent 60%), linear-gradient(118deg,#0d1119 0%,#0a0d13 52%,#070a10 100%)` }}>
+    <div className="relative overflow-hidden pb-20" style={{ background: `radial-gradient(900px 620px at 86% 22%, ${tc}30, transparent 62%), radial-gradient(700px 520px at 4% 100%, rgba(201,162,39,.12), transparent 60%), linear-gradient(118deg,#0d1119 0%,#0a0d13 52%,#070a10 100%)` }}>
       <div className="pointer-events-none absolute inset-0 opacity-50" style={{ background: 'repeating-linear-gradient(118deg, transparent 0 140px, rgba(255,255,255,.016) 140px 142px)' }} />
       <div className="font-display pointer-events-none absolute -left-2 top-2 leading-none whitespace-nowrap uppercase select-none" style={{ fontSize: 'clamp(70px,15vw,168px)', color: 'transparent', WebkitTextStroke: '1px rgba(255,255,255,.05)' }}>{teamFullNames[team] || team}</div>
       {rating != null && (
-        <div className="font-display pointer-events-none absolute right-[3%] -bottom-8 leading-[.8] select-none" style={{ fontSize: 'clamp(160px,28vw,340px)', color: 'transparent', WebkitTextStroke: '2px rgba(230,195,106,.15)' }}>{rating}</div>
+        <div className="font-display pointer-events-none absolute right-[3%] -bottom-8 leading-[.8] select-none" style={{ fontSize: 'clamp(160px,28vw,340px)', color: 'transparent', WebkitTextStroke: '2px rgba(201,162,39,.16)' }}>{rating}</div>
       )}
 
       <div className="relative z-10 grid items-end gap-x-4 px-5 pt-6 md:grid-cols-[1.2fr_.9fr] md:px-8">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
-            <span className="font-cond rounded-[3px] px-3 py-1 text-[11px] font-extrabold tracking-[.3em] uppercase text-[#10131b]" style={{ background: 'linear-gradient(120deg,#f7e3ad,#e6c36a)' }}>{POS_LABEL[pos] ?? pos}</span>
+            <span className="font-cond rounded-[3px] px-3 py-1 text-[11px] font-extrabold tracking-[.3em] uppercase text-[#10131b]" style={{ background: 'linear-gradient(120deg,#ead188,#c9a227)' }}>{POS_LABEL[pos] ?? pos}</span>
             <span className="font-cond text-[12.5px] font-semibold tracking-[.16em] uppercase" style={{ color: HERO_DIM }}>
               <b style={{ color: tc }}>{teamFullNames[team] || team}</b> · £{r.price}m · {r.selected_by_percent}% owned
             </span>
@@ -512,8 +512,8 @@ function PlayerHero({ r, verdict, personas, flags, isPenTaker, isSpTaker, streak
           <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-3">
             <h1 className="font-display leading-[.9] tracking-[-.015em] uppercase" style={{ fontSize: 'clamp(44px,8vw,92px)', background: 'linear-gradient(180deg,#fff 12%,#e4e6ea 48%,#8f96a5 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', filter: 'drop-shadow(0 10px 34px rgba(0,0,0,.65))' }}>{name}</h1>
             {rating != null && (
-              <div className="relative grid h-16 w-16 flex-none place-items-center rounded-full" style={{ background: 'radial-gradient(circle at 32% 26%, #202636, #10141d 70%)', boxShadow: '0 0 0 1.5px #e6c36a, 0 0 0 6px rgba(10,13,19,.9), 0 0 0 7px rgba(230,195,106,.25), 0 0 42px rgba(230,195,106,.3)' }}>
-                <b className="font-display text-[23px]" style={{ color: '#f7e3ad' }}>{rating}</b>
+              <div className="relative grid h-16 w-16 flex-none place-items-center rounded-full" style={{ background: 'radial-gradient(circle at 32% 26%, #202636, #10141d 70%)', boxShadow: '0 0 0 1.5px #c9a227, 0 0 0 6px rgba(10,13,19,.9), 0 0 0 7px rgba(201,162,39,.25), 0 0 42px rgba(201,162,39,.3)' }}>
+                <b className="metallic-num font-display text-[23px]">{rating}</b>
                 <span className="font-cond absolute bottom-2 text-[6.5px] font-semibold tracking-[.3em] uppercase" style={{ color: HERO_DIM }}>Rating</span>
               </div>
             )}

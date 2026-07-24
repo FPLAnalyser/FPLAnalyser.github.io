@@ -47,10 +47,10 @@ export function Layout() {
         <div className="mx-auto flex h-14 max-w-[1760px] items-center gap-2 px-3 md:h-[70px] md:px-6">
           <NavLink to="/" end className="flex shrink-0 flex-col justify-center leading-none" aria-label="FPL Analyser — home">
             <span className="text-[17px] font-extrabold tracking-tight text-ink md:text-xl">
-              FPL <span className="text-accent">Analyser</span>
+              <span className="metallic-num">FPL</span> Analyser
             </span>
             <span className="mt-0.5 hidden text-[9px] font-semibold tracking-[0.22em] text-ink-3 uppercase md:block">
-              Data · Insight · Points
+              Data · <span className="text-accent">Insight</span> · Points
             </span>
           </NavLink>
 
