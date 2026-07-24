@@ -44,7 +44,7 @@ export function Layout() {
         className="sticky top-0 z-[100] border-b border-line bg-glass backdrop-blur-xl"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
-        <div className="mx-auto flex h-14 max-w-[1440px] items-center gap-2 px-3 md:h-[70px] md:px-6">
+        <div className="mx-auto flex h-14 max-w-[1760px] items-center gap-2 px-3 md:h-[70px] md:px-6">
           <NavLink to="/" end className="flex shrink-0 flex-col justify-center leading-none" aria-label="FPL Analyser — home">
             <span className="text-[17px] font-extrabold tracking-tight text-ink md:text-xl">
               FPL <span className="text-accent">Analyser</span>
