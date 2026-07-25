@@ -25,21 +25,32 @@ function ScrollTo({ frac, children }: { frac: number | null; children: ReactNode
 
 export type CompareLens = 'value' | 'roles' | 'momentum'
 
-/** Lens chips — the roles lens becomes the keeper chart (xGC × saves) when
- * the goalkeeper filter is active. */
-export function compareLenses(gk: boolean): { id: CompareLens; label: string; tip: string }[] {
+/** The pool's position character — decides what the "roles" lens plots. */
+export type PosMode = 'GKP' | 'DEF' | 'ATT'
+export const posModeOf = (rows: RatingRow[]): PosMode =>
+  rows.length > 0 && rows.every((r) => r.position === 'GKP') ? 'GKP'
+  : rows.length > 0 && rows.every((r) => r.position === 'DEF') ? 'DEF'
+  : 'ATT'
+
+/** Lens chips — the roles lens becomes a position-specific chart: keepers get
+ * saves × xGC, defenders def con × clean sheets, everyone else xG × xA. */
+export function compareLenses(mode: PosMode): { id: CompareLens; label: string; tip: string }[] {
+  const roles =
+    mode === 'GKP'
+      ? { id: 'roles' as const, label: 'Keepers — saves × xGC', tip: 'Saves per 90 (x) against expected goals conceded per 90 (y). Bottom-right is the dream: a busy keeper behind a defence that still concedes little. Low on the chart = better defence in front (the clean-sheet route); far right = save-points volume.' }
+      : mode === 'DEF'
+        ? { id: 'roles' as const, label: 'Defenders — def con × clean sheets', tip: 'Share of starts hitting the +2 Def Con threshold (x) against clean-sheet rate (y). Top-right earns both ways; far right earns without needing the clean sheet; top-left is a pure clean-sheet play.' }
+        : { id: 'roles' as const, label: 'Roles — xG × xA', tip: 'Non-penalty goal threat (x) against creativity (y), both per 90. Scorers sit right, creators sit high, the rare both-axis elite sit top-right.' }
   return [
-    { id: 'value', label: 'Value — price × rating', tip: 'Every player plotted price (x) against rating (y). The dashed line is the fair price for a given rating — above it = value. ' },
-    gk
-      ? { id: 'roles', label: 'Keepers — xGC × saves', tip: 'Expected goals conceded per 90 (x) against saves per 90 (y). Left = an elite defence in front (the clean-sheet route); top-right = a busy keeper making saves (the save-points route).' }
-      : { id: 'roles', label: 'Roles — xG × xA', tip: 'Non-penalty goal threat (x) against creativity (y), both per 90. Scorers sit right, creators sit high, the rare both-axis elite sit top-right.' },
+    { id: 'value', label: 'Value — price × rating', tip: 'Every player plotted price (x) against rating (y). The dashed line is the fair price for a given rating — above it = value.' },
+    roles,
     { id: 'momentum', label: 'Momentum — season × last 4', tip: 'Season rating (x) against the last-4-gameweek rating (y). Above the diagonal = form running ahead of reputation; below = cooling.' },
   ]
 }
 
 interface Pt { r: RatingRow; x: number; y: number }
 
-function lensPoints(rows: RatingRow[], lens: CompareLens, gk: boolean): Pt[] {
+function lensPoints(rows: RatingRow[], lens: CompareLens, mode: PosMode): Pt[] {
   const pts: Pt[] = []
   for (const r of rows) {
     let x: number | null = null
@@ -48,10 +59,16 @@ function lensPoints(rows: RatingRow[], lens: CompareLens, gk: boolean): Pt[] {
       x = num(r, 'price')
       y = ratingTo100(num(r, 'season_overall_score'))
     } else if (lens === 'roles') {
-      if (gk) {
+      if (mode === 'GKP') {
         if (r.position !== 'GKP') continue
-        x = num(r, 'season_m_xgc')
-        y = num(r, 'season_m_saves')
+        x = num(r, 'season_m_saves')
+        y = num(r, 'season_m_xgc')
+      } else if (mode === 'DEF') {
+        if (r.position !== 'DEF') continue
+        const hit = num(r, 'season_m_dc_hit')
+        const cs = num(r, 'season_m_cs_rate')
+        x = hit != null ? hit * 100 : null
+        y = cs != null ? cs * 100 : null
       } else {
         if (r.position === 'GKP') continue
         x = num(r, 'season_m_xg')
@@ -66,18 +83,31 @@ function lensPoints(rows: RatingRow[], lens: CompareLens, gk: boolean): Pt[] {
   return pts
 }
 
+/** ~5 rounded gridline values spanning a range — "nice" steps so the labels
+ * read 0.5 / 1.0 / 1.5, never 0.4732. */
+function ticks(min: number, max: number, target = 5): number[] {
+  const span = max - min
+  if (!(span > 0)) return [min]
+  const raw = span / target
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)))
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw) ?? 10 * mag
+  const out: number[] = []
+  for (let t = Math.ceil(min / step) * step; t <= max + 1e-9; t += step) out.push(Number(t.toFixed(6)))
+  return out
+}
+
 export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
   rows: RatingRow[]
   lens: CompareLens
   highlightName?: string | null
   onPlayer: (name: string, code?: number | null) => void
 }) {
-  const gk = rows.length > 0 && rows.every((r) => r.position === 'GKP')
-  const pts = useMemo(() => lensPoints(rows, lens, gk), [rows, lens, gk])
+  const mode = posModeOf(rows)
+  const pts = useMemo(() => lensPoints(rows, lens, mode), [rows, lens, mode])
   const [hovered, setHovered] = useState<number | null>(null)
   if (pts.length < 8) return <p className="py-8 text-center text-sm text-ink-3">Not enough rated players for this view yet.</p>
 
-  const W = 720, H = 380, PAD = { l: 40, r: 18, t: 18, b: 34 }
+  const W = 720, H = 380, PAD = { l: 46, r: 18, t: 18, b: 34 }
   const xs = pts.map((d) => d.x), ys = pts.map((d) => d.y)
   const xMin = Math.min(...xs), xMax = Math.max(...xs)
   const yMin = Math.min(...ys), yMax = Math.max(...ys)
@@ -108,18 +138,47 @@ export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
   const gold = hl ?? [...pts].sort((a, b) => b.y - a.y)[0]
   const labelled = [...pts].sort((a, b) => b.y - a.y).slice(0, 4).filter((d) => d !== gold)
 
-  const fmt = (v: number) => (lens === 'roles' ? v.toFixed(2) : Math.round(v))
-  const axis = lens === 'value' ? ['Rating ↑', 'Price →'] : lens === 'roles' ? (gk ? ['Saves / 90 ↑', 'xGC / 90 →'] : ['xA / 90 ↑', 'npxG / 90 →']) : ['Last 4 GW ↑', 'Season →']
+  // Percent-style lenses print whole numbers; per-90 rates get 2dp.
+  const pctLens = lens === 'roles' && mode === 'DEF'
+  const rateLens = lens === 'roles' && mode !== 'DEF'
+  const fmt = (v: number) => (rateLens ? v.toFixed(2) : pctLens ? `${Math.round(v)}%` : String(Math.round(v)))
+  const axis =
+    lens === 'value' ? ['Rating ↑', 'Price →']
+    : lens === 'roles'
+      ? mode === 'GKP' ? ['xGC / 90 ↑', 'Saves / 90 →']
+        : mode === 'DEF' ? ['Clean sheet % ↑', 'Def Con hit % →']
+        : ['xA / 90 ↑', 'npxG / 90 →']
+      : ['Last 4 GW ↑', 'Season →']
   // Value lens: x IS the price, so the label reads "name · rating · £price".
   const labelFor = (d: Pt) => (lens === 'value' ? `${d.r.web_name} · ${Math.round(d.y)} · £${d.r.price}m` : `${d.r.web_name} · ${fmt(d.x)} / ${fmt(d.y)}`)
   const hoveredPt = hovered != null ? pts.find((d) => d.r.element === hovered) ?? null : null
+  const xTicks = ticks(xMin - xPadU, xMax + xPadU)
+  const yTicks = ticks(yMin - yPadU, yMax + yPadU)
+  // Axis-specific: only the value lens's X axis is money — its Y is a rating.
+  const xTickLabel = (v: number) =>
+    lens === 'value' ? `£${v}m` : pctLens ? `${Math.round(v)}%` : rateLens ? v.toFixed(2) : String(Math.round(v))
+  const yTickLabel = (v: number) =>
+    lens === 'value' ? String(Math.round(v)) : pctLens ? `${Math.round(v)}%` : rateLens ? v.toFixed(2) : String(Math.round(v))
 
   return (
     <div className="rounded-xl border border-line bg-surface-1 p-4">
       <ScrollTo frac={(X(gold.x) - PAD.l) / (W - PAD.l - PAD.r)}>
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[560px]" role="img" aria-label="Player comparison scatter">
-          <line x1={PAD.l} y1={H - PAD.b} x2={W - PAD.r} y2={H - PAD.b} stroke="var(--line)" />
-          <line x1={PAD.l} y1={PAD.t} x2={PAD.l} y2={H - PAD.b} stroke="var(--line)" />
+          {/* gridlines — recessive, behind everything */}
+          {yTicks.map((t) => (
+            <g key={`y${t}`}>
+              <line x1={PAD.l} x2={W - PAD.r} y1={Y(t)} y2={Y(t)} stroke="var(--line)" strokeWidth="1" />
+              <text x={PAD.l - 7} y={Y(t) + 3.5} textAnchor="end" fontSize="9.5" fill="var(--ink-3)">{yTickLabel(t)}</text>
+            </g>
+          ))}
+          {xTicks.map((t) => (
+            <g key={`x${t}`}>
+              <line x1={X(t)} x2={X(t)} y1={PAD.t} y2={H - PAD.b} stroke="var(--line)" strokeWidth="1" />
+              <text x={X(t)} y={H - PAD.b + 15} textAnchor="middle" fontSize="9.5" fill="var(--ink-3)">{xTickLabel(t)}</text>
+            </g>
+          ))}
+          <line x1={PAD.l} y1={H - PAD.b} x2={W - PAD.r} y2={H - PAD.b} stroke="var(--line-mid)" />
+          <line x1={PAD.l} y1={PAD.t} x2={PAD.l} y2={H - PAD.b} stroke="var(--line-mid)" />
           {ref && <line {...{ x1: ref.x1, y1: ref.y1, x2: ref.x2, y2: ref.y2 }} stroke="var(--ink-3)" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.5" />}
           {pts.filter((d) => d !== gold).map((d) => (
             <circle
@@ -151,7 +210,7 @@ export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
               x={X(hoveredPt.x) + (hoveredPt.x > (xMin + xMax) / 2 ? -10 : 10)}
               y={Math.max(16, Y(hoveredPt.y) - 9)}
               textAnchor={hoveredPt.x > (xMin + xMax) / 2 ? 'end' : 'start'}
-              fontSize="11.5" fontWeight="700" fill="var(--ink)"
+              fontSize="11.5" fontWeight="700" fill="var(--ink-1)"
               stroke="var(--surface-1)" strokeWidth="4" style={{ paintOrder: 'stroke' }}
               className="pointer-events-none"
             >
@@ -165,9 +224,11 @@ export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
       <div className="mt-2 text-xs text-ink-3">
         {lens === 'value' && 'Dashed line = fair price for the rating; above it = value. '}
         {lens === 'momentum' && 'Diagonal = form exactly on season level; above it = heating up. '}
-        {lens === 'roles' && (gk
-          ? 'Left = an elite defence in front (the clean-sheet route); top-right = a busy keeper making saves (the save-points route). '
-          : 'Scorers sit right, creators sit high; top-right is the rare both-axis elite. ')}
+        {lens === 'roles' && (mode === 'GKP'
+          ? 'Low on the chart = a mean defence in front (the clean-sheet route); far right = save volume (the save-points route). Bottom-right is both. '
+          : mode === 'DEF'
+            ? 'Top-right earns both ways; far right earns without needing the clean sheet; top-left is a pure clean-sheet play. '
+            : 'Scorers sit right, creators sit high; top-right is the rare both-axis elite. ')}
         Gold follows your search. Hover a dot for the name; tap it to open the player.
       </div>
     </div>

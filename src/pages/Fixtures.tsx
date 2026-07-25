@@ -10,6 +10,7 @@ import { PageSkeleton } from '../components/Skeleton'
 import { useCore, useLazyTable } from '../lib/useData'
 import { classifyZone, toPitch } from '../lib/shotzones'
 import { windowGames } from '../components/TeamStory'
+import { Exportable } from '../components/ExportPanel'
 import { num, str } from '../lib/rows'
 import { teamLabel, FDR_COLORS, playerHref } from '../lib/util'
 import type { FixtureEaseRow, RatingRow, Row, TeamRatingRow } from '../lib/types'
@@ -291,7 +292,9 @@ export default function Fixtures() {
               <p className="mb-3 -mt-1 text-xs text-ink-3">The data pipeline currently publishes {horizon} gameweeks ahead — showing all {horizon}.</p>
             )}
 
+            <Exportable title={mode === 'diff' ? `Fixture difficulty — next ${windowN}` : mode === 'xg' ? `Projected xG — next ${windowN}` : `Clean sheet odds — next ${windowN}`}>
             <FixtureGrid key={mode} fixtureEase={fixtureEase} windowN={windowN} lens={lens} mode={mode} seasonRating={seasonRating} baselines={baselines} leagueBase={leagueBase} profiles={profiles} league={league} />
+            </Exportable>
             <ChipPlanner fixtureEase={fixtureEase} ratings={data.ratings as RatingRow[]} />
           </>
         ) : (
