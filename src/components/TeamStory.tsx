@@ -15,13 +15,13 @@ import type { CoreData, FixtureEaseRow, RatingRow, Row, TeamRatingRow } from '..
 const pct = (v: number | null | undefined) => (v == null ? null : `${Math.round(v * 100)}%`)
 
 function Sentence({ children }: { children: ReactNode }) {
-  return <p className="text-[15px] leading-snug font-semibold tracking-[-0.01em] text-ink [&_em]:not-italic [&_em]:text-accent-2">{children}</p>
+  return <p className="text-[16.5px] leading-snug font-semibold tracking-[-0.01em] text-ink [&_em]:not-italic [&_em]:text-accent-2">{children}</p>
 }
 function Support({ children }: { children: ReactNode }) {
-  return <p className="mt-1.5 text-[13px] leading-relaxed text-ink-2">{children}</p>
+  return <p className="mt-1.5 text-[14px] leading-relaxed text-ink-2">{children}</p>
 }
 function Kick({ children }: { children: ReactNode }) {
-  return <div className="mb-1.5 text-[10px] font-extrabold tracking-[0.2em] text-accent-2 uppercase">{children}</div>
+  return <div className="mb-1.5 text-[11px] font-extrabold tracking-[0.2em] text-accent-2 uppercase">{children}</div>
 }
 function BarRow({ label, width, value, tone }: { label: string; width: number; value: string; tone?: 'gold' | 'good' | 'warn' | 'bad' | 'info' }) {
   const grad: Record<string, string> = {
@@ -32,8 +32,8 @@ function BarRow({ label, width, value, tone }: { label: string; width: number; v
     info: 'linear-gradient(90deg, #2f5fa8, #6ea8ff)',
   }
   return (
-    <div className="grid grid-cols-[92px_1fr_52px] items-center gap-2.5 text-xs">
-      <span className="text-[10px] font-bold tracking-[0.07em] text-ink-2 uppercase">{label}</span>
+    <div className="grid grid-cols-[100px_1fr_56px] items-center gap-2.5 text-[13px]">
+      <span className="text-[11px] font-bold tracking-[0.07em] text-ink-2 uppercase">{label}</span>
       <div className="h-2 overflow-hidden rounded-full bg-white/8">
         <div className="h-full rounded-full" style={{ width: `${Math.max(3, Math.min(100, width))}%`, background: grad[tone ?? 'gold'] }} />
       </div>
@@ -46,8 +46,8 @@ function DCell({ label, word, tone, sub }: { label: string; word: ReactNode; ton
   return (
     <div className="bg-bg-1 px-4 py-3">
       <div className="mb-1 text-[9px] font-extrabold tracking-[0.16em] text-ink-3 uppercase">{label}</div>
-      <div className={`text-[15px] font-extrabold ${tone ?? 'text-ink'}`}>{word}</div>
-      {sub && <div className="mt-0.5 text-[11px] text-ink-2">{sub}</div>}
+      <div className={`text-[16px] font-extrabold ${tone ?? 'text-ink'}`}>{word}</div>
+      {sub && <div className="mt-0.5 text-[12.5px] text-ink-2">{sub}</div>}
     </div>
   )
 }
@@ -71,10 +71,10 @@ function BuyRow({ p, why, onOpen }: { p: RatingRow; why: string; onOpen: () => v
         placeholder={<span className="block w-8 shrink-0 rounded-md bg-surface-3" style={{ height: 40 }} />}
       />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-bold text-ink">{String(p.web_name)}</span>
-        <span className="block text-[11px] text-ink-2">{String(p.position)} · £{p.price}m{rating != null ? ` · ${Math.round(rating * 20)} rated` : ''}</span>
+        <span className="block truncate text-[15px] font-bold text-ink">{String(p.web_name)}</span>
+        <span className="block text-[12.5px] text-ink-2">{String(p.position)} · £{p.price}m{rating != null ? ` · ${Math.round(rating * 20)} rated` : ''}</span>
       </span>
-      <span className="max-w-[19ch] text-right text-[11px] leading-tight text-ink-2">{why}</span>
+      <span className="max-w-[22ch] text-right text-[12px] leading-tight text-ink-2">{why}</span>
     </button>
   )
 }
@@ -241,7 +241,7 @@ export function TeamStory({ team, data }: { team: string; data: CoreData }) {
                 <span className="grid w-8 shrink-0 place-items-center text-lg font-extrabold text-bad">✕</span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-bold text-ink">The clean-sheet case</span>
-                  <span className="block text-[11px] text-ink-2">Any defender bought for clean sheets</span>
+                  <span className="block text-[12.5px] text-ink-2">Any defender bought for clean sheets</span>
                 </span>
                 <span className="max-w-[26ch] text-right text-[11px] leading-tight text-bad">
                   {csRate != null ? `CS in ${pct(csRate)}, ` : ''}#{dRank} defence — buy the def-con, never the clean sheets

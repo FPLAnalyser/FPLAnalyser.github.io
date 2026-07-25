@@ -16,7 +16,7 @@ import { PlayerCompare, ViewChips, compareLenses, type CompareLens } from '../co
 import { Exportable } from '../components/ExportPanel'
 import { useCore } from '../lib/useData'
 import { num, str, bool } from '../lib/rows'
-import { ratingToNum, norm, TOOLTIPS, playerHref, teamFullNames } from '../lib/util'
+import { ratingToNum, norm, searchText, TOOLTIPS, playerHref, teamLabel } from '../lib/util'
 import type { RatingRow, Row } from '../lib/types'
 
 // This is the app's "Players" hub: sortable leaderboards across every metric,
@@ -159,7 +159,7 @@ function rankedPool(rows: Row[], metricKey: string, query: string): Row[] {
     .map((r, i) => ({ ...r, _rank: i + 1 }))
   if (query) {
     const q = norm(query)
-    return sorted.filter((r) => norm(r.web_name).includes(q)).slice(0, SEARCH_CAP)
+    return sorted.filter((r) => searchText(r.web_name).includes(q)).slice(0, SEARCH_CAP)
   }
   return sorted.slice(0, TOP_N)
 }
@@ -201,7 +201,7 @@ function FilterBar({ teams, priceMin, priceMax, setPriceMin, setPriceMax, teamFi
           <span className="text-[10px] font-bold tracking-[0.12em] text-ink-3 uppercase">Club</span>
           <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)} className={`${field} w-[130px]`}>
             <option value="ALL">All clubs</option>
-            {teams.map((t) => <option key={t} value={t}>{teamFullNames[t] || t}</option>)}
+            {teams.map((t) => <option key={t} value={t}>{teamLabel(t)}</option>)}
           </select>
         </label>
         <label className="flex flex-col gap-1">

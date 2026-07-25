@@ -86,7 +86,7 @@ export function StadiumBanner({
           </div>
           {info && (
             <p className="sb-sub">
-              {info.stadium} · {info.capacity.toLocaleString('en-GB')}
+              {info.stadium}
             </p>
           )}
         </div>

@@ -23,7 +23,7 @@ function ScrollTo({ frac, children }: { frac: number | null; children: ReactNode
 
 /* ── Players: three lenses over the same field ─────────────────────────── */
 
-export type CompareLens = 'value' | 'roles' | 'momentum'
+export type CompareLens = 'value' | 'roles' | 'momentum' | 'workload'
 
 /** The pool's position character — decides what the "roles" lens plots. */
 export type PosMode = 'GKP' | 'DEF' | 'ATT'
@@ -42,10 +42,35 @@ export function compareLenses(mode: PosMode): { id: CompareLens; label: string; 
         ? { id: 'roles' as const, label: 'Defenders — def con × clean sheets', tip: 'Share of starts hitting the +2 Def Con threshold (x) against clean-sheet rate (y). Top-right earns both ways; far right earns without needing the clean sheet; top-left is a pure clean-sheet play.' }
         : { id: 'roles' as const, label: 'Roles — xG × xA', tip: 'Non-penalty goal threat (x) against creativity (y), both per 90. Scorers sit right, creators sit high, the rare both-axis elite sit top-right.' }
   return [
-    { id: 'value', label: 'Value — price × rating', tip: 'Every player plotted price (x) against rating (y). The dashed line is the fair price for a given rating — above it = value.' },
+    { id: 'value', label: 'Value — price × FPL Analyser rating', tip: 'Every player plotted price (x) against their FPL Analyser rating (y). The dashed line is the fair price for a given rating — above it = value.' },
     roles,
-    { id: 'momentum', label: 'Momentum — season × last 4', tip: 'Season rating (x) against the last-4-gameweek rating (y). Above the diagonal = form running ahead of reputation; below = cooling.' },
+    ...(mode === 'GKP'
+      ? [{ id: 'workload' as const, label: 'Keepers — shot distance × saves', tip: "Average distance of the shots a keeper faces (x) against saves per 90 (y). Left = shots taken close to goal, so each one is harder and the defence is letting attackers in; right = shots from range, the easy kind. High and right is the save-points sweet spot: plenty of saves, mostly from distance." }]
+      : []),
+    { id: 'momentum', label: 'Momentum — season × last 4 rating', tip: 'Season FPL Analyser rating (x) against the last-4-gameweek FPL Analyser rating (y). Above the diagonal = form running ahead of reputation; below = cooling.' },
   ]
+}
+
+/** Quadrant guides: which corner is good, which is bad, and what to call
+ * them. Null where the chart's meaning isn't a corner (value, momentum use
+ * a reference line instead). */
+interface Quadrants { best: 'tr' | 'tl' | 'br' | 'bl'; worst: 'tr' | 'tl' | 'br' | 'bl'; labels: Partial<Record<'tr' | 'tl' | 'br' | 'bl', string>> }
+function quadrantsFor(lens: CompareLens, mode: PosMode): Quadrants | null {
+  if (lens === 'roles') {
+    if (mode === 'GKP') {
+      // x = saves, y = xGC. Low xGC + high saves = busy behind a good defence.
+      return { best: 'br', worst: 'tl', labels: { br: 'Busy · mean defence', tl: 'Quiet · leaky defence', tr: 'Busy · leaky', bl: 'Quiet · mean' } }
+    }
+    if (mode === 'DEF') {
+      return { best: 'tr', worst: 'bl', labels: { tr: 'Both routes', tl: 'Clean sheets only', br: 'Def Con only', bl: 'Neither' } }
+    }
+    return { best: 'tr', worst: 'bl', labels: { tr: 'Scores & creates', tl: 'Creator', br: 'Scorer', bl: 'Neither' } }
+  }
+  if (lens === 'workload') {
+    // x = avg shot distance faced, y = saves. Far + many = save points made easy.
+    return { best: 'tr', worst: 'bl', labels: { tr: 'Save points, from range', tl: 'Few saves, from range', br: 'Saves under pressure', bl: 'Quiet, close-range' } }
+  }
+  return null
 }
 
 interface Pt { r: RatingRow; x: number; y: number }
@@ -58,6 +83,10 @@ function lensPoints(rows: RatingRow[], lens: CompareLens, mode: PosMode): Pt[] {
     if (lens === 'value') {
       x = num(r, 'price')
       y = ratingTo100(num(r, 'season_overall_score'))
+    } else if (lens === 'workload') {
+      if (r.position !== 'GKP') continue
+      x = num(r, 'season_m_dist_faced')
+      y = num(r, 'season_m_saves')
     } else if (lens === 'roles') {
       if (mode === 'GKP') {
         if (r.position !== 'GKP') continue
@@ -105,6 +134,7 @@ export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
   const mode = posModeOf(rows)
   const pts = useMemo(() => lensPoints(rows, lens, mode), [rows, lens, mode])
   const [hovered, setHovered] = useState<number | null>(null)
+  const [showAllNames, setShowAllNames] = useState(false)
   if (pts.length < 8) return <p className="py-8 text-center text-sm text-ink-3">Not enough rated players for this view yet.</p>
 
   const W = 720, H = 380, PAD = { l: 46, r: 18, t: 18, b: 34 }
@@ -138,17 +168,22 @@ export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
   const gold = hl ?? [...pts].sort((a, b) => b.y - a.y)[0]
   const labelled = [...pts].sort((a, b) => b.y - a.y).slice(0, 4).filter((d) => d !== gold)
 
+  const quads = quadrantsFor(lens, mode)
+  const midX = X((xMin + xMax) / 2)
+  const midY = Y((yMin + yMax) / 2)
+
   // Percent-style lenses print whole numbers; per-90 rates get 2dp.
   const pctLens = lens === 'roles' && mode === 'DEF'
-  const rateLens = lens === 'roles' && mode !== 'DEF'
+  const rateLens = (lens === 'roles' && mode !== 'DEF') || lens === 'workload'
   const fmt = (v: number) => (rateLens ? v.toFixed(2) : pctLens ? `${Math.round(v)}%` : String(Math.round(v)))
   const axis =
-    lens === 'value' ? ['Rating ↑', 'Price →']
+    lens === 'value' ? ['FPL Analyser rating ↑', 'Price →']
+    : lens === 'workload' ? ['Saves / 90 ↑', 'Avg shot distance faced →']
     : lens === 'roles'
       ? mode === 'GKP' ? ['xGC / 90 ↑', 'Saves / 90 →']
         : mode === 'DEF' ? ['Clean sheet % ↑', 'Def Con hit % →']
         : ['xA / 90 ↑', 'npxG / 90 →']
-      : ['Last 4 GW ↑', 'Season →']
+      : ['Last 4 GW rating ↑', 'Season rating →']
   // Value lens: x IS the price, so the label reads "name · rating · £price".
   const labelFor = (d: Pt) => (lens === 'value' ? `${d.r.web_name} · ${Math.round(d.y)} · £${d.r.price}m` : `${d.r.web_name} · ${fmt(d.x)} / ${fmt(d.y)}`)
   const hoveredPt = hovered != null ? pts.find((d) => d.r.element === hovered) ?? null : null
@@ -162,8 +197,46 @@ export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
 
   return (
     <div className="rounded-xl border border-line bg-surface-1 p-4">
+      <div className="mb-2 flex justify-end">
+        <label className="inline-flex cursor-pointer items-center gap-2 text-[12px] font-semibold text-ink-2">
+          <input type="checkbox" checked={showAllNames} onChange={(e) => setShowAllNames(e.target.checked)} className="size-4 accent-[var(--accent)]" />
+          Show all names
+        </label>
+      </div>
       <ScrollTo frac={(X(gold.x) - PAD.l) / (W - PAD.l - PAD.r)}>
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[560px]" role="img" aria-label="Player comparison scatter">
+          {/* quadrants: a green wash on the corner you want to be in, a red
+              wash on the one you don't, both faint enough to stay behind. */}
+          {quads && (() => {
+            const box = (q: 'tr' | 'tl' | 'br' | 'bl') => ({
+              x: q === 'tl' || q === 'bl' ? PAD.l : midX,
+              y: q === 'tl' || q === 'tr' ? PAD.t : midY,
+              width: (q === 'tl' || q === 'bl' ? midX - PAD.l : W - PAD.r - midX),
+              height: (q === 'tl' || q === 'tr' ? midY - PAD.t : H - PAD.b - midY),
+            })
+            const b = box(quads.best), w = box(quads.worst)
+            const anchor = (q: 'tr' | 'tl' | 'br' | 'bl') => {
+              const r = box(q)
+              const right = q === 'tr' || q === 'br'
+              const bottom = q === 'bl' || q === 'br'
+              return { x: right ? r.x + r.width - 8 : r.x + 8, y: bottom ? r.y + r.height - 8 : r.y + 13, anchor: right ? 'end' as const : 'start' as const }
+            }
+            return (
+              <g>
+                <rect {...b} fill="var(--good)" opacity="0.07" />
+                <rect {...w} fill="var(--bad)" opacity="0.06" />
+                {(Object.keys(quads.labels) as ('tr' | 'tl' | 'br' | 'bl')[]).map((q) => {
+                  const a = anchor(q)
+                  const tone = q === quads.best ? 'var(--good)' : q === quads.worst ? 'var(--bad)' : 'var(--ink-3)'
+                  return (
+                    <text key={q} x={a.x} y={a.y} textAnchor={a.anchor} fontSize="9" fontWeight="800" fill={tone} opacity="0.85" style={{ textTransform: 'uppercase', letterSpacing: '.1em' }}>
+                      {quads.labels[q]}
+                    </text>
+                  )
+                })}
+              </g>
+            )
+          })()}
           {/* gridlines — recessive, behind everything */}
           {yTicks.map((t) => (
             <g key={`y${t}`}>
@@ -195,17 +268,28 @@ export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
               <title>{labelFor(d)} ({d.r.team})</title>
             </circle>
           ))}
-          {labelled.filter((d) => d.r.element !== hovered).map((d) => (
-            <text key={`l${d.r.element}`} x={X(d.x) + 8} y={Y(d.y) + 3} fontSize="10.5" fontWeight="700" fill="var(--ink-2)" className="pointer-events-none">{String(d.r.web_name)}</text>
+          {/* names: the notable few by default, everyone when toggled on */}
+          {(showAllNames ? pts.filter((d) => d !== gold) : labelled).filter((d) => d.r.element !== hovered).map((d) => (
+            <text key={`l${d.r.element}`} x={X(d.x) + 7} y={Y(d.y) + 3} fontSize={showAllNames ? 8.5 : 10.5} fontWeight="700" fill="var(--ink-2)" opacity={showAllNames ? 0.75 : 1} className="pointer-events-none">{String(d.r.web_name)}</text>
           ))}
           <circle cx={X(gold.x)} cy={Y(gold.y)} r="10" fill="var(--accent)" opacity="0.18" />
-          <circle cx={X(gold.x)} cy={Y(gold.y)} r="6" fill="var(--accent)" stroke="var(--surface-1)" strokeWidth="1.5" className="cursor-pointer" onClick={() => onPlayer(String(gold.r.web_name), num(gold.r, 'code'))}>
+          <circle
+            cx={X(gold.x)} cy={Y(gold.y)} r={hovered === gold.r.element ? 7.5 : 6}
+            fill="var(--accent)" stroke="var(--surface-1)" strokeWidth="1.5" className="cursor-pointer"
+            onClick={() => onPlayer(String(gold.r.web_name), num(gold.r, 'code'))}
+            onMouseEnter={() => setHovered(gold.r.element)}
+            onMouseLeave={() => setHovered(null)}
+          >
             <title>{labelFor(gold)} ({gold.r.team})</title>
           </circle>
-          <text x={X(gold.x) + (gold.x > (xMin + xMax) / 2 ? -12 : 12)} y={Math.max(16, Y(gold.y) - 10)} textAnchor={gold.x > (xMin + xMax) / 2 ? 'end' : 'start'} fontSize="12" fontWeight="700" fill="var(--accent)" className="pointer-events-none">{String(gold.r.web_name)}</text>
+          {/* the gold player's own label carries its stats too, so hovering
+              the highlighted dot reads like every other dot */}
+          <text x={X(gold.x) + (gold.x > (xMin + xMax) / 2 ? -12 : 12)} y={Math.max(16, Y(gold.y) - 10)} textAnchor={gold.x > (xMin + xMax) / 2 ? 'end' : 'start'} fontSize="12" fontWeight="700" fill="var(--accent)" stroke="var(--surface-1)" strokeWidth={hovered === gold.r.element ? 4 : 0} style={{ paintOrder: 'stroke' }} className="pointer-events-none">
+            {hovered === gold.r.element ? labelFor(gold) : String(gold.r.web_name)}
+          </text>
           {/* instant hover label — name + values, with a surface halo so it
               stays readable over neighbouring dots */}
-          {hoveredPt && (
+          {hoveredPt && hoveredPt !== gold && (
             <text
               x={X(hoveredPt.x) + (hoveredPt.x > (xMin + xMax) / 2 ? -10 : 10)}
               y={Math.max(16, Y(hoveredPt.y) - 9)}
@@ -223,6 +307,7 @@ export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
       </ScrollTo>
       <div className="mt-2 text-xs text-ink-3">
         {lens === 'value' && 'Dashed line = fair price for the rating; above it = value. '}
+        {lens === 'workload' && 'Green corner = plenty of saves, mostly from distance — save points the easy way. Red corner = quiet and close-range. '}
         {lens === 'momentum' && 'Diagonal = form exactly on season level; above it = heating up. '}
         {lens === 'roles' && (mode === 'GKP'
           ? 'Low on the chart = a mean defence in front (the clean-sheet route); far right = save volume (the save-points route). Bottom-right is both. '

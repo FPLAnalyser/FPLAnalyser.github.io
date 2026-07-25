@@ -17,7 +17,7 @@ import { MatchupBars, UnknownModules, minutesRead, formRead, valueRead, defConRe
 import { PlayerZoneMap } from '../components/ShotMap'
 import { useCore } from '../lib/useData'
 import { num, str, bool } from '../lib/rows'
-import { teamFullNames, teamColors, TOOLTIPS } from '../lib/util'
+import { teamFullNames, teamColors, searchText, TOOLTIPS } from '../lib/util'
 import { buildPlayerBundle, buildPlayerVerdict } from '../lib/insights/narrative'
 import type { CoreData, RatingRow } from '../lib/types'
 
@@ -106,6 +106,7 @@ export default function Players() {
         <SearchBox
           items={ratings.filter((p) => p.web_name)}
           getLabel={(p) => String(p.web_name)}
+          getSearchText={(p) => searchText(p.web_name)}
           renderItem={(p) => (
             <span className="flex w-full items-center justify-between gap-2">
               <span>{String(p.web_name)}</span>
@@ -235,8 +236,8 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
             {/* Wide screens: the brief reads left, the evidence charts sit in
                 a right rail so the short sentences don't leave a dead half. */}
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-start">
-              <TheBrief r={r} data={data} verdict={verdict} />
-              <EvidenceBand r={r} peers={peers} />
+              <Exportable title={`${r.web_name} — the brief`}><TheBrief r={r} data={data} verdict={verdict} /></Exportable>
+              <Exportable title={`${r.web_name} — promise vs delivery`}><EvidenceBand r={r} peers={peers} /></Exportable>
             </div>
             <div className="mt-6"><Exportable title={`${r.web_name} — the market`}><MarketScatter r={r} peers={peers} /></Exportable></div>
             <Receipts r={r} data={data} name={name} />
@@ -279,10 +280,12 @@ function Receipts({ r, data, name }: { r: RatingRow; data: CoreData; name: strin
           </button>
         ))}
       </div>
-      {tab === 'engine' && <PointsEngine r={r} />}
-      {tab === 'dims' && <DimBars r={r} dims={dims} overall={['season_overall_score', 'gw4_overall_score']} />}
-      {tab === 'matchups' && <MatchupBars element={r.element} tierPerf={data.tierPerf} />}
-      {tab === 'zones' && pos !== 'GKP' && <PlayerZoneMap element={r.element} name={name} />}
+      <Exportable title={`${r.web_name} — ${tabs.find((t) => t.id === tab)?.label ?? 'receipts'}`}>
+        {tab === 'engine' && <PointsEngine r={r} />}
+        {tab === 'dims' && <DimBars r={r} dims={dims} overall={['season_overall_score', 'gw4_overall_score']} />}
+        {tab === 'matchups' && <MatchupBars element={r.element} tierPerf={data.tierPerf} />}
+        {tab === 'zones' && pos !== 'GKP' && <PlayerZoneMap element={r.element} name={name} />}
+      </Exportable>
     </div>
   )
 }
@@ -531,22 +534,41 @@ function TheBrief({ r, data, verdict }: { r: RatingRow; data: CoreData; verdict:
   return (
     <div className="mt-5">
       <div className="mb-2 text-[10px] font-extrabold tracking-[0.24em] text-accent uppercase">The Brief</div>
-      {verdict?.verdict && <p className="text-[17px] leading-snug font-bold tracking-[-0.01em] text-ink">{verdict.verdict}.</p>}
+      {verdict?.verdict && <p className="text-[19px] leading-snug font-bold tracking-[-0.01em] text-ink">{verdict.verdict}.</p>}
       <div className="mt-2">
         {lines.map((l) => (
-          <p key={l.key} className="border-t border-line py-2.5 text-[14.5px] leading-snug font-semibold text-ink first:border-t-0">
+          <p key={l.key} className="border-t border-line py-2.5 text-[16px] leading-snug font-semibold text-ink first:border-t-0">
             {l.lead === '__dc__' && d ? <span className="[&_em]:not-italic [&_em]:text-accent-2">{d.sentence}</span> : <span className={READ_TONE[l.tone] ?? 'text-ink'}>{l.lead}</span>}
             {l.rest && <span> {l.rest}</span>}
-            {l.receipt && <span className="mt-0.5 block text-xs font-normal text-ink-3">{l.receipt}</span>}
+            {l.receipt && <span className="mt-0.5 block text-[13px] font-normal text-ink-3">{l.receipt}</span>}
           </p>
         ))}
       </div>
-      {hasFix && (
-        <div className="border-t border-line pt-2.5">
-          <div className="mb-1.5 text-[10px] font-bold tracking-[0.14em] text-ink-3 uppercase">Next fixtures</div>
-          <FixtureChips fixtureEase={data.fixtureEase} team={String(r.team)} n={4} />
-        </div>
-      )}
+      {hasFix && (() => {
+        // The run needs a verdict, not just chips: average our own difficulty
+        // over the next four and say whether that helps or hurts.
+        const up = data.fixtureEase.filter((fx) => fx.team === String(r.team)).sort((a, b) => a.gw - b.gw).slice(0, 4)
+        const avg = up.length ? up.reduce((s, fx) => s + (fx.fdr || 3), 0) / up.length : null
+        const kind = up.filter((fx) => (fx.fdr ?? 3) <= 2)
+        const hard = up.filter((fx) => (fx.fdr ?? 3) >= 4)
+        const read =
+          avg == null ? null
+          : avg <= 2.4 ? { tone: 'text-good', word: 'A kind run.', sub: `${kind.length} of the next ${up.length} rate 2 or easier — the window to own him.` }
+          : avg >= 3.6 ? { tone: 'text-bad', word: 'A tough run.', sub: `${hard.length} of the next ${up.length} rate 4 or harder — expect the ceiling to dip.` }
+          : { tone: 'text-warn', word: 'A mixed run.', sub: `Averages ${avg.toFixed(1)} difficulty over the next ${up.length}${kind.length ? ` — ${kind.length} kind, ${hard.length} awkward` : ''}.` }
+        return (
+          <div className="border-t border-line pt-2.5">
+            <div className="mb-1.5 text-[10px] font-bold tracking-[0.14em] text-ink-3 uppercase">Next fixtures</div>
+            <FixtureChips fixtureEase={data.fixtureEase} team={String(r.team)} n={4} />
+            {read && (
+              <p className="mt-2 text-[13.5px] leading-snug font-semibold text-ink">
+                <span className={read.tone}>{read.word}</span>
+                <span className="mt-0.5 block text-[13px] font-normal text-ink-3">{read.sub}</span>
+              </p>
+            )}
+          </div>
+        )
+      })()}
     </div>
   )
 }

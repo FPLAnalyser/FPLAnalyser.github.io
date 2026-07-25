@@ -41,6 +41,35 @@ export function norm(s: unknown): string {
   return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 }
 
+/** Extra search terms per web_name — FPL abbreviates famous names to an
+ *  initial ("B.Fernandes"), so searching "bruno" found nothing. Keyed by
+ *  web_name, matched in addition to the displayed name. */
+const SEARCH_ALIASES: Record<string, string> = {
+  'B.Fernandes': 'bruno fernandes',
+  'J.Timber': 'jurrien timber',
+  'M.Salah': 'mohamed mo salah',
+  'N.Williams': 'neco williams',
+  'R.James': 'reece james',
+  'D.Luiz': 'douglas luiz',
+  'A.Becker': 'alisson becker',
+  'J.Ramsey': 'jacob ramsey',
+  'Sánchez': 'robert sanchez',
+  'Virgil': 'van dijk virgil',
+  'Raúl': 'raul jimenez',
+  'Kiwior': 'jakub kiwior',
+  'Gabriel': 'gabriel magalhaes',
+  'Bruno G.': 'bruno guimaraes',
+}
+
+/** Everything a player row should match on: the displayed name plus any
+ *  alias, accent-folded. */
+export function searchText(webName: unknown): string {
+  const n = String(webName)
+  const alias = SEARCH_ALIASES[n]
+  // Split "B.Fernandes" so the surname alone matches too.
+  return norm(alias ? `${n} ${alias}` : n).replace(/\./g, ' ') + ' ' + norm(n)
+}
+
 export function getPositionEmoji(pos: string): string {
   return ({ GKP: '🧤', DEF: '🛡️', MID: '⚡', FWD: '⚽' } as Record<string, string>)[pos] || '👤'
 }

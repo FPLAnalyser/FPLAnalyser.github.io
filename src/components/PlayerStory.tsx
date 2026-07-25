@@ -18,15 +18,15 @@ const pct = (v: number | null | undefined) => (v == null ? null : `${Math.round(
 /* ── shared atoms ── */
 
 function Sentence({ children }: { children: ReactNode }) {
-  return <p className="text-[15px] leading-snug font-semibold tracking-[-0.01em] text-ink [&_em]:not-italic [&_em]:text-accent-2">{children}</p>
+  return <p className="text-[16.5px] leading-snug font-semibold tracking-[-0.01em] text-ink [&_em]:not-italic [&_em]:text-accent-2">{children}</p>
 }
 
 function Support({ children }: { children: ReactNode }) {
-  return <p className="mt-1.5 text-[13px] leading-relaxed text-ink-2">{children}</p>
+  return <p className="mt-1.5 text-[14px] leading-relaxed text-ink-2">{children}</p>
 }
 
 function Kick({ children }: { children: ReactNode }) {
-  return <div className="mb-1.5 text-[10px] font-extrabold tracking-[0.2em] text-accent-2 uppercase">{children}</div>
+  return <div className="mb-1.5 text-[11px] font-extrabold tracking-[0.2em] text-accent-2 uppercase">{children}</div>
 }
 
 function ModuleCard({ children }: { children: ReactNode }) {
@@ -43,8 +43,8 @@ function BarRow({ label, width, value, tone }: { label: string; width: number; v
     info: 'linear-gradient(90deg, #2f5fa8, #6ea8ff)',
   }
   return (
-    <div className="grid grid-cols-[86px_1fr_52px] items-center gap-2.5 text-xs">
-      <span className="text-[10px] font-bold tracking-[0.07em] text-ink-2 uppercase">{label}</span>
+    <div className="grid grid-cols-[94px_1fr_56px] items-center gap-2.5 text-[13px]">
+      <span className="text-[11px] font-bold tracking-[0.07em] text-ink-2 uppercase">{label}</span>
       <div className="h-2 overflow-hidden rounded-full bg-white/8">
         <div className="h-full rounded-full" style={{ width: `${Math.max(3, Math.min(100, width))}%`, background: grad[tone ?? 'gold'] }} />
       </div>
@@ -145,8 +145,8 @@ function DCell({ label, read }: { label: string; read: Read | null }) {
   return (
     <div className="bg-bg-1 px-4 py-3">
       <div className="mb-1 text-[9px] font-extrabold tracking-[0.16em] text-ink-3 uppercase">{label}</div>
-      <div className={`text-[15px] font-extrabold ${TONE_TEXT[read.tone]}`}>{read.word}</div>
-      <div className="mt-0.5 text-[11px] text-ink-2">{read.sub}</div>
+      <div className={`text-[16px] font-extrabold ${TONE_TEXT[read.tone]}`}>{read.word}</div>
+      <div className="mt-0.5 text-[12.5px] text-ink-2">{read.sub}</div>
     </div>
   )
 }

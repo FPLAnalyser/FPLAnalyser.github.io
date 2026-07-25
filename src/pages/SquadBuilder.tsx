@@ -6,10 +6,12 @@ import { PageSkeleton } from '../components/Skeleton'
 import { Tabs, type TabDef } from '../components/Tabs'
 import { TeamBadge } from '../components/badges'
 import { FixtureChips } from '../components/FixtureChips'
+import { PlayerPhoto } from '../components/PlayerPhoto'
 import { RatingCard } from '../components/RatingCard'
 import { ShareFooter } from '../components/ShareFooter'
 import { SeasonPlanner } from '../components/SeasonPlanner'
 import { Icon } from '../components/Icon'
+import { Pitch } from '../components/Pitch'
 import { useCore } from '../lib/useData'
 import { tapHaptic, shareImageNative } from '../lib/native'
 import { num } from '../lib/rows'
@@ -72,6 +74,7 @@ export default function SquadBuilder() {
   })
   const [mode, setMode] = useState<'build' | 'plan'>('build')
   const [pickPos, setPickPos] = useState<Pos>('GKP')
+  const [boardView, setBoardView] = useState<'pitch' | 'list'>('pitch')
   const [sort, setSort] = useState<SortKey>('rating')
   const [query, setQuery] = useState('')
   const [note, setNote] = useState<string | null>(null)
@@ -249,8 +252,33 @@ export default function SquadBuilder() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
         {/* Pitch view of the squad */}
         <div>
-          <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Your squad {total > 0 && <span className="text-ink-3 normal-case tracking-normal">· tap an empty slot to add, tap the ✕ to drop</span>}</div>
-          <SquadBoard chosen={chosen} fixtureEase={fixtureEase} pickPos={pickPos} onRemove={remove} onPick={(p) => { setPickPos(p); setNote(null) }} />
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Your squad</div>
+            <div className="ml-auto flex gap-1.5">
+              {(['pitch', 'list'] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setBoardView(v)}
+                  className={`min-h-8 rounded-full border px-3 text-[12px] font-semibold capitalize transition-colors ${
+                    boardView === v ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+                  }`}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          </div>
+          {boardView === 'pitch' ? (
+            <SquadBoard chosen={chosen} fixtureEase={fixtureEase} pickPos={pickPos} onRemove={remove} onPick={(p) => { setPickPos(p); setNote(null) }} />
+          ) : (
+            <SquadList
+              chosen={chosen}
+              fixtureEase={fixtureEase}
+              onRemove={remove}
+              onPick={(p) => { setPickPos(p); setNote(null) }}
+              onOpen={(r) => navigate(playerHref(String(r.web_name), num(r, 'code')))}
+            />
+          )}
         </div>
 
         {/* Player picker */}
@@ -342,19 +370,16 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, capture }:
   chosen: RatingRow[]; fixtureEase: FixtureEaseRow[]; pickPos?: Pos; onRemove?: (el: number) => void; onPick?: (p: Pos) => void; capture?: boolean
 }) {
   const navigate = useNavigate()
-  const wrap = 'relative w-[calc(50%-0.375rem)] sm:w-[168px] lg:w-[188px]'
+  const wrap = 'relative w-[calc(50%-0.375rem)] sm:w-[112px] lg:w-[118px]'
   return (
-    <div
-      className="relative overflow-hidden rounded-3xl p-3 md:p-5"
-      style={{ background: 'radial-gradient(120% 80% at 50% 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.5) 100%), repeating-linear-gradient(90deg, #0e2117 0 9%, #10281c 9% 18%), linear-gradient(180deg, #10281c, #0c1c13)' }}
-    >
-      <div className="relative flex flex-col gap-4 md:gap-5">
+    <Pitch maxWidth={capture ? undefined : 780}>
+      <div className="relative flex flex-col gap-3 md:gap-4">
         {SLOTS.map(({ pos, count }) => {
           const players = chosen.filter((r) => r.position === pos)
           if (capture && !players.length) return null
           const empties = capture ? 0 : Math.max(0, count - players.length)
           return (
-            <div key={pos} className="flex flex-wrap justify-center gap-3 md:gap-4">
+            <div key={pos} className="flex flex-wrap justify-center gap-2.5 md:gap-3">
               {players.map((r) => (
                 <div key={r.element} className={wrap}>
                   <RatingCard r={r} compact window="season" fixtureEase={fixtureEase} onClick={capture ? undefined : () => navigate(playerHref(String(r.web_name), num(r, 'code')))} />
@@ -369,7 +394,7 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, capture }:
                 <button
                   key={i}
                   onClick={() => onPick?.(pos)}
-                  className={`${wrap} grid min-h-[110px] place-items-center rounded-2xl border-2 border-dashed text-xs font-medium transition-colors ${
+                  className={`${wrap} grid min-h-[92px] place-items-center rounded-xl border-2 border-dashed text-[11px] font-medium transition-colors ${
                     pickPos === pos ? 'border-accent/70 text-accent' : 'border-white/20 text-white/75 hover:border-white/45 hover:text-white'
                   }`}
                 >
@@ -380,6 +405,52 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, capture }:
           )
         })}
       </div>
+    </Pitch>
+  )
+}
+
+/** The build list: one dense row per player, grouped by position, with the
+ *  numbers you actually pick on in aligned columns. */
+function SquadList({ chosen, fixtureEase, onRemove, onPick, onOpen }: {
+  chosen: RatingRow[]; fixtureEase: FixtureEaseRow[]; onRemove: (el: number) => void; onPick: (p: Pos) => void; onOpen: (r: RatingRow) => void
+}) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-line">
+      {SLOTS.map(({ pos, count }) => {
+        const players = chosen.filter((r) => r.position === pos)
+        const empties = Math.max(0, count - players.length)
+        return (
+          <div key={pos}>
+            <div className="border-b border-line bg-surface-2/60 px-3 py-1.5 text-[11px] font-extrabold tracking-[0.16em] text-ink-3 uppercase">
+              {POS_LABEL[pos]} · {players.length}/{count}
+            </div>
+            {players.map((r) => {
+              const rating = num(r, 'season_overall_score')
+              return (
+                <div key={r.element} className="flex items-center gap-3 border-b border-line px-3 py-2 last:border-b-0 hover:bg-surface-2/40">
+                  <button onClick={() => onOpen(r)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                    <PlayerPhoto code={num(r, 'code')} element={num(r, 'element')} className="w-7 shrink-0 rounded object-cover object-top" style={{ height: 34 }} placeholder={<span className="block w-7 shrink-0 rounded bg-surface-3" style={{ height: 34 }} />} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[14px] font-bold text-ink">{String(r.web_name)}</span>
+                      <span className="block text-[12px] text-ink-3">{String(r.team)}</span>
+                    </span>
+                  </button>
+                  <span className="font-num w-[58px] shrink-0 text-right text-[13px] font-semibold tabular-nums text-ink-2">£{num(r, 'price')}m</span>
+                  <span className="metallic-num font-num w-[38px] shrink-0 text-right text-[14px] font-extrabold tabular-nums">{rating != null ? Math.round(rating * 20) : '—'}</span>
+                  <span className="hidden w-[120px] shrink-0 sm:block"><FixtureChips fixtureEase={fixtureEase} team={String(r.team)} n={4} /></span>
+                  <button onClick={() => onRemove(r.element)} aria-label={`Remove ${r.web_name}`} className="shrink-0 px-1 text-ink-3 transition-colors hover:text-bad"><Icon name="x" size={14} /></button>
+                </div>
+              )
+            })}
+            {Array.from({ length: empties }).map((_, i) => (
+              <button key={i} onClick={() => onPick(pos)} className="flex w-full items-center gap-3 border-b border-line px-3 py-2.5 text-left last:border-b-0 hover:bg-surface-2/40">
+                <span className="grid h-[34px] w-7 shrink-0 place-items-center rounded border border-dashed border-line-mid text-ink-3"><Icon name="search" size={12} /></span>
+                <span className="text-[13px] text-ink-3 italic">Empty slot — tap to pick a {POS_LABEL[pos].toLowerCase().replace(/s$/, '')}</span>
+              </button>
+            ))}
+          </div>
+        )
+      })}
     </div>
   )
 }
