@@ -128,6 +128,7 @@ export function PlayerCardSheet({ player, pool, onClose, onSwap }: {
           <div className="min-w-0 flex-1">
             <div className="truncate text-[18px] font-extrabold tracking-[-0.01em] text-ink">{String(player.web_name)}</div>
             <div className="text-[12.5px] text-ink-2">{pos} · {teamLabel(String(player.team))} · £{price}m{player.selected_by_percent != null ? ` · ${player.selected_by_percent}% owned` : ''}</div>
+            {adjusted != null && <div className="mt-0.5 text-[12px] font-semibold text-accent-2">{adjusted.toFixed(2)} expected points / game</div>}
           </div>
           {rating != null && <div className="metallic-num font-display shrink-0 text-[34px] leading-none">{rating}</div>}
           <button onClick={onClose} aria-label="Close" className="shrink-0 rounded-lg p-1.5 text-ink-3 transition-colors hover:text-ink"><Icon name="x" size={18} /></button>

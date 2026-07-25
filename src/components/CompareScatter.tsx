@@ -67,8 +67,19 @@ function quadrantsFor(lens: CompareLens, mode: PosMode): Quadrants | null {
     return { best: 'tr', worst: 'bl', labels: { tr: 'Scores & creates', tl: 'Creator', br: 'Scorer', bl: 'Neither' } }
   }
   if (lens === 'workload') {
-    // x = avg shot distance faced, y = saves. Far + many = save points made easy.
-    return { best: 'tr', worst: 'bl', labels: { tr: 'Save points, from range', tl: 'Few saves, from range', br: 'Saves under pressure', bl: 'Quiet, close-range' } }
+    // x = avg shot distance faced (left = close), y = saves (top = many).
+    // Best: plenty of saves from distance. Worst: few saves and the shots
+    // that do come are close in.
+    return {
+      best: 'tr',
+      worst: 'bl',
+      labels: {
+        tr: 'Save points, from range',
+        tl: 'Busy under pressure',
+        br: 'Quiet, shots from range',
+        bl: 'Few saves, close range',
+      },
+    }
   }
   return null
 }
