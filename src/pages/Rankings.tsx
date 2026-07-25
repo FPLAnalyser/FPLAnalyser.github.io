@@ -12,7 +12,7 @@ import { InfoTip } from '../components/InfoTip'
 import { Icon } from '../components/Icon'
 import { PageSkeleton } from '../components/Skeleton'
 import { EmptyState } from '../components/PageShell'
-import { PlayerCompare, ViewChips, COMPARE_LENSES, type CompareLens } from '../components/CompareScatter'
+import { PlayerCompare, ViewChips, compareLenses, type CompareLens } from '../components/CompareScatter'
 import { useCore } from '../lib/useData'
 import { num, str, bool } from '../lib/rows'
 import { ratingToNum, norm, TOOLTIPS, playerHref } from '../lib/util'
@@ -465,9 +465,14 @@ export default function Rankings() {
       )}
 
       {viewMode === 'compare' && tab !== 'totw' ? (
+        (() => {
+          // Single-position tabs (Goalkeepers, Clean Sheets) imply the
+          // position even though their pill filter is hidden.
+          const comparePos = tab === 'goalkeepers' ? 'GKP' : tab === 'clean-sheets' ? 'DEF' : pos
+          return (
         <>
           <div className="mb-3 flex flex-wrap items-center gap-1.5">
-            {COMPARE_LENSES.map((l) => (
+            {compareLenses(comparePos === 'GKP').map((l) => (
               <span key={l.id} className="flex items-center gap-1">
                 <button
                   onClick={() => setCompareLens(l.id)}
@@ -482,12 +487,14 @@ export default function Rankings() {
             ))}
           </div>
           <PlayerCompare
-            rows={(pos === 'ALL' ? ratings : ratings.filter((p) => p.position === pos)).filter((p) => bool(p, 'season_ok')) as RatingRow[]}
+            rows={(comparePos === 'ALL' ? ratings : ratings.filter((p) => p.position === comparePos)).filter((p) => bool(p, 'season_ok')) as RatingRow[]}
             lens={compareLens}
             highlightName={query || null}
             onPlayer={toPlayer}
           />
         </>
+          )
+        })()
       ) : tab === 'totw' ? (
         <TeamOfTheWeek ratings={ratings} currentGw={data.meta?.current_gw ?? null} onPlayer={toPlayer} />
       ) : tab === 'form' ? (
