@@ -124,6 +124,20 @@ function ppgCol(rows: Row[]): Column<Row> {
   }
 }
 
+/** Availability-adjusted expected points per game — the number the overall
+ *  rating is built from. We calculate it, so it belongs on the table. */
+const xptsCol: Column<Row> = {
+  key: 'season_xpts_adjusted',
+  header: 'xPts',
+  tip: 'Availability-adjusted expected points per game: what the underlying numbers say a player should score, scaled by how often he actually starts. The FPL Analyser rating is this number ranked against the position.',
+  align: 'right',
+  sortValue: (r) => num(r, 'season_xpts_adjusted') ?? num(r, 'season_xpts_per_game'),
+  cell: (r) => {
+    const v = num(r, 'season_xpts_adjusted') ?? num(r, 'season_xpts_per_game')
+    return v == null ? <span className="text-ink-3">—</span> : <span className="font-num tabular-nums">{v.toFixed(2)}</span>
+  },
+}
+
 // ── Raw-metric columns (the ingredients behind each rating) ──────────────────
 const dash = <span className="text-ink-3">—</span>
 /** Plain numeric per-90 / ratio metric, N decimals. */
@@ -239,7 +253,7 @@ export default function Rankings() {
   const [teamFilter, setTeamFilter] = useState('ALL')
   const [ownership, setOwnership] = useState<'ALL' | 'template' | 'differential'>('ALL')
   const [nailedOnly, setNailedOnly] = useState(false)
-  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(true)
 
   const ratings = (data?.ratings ?? []) as RatingRow[]
   const metrics = data?.metrics ?? []
@@ -309,6 +323,7 @@ export default function Rankings() {
             windowScoreCol('gw4_overall_score', '4GW Rating', 'The same composite rating measured over the last 4 gameweeks only — a form snapshot.'),
             numCol('season_total_points', 'Pts', 'Total FPL points scored this season.', 0),
             ppgCol(rows),
+            xptsCol,
           ],
           rows,
         }
@@ -423,6 +438,7 @@ export default function Rankings() {
             scoreCol('season_value_score_norm', 'Value Rating', TOOLTIPS.value as string),
             numCol('season_total_points', 'Pts', 'Total FPL points scored this season.', 0),
             ppgCol(rows),
+            xptsCol,
           ],
           rows,
         }
@@ -514,7 +530,7 @@ export default function Rankings() {
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           {posOptions.length > 1 ? <PillGroup options={posOptions} active={pos} onChange={setPos} /> : null}
-          <ViewChips options={[{ id: 'table', label: 'Table' }, { id: 'compare', label: 'Compare' }]} active={viewMode} onChange={setViewMode} />
+          <ViewChips options={[{ id: 'table', label: 'Table' }, { id: 'compare', label: 'Chart' }]} active={viewMode} onChange={setViewMode} />
           <button
             onClick={() => setFiltersOpen((o) => !o)}
             className={`min-h-9 rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${

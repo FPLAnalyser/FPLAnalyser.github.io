@@ -14,8 +14,11 @@ import { shareImageNative } from '../lib/native'
  * credit, by design. */
 const SITE_NAME = 'FPL Analyser'
 
-type Format = 'wide' | 'square' | 'story'
+type Format = 'auto' | 'wide' | 'square' | 'story'
 const FORMATS: { id: Format; label: string; hint: string; w: number; h: number | null; handle: string }[] = [
+  // Auto shapes the image to the content — the right default, because a tall
+  // table forced into 16:9 renders as an unreadable stamp in a sea of black.
+  { id: 'auto', label: 'Fit content', hint: 'auto', w: 1600, h: null, handle: '@FPLAnalyser' },
   { id: 'wide', label: 'Twitter / X', hint: '16:9', w: 1600, h: 900, handle: '@FPLAnalyser' },
   { id: 'square', label: 'Instagram', hint: '1:1', w: 1080, h: 1080, handle: '@fpl_analyser' },
   { id: 'story', label: 'Story', hint: '9:16', w: 1080, h: 1920, handle: '@fpl_analyser' },
@@ -25,7 +28,10 @@ const FORMATS: { id: Format; label: string; hint: string; w: number; h: number |
 function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: string, handle: string, dark: boolean): HTMLCanvasElement {
   const out = document.createElement('canvas')
   out.width = fmt.w
-  out.height = fmt.h ?? Math.round((source.height / source.width) * fmt.w) + 220
+  // Auto: chrome + the panel at full width, so nothing is ever shrunk.
+  const autoPad = Math.round(fmt.w * 0.045)
+  const autoChrome = autoPad + 34 + Math.round(fmt.w * 0.028) + Math.round(fmt.w * 0.07) + autoPad
+  out.height = fmt.h ?? Math.round((source.height / source.width) * (fmt.w - autoPad * 2)) + autoChrome
   const ctx = out.getContext('2d')!
   const bg = dark ? '#0c0b09' : '#faf8f3'
   const ink = dark ? '#f4efe3' : '#1b1712'
@@ -52,10 +58,24 @@ function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: 
   const footH = Math.round(out.width * 0.07)
   const availW = out.width - pad * 2
   const availH = out.height - top - footH - pad
-  const scale = Math.min(availW / source.width, availH / source.height)
-  const dw = source.width * scale
+  // Fill the frame's width so the content stays legible. If that makes it
+  // taller than the frame (a long table in a 16:9 crop), show the top of the
+  // panel at full size rather than shrinking the whole thing to a stamp.
+  const scale = availW / source.width
+  const dw = availW
   const dh = source.height * scale
-  ctx.drawImage(source, pad + (availW - dw) / 2, top + (availH - dh) / 2, dw, dh)
+  if (dh <= availH) {
+    ctx.drawImage(source, pad + (availW - dw) / 2, top + (availH - dh) / 2, dw, dh)
+  } else {
+    const srcH = Math.round(availH / scale) // source pixels that fit the frame
+    ctx.drawImage(source, 0, 0, source.width, srcH, pad, top, dw, availH)
+    // Fade the cut edge so it reads as "continues", not "broken".
+    const grad = ctx.createLinearGradient(0, top + availH - 90, 0, top + availH)
+    grad.addColorStop(0, 'rgba(0,0,0,0)')
+    grad.addColorStop(1, bg)
+    ctx.fillStyle = grad
+    ctx.fillRect(pad, top + availH - 90, dw, 90)
+  }
 
   // Footer: handle + hairline.
   ctx.strokeStyle = dark ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.12)'
@@ -83,7 +103,7 @@ export function Exportable({ title, filename, children, className }: {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
-  const [fmt, setFmt] = useState<Format>('wide')
+  const [fmt, setFmt] = useState<Format>('auto')
 
   useEffect(() => {
     if (!open) setMsg('')

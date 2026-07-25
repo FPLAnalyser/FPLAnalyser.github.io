@@ -7,11 +7,10 @@ import { Tabs, type TabDef } from '../components/Tabs'
 import { TeamBadge } from '../components/badges'
 import { FixtureChips } from '../components/FixtureChips'
 import { PlayerPhoto } from '../components/PlayerPhoto'
-import { RatingCard } from '../components/RatingCard'
 import { ShareFooter } from '../components/ShareFooter'
 import { SeasonPlanner } from '../components/SeasonPlanner'
 import { Icon } from '../components/Icon'
-import { Pitch } from '../components/Pitch'
+import { Pitch, PitchCard } from '../components/Pitch'
 import { PlayerCardSheet } from '../components/PlayerCardSheet'
 import { useCore } from '../lib/useData'
 import { tapHaptic, shareImageNative } from '../lib/native'
@@ -380,19 +379,28 @@ export default function SquadBuilder() {
 function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, capture }: {
   chosen: RatingRow[]; fixtureEase: FixtureEaseRow[]; pickPos?: Pos; onRemove?: (el: number) => void; onPick?: (p: Pos) => void; onOpen?: (r: RatingRow) => void; capture?: boolean
 }) {
-  const wrap = 'relative w-[calc(50%-0.375rem)] sm:w-[112px] lg:w-[118px]'
+  const wrap = 'relative'
   return (
-    <Pitch maxWidth={capture ? undefined : 780}>
+    <Pitch maxWidth={capture ? undefined : 560}>
       <div className="relative flex flex-col gap-3 md:gap-4">
         {SLOTS.map(({ pos, count }) => {
           const players = chosen.filter((r) => r.position === pos)
           if (capture && !players.length) return null
           const empties = capture ? 0 : Math.max(0, count - players.length)
           return (
-            <div key={pos} className="flex flex-wrap justify-center gap-2.5 md:gap-3">
+            <div key={pos} className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
               {players.map((r) => (
                 <div key={r.element} className={wrap}>
-                  <RatingCard r={r} compact window="season" fixtureEase={fixtureEase} onClick={capture ? undefined : () => onOpen?.(r)} />
+                  <PitchCard
+                    rating={num(r, 'season_overall_score') != null ? Math.round((num(r, 'season_overall_score') as number) * 20) : null}
+                    name={String(r.web_name)}
+                    team={String(r.team)}
+                    price={num(r, 'price')}
+                    code={num(r, 'code')}
+                    element={num(r, 'element')}
+                    fixtures={<FixtureChips fixtureEase={fixtureEase} team={String(r.team)} n={3} compact />}
+                    onClick={capture ? undefined : () => onOpen?.(r)}
+                  />
                   {onRemove && !capture && (
                     <button aria-label={`Remove ${r.web_name}`} onClick={() => onRemove(r.element)} className="absolute -top-2 -right-2 z-10 grid size-7 place-items-center rounded-full border border-line bg-surface-1 text-ink-2 shadow-lg transition-colors hover:border-bad hover:text-bad">
                       <Icon name="x" size={14} />
@@ -404,7 +412,7 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, ca
                 <button
                   key={i}
                   onClick={() => onPick?.(pos)}
-                  className={`${wrap} grid min-h-[92px] place-items-center rounded-xl border-2 border-dashed text-[11px] font-medium transition-colors ${
+                  className={`w-[74px] sm:w-[84px] grid min-h-[92px] place-items-center rounded-lg border-2 border-dashed text-[10px] font-medium transition-colors ${
                     pickPos === pos ? 'border-accent/70 text-accent' : 'border-white/20 text-white/75 hover:border-white/45 hover:text-white'
                   }`}
                 >

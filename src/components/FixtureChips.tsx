@@ -9,16 +9,36 @@ export function FixtureChips({
   fixtureEase,
   team,
   n = 3,
+  compact = false,
 }: {
   fixtureEase: FixtureEaseRow[]
   team: string
   n?: number
+  /** Tiny colour ticks instead of labelled chips — for pitch cards. */
+  compact?: boolean
 }) {
   const upcoming = (fixtureEase || [])
     .filter((f) => f.team === team)
     .sort((a, b) => a.gw - b.gw)
     .slice(0, n)
   if (!upcoming.length) return null
+  if (compact) {
+    return (
+      <>
+        {upcoming.map((f, i) => {
+          const [bg] = FDR_COLORS[f.fdr] || FDR_COLORS[3]
+          return (
+            <span
+              key={i}
+              className="block h-[4px] w-[11px] rounded-sm"
+              style={{ background: bg }}
+              title={`GW${f.gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamFullNames[f.opponent] || f.opponent} (FDR ${f.fdr})`}
+            />
+          )
+        })}
+      </>
+    )
+  }
   return (
     <span className="inline-flex flex-wrap gap-1">
       {upcoming.map((f, i) => {

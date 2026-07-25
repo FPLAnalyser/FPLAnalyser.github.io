@@ -26,9 +26,30 @@ const FORMATIONS: [number, number, number][] = [
 
 interface Pick { r: RatingRow; score: number; gw?: Row }
 
+/** The number in the card's corner: the weekly rating after a gameweek, the
+ * season FPL Analyser rating when projecting. */
+const cornerRating = (pick: Pick, projected: boolean) =>
+  projected ? ratingTo100(num(pick.r, 'season_overall_score')) : Math.round(pick.score)
+
 /** Best formation-legal XI by score. When `budget` is set, greedily trims
  * the most expensive picks until the XI fits (FPL's £100m squad rule
  * applied to the starting eleven). */
+const MAX_PER_CLUB = 3
+
+/** Take the best `n` from a sorted list without breaking the three-per-club
+ *  rule, given what the rest of the XI already uses. */
+function takeRespectingClubs(sorted: Pick[], n: number, clubCount: Map<string, number>): Pick[] {
+  const out: Pick[] = []
+  for (const p of sorted) {
+    if (out.length === n) break
+    const club = String(p.r.team)
+    if ((clubCount.get(club) ?? 0) >= MAX_PER_CLUB) continue
+    out.push(p)
+    clubCount.set(club, (clubCount.get(club) ?? 0) + 1)
+  }
+  return out
+}
+
 function pickXI(pool: Pick[], budget?: number) {
   const byPos = (pos: string) => pool.filter((p) => p.r.position === pos).sort((a, b) => b.score - a.score)
   const gk = byPos('GKP'), def = byPos('DEF'), mid = byPos('MID'), fwd = byPos('FWD')
@@ -38,7 +59,14 @@ function pickXI(pool: Pick[], budget?: number) {
   let best: { total: number; rows: Pick[][]; formation: string } | null = null
   for (const [d, m, f] of FORMATIONS) {
     if (def.length < d || mid.length < m || fwd.length < f) continue
-    let rows: Pick[][] = [[gk[0]], def.slice(0, d), mid.slice(0, m), fwd.slice(0, f)]
+    // FPL's three-players-per-club limit, applied as the XI is assembled.
+    const clubs = new Map<string, number>()
+    const keeper = takeRespectingClubs(gk, 1, clubs)
+    const defs = takeRespectingClubs(def, d, clubs)
+    const mids = takeRespectingClubs(mid, m, clubs)
+    const fwds = takeRespectingClubs(fwd, f, clubs)
+    if (!keeper.length || defs.length < d || mids.length < m || fwds.length < f) continue
+    let rows: Pick[][] = [keeper, defs, mids, fwds]
     if (budget != null) {
       // Swap out the priciest player for the best affordable replacement in
       // his position until the XI is inside the budget.
@@ -52,7 +80,11 @@ function pickXI(pool: Pick[], budget?: number) {
         const victim = [...flat].sort((a, b) => cost(a) / Math.max(a.score, 0.01) - cost(b) / Math.max(b.score, 0.01)).pop()
         if (!victim) break
         const used = new Set(flat.map((p) => p.r.element))
-        const repl = bench[String(victim.r.position)].find((p) => !used.has(p.r.element) && cost(p) < cost(victim))
+        const clubUse = new Map<string, number>()
+        for (const p of flat) if (p.r.element !== victim.r.element) clubUse.set(String(p.r.team), (clubUse.get(String(p.r.team)) ?? 0) + 1)
+        const repl = bench[String(victim.r.position)].find(
+          (p) => !used.has(p.r.element) && cost(p) < cost(victim) && (clubUse.get(String(p.r.team)) ?? 0) < MAX_PER_CLUB,
+        )
         if (!repl) break
         rows = rows.map((row) => row.map((p) => (p.r.element === victim.r.element ? repl : p)))
       }
@@ -78,38 +110,38 @@ function TotwCard({ pick, delay, onClick, projected }: { pick: Pick; delay: numb
   return (
     <button
       onClick={onClick}
-      className="totw-card w-[104px] rounded-xl border border-accent/45 p-2 text-center transition-transform hover:-translate-y-0.5 md:w-[116px]"
+      className="totw-card w-[78px] rounded-lg border border-accent/45 p-1.5 text-center transition-transform hover:-translate-y-0.5 sm:w-[88px]"
       style={{ animationDelay: `${delay}s`, background: 'linear-gradient(165deg,#211d16,#0d0b08)' }}
     >
       <div className="flex items-start justify-between">
-        <span className="metallic-num font-num text-[17px] leading-none font-extrabold tabular-nums">{Math.round(score)}</span>
+        <span className="metallic-num font-num text-[14px] leading-none font-extrabold tabular-nums">{cornerRating(pick, Boolean(projected)) ?? '—'}</span>
         {pts != null && (
-          <span className="rounded-md bg-accent px-1.5 py-0.5 font-num text-[11px] leading-none font-extrabold tabular-nums text-[#10131b]">{pts}</span>
+          <span className="rounded bg-accent px-1 py-0.5 font-num text-[10px] leading-none font-extrabold tabular-nums text-[#10131b]">{pts}</span>
         )}
-        {projected && <span className="rounded-md border border-accent/50 px-1.5 py-0.5 text-[9px] font-extrabold text-accent-2">PROJ</span>}
+        {projected && score != null && <span className="rounded border border-accent/50 px-1 py-0.5 font-num text-[9px] font-extrabold tabular-nums text-accent-2">{score.toFixed(1)}</span>}
       </div>
       <PlayerPhoto
         code={num(r, 'code')} element={num(r, 'element')}
-        className="mx-auto my-1 w-9 rounded-md object-cover object-top" style={{ height: 44 }}
-        placeholder={<span className="mx-auto my-1 block w-9 rounded-md bg-white/5" style={{ height: 44 }} />}
+        className="mx-auto my-1 w-8 rounded object-cover object-top" style={{ height: 38 }}
+        placeholder={<span className="mx-auto my-1 block w-8 rounded bg-white/5" style={{ height: 38 }} />}
       />
-      <div className="truncate text-[11.5px] font-bold text-ink">{String(r.web_name)}</div>
-      <div className="mt-0.5 flex items-center justify-center gap-1 text-[9.5px] text-ink-3">
-        <TeamBadge team={String(r.team)} size={10} />{String(r.team)} · £{r.price}m
+      <div className="truncate text-[10.5px] font-bold text-white">{String(r.web_name)}</div>
+      <div className="mt-0.5 flex items-center justify-center gap-1 text-[9px] text-white/55">
+        <TeamBadge team={String(r.team)} size={9} />{String(r.team)} · £{r.price}m
       </div>
       {gw && (
-        <div className="mt-1 border-t border-white/8 pt-1 text-[9.5px] leading-tight text-ink-2">
+        <div className="mt-1 border-t border-white/10 pt-1 text-[9px] leading-tight text-white/75">
           {(goals ?? 0) > 0 && <span className="mr-1">{goals}G</span>}
           {(assists ?? 0) > 0 && <span className="mr-1">{assists}A</span>}
           {(cs ?? 0) > 0 && <span className="mr-1">CS</span>}
           {(bonus ?? 0) > 0 && <span className="mr-1 text-accent-2">+{bonus}B</span>}
           {(goals ?? 0) === 0 && (assists ?? 0) === 0 && (cs ?? 0) === 0 && (bonus ?? 0) === 0 && <span>—</span>}
-          <span className="mt-0.5 block text-ink-3">
+          <span className="mt-0.5 block text-white/45">
             {xg != null ? `${xg.toFixed(2)} xG` : ''}{xg != null && xa != null ? ' · ' : ''}{xa != null ? `${xa.toFixed(2)} xA` : ''}
           </span>
         </div>
       )}
-      {projected && <div className="mt-1 border-t border-white/8 pt-1 text-[9.5px] text-ink-2">{score.toFixed(1)} proj pts</div>}
+      {projected && <div className="mt-1 border-t border-white/10 pt-1 text-[9px] text-white/70">{score.toFixed(1)} proj pts</div>}
     </button>
   )
 }
@@ -259,7 +291,7 @@ export function TeamOfTheWeek({
       {chips}
 
       <Exportable title={title}>
-        <Pitch key={`${runId}-${view}`}>
+        <Pitch key={`${runId}-${view}`} maxWidth={560}>
           <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
             <div className="text-[12px] font-extrabold tracking-[0.2em] text-white uppercase">{title}</div>
             <div className="flex items-center gap-2">
@@ -278,7 +310,7 @@ export function TeamOfTheWeek({
           <div className="mb-4 max-w-[62ch] text-[11.5px] text-white/70">{sub}</div>
           <div className="flex flex-col gap-3">
             {shown.rows.map((row, i) => (
-              <div key={i} className="flex flex-wrap justify-center gap-2 md:gap-2.5">
+              <div key={i} className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
                 {row.map((pick) => {
                   delay += 0.16
                   return (
