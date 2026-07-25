@@ -190,7 +190,8 @@ export function TeamStory({ team, data }: { team: string; data: CoreData }) {
   const showTopDef = topDefOrGk != null && (!defTrap || topDefOrGk.position === 'GKP')
 
   return (
-    <div className="mb-5 flex flex-col gap-4">
+    <div className="mb-5 grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-start">
+      <div className="flex flex-col gap-4">
       <div className="rounded-xl border border-line bg-surface-1 p-4">
         <Kick>The brief</Kick>
         <Sentence>{verdict}</Sentence>
@@ -222,6 +223,7 @@ export function TeamStory({ team, data }: { team: string; data: CoreData }) {
             <div className="mt-1.5"><FixtureChips fixtureEase={data.fixtureEase} team={team} n={6} /></div>
           </div>
         )}
+      </div>
       </div>
 
       {/* the route in */}

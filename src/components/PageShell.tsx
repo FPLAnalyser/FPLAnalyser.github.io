@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react'
 
 export function PageShell({ children }: { children: ReactNode }) {
-  return <div className="mx-auto w-full max-w-[1760px] px-4 py-6 md:px-6 md:py-8">{children}</div>
+  // Content caps well short of the nav's full width: past ~1500px the
+  // components inside stop growing and the page just gains empty margins.
+  return <div className="mx-auto w-full max-w-[1500px] px-4 py-6 md:px-6 md:py-8">{children}</div>
 }
 
 export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {

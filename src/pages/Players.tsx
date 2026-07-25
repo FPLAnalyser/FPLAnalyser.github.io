@@ -11,6 +11,7 @@ import { TeamBadge, PositionIcon } from '../components/badges'
 import { PageSkeleton } from '../components/Skeleton'
 import { PlayerPhoto as PhotoImg } from '../components/PlayerPhoto'
 import { ShareCard } from '../components/ShareCard'
+import { Exportable } from '../components/ExportPanel'
 import { FixtureChips } from '../components/FixtureChips'
 import { MatchupBars, UnknownModules, minutesRead, formRead, valueRead, defConRead } from '../components/PlayerStory'
 import { PlayerZoneMap } from '../components/ShotMap'
@@ -231,9 +232,13 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
           </>
         ) : (
           <>
-            <TheBrief r={r} data={data} verdict={verdict} />
-            <EvidenceBand r={r} peers={peers} />
-            <div className="mt-6"><MarketScatter r={r} peers={peers} /></div>
+            {/* Wide screens: the brief reads left, the evidence charts sit in
+                a right rail so the short sentences don't leave a dead half. */}
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-start">
+              <TheBrief r={r} data={data} verdict={verdict} />
+              <EvidenceBand r={r} peers={peers} />
+            </div>
+            <div className="mt-6"><Exportable title={`${r.web_name} — the market`}><MarketScatter r={r} peers={peers} /></Exportable></div>
             <Receipts r={r} data={data} name={name} />
           </>
         )}
@@ -340,7 +345,6 @@ function PointsEngine({ r }: { r: RatingRow }) {
    percentile fingerprint. Everything else lives in the story below. */
 
 const POS_LABEL: Record<string, string> = { GKP: 'Goalkeeper', DEF: 'Defender', MID: 'Midfielder', FWD: 'Forward' }
-const HERO_DIM = '#a89f8c'
 
 function HeroSilhouette() {
   return (
@@ -351,9 +355,9 @@ function HeroSilhouette() {
 }
 
 function HeroPill({ children, gold, warn, title }: { children: ReactNode; gold?: boolean; warn?: boolean; title?: string }) {
-  const base = 'font-cond inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold tracking-[.14em] uppercase'
-  if (gold) return <span title={title} className={`${base} font-extrabold text-[#10131b]`} style={{ background: 'linear-gradient(120deg,#ead188,#c9a227)' }}>{children}</span>
-  return <span title={title} className={base} style={{ border: '1px solid rgba(201,162,39,.18)', color: warn ? '#e8b04a' : '#d6d0c2', background: 'rgba(255,255,255,.02)' }}>{children}</span>
+  const base = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-semibold'
+  if (gold) return <span title={title} className={`${base} text-[#10131b]`} style={{ background: 'linear-gradient(120deg,#ead188,#c9a227)' }}>{children}</span>
+  return <span title={title} className={base} style={{ border: '1px solid rgba(201,162,39,.22)', color: warn ? '#e8b04a' : '#cfc9bb', background: 'rgba(255,255,255,.03)' }}>{children}</span>
 }
 
 // Fingerprint dimensions — five per position, the same score fields the
@@ -392,11 +396,11 @@ function IdentStrip({ r, peers, personas, flags, isPenTaker, isSpTaker, streak }
           <PhotoImg hero code={r.code} element={r.element} className="h-[64px] w-auto object-contain md:h-[76px]" style={{ filter: 'drop-shadow(0 8px 16px rgba(0,0,0,.55))' }} placeholder={<div className="flex h-[64px] w-[46px] items-end justify-center md:h-[76px]"><HeroSilhouette /></div>} />
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="font-display leading-[.95] tracking-[-.005em] uppercase" style={{ fontSize: 'clamp(17px,5vw,27px)', overflowWrap: 'anywhere', background: 'linear-gradient(180deg,#fff 12%,#eee9dd 48%,#a1988a 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>{name}</h1>
-          <div className="font-cond mt-1 text-[11px] font-semibold tracking-[.12em] uppercase" style={{ color: HERO_DIM }}>
-            {POS_LABEL[pos] ?? pos} · <b style={{ color: tc }}>{teamFullNames[team] || team}</b> · £{r.price}m · {r.selected_by_percent}%
-            {streak === '🔥 Hot' && <span className="ml-2 inline-flex items-center gap-1 text-hot normal-case tracking-normal"><Icon name="flame" size={11} solid /> Hot</span>}
-            {streak === '🧊 Cold' && <span className="ml-2 inline-flex items-center gap-1 text-cold normal-case tracking-normal"><Icon name="snow" size={11} /> Cold</span>}
+          <h1 className="leading-[1.05] font-extrabold tracking-[-.02em]" style={{ fontSize: 'clamp(20px,4.4vw,32px)', overflowWrap: 'anywhere', color: '#f5f2ea' }}>{name}</h1>
+          <div className="mt-1 text-[13px] font-medium" style={{ color: '#a9a294' }}>
+            {POS_LABEL[pos] ?? pos} · <b className="font-semibold" style={{ color: tc }}>{teamFullNames[team] || team}</b> · £{r.price}m · {r.selected_by_percent}% owned
+            {streak === '🔥 Hot' && <span className="ml-2 inline-flex items-center gap-1 text-hot"><Icon name="flame" size={12} solid /> Hot</span>}
+            {streak === '🧊 Cold' && <span className="ml-2 inline-flex items-center gap-1 text-cold"><Icon name="snow" size={12} /> Cold</span>}
           </div>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {isPenTaker && <HeroPill gold title="First-choice penalty taker — extra, high-value goal route.">ⓒ Penalties</HeroPill>}
@@ -408,7 +412,7 @@ function IdentStrip({ r, peers, personas, flags, isPenTaker, isSpTaker, streak }
         {rating != null && (
           <div className="flex-none text-center">
             <div className="metallic-num font-display text-[38px] leading-[.85] md:text-[46px]">{rating}</div>
-            {rank != null && <div className="font-cond mt-1 text-[9px] font-bold tracking-[.1em] whitespace-nowrap uppercase" style={{ color: HERO_DIM }}>#{rank} of {peers.length} {pos}</div>}
+            {rank != null && <div className="mt-1 text-[11px] font-semibold whitespace-nowrap" style={{ color: '#a9a294' }}>#{rank} of {peers.length} {pos}</div>}
           </div>
         )}
       </div>
@@ -563,7 +567,7 @@ function BulletGauge({ r, peers }: { r: RatingRow; peers: RatingRow[] }) {
       <div className="mb-2 text-[10px] font-extrabold tracking-[0.18em] text-ink-3 uppercase">Promise vs delivery — pts / game</div>
       <div className="relative h-4 rounded-full bg-white/8">
         <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.min(100, (xpg / scale) * 100)}%`, background: 'linear-gradient(90deg, var(--accent-strong), var(--accent-2))' }} />
-        <span className="absolute -top-1 -bottom-1 w-[3px] rounded-sm" style={{ left: `${Math.min(100, (ppg / scale) * 100)}%`, background: 'var(--ink)', boxShadow: '0 0 8px rgba(0,0,0,.4)' }} />
+        <span className="absolute -top-1 -bottom-1 w-[3px] rounded-sm" style={{ left: `${Math.min(100, (ppg / scale) * 100)}%`, background: 'var(--ink-1)', boxShadow: '0 0 8px rgba(0,0,0,.4)' }} />
       </div>
       <div className="mt-2 flex flex-wrap justify-between gap-x-4 gap-y-1 text-[12px] text-ink-2">
         <span><b className="metallic-num">{xpg.toFixed(1)} expected</b> (fill)</span>
@@ -603,7 +607,7 @@ function Fingerprint({ r }: { r: RatingRow }) {
 
 function EvidenceBand({ r, peers }: { r: RatingRow; peers: RatingRow[] }) {
   return (
-    <div className="mt-6 grid gap-6 rounded-xl border border-line bg-surface-1 p-4 md:grid-cols-[1.05fr_1fr] md:items-center">
+    <div className="mt-5 grid gap-6 rounded-xl border border-line bg-surface-1 p-4 md:grid-cols-2 md:items-start lg:mt-0 lg:grid-cols-1">
       <BulletGauge r={r} peers={peers} />
       <Fingerprint r={r} />
     </div>
@@ -708,8 +712,13 @@ function MarketScatter({ r, peers }: { r: RatingRow; peers: RatingRow[] }) {
             </g>
           ))}
           {priceTicks.map((t) => (
-            <text key={t} x={X(t)} y={H - PAD.b + 16} textAnchor="middle" fontSize="10" fill="var(--ink-3)">£{t}m</text>
+            <g key={t}>
+              <line x1={X(t)} x2={X(t)} y1={PAD.t} y2={H - PAD.b} stroke="var(--line)" strokeWidth="1" />
+              <text x={X(t)} y={H - PAD.b + 16} textAnchor="middle" fontSize="10" fill="var(--ink-3)">£{t}m</text>
+            </g>
           ))}
+          <line x1={PAD.l} y1={H - PAD.b} x2={W - PAD.r} y2={H - PAD.b} stroke="var(--line-mid)" />
+          <line x1={PAD.l} y1={PAD.t} x2={PAD.l} y2={H - PAD.b} stroke="var(--line-mid)" />
           {/* fair-price line */}
           <line x1={X(xMin)} y1={Y(clampY(fit(xMin)))} x2={X(xMax)} y2={Y(clampY(fit(xMax)))} stroke="var(--ink-3)" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.55" />
           {/* peers */}
@@ -739,7 +748,7 @@ function MarketScatter({ r, peers }: { r: RatingRow; peers: RatingRow[] }) {
                 x={X(d.x) + (d.x > (xMin + xMax) / 2 ? -9 : 9)}
                 y={Math.max(16, Y(d.y) - 8)}
                 textAnchor={d.x > (xMin + xMax) / 2 ? 'end' : 'start'}
-                fontSize="11.5" fontWeight="700" fill="var(--ink)"
+                fontSize="11.5" fontWeight="700" fill="var(--ink-1)"
                 stroke="var(--surface-1)" strokeWidth="4" style={{ paintOrder: 'stroke' }}
                 className="pointer-events-none"
               >

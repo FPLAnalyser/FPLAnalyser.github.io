@@ -11,19 +11,23 @@ function Hero() {
   const preseason = Boolean(info?.provisional)
   const seasonLabel = info?.label ?? '2026/27'
   const ratingsFrom = info?.ratings_season ? info.ratings_season.replace('-', '/') : null
+  // Wide screens: headline left, season note right — the note fills the space
+  // the capped reading measure would otherwise leave empty.
   return (
-    <section className="mb-5 md:mb-6">
-      <p className="mb-3 text-[11px] font-semibold tracking-[0.28em] text-accent uppercase">Data. Insight. Points.</p>
-      <h1 className="max-w-3xl text-2xl leading-[1.08] font-extrabold tracking-[-0.02em] text-ink md:text-4xl">
-        Turn Premier League data into FPL points.
-      </h1>
-      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-2 md:text-base">
-        FPL Analyser rates every player on the numbers that actually predict returns — expected goals, minutes, form and
-        fixtures — then turns them into a plain-language verdict and transfer calls for <em>your</em> team.
-      </p>
+    <section className="mb-5 grid items-start gap-x-10 gap-y-4 md:mb-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+      <div>
+        <p className="mb-3 text-[11px] font-semibold tracking-[0.28em] text-accent uppercase">Data. Insight. Points.</p>
+        <h1 className="text-2xl leading-[1.08] font-extrabold tracking-[-0.02em] text-ink md:text-4xl">
+          Turn Premier League data into FPL points.
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-2 md:text-base">
+          FPL Analyser rates every player on the numbers that actually predict returns — expected goals, minutes, form and
+          fixtures — then turns them into a plain-language verdict and transfer calls for <em>your</em> team.
+        </p>
+      </div>
 
       {preseason && (
-        <div className="mt-4 max-w-2xl rounded-xl border border-accent/25 bg-accent-soft/40 p-3.5">
+        <div className="rounded-xl border border-accent/25 bg-accent-soft/40 p-3.5 lg:mt-8">
           <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.14em] text-accent uppercase">
             <Icon name="star" size={13} /> Welcome to the {seasonLabel} season
           </div>

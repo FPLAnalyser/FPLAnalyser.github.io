@@ -13,9 +13,10 @@ import { Icon } from '../components/Icon'
 import { PageSkeleton } from '../components/Skeleton'
 import { EmptyState } from '../components/PageShell'
 import { PlayerCompare, ViewChips, compareLenses, type CompareLens } from '../components/CompareScatter'
+import { Exportable } from '../components/ExportPanel'
 import { useCore } from '../lib/useData'
 import { num, str, bool } from '../lib/rows'
-import { ratingToNum, norm, TOOLTIPS, playerHref } from '../lib/util'
+import { ratingToNum, norm, TOOLTIPS, playerHref, teamFullNames } from '../lib/util'
 import type { RatingRow, Row } from '../lib/types'
 
 // This is the app's "Players" hub: sortable leaderboards across every metric,
@@ -168,6 +169,63 @@ interface TabView {
   rows: Row[]
 }
 
+// Price slider bounds — wide enough for any FPL season.
+const PRICE_FLOOR = 3.5
+const PRICE_CEIL = 16
+
+/** The filter bar: price band, club, ownership and a nailed-minutes switch.
+ *  Applies to the table and the compare chart alike. */
+function FilterBar({ teams, priceMin, priceMax, setPriceMin, setPriceMax, teamFilter, setTeamFilter, ownership, setOwnership, nailedOnly, setNailedOnly, onReset, active }: {
+  teams: string[]
+  priceMin: number; priceMax: number
+  setPriceMin: (v: number) => void; setPriceMax: (v: number) => void
+  teamFilter: string; setTeamFilter: (v: string) => void
+  ownership: 'ALL' | 'template' | 'differential'; setOwnership: (v: 'ALL' | 'template' | 'differential') => void
+  nailedOnly: boolean; setNailedOnly: (v: boolean) => void
+  onReset: () => void
+  active: boolean
+}) {
+  const field = 'min-h-9 rounded-lg border border-line-mid bg-surface-1 px-2.5 text-sm text-ink focus:border-line-strong focus:outline-none'
+  return (
+    <div className="mb-4 rounded-xl border border-line bg-surface-1/60 p-3">
+      <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
+        <label className="flex flex-col gap-1">
+          <span className="text-[10px] font-bold tracking-[0.12em] text-ink-3 uppercase">Price</span>
+          <span className="flex items-center gap-1.5">
+            <input type="number" step="0.1" min={PRICE_FLOOR} max={PRICE_CEIL} value={priceMin} onChange={(e) => setPriceMin(Number(e.target.value))} className={`${field} w-[74px]`} aria-label="Minimum price" />
+            <span className="text-xs text-ink-3">to</span>
+            <input type="number" step="0.1" min={PRICE_FLOOR} max={PRICE_CEIL} value={priceMax} onChange={(e) => setPriceMax(Number(e.target.value))} className={`${field} w-[74px]`} aria-label="Maximum price" />
+          </span>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-[10px] font-bold tracking-[0.12em] text-ink-3 uppercase">Club</span>
+          <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)} className={`${field} w-[130px]`}>
+            <option value="ALL">All clubs</option>
+            {teams.map((t) => <option key={t} value={t}>{teamFullNames[t] || t}</option>)}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-[10px] font-bold tracking-[0.12em] text-ink-3 uppercase">Ownership</span>
+          <select value={ownership} onChange={(e) => setOwnership(e.target.value as 'ALL' | 'template' | 'differential')} className={`${field} w-[150px]`}>
+            <option value="ALL">Any ownership</option>
+            <option value="template">Template (20%+)</option>
+            <option value="differential">Differential (&lt;10%)</option>
+          </select>
+        </label>
+        <label className="flex min-h-9 items-center gap-2 text-sm text-ink-2">
+          <input type="checkbox" checked={nailedOnly} onChange={(e) => setNailedOnly(e.target.checked)} className="size-4 accent-[var(--accent)]" />
+          Nailed starters only
+        </label>
+        {active && (
+          <button onClick={onReset} className="min-h-9 rounded-lg border border-line-mid px-3 text-[13px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink">
+            Clear filters
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function Rankings() {
   const { data, error: coreError } = useCore()
   const navigate = useNavigate()
@@ -176,6 +234,12 @@ export default function Rankings() {
   const [query, setQuery] = useState('')
   const [viewMode, setViewMode] = useState<'table' | 'compare'>('table')
   const [compareLens, setCompareLens] = useState<CompareLens>('value')
+  const [priceMin, setPriceMin] = useState(PRICE_FLOOR)
+  const [priceMax, setPriceMax] = useState(PRICE_CEIL)
+  const [teamFilter, setTeamFilter] = useState('ALL')
+  const [ownership, setOwnership] = useState<'ALL' | 'template' | 'differential'>('ALL')
+  const [nailedOnly, setNailedOnly] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   const ratings = (data?.ratings ?? []) as RatingRow[]
   const metrics = data?.metrics ?? []
@@ -200,14 +264,35 @@ export default function Rankings() {
     return [ALL, GKP, DEF, MID, FWD]
   }, [isAttOnly, isOutfield, singlePos])
 
+  const allTeams = useMemo(() => [...new Set(ratings.map((p) => String(p.team)).filter(Boolean))].sort(), [ratings])
+
+  // Filters apply to the table AND the compare chart — one pool, two views.
+  const passesFilters = useMemo(() => {
+    return (p: Row): boolean => {
+      const price = num(p, 'price')
+      if (price != null && (price < priceMin || price > priceMax)) return false
+      if (teamFilter !== 'ALL' && String(p.team) !== teamFilter) return false
+      const own = num(p, 'selected_by_percent') ?? 0
+      if (ownership === 'template' && own < 20) return false
+      if (ownership === 'differential' && own >= 10) return false
+      if (nailedOnly) {
+        const sr = num(p, 'season_start_rate')
+        const m90 = num(p, 'season_mins90_rate')
+        // Nailed = starts nearly everything, or plays full shifts when fit.
+        if (!((sr ?? 0) >= 0.85 || ((sr ?? 0) >= 0.55 && (m90 ?? 0) >= 0.75))) return false
+      }
+      return true
+    }
+  }, [priceMin, priceMax, teamFilter, ownership, nailedOnly])
+
+  const filtersOn = priceMin > PRICE_FLOOR || priceMax < PRICE_CEIL || teamFilter !== 'ALL' || ownership !== 'ALL' || nailedOnly
+
   const view: TabView | null = useMemo(() => {
     // Leaderboards rank only players with enough minutes to earn a rating.
     // But when the user searches by name, widen to the full pool so newly
     // promoted clubs and new signings — who have no rating yet (shown N/A) —
     // are still findable and clickable through to their profile.
-    const seasonOk = query
-      ? ratings
-      : ratings.filter((p) => bool(p, 'season_ok'))
+    const seasonOk = (query ? ratings : ratings.filter((p) => bool(p, 'season_ok'))).filter(passesFilters)
     const applyPos = (rows: Row[]) => (pos === 'ALL' ? rows : rows.filter((p) => p.position === pos))
 
     switch (tab) {
@@ -430,6 +515,15 @@ export default function Rankings() {
         <div className="flex flex-wrap items-center gap-3">
           {posOptions.length > 1 ? <PillGroup options={posOptions} active={pos} onChange={setPos} /> : null}
           <ViewChips options={[{ id: 'table', label: 'Table' }, { id: 'compare', label: 'Compare' }]} active={viewMode} onChange={setViewMode} />
+          <button
+            onClick={() => setFiltersOpen((o) => !o)}
+            className={`min-h-9 rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${
+              filtersOn ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+            }`}
+            aria-expanded={filtersOpen}
+          >
+            Filters{filtersOn ? ' ·' : ''}
+          </button>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           {showSearch && (
@@ -464,6 +558,18 @@ export default function Rankings() {
       </div>
       )}
 
+      {showFilters && filtersOpen && (
+        <FilterBar
+          teams={allTeams}
+          priceMin={priceMin} priceMax={priceMax} setPriceMin={setPriceMin} setPriceMax={setPriceMax}
+          teamFilter={teamFilter} setTeamFilter={setTeamFilter}
+          ownership={ownership} setOwnership={setOwnership}
+          nailedOnly={nailedOnly} setNailedOnly={setNailedOnly}
+          active={filtersOn}
+          onReset={() => { setPriceMin(PRICE_FLOOR); setPriceMax(PRICE_CEIL); setTeamFilter('ALL'); setOwnership('ALL'); setNailedOnly(false) }}
+        />
+      )}
+
       {viewMode === 'compare' && tab !== 'totw' ? (
         (() => {
           // Single-position tabs (Goalkeepers, Clean Sheets) imply the
@@ -472,7 +578,7 @@ export default function Rankings() {
           return (
         <>
           <div className="mb-3 flex flex-wrap items-center gap-1.5">
-            {compareLenses(comparePos === 'GKP').map((l) => (
+            {compareLenses(comparePos === 'GKP' ? 'GKP' : comparePos === 'DEF' ? 'DEF' : 'ATT').map((l) => (
               <span key={l.id} className="flex items-center gap-1">
                 <button
                   onClick={() => setCompareLens(l.id)}
@@ -486,12 +592,14 @@ export default function Rankings() {
               </span>
             ))}
           </div>
-          <PlayerCompare
-            rows={(comparePos === 'ALL' ? ratings : ratings.filter((p) => p.position === comparePos)).filter((p) => bool(p, 'season_ok')) as RatingRow[]}
-            lens={compareLens}
-            highlightName={query || null}
-            onPlayer={toPlayer}
-          />
+          <Exportable title={`${comparePos === 'ALL' ? 'Players' : comparePos} — ${compareLens === 'value' ? 'price vs rating' : compareLens === 'roles' ? 'role map' : 'momentum'}`}>
+            <PlayerCompare
+              rows={(comparePos === 'ALL' ? ratings : ratings.filter((p) => p.position === comparePos)).filter((p) => bool(p, 'season_ok') && passesFilters(p)) as RatingRow[]}
+              lens={compareLens}
+              highlightName={query || null}
+              onPlayer={toPlayer}
+            />
+          </Exportable>
         </>
           )
         })()
@@ -501,18 +609,22 @@ export default function Rankings() {
         <FormTables rows={seasonToDate} pos={pos} onPlayer={toPlayer} />
       ) : view ? (
         view.rows.length ? (
-          <SortableTable
-            rows={view.rows}
-            columns={view.columns}
-            initialSort="rank"
-            initialDir="asc"
-            rowKey={(r) => String(r.element)}
-            onRowClick={(r) => toPlayer(String(r.web_name), num(r, 'code'))}
-            featured={!query}
-          />
+          <Exportable title={TABS.find((t) => t.id === tab)?.label ?? 'Players'}>
+            <SortableTable
+              rows={view.rows}
+              columns={view.columns}
+              initialSort="rank"
+              initialDir="asc"
+              rowKey={(r) => String(r.element)}
+              onRowClick={(r) => toPlayer(String(r.web_name), num(r, 'code'))}
+              featured={!query}
+            />
+          </Exportable>
         ) : (
           <EmptyState icon={<Icon name="search" size={44} />}>
-            No players match “{query}” in this ranking. Try another tab or clear the search.
+            {query
+              ? <>No players match “{query}” in this ranking. Try another tab or clear the search.</>
+              : <>No players match these filters. Try widening the price band or clearing the filters.</>}
           </EmptyState>
         )
       ) : (
