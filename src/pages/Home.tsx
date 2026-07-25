@@ -40,19 +40,19 @@ const IMG_BASE = import.meta.env.BASE_URL
 interface HomeWin { key: string; to: string; kicker: string; title: string; desc: string; stat: string; ghost?: { text: string; style: CSSProperties } }
 const WINDOWS: HomeWin[] = [
   { key: 'players', to: '/players', kicker: 'Explore', title: 'Players', desc: 'Every player rated 0–100 — form, value, fixtures and the editorial player hero.', stat: '600+ rated',
-    ghost: { text: '8', style: { right: '3%', bottom: '-8%', fontSize: 'clamp(120px,16vw,190px)' } } },
+    ghost: { text: '8', style: { right: '2%', bottom: '-6%', fontSize: 'clamp(80px,9vw,150px)' } } },
   { key: 'teams', to: '/teams', kicker: 'Explore', title: 'Teams', desc: 'Attack, defence and set-piece ratings for all 20 clubs, with matchup previews.', stat: '20 clubs',
-    ghost: { text: 'AFC', style: { left: '5%', bottom: '2%', fontSize: 'clamp(72px,9vw,120px)', WebkitTextStroke: '2px rgba(255,255,255,.10)' } } },
+    ghost: { text: 'AFC', style: { left: '5%', bottom: '1%', fontSize: 'clamp(46px,6vw,86px)', WebkitTextStroke: '2px rgba(255,255,255,.10)' } } },
   { key: 'fixtures', to: '/fixtures', kicker: 'Plan', title: 'Fixtures', desc: 'Our own fixture rating and rotation planner.', stat: 'Next 6 GWs' },
   { key: 'scouting', to: '/scout', kicker: 'Discover', title: 'Scouting', desc: 'Filter the market for your next differential.', stat: 'Find gems' },
   { key: 'squad', to: '/squad', kicker: 'Build', title: 'Squad Builder', desc: 'Draft an XI and plan the season week by week.', stat: '£100.0m' },
   { key: 'myteam', to: '/loadteam', kicker: 'Track', title: 'My Team', desc: 'Link your side for a live rated breakdown.', stat: 'Live GW1',
-    ghost: { text: '★', style: { right: '6%', top: '8%', fontSize: 'clamp(70px,9vw,110px)', WebkitTextStroke: '2px color-mix(in srgb, var(--accent) 18%, transparent)' } } },
+    ghost: { text: '★', style: { right: '6%', top: '6%', fontSize: 'clamp(44px,6vw,84px)', WebkitTextStroke: '2px color-mix(in srgb, var(--accent) 18%, transparent)' } } },
 ]
 
 function ArrowRight() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-1">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-0.5">
       <path d="M5 12h14M13 6l6 6-6 6" />
     </svg>
   )
@@ -62,7 +62,12 @@ function WindowCard({ w }: { w: HomeWin }) {
   const navigate = useNavigate()
   const [loaded, setLoaded] = useState(false)
   return (
-    <button type="button" onClick={() => navigate(w.to)} className="hw-card group min-h-[190px] lg:min-h-0" aria-label={`${w.title} — ${w.desc}`}>
+    <button
+      type="button"
+      onClick={() => navigate(w.to)}
+      className="hw-card group aspect-[3/4] sm:aspect-[10/15] lg:aspect-auto lg:h-full lg:min-h-0 lg:flex-1 lg:basis-0"
+      aria-label={`${w.title} — ${w.desc}`}
+    >
       <div className={`hw-photo hw-${w.key}`}>
         <img
           src={`${IMG_BASE}home/${w.key}.jpg`}
@@ -76,12 +81,12 @@ function WindowCard({ w }: { w: HomeWin }) {
       {w.ghost && <div className="hw-ghost" style={w.ghost.style}>{w.ghost.text}</div>}
       <div className="hw-grain" />
       <div className="hw-body">
-        <span className="mb-1.5 inline-flex items-center gap-1.5 text-[0.62rem] font-extrabold tracking-[0.16em] text-accent-2 uppercase">◆ {w.kicker}</span>
-        <h3 className="font-display text-2xl leading-none text-white uppercase md:text-[1.75rem]">{w.title}</h3>
-        <p className="mt-1.5 max-w-[34ch] text-[13px] leading-snug text-[#d8d2c6]">{w.desc}</p>
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-sm">{w.stat}</span>
-          <span className="inline-flex items-center gap-1.5 text-sm font-extrabold text-accent-2"><span className="hidden sm:inline">Open</span> <ArrowRight /></span>
+        <span className="mb-1 inline-flex items-center gap-1.5 text-[0.58rem] font-extrabold tracking-[0.16em] text-accent-2 uppercase">◆ {w.kicker}</span>
+        <h3 className="font-display text-lg leading-[0.95] text-white uppercase md:text-xl">{w.title}</h3>
+        <div className="mt-2 mb-2.5 h-0.5 w-7 rounded-full" style={{ background: 'linear-gradient(90deg, var(--accent-2), var(--accent-strong))' }} />
+        <div className="flex items-center justify-between gap-1.5">
+          <span className="truncate text-[11px] font-bold text-[#e9e4d8]">{w.stat}</span>
+          <span className="grid size-7 shrink-0 place-items-center rounded-full border border-white/20 bg-white/10 text-accent-2 backdrop-blur-sm"><ArrowRight /></span>
         </div>
       </div>
     </button>
@@ -117,7 +122,7 @@ export default function Home() {
       <div
         ref={gridRef}
         style={gridH ? { height: gridH } : undefined}
-        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:grid-rows-2 lg:gap-4"
+        className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:flex lg:gap-3.5"
       >
         {WINDOWS.map((w) => <WindowCard key={w.key} w={w} />)}
       </div>
