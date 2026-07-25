@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PageHeader, PageShell } from '../components/PageShell'
+import { PageShell } from '../components/PageShell'
+import { SectionBanner } from '../components/SectionBanner'
 import { PageSkeleton } from '../components/Skeleton'
 import { Tabs, type TabDef } from '../components/Tabs'
 import { TeamBadge } from '../components/badges'
@@ -188,7 +189,7 @@ export default function SquadBuilder() {
   if (!data) {
     return (
       <PageShell>
-        <PageHeader title="Squad Builder" subtitle="Build a 15-man squad within £100m and rate it" />
+        <SectionBanner imgKey="squad" title="Squad Builder" subtitle="Build a 15-man squad within £100m and rate it" />
         <PageSkeleton error={error} />
       </PageShell>
     )
@@ -196,7 +197,7 @@ export default function SquadBuilder() {
 
   return (
     <PageShell>
-      <PageHeader title="Squad Builder" subtitle="Pick a full 15 within £100m, then plan your gameweeks — transfers, captain and chips" />
+      <SectionBanner imgKey="squad" title="Squad Builder" subtitle="Pick a full 15 within £100m, then plan your gameweeks — transfers, captain and chips" />
 
       {/* Build / Plan toggle */}
       <div className="mb-5 flex flex-wrap items-center gap-2">

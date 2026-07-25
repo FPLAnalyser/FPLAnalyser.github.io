@@ -1,7 +1,10 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import { flushSync } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../components/Icon'
+import { GameweekCover } from '../components/GameweekCover'
 import { useSeason } from '../lib/season'
+import { useCore } from '../lib/useData'
 
 function Hero() {
   const { info } = useSeason()
@@ -59,10 +62,18 @@ function ArrowRight() {
 function WindowCard({ w }: { w: HomeWin }) {
   const navigate = useNavigate()
   const [loaded, setLoaded] = useState(false)
+  // Tile grows into the section: wrap the route change in a view transition
+  // where supported (and motion isn't reduced) so the page cross-fades/scales.
+  const go = () => {
+    const start = (document as unknown as { startViewTransition?: (cb: () => void) => void }).startViewTransition?.bind(document)
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (start && !reduced) start(() => flushSync(() => navigate(w.to)))
+    else navigate(w.to)
+  }
   return (
     <button
       type="button"
-      onClick={() => navigate(w.to)}
+      onClick={go}
       className="hw-card group aspect-[3/4] sm:aspect-[10/15] lg:aspect-auto lg:h-full lg:min-h-0 lg:flex-1 lg:basis-0"
       aria-label={`${w.title} — ${w.desc}`}
     >
@@ -92,6 +103,7 @@ function WindowCard({ w }: { w: HomeWin }) {
 }
 
 export default function Home() {
+  const { data } = useCore()
   const rootRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   // On desktop, size the grid so the six equal windows fill the viewport with
@@ -116,6 +128,7 @@ export default function Home() {
 
   return (
     <div ref={rootRef} className="mx-auto w-full max-w-[1760px] px-4 pt-5 pb-6 md:px-6 md:pt-6 lg:pb-0">
+      {data && <GameweekCover data={data} />}
       <Hero />
       <div
         ref={gridRef}

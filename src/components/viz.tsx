@@ -115,7 +115,14 @@ export function Sparkline({
         fill={`url(#${gid})`}
       />
       <polyline points={pts} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx={x(vals.length - 1).toFixed(1)} cy={y(vals[vals.length - 1]).toFixed(1)} r={3} fill={color} />
+      {/* emphasised endpoint — brighter dot with a soft glow halo */}
+      <circle cx={x(vals.length - 1).toFixed(1)} cy={y(vals[vals.length - 1]).toFixed(1)} r={6} fill={color} opacity={0.25} />
+      <circle
+        cx={x(vals.length - 1).toFixed(1)}
+        cy={y(vals[vals.length - 1]).toFixed(1)}
+        r={3}
+        fill={tone === 'accent' ? 'var(--accent-2)' : color}
+      />
     </svg>
   )
 }

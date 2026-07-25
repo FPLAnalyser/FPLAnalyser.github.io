@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PageHeader, PageShell, EmptyState } from '../components/PageShell'
+import { PageShell, EmptyState } from '../components/PageShell'
+import { SectionBanner } from '../components/SectionBanner'
+import { SeasonWrapped } from '../components/SeasonWrapped'
 import { SkeletonBlock } from '../components/Skeleton'
 import { StarRating } from '../components/StarRating'
 import { Tabs, type TabDef } from '../components/Tabs'
@@ -64,7 +66,7 @@ export default function MyTeam() {
   if (preseason) {
     return (
       <PageShell>
-        <PageHeader title="My Team" subtitle="Your squad, ratings and a personalised weekly report" />
+        <SectionBanner imgKey="myteam" title="My Team" subtitle="Your squad, ratings and a personalised weekly report" />
         <div className="rounded-2xl border border-line bg-surface-1/60 p-6 text-center md:p-10">
           <div className="mx-auto mb-3 grid size-12 place-items-center rounded-full bg-accent-soft text-accent"><Icon name="clock" size={22} /></div>
           <div className="mb-1 text-lg font-bold text-ink">Available after Gameweek 1</div>
@@ -79,7 +81,7 @@ export default function MyTeam() {
 
   return (
     <PageShell>
-      <PageHeader title="My Team" subtitle="Enter your FPL Team ID for your squad, ratings and a personalised weekly report" />
+      <SectionBanner imgKey="myteam" title="My Team" subtitle="Enter your FPL Team ID for your squad, ratings and a personalised weekly report" />
 
       <div className="mb-2 flex max-w-md gap-2">
         <input
@@ -161,6 +163,8 @@ function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
 
   return (
     <div>
+      {/* End-of-season story — renders only once all 38 GWs are played */}
+      <SeasonWrapped history={historyData} teamName={entryData?.name ? String(entryData.name) : undefined} />
       <div className="mb-5">
         <Tabs tabs={SQUAD_TABS(hasLeagues)} active={tab} onChange={(id) => setTab(id as SquadTab)} layoutId="myteam-tab" />
       </div>

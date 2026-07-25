@@ -162,7 +162,11 @@ export function RatingCard({
     >
       <div className="absolute inset-x-0 top-0 h-[3px]" style={{ background: T.edge }} />
       {tier === 'elite' && (
-        <div className="pointer-events-none absolute inset-0 opacity-[0.06]" style={{ background: 'conic-gradient(from 0deg,#e7c877,#fff6d8,#b98f3f,#e7c877,#fff6d8,#b98f3f,#e7c877)' }} />
+        <>
+          <div className="pointer-events-none absolute inset-0 opacity-[0.06]" style={{ background: 'conic-gradient(from 0deg,#e7c877,#fff6d8,#b98f3f,#e7c877,#fff6d8,#b98f3f,#e7c877)' }} />
+          {/* pulled-rare foil sweep — 90+ only, so it stays special */}
+          <div className="foil-shine" aria-hidden="true" />
+        </>
       )}
       {captain && <span className={`absolute z-10 grid place-items-center rounded-full bg-accent font-bold text-accent-contrast ${compact ? 'top-2 right-2 size-5 text-[10px]' : 'top-3 right-3 size-6 text-[11px]'}`}>C</span>}
       {viceCaptain && <span className={`absolute z-10 grid place-items-center rounded-full bg-surface-3 font-bold text-ink ${compact ? 'top-2 right-2 size-5 text-[10px]' : 'top-3 right-3 size-6 text-[11px]'}`}>V</span>}

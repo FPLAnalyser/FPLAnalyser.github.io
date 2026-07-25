@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { PageHeader, PageShell, EmptyState } from '../components/PageShell'
+import { PageShell, EmptyState } from '../components/PageShell'
+import { SectionBanner, StadiumBanner } from '../components/SectionBanner'
 import { SortableTable, type Column } from '../components/SortableTable'
 import { SearchBox } from '../components/SearchBox'
 import { Tabs, type TabDef } from '../components/Tabs'
@@ -89,7 +90,7 @@ export default function Teams() {
   if (!data) {
     return (
       <PageShell>
-        <PageHeader title="Team Search" subtitle="Search for a team to see their metrics and player ratings" />
+        <SectionBanner imgKey="teams" title="Teams" subtitle="Search for a team to see their metrics and player ratings" />
         <PageSkeleton error={coreError} />
       </PageShell>
     )
@@ -101,7 +102,22 @@ export default function Teams() {
 
   return (
     <PageShell>
-      <PageHeader title="Team Search" subtitle="Search for a team to see their metrics and player ratings" />
+      {selected && seasonByTeam.has(selected) ? (
+        <StadiumBanner
+          team={selected}
+          stats={(() => {
+            const r = ratingByTeam.get(selected)
+            if (!r) return undefined
+            const out: { label: string; value: string }[] = []
+            if (r.attack != null) out.push({ label: 'Attack', value: String(Math.round(Number(r.attack))) })
+            if (r.defence != null) out.push({ label: 'Defence', value: String(Math.round(Number(r.defence))) })
+            if (r.set_piece_share != null) out.push({ label: 'Set piece xG', value: `${Math.round(Number(r.set_piece_share) * 100)}%` })
+            return out
+          })()}
+        />
+      ) : (
+        <SectionBanner imgKey="teams" title="Teams" subtitle="Search for a team to see their metrics and player ratings" />
+      )}
 
       <div className="mb-6">
         <SearchBox

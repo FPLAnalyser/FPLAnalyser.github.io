@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PageHeader, PageShell } from '../components/PageShell'
+import { PageShell } from '../components/PageShell'
+import { SectionBanner } from '../components/SectionBanner'
+import { TeamOfTheWeek } from '../components/TeamOfTheWeek'
 import { Tabs, PillGroup, type TabDef } from '../components/Tabs'
 import { SortableTable, type Column } from '../components/SortableTable'
 import { StarRating } from '../components/StarRating'
@@ -29,6 +31,7 @@ const TABS: TabDef[] = [
   { id: 'value', label: 'Value Picks', icon: <Icon name="coin" size={13} /> },
   { id: 'form', label: 'Form', icon: <span className="text-hot"><Icon name="flame" size={13} solid /></span> },
   { id: 'next4', label: 'Next 4 GWs', icon: <Icon name="calendar" size={13} /> },
+  { id: 'totw', label: 'Team of the Week', icon: <Icon name="trophy" size={13} /> },
 ]
 
 const TOP_N = 30
@@ -375,17 +378,18 @@ export default function Rankings() {
   if (!data) {
     return (
       <PageShell>
-        <PageHeader title="Players" subtitle="Every player ranked — search, sort and dig into the numbers" />
+        <SectionBanner imgKey="players" title="Players" subtitle="Every player ranked — search, sort and dig into the numbers" />
         <PageSkeleton error={coreError} />
       </PageShell>
     )
   }
 
-  const showSearch = tab !== 'form'
+  const showSearch = tab !== 'form' && tab !== 'totw'
+  const showFilters = tab !== 'totw'
 
   return (
     <PageShell>
-      <PageHeader title="Players" subtitle="Every player ranked — search, sort and dig into the numbers" />
+      <SectionBanner imgKey="players" title="Players" subtitle="Every player ranked — search, sort and dig into the numbers" />
       {/* Desktop: tab strip. Mobile: a reliable native dropdown (tabs were
           hard to reach in a horizontal scroller on a phone). */}
       <div className="mb-4 hidden md:block">
@@ -418,6 +422,7 @@ export default function Rankings() {
         </div>
       )}
 
+      {showFilters && (
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {posOptions.length > 1 ? <PillGroup options={posOptions} active={pos} onChange={setPos} /> : <div />}
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
@@ -451,8 +456,11 @@ export default function Rankings() {
           </button>
         </div>
       </div>
+      )}
 
-      {tab === 'form' ? (
+      {tab === 'totw' ? (
+        <TeamOfTheWeek ratings={ratings} currentGw={data.meta?.current_gw ?? null} onPlayer={toPlayer} />
+      ) : tab === 'form' ? (
         <FormTables rows={seasonToDate} pos={pos} onPlayer={toPlayer} />
       ) : view ? (
         view.rows.length ? (

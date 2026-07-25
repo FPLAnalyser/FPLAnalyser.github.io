@@ -29,10 +29,10 @@
 
 :root {
   /* Constant across themes */
-  --star-c: #e0c074;            /* ratings stay warm gold in every theme */
+  --star-c: #e2c06a;            /* ratings stay warm gold in every theme */
   --good: #3ddc7a; --warn: #e8b04a; --bad: #f0736f; --info: #6ea8ff;
   --hot: #ff5a3c; --cold: #4ea3ff;   /* hot streak = fiery red · cold streak = frost blue */
-  --chart-1: #d9b45c; --chart-2: #6ea8ff; --chart-3: #57c993; --chart-4: #e2649b; --chart-5: #b79bf0;
+  --chart-1: #c9a227; --chart-2: #6ea8ff; --chart-3: #57c993; --chart-4: #e2649b; --chart-5: #b79bf0;
   --font-ui: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-num: 'Manrope', system-ui, sans-serif;
   --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px; --radius-xl: 20px;
@@ -197,7 +197,8 @@ body {
 @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
 .skel {
   border-radius: 8px;
-  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  /* warm gold-tinted shimmer — even loading is on-brand */
+  background: linear-gradient(90deg, var(--surface-2) 25%, color-mix(in srgb, var(--accent) 12%, var(--surface-3)) 50%, var(--surface-2) 75%);
   background-size: 800px 100%;
   animation: shimmer 1.4s infinite linear;
 }
@@ -268,6 +269,84 @@ body {
   radial-gradient(75% 65% at 50% 22%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 60%),
   linear-gradient(160deg, #1c160c, #0a0806); }
 .hw-compare { background: linear-gradient(120deg, #141009, #0a0806); }
+
+/* ════════════════════════════════════════════════════════════════════════
+   Section hero banners — each section opens with its home-tile photo as a
+   slim banner (tile → page continuity). Stadium variant for team pages.
+   ════════════════════════════════════════════════════════════════════════ */
+.sb {
+  position: relative; display: flex; flex-direction: column; justify-content: flex-end;
+  min-height: 132px; border-radius: var(--radius-xl); overflow: hidden;
+  border: 1px solid var(--line-subtle); isolation: isolate; margin-bottom: 1.4rem;
+  background: var(--surface-1);
+}
+@media (min-width: 768px) { .sb { min-height: 168px; } }
+.sb-photo { position: absolute; inset: 0; z-index: 0; }
+.sb::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(to top, rgba(0,0,0,.9) 0%, rgba(0,0,0,.48) 46%, rgba(0,0,0,.12) 80%); }
+.sb::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; z-index: 3;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 78%, transparent), transparent); }
+.sb-inner { position: relative; z-index: 2; display: flex; align-items: flex-end; justify-content: space-between;
+  gap: .8rem; flex-wrap: wrap; padding: .95rem 1.15rem .9rem; }
+.sb-crumbs { font-size: .66rem; letter-spacing: .16em; text-transform: uppercase; font-weight: 700;
+  color: var(--accent-2); margin-bottom: .35rem; }
+.sb-crumbs span { color: rgba(255,255,255,.4); }
+.sb-title { font-weight: 800; font-size: clamp(1.9rem, 4.5vw, 2.9rem); line-height: .9;
+  letter-spacing: .02em; text-transform: uppercase; color: #fff; }
+.sb-sub { margin-top: .35rem; color: #d8d2c6; font-size: .82rem; max-width: 60ch; }
+.sb-tools { display: flex; gap: .5rem; align-items: center; }
+
+/* Stadium banner (team pages): club-tinted floodlit bowl behind the club name.
+   --club-glow is set inline from the club's primary colour. */
+.sb-stadium { min-height: 190px; }
+@media (min-width: 768px) { .sb-stadium { min-height: 240px; } }
+.sb-bowl { position: absolute; inset: 0; z-index: 0;
+  background:
+    radial-gradient(140% 90% at 50% -30%, rgba(255,255,255,.14), transparent 55%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.045) 0 3px, transparent 3px 7px); }
+.sb-clubglow { position: absolute; inset: 0; z-index: 0;
+  background: radial-gradient(120% 100% at 50% 115%, var(--club-glow, rgba(201,162,39,.5)), transparent 65%); }
+.sb-pitchline { position: absolute; left: 0; right: 0; bottom: 0; height: 22%; z-index: 0;
+  background: repeating-linear-gradient(90deg, #0d3d24 0 9%, #0f472a 9% 18%);
+  -webkit-mask: linear-gradient(180deg, transparent, #000 60%); mask: linear-gradient(180deg, transparent, #000 60%); }
+.sb-statchip { border: 1px solid rgba(255,255,255,.16); background: rgba(0,0,0,.35);
+  border-radius: 10px; padding: .38rem .62rem; backdrop-filter: blur(4px); text-align: center; }
+
+/* ── Elite foil shimmer (rating cards, overall 90+) ── */
+.foil-shine { position: absolute; inset: -40%; z-index: 1; pointer-events: none;
+  background: linear-gradient(115deg, transparent 42%, rgba(255,246,216,.32) 50%, transparent 58%);
+  animation: foil-sweep 3.4s ease-in-out infinite; }
+@keyframes foil-sweep { 0%, 100% { transform: translateX(-45%); } 50% { transform: translateX(45%); } }
+@media (prefers-reduced-motion: reduce) { .foil-shine { display: none; } }
+
+/* ── Tile→page view transition (guarded: only runs when the browser supports
+   the View Transitions API and motion isn't reduced) ── */
+@media not (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root) { animation: vt-out .26s ease both; }
+  ::view-transition-new(root) { animation: vt-in .32s cubic-bezier(.2,.7,.3,1) both; }
+}
+@keyframes vt-out { to { opacity: 0; transform: scale(.985); } }
+@keyframes vt-in { from { opacity: 0; transform: scale(1.015); } }
+
+/* ── Team of the Week: card-by-card reveal on a black pitch ── */
+.totw-pitch { border-radius: var(--radius-xl); border: 1px solid var(--line-subtle); overflow: hidden;
+  background:
+    radial-gradient(80% 50% at 50% 0%, rgba(201,162,39,.08), transparent 60%),
+    repeating-linear-gradient(90deg, #07190f 0 12.5%, #081d12 12.5% 25%),
+    linear-gradient(180deg, #081b10, #04100a); }
+.totw-card { opacity: 0; transform: translateY(14px) rotateX(28deg);
+  animation: totw-reveal .6s cubic-bezier(.2,.7,.3,1) forwards; }
+@keyframes totw-reveal { to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .totw-card { opacity: 1; transform: none; animation: none; } }
+
+/* ── Full-screen story overlays (Gameweek cover · Season Wrapped) ── */
+.story-overlay { position: fixed; inset: 0; z-index: 190; display: flex; flex-direction: column;
+  overflow: hidden; background: #000; animation: story-in .4s ease both; }
+@keyframes story-in { from { opacity: 0; } }
+.story-rise { animation: story-rise .6s cubic-bezier(.2,.7,.3,1) both; }
+@keyframes story-rise { from { opacity: 0; transform: translateY(16px); } }
+@media (prefers-reduced-motion: reduce) { .story-overlay, .story-rise { animation: none; } }
+.wrapped-h em { font-style: normal; color: var(--wrapped-em, var(--accent-2)); }
 
 /* ════════════════════════════════════════════════════════════════════════
    Intro splash — one-time animated wordmark reveal on floodlit turf.
