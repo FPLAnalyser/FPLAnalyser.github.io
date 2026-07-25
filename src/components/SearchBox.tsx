@@ -5,6 +5,8 @@ import { norm } from '../lib/util'
 interface Props<T> {
   items: T[]
   getLabel: (item: T) => string
+  /** Extra text to match on beyond the label (aliases, full names). */
+  getSearchText?: (item: T) => string
   renderItem?: (item: T) => ReactNode
   onSelect: (item: T) => void
   placeholder?: string
@@ -15,7 +17,7 @@ interface Props<T> {
 }
 
 /** Accent-insensitive live-search input with a results dropdown (mouse + touch). */
-export function SearchBox<T>({ items, getLabel, renderItem, onSelect, placeholder = 'Search…', limit = 8, initialValue = '', clearOnSelect = false }: Props<T>) {
+export function SearchBox<T>({ items, getLabel, getSearchText, renderItem, onSelect, placeholder = 'Search…', limit = 8, initialValue = '', clearOnSelect = false }: Props<T>) {
   const [q, setQ] = useState(initialValue)
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
@@ -34,8 +36,8 @@ export function SearchBox<T>({ items, getLabel, renderItem, onSelect, placeholde
   const matches = useMemo(() => {
     const nq = norm(q.trim())
     if (!nq) return []
-    return items.filter((it) => norm(getLabel(it)).includes(nq)).slice(0, limit)
-  }, [q, items, getLabel, limit])
+    return items.filter((it) => (getSearchText ? getSearchText(it) : norm(getLabel(it))).includes(nq)).slice(0, limit)
+  }, [q, items, getLabel, getSearchText, limit])
 
   const pick = (item: T) => {
     onSelect(item)

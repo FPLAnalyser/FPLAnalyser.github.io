@@ -22,7 +22,7 @@ function Hero() {
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-2 md:text-base">
           FPL Analyser rates every player on the numbers that actually predict returns — expected goals, minutes, form and
-          fixtures — then turns them into a plain-language verdict and transfer calls for <em>your</em> team.
+          fixtures — then turns them into a plain-language verdict and transfer calls for <strong className="font-semibold text-ink">your</strong> team.
         </p>
       </div>
 

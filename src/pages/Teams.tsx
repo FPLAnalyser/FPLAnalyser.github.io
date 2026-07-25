@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { PageShell, EmptyState } from '../components/PageShell'
 import { SectionBanner, StadiumBanner } from '../components/SectionBanner'
 import { TeamStory, PointsMix } from '../components/TeamStory'
+import { Exportable } from '../components/ExportPanel'
 import { SortableTable, type Column } from '../components/SortableTable'
 import { SearchBox } from '../components/SearchBox'
 import { Tabs, type TabDef } from '../components/Tabs'
@@ -140,7 +141,7 @@ export default function Teams() {
 
       {selected && seasonByTeam.has(selected) ? (
         <div className="flex flex-col gap-4">
-          <TeamStory team={selected} data={data} />
+          <Exportable title={`${teamLabel(selected)} — the brief`}><TeamStory team={selected} data={data} /></Exportable>
           <TeamReceipts
             team={selected}
             data={data}
@@ -229,6 +230,7 @@ function TeamReceipts({ team, data, season, gw4, ratingByTeam, metricRows, ratin
           </button>
         ))}
       </div>
+      <Exportable title={`${teamLabel(team)} — ${tab === 'dashboard' ? 'club dashboard' : 'squad'}`}>
       {tab === 'dashboard' ? (
         <div className="grid items-start gap-3 md:grid-cols-2">
           <ClubCard team={team} season={season} gw4={gw4} fixtureEase={fixtureEase} />
@@ -240,6 +242,7 @@ function TeamReceipts({ team, data, season, gw4, ratingByTeam, metricRows, ratin
       ) : (
         <TeamCard team={team} metricRows={metricRows} ratingRows={ratingRows} ratings={ratings} fixtureEase={fixtureEase} />
       )}
+      </Exportable>
     </div>
   )
 }

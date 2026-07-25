@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Icon } from './Icon'
 import { TeamBadge, PositionIcon } from './badges'
 import { useCore } from '../lib/useData'
-import { norm, teamFullNames, playerHref } from '../lib/util'
+import { norm, teamFullNames, playerHref, searchText } from '../lib/util'
 import { num } from '../lib/rows'
 import type { RatingRow } from '../lib/types'
 
@@ -78,7 +78,7 @@ export function GlobalSearch({
     const nq = norm(q.trim())
     if (!nq) return [] as Item[]
     const t = teams.filter((it) => norm(it.label).includes(nq) || norm(it.code).includes(nq)).slice(0, 3)
-    const p = players.filter((it) => norm(it.label).includes(nq)).slice(0, 8 - t.length)
+    const p = players.filter((it) => searchText(it.label).includes(nq)).slice(0, 8 - t.length)
     return [...t, ...p]
   }, [q, players, teams])
 

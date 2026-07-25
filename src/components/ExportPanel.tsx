@@ -30,10 +30,10 @@ export function setHandle(v: string) {
 }
 
 type Format = 'wide' | 'square' | 'story'
-const FORMATS: { id: Format; label: string; hint: string; w: number; h: number | null }[] = [
-  { id: 'wide', label: 'Twitter / X', hint: '16:9', w: 1600, h: 900 },
-  { id: 'square', label: 'Instagram', hint: '1:1', w: 1080, h: 1080 },
-  { id: 'story', label: 'Story', hint: '9:16', w: 1080, h: 1920 },
+const FORMATS: { id: Format; label: string; hint: string; w: number; h: number | null; handle: string }[] = [
+  { id: 'wide', label: 'Twitter / X', hint: '16:9', w: 1600, h: 900, handle: '@FPLAnalyser' },
+  { id: 'square', label: 'Instagram', hint: '1:1', w: 1080, h: 1080, handle: '@fpl_analyser' },
+  { id: 'story', label: 'Story', hint: '9:16', w: 1080, h: 1920, handle: '@fpl_analyser' },
 ]
 
 /** Draw the captured panel onto a branded canvas of the chosen aspect. */
@@ -119,7 +119,7 @@ export function Exportable({ title, filename, children, className }: {
         logging: false,
       })
       const spec = FORMATS.find((f) => f.id === fmt)!
-      const canvas = brand(shot, spec, title, handle, dark)
+      const canvas = brand(shot, spec, title, handle || spec.handle, dark)
       const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, 'image/png'))
       if (!blob) throw new Error('render failed')
       const name = `${filename ?? title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${fmt}.png`
@@ -175,11 +175,11 @@ export function Exportable({ title, filename, children, className }: {
             ))}
           </div>
           <label className="mb-2 block">
-            <span className="mb-1 block text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Your handle (appears on every export)</span>
+            <span className="mb-1 block text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Byline — defaults to the account for this platform</span>
             <input
               value={handle}
               onChange={(e) => { setHandleState(e.target.value); setHandle(e.target.value) }}
-              placeholder="@yourname"
+              placeholder={FORMATS.find((f) => f.id === fmt)!.handle}
               className="min-h-9 w-full max-w-xs rounded-lg border border-line-mid bg-surface-2 px-2.5 text-sm text-ink placeholder:text-ink-3 focus:border-line-strong focus:outline-none"
             />
           </label>
