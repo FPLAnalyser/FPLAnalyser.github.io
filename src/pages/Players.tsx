@@ -4,20 +4,20 @@ import { PageShell, EmptyState } from '../components/PageShell'
 import { SectionBanner } from '../components/SectionBanner'
 import { SearchBox } from '../components/SearchBox'
 import { StarRating, ratingTo100 } from '../components/StarRating'
-import { Radar, MiniBar, ConcentrationBar, CHART_COLORS, type Tone } from '../components/viz'
-import { AnimatedCounter } from '../components/AnimatedCounter'
+import { MiniBar, ConcentrationBar, CHART_COLORS, type Tone } from '../components/viz'
 import { InfoTip } from '../components/InfoTip'
 import { Icon, type IconName } from '../components/Icon'
 import { TeamBadge, PositionIcon } from '../components/badges'
 import { PageSkeleton } from '../components/Skeleton'
 import { PlayerPhoto as PhotoImg } from '../components/PlayerPhoto'
 import { ShareCard } from '../components/ShareCard'
+import { DecisionRow, StoryModules, MatchupBars } from '../components/PlayerStory'
 import { PlayerScatterMap, PlayerZoneMap } from '../components/ShotMap'
 import { useCore } from '../lib/useData'
 import { num, str, bool } from '../lib/rows'
 import { teamFullNames, teamColors, TOOLTIPS } from '../lib/util'
 import { buildPlayerBundle, buildPlayerVerdict } from '../lib/insights/narrative'
-import type { CoreData, RatingRow, Row } from '../lib/types'
+import type { CoreData, RatingRow } from '../lib/types'
 
 const personaTip = (name: string): string | undefined => (TOOLTIPS.personas as Record<string, string>)[name]
 const metricTip = (key: string): string | undefined => { const v = TOOLTIPS[key]; return typeof v === 'string' ? v : undefined }
@@ -54,15 +54,6 @@ const ATT_POS_DIMS: Dim[] = [
   ['Value', 'season_value_score_rating', 'gw4_value_score_rating', 'value'],
   ['Reliability', 'season_reliability_score_rating', 'gw4_reliability_score_rating', 'reliability'],
   ['90 Mins', 'season_mins90_score_rating', 'gw4_mins90_score_rating', 'mins90'],
-]
-const ATT_COMBINED_DIMS: Dim[] = [
-  ['Goal Threat', 'season_att_goal_score_rating', 'gw4_att_goal_score_rating'],
-  ['Creativity', 'season_att_creative_score_rating', 'gw4_att_creative_score_rating'],
-  ['Def Contribution', 'season_att_dc_score_rating', 'gw4_att_dc_score_rating'],
-  ['BPS / Bonus', 'season_att_bps_score_rating', 'gw4_att_bps_score_rating'],
-  ['Value', 'season_att_value_score_rating', 'gw4_att_value_score_rating'],
-  ['Reliability', 'season_att_reliability_rating', 'gw4_att_reliability_rating'],
-  ['90 Mins', 'season_att_mins90_rating', 'gw4_att_mins90_rating'],
 ]
 
 function PlayerPhoto({ code, element, pos, size }: { code: number | null; element?: number | null; pos: string; size: number }) {
@@ -201,7 +192,6 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
 
   // Key related tables by the player's element (unique), never web_name.
   const p4 = data.personas4.find((p) => p.element === r.element) ?? null
-  const m = data.metrics.find((p) => p.element === r.element) ?? null
   const std = data.seasonToDate.find((p) => p.element === r.element) ?? null
   const streak = std ? String(std.streak ?? '') : ''
 
@@ -216,82 +206,40 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
   const isSpTaker = bool(r, 'is_setpiece_taker')
 
   const dims = pos === 'GKP' ? GKP_DIMS : pos === 'DEF' ? DEF_DIMS : ATT_POS_DIMS
-  const ptsDelta = std ? num(std, 'pts_delta') : null
-  const xgShare = m ? num(m, 'xg_share_4gw') : null
-  const xaShare = m ? num(m, 'xa_share_4gw') : null
-  const n2 = (v: number | null, f: 1 | 2 = 2) => (v != null ? <AnimatedCounter value={v} format={f === 1 ? '1dp' : '2dp'} /> : 'N/A')
-
-  const xptsRank = useMemo(() => {
-    const v = num(r, 'season_xpts_per_game')
-    if (v == null) return null
-    let ahead = 0
-    for (const p of data.ratings) { const x = num(p, 'season_xpts_per_game'); if (x != null && x > v) ahead++ }
-    return ahead + 1
-  }, [data.ratings, r])
+  const unknown = num(r, 'season_overall_score') == null
 
   return (
     <div className="overflow-hidden rounded-xl border border-line bg-surface-1/50">
       <PlayerHero r={r} verdict={verdict} personas={personas} flags={flags} isPenTaker={isPenTaker} isSpTaker={isSpTaker} streak={streak} isAtt={isAtt} />
 
-      {/* Single scroll — every section visible, no tabs. Order mirrors the
-          rating's own construction: receipts → stats → profile → underlying →
-          reliability → context → shots. */}
+      {/* Story-first flow: decision row → story modules → receipts → matchup
+          → shot evidence. Every module opens with a sentence; the numbers are
+          the supporting cast. Unknown players get the know/don't-know page. */}
       <div className="px-5 pb-5 md:px-6 md:pb-6">
-        <div className="relative z-10 -mt-12 mb-6 flex flex-wrap justify-center gap-3">
-          {heroChips(r, xptsRank).map((c) => <BigChip key={c.k} label={c.k} value={c.v} sub={c.sub} />)}
-        </div>
-        <div className="mb-8 flex justify-center">
-          <ShareCard r={r} fixtureEase={data.fixtureEase} />
-        </div>
+        <div className="mt-5 mb-6"><DecisionRow r={r} fixtureEase={data.fixtureEase} /></div>
 
-        <PointsEngine r={r} />
+        <Section title="The Story"><StoryModules r={r} data={data} /></Section>
 
-        <Section title={`Rating Profile — vs ${pos} players`}>
-          <div className="grid gap-5 lg:grid-cols-[300px_1fr] lg:items-center">
-            <Radar axes={radarAxes(r, dims)} seriesALabel="Season" seriesBLabel="Last 4GW" />
+        {!unknown && <PointsEngine r={r} />}
+
+        {!unknown && (
+          <Section title={`Rating Profile — vs ${pos} players`}>
             <DimBars r={r} dims={dims} overall={['season_overall_score', 'gw4_overall_score']} />
-          </div>
-        </Section>
-
-        <UnderlyingQuality r={r} pos={pos} />
-
-        {isAtt && (
-          <Section title="Attacking Share (Last 4GW)">
-            <div className="grid grid-cols-2 gap-2">
-              <Tile value={xgShare != null ? `${(xgShare * 100).toFixed(1)}%` : 'N/A'} label="Team xG Share" />
-              <Tile value={xaShare != null ? `${(xaShare * 100).toFixed(1)}%` : 'N/A'} label="Team xA Share" />
-            </div>
-          </Section>
-        )}
-        {isAtt && (
-          <Section title="Attacker Ratings — vs all MID & FWD players">
-            <DimBars r={r} dims={ATT_COMBINED_DIMS} overall={['season_att_overall_score', 'gw4_att_overall_score']} />
           </Section>
         )}
 
-        <Section title="Reliability & Risk">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Tile value={num(r, 'season_start_rate') != null ? <AnimatedCounter value={num(r, 'season_start_rate')! * 100} suffix="%" /> : 'N/A'} label="Start Rate" />
-            <Tile value={num(r, 'season_mins90_rate') != null ? <AnimatedCounter value={num(r, 'season_mins90_rate')! * 100} suffix="%" /> : 'N/A'} label="90 Mins Rate" />
-            <Tile value={n2(m ? num(m, 'sortino_4gw') : null)} label={<>Sortino <InfoTip text={TOOLTIPS.sortino as string} /></>} />
-            <Tile value={n2(m ? num(m, 'consistency_4gw') : null)} label={<>Consistency <InfoTip text={TOOLTIPS.consistency as string} /></>} />
-            <Tile value={n2(m ? num(m, 'alpha_4gw') : null)} label={<>Alpha <InfoTip text={TOOLTIPS.alpha as string} /></>} />
-            <Tile value={n2(m ? num(m, 'sharpe_4gw') : null)} label={<>Sharpe <InfoTip text={TOOLTIPS.sharpe as string} /></>} />
-            <Tile value={n2(m ? num(m, 'home_avg_season') : null, 1)} label="Home Avg Pts" />
-            <Tile value={n2(m ? num(m, 'away_avg_season') : null, 1)} label="Away Avg Pts" />
-            <Tile value={std && num(std, 'pts_per90_season') != null ? <AnimatedCounter value={num(std, 'pts_per90_season')!} format="2dp" /> : 'N/A'} label="Pts / 90" />
-            <Tile value={ptsDelta != null ? `${ptsDelta > 0 ? '+' : ''}${ptsDelta.toFixed(2)}` : 'N/A'} label="Form Delta" />
-          </div>
-        </Section>
+        <div className="mt-6"><MatchupBars element={r.element} tierPerf={data.tierPerf} /></div>
 
-        <TierTable element={r.element} tierPerf={data.tierPerf} />
-
-        {pos !== 'GKP' && (
+        {pos !== 'GKP' && !unknown && (
           <>
             <Section title="Shot Map"><PlayerScatterMap element={r.element} /></Section>
             <Section title="Shot Zones"><PlayerZoneMap element={r.element} name={name} /></Section>
           </>
         )}
+
+        <div className="mt-8 flex justify-center">
+          <ShareCard r={r} fixtureEase={data.fixtureEase} />
+        </div>
       </div>
     </div>
   )
@@ -348,50 +296,16 @@ function PointsEngine({ r }: { r: RatingRow }) {
   )
 }
 
-/** Season per-90 quality metrics — the data layer beneath the xPts model. */
-function UnderlyingQuality({ r, pos }: { r: RatingRow; pos: string }) {
-  const f = (k: string, d = 2) => { const v = num(r, `season_m_${k}`); return v == null ? 'N/A' : v.toFixed(d) }
-  const pc = (k: string) => { const v = num(r, `season_m_${k}`); return v == null ? 'N/A' : `${Math.round(v * 100)}%` }
-  if (pos === 'GKP') {
-    return (
-      <Section title="Underlying Quality (Season)">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <Tile value={f('saves')} label="Saves / 90" />
-          <Tile value={f('xgc')} label="xGC / 90" />
-          <Tile value={f('prevented')} label="Goals Prevented / 90" />
-          <Tile value={f('shots_faced', 1)} label="Shots Faced / Game" />
-          <Tile value={pc('box_faced')} label="Box Share Faced" />
-          <Tile value={`${f('dist_faced', 1)} yd`} label="Avg Shot Dist Faced" />
-        </div>
-      </Section>
-    )
-  }
-  return (
-    <Section title="Underlying Quality (Season)">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Tile value={f('xg')} label="xG / 90" />
-        <Tile value={f('xa')} label="xA / 90" />
-        <Tile value={f('shot_quality', 3)} label={<>npxG / Shot <InfoTip text={TOOLTIPS.shot_quality as string} /></>} />
-        <Tile value={pc('box_share')} label="Box Shot %" />
-        <Tile value={pc('sot_rate')} label="Shots on Target %" />
-        <Tile value={f('touches_box', 1)} label="Touches in Box / 90" />
-        <Tile value={f('big_chances')} label="Big Chances / 90" />
-        <Tile value={f('set_piece', 1)} label="SP Deliveries / 90" />
-      </div>
-    </Section>
-  )
-}
-
 /* ═══ Editorial player hero ═══════════════════════════════════════════════
    Always-dark cinematic band (like the shot maps): club-coloured glow, ghost
    watermark + rating numeral, display-type name, PL cutout figure, season
    numbers, biggest hauls and the verdict as headlines. */
 
 const POS_LABEL: Record<string, string> = { GKP: 'Goalkeeper', DEF: 'Defender', MID: 'Midfielder', FWD: 'Forward' }
-const HERO_DIM = '#8e94a3'
+const HERO_DIM = '#a89f8c'
 const HERO_INK = '#f1efe9'
 const HERO_GOLD = '#ead188' // logo-gold highlight (bright, legible on near-black)
-const HERO_PANEL: CSSProperties = { borderColor: 'rgba(201,162,39,.18)', background: 'rgba(16,20,30,.72)', backdropFilter: 'blur(10px)' }
+const HERO_PANEL: CSSProperties = { borderColor: 'rgba(201,162,39,.18)', background: 'rgba(20,17,12,.72)', backdropFilter: 'blur(10px)' }
 
 function HeroSilhouette() {
   return (
@@ -404,7 +318,7 @@ function HeroSilhouette() {
 function HeroPill({ children, gold, warn, title }: { children: ReactNode; gold?: boolean; warn?: boolean; title?: string }) {
   const base = 'font-cond inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold tracking-[.14em] uppercase'
   if (gold) return <span title={title} className={`${base} font-extrabold text-[#10131b]`} style={{ background: 'linear-gradient(120deg,#ead188,#c9a227)' }}>{children}</span>
-  return <span title={title} className={base} style={{ border: '1px solid rgba(201,162,39,.18)', color: warn ? '#e8b04a' : '#cfd3db', background: 'rgba(255,255,255,.02)' }}>{children}</span>
+  return <span title={title} className={base} style={{ border: '1px solid rgba(201,162,39,.18)', color: warn ? '#e8b04a' : '#d6d0c2', background: 'rgba(255,255,255,.02)' }}>{children}</span>
 }
 
 function BigNum({ v, sub, k }: { v: ReactNode; sub?: string; k: string }) {
@@ -426,41 +340,6 @@ function MiniRating({ k, v }: { k: string; v: number | null }) {
       <span className="text-[19px] font-extrabold" style={{ color: c }}>{v ?? '—'}</span>
     </div>
   )
-}
-
-function BigChip({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="min-w-[150px] max-w-[240px] flex-1 rounded-2xl p-px" style={{ background: 'linear-gradient(160deg, rgba(201,162,39,.7), rgba(201,162,39,.08) 45%, rgba(201,162,39,.35))' }}>
-      <div className="rounded-[15px] px-4 py-3 text-center" style={{ background: 'linear-gradient(180deg,#12161f,#0c0f16)' }}>
-        <div className="font-cond text-[10px] font-semibold tracking-[.28em] uppercase" style={{ color: HERO_DIM }}>{label}</div>
-        <div className="font-cond mt-1 text-[26px] leading-none font-extrabold md:text-[30px]" style={{ color: HERO_INK }}>
-          {value}{sub && <small className="ml-1 text-[15px] font-semibold" style={{ color: HERO_GOLD }}>{sub}</small>}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function heroChips(r: RatingRow, xptsRank: number | null): { k: string; v: string; sub?: string }[] {
-  const f = (k: string, d = 1) => { const v = num(r, `season_m_${k}`); return v == null ? null : v.toFixed(d) }
-  const pcv = (k: string) => { const v = num(r, `season_m_${k}`); return v == null ? null : String(Math.round(v * 100)) }
-  const chips: { k: string; v: string; sub?: string }[] = []
-  const xp = num(r, 'season_xpts_per_game')
-  if (xp != null) chips.push({ k: 'xPts / Game', v: xp.toFixed(2), sub: xptsRank != null ? `#${xptsRank}` : undefined })
-  if (r.position === 'GKP') {
-    const s = f('saves', 2); if (s) chips.push({ k: 'Saves / 90', v: s })
-    const sf = f('shots_faced', 1); if (sf) chips.push({ k: 'Shots Faced / Gm', v: sf })
-    const pr = f('prevented', 2); if (pr) chips.push({ k: 'Goals Prevented / 90', v: pr })
-  } else if (r.position === 'DEF') {
-    const cs = pcv('cs_rate'); if (cs) chips.push({ k: 'Clean Sheets', v: cs, sub: '%' })
-    const xgc = f('xgc', 2); if (xgc) chips.push({ k: 'xGC / 90', v: xgc })
-    const tb = f('touches_box', 1); if (tb) chips.push({ k: 'Touches in Box / 90', v: tb })
-  } else {
-    const b = pcv('box_share'); if (b) chips.push({ k: 'Box Shots', v: b, sub: '%' })
-    const s = pcv('sot_rate'); if (s) chips.push({ k: 'Shots on Target', v: s, sub: '%' })
-    const tb = f('touches_box', 1); if (tb) chips.push({ k: 'Touches in Box / 90', v: tb })
-  }
-  return chips
 }
 
 function PlayerHero({ r, verdict, personas, flags, isPenTaker, isSpTaker, streak, isAtt }: {
@@ -492,7 +371,7 @@ function PlayerHero({ r, verdict, personas, flags, isPenTaker, isSpTaker, streak
   const bullets = verdict?.bullets ?? []
 
   return (
-    <div className="relative overflow-hidden pb-20" style={{ background: `radial-gradient(900px 620px at 86% 22%, ${tc}30, transparent 62%), radial-gradient(700px 520px at 4% 100%, rgba(201,162,39,.12), transparent 60%), linear-gradient(118deg,#0d1119 0%,#0a0d13 52%,#070a10 100%)` }}>
+    <div className="relative overflow-hidden pb-20" style={{ background: `radial-gradient(900px 620px at 86% 22%, ${tc}30, transparent 62%), radial-gradient(700px 520px at 4% 100%, rgba(201,162,39,.12), transparent 60%), linear-gradient(118deg,#12100b 0%,#0b0908 52%,#060504 100%)` }}>
       <div className="pointer-events-none absolute inset-0 opacity-50" style={{ background: 'repeating-linear-gradient(118deg, transparent 0 140px, rgba(255,255,255,.016) 140px 142px)' }} />
       <div className="font-display pointer-events-none absolute -left-2 top-2 leading-none whitespace-nowrap uppercase select-none" style={{ fontSize: 'clamp(70px,15vw,168px)', color: 'transparent', WebkitTextStroke: '1px rgba(255,255,255,.05)' }}>{teamFullNames[team] || team}</div>
       {rating != null && (
@@ -511,16 +390,16 @@ function PlayerHero({ r, verdict, personas, flags, isPenTaker, isSpTaker, streak
           </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-3">
-            <h1 className="font-display leading-[.9] tracking-[-.015em] uppercase" style={{ fontSize: 'clamp(44px,8vw,92px)', background: 'linear-gradient(180deg,#fff 12%,#e4e6ea 48%,#8f96a5 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', filter: 'drop-shadow(0 10px 34px rgba(0,0,0,.65))' }}>{name}</h1>
+            <h1 className="font-display leading-[.9] tracking-[-.015em] uppercase" style={{ fontSize: 'clamp(44px,8vw,92px)', background: 'linear-gradient(180deg,#fff 12%,#eee9dd 48%,#a1988a 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', filter: 'drop-shadow(0 10px 34px rgba(0,0,0,.65))' }}>{name}</h1>
             {rating != null && (
-              <div className="relative grid h-16 w-16 flex-none place-items-center rounded-full" style={{ background: 'radial-gradient(circle at 32% 26%, #202636, #10141d 70%)', boxShadow: '0 0 0 1.5px #c9a227, 0 0 0 6px rgba(10,13,19,.9), 0 0 0 7px rgba(201,162,39,.25), 0 0 42px rgba(201,162,39,.3)' }}>
+              <div className="relative grid h-16 w-16 flex-none place-items-center rounded-full" style={{ background: 'radial-gradient(circle at 32% 26%, #2b241a, #151109 70%)', boxShadow: '0 0 0 1.5px #c9a227, 0 0 0 6px rgba(12,10,7,.9), 0 0 0 7px rgba(201,162,39,.25), 0 0 42px rgba(201,162,39,.3)' }}>
                 <b className="metallic-num font-display text-[23px]">{rating}</b>
                 <span className="font-cond absolute bottom-2 text-[6.5px] font-semibold tracking-[.3em] uppercase" style={{ color: HERO_DIM }}>Rating</span>
               </div>
             )}
           </div>
 
-          <div className="mt-2 text-[15px]" style={{ color: '#c9cdd6' }}>
+          <div className="mt-2 text-[15px]" style={{ color: '#d6d0c2' }}>
             {verdict?.verdict && <>{verdict.verdict}. </>}
             {!isGk && tg != null && txg != null && <span className="font-semibold" style={{ color: HERO_GOLD }}>{tg} goals from {txg} xG</span>}
           </div>
@@ -555,7 +434,7 @@ function PlayerHero({ r, verdict, personas, flags, isPenTaker, isSpTaker, streak
                   {hauls.map((h) => (
                     <div key={h.gw} className="flex items-center gap-3 border-t border-white/5 py-1.5 first:border-0">
                       <div className="font-cond w-11 text-[24px] leading-none font-extrabold" style={{ color: tc }}>{h.pts}<small className="text-[11px] font-semibold" style={{ color: HERO_DIM }}>pts</small></div>
-                      <div className="font-cond text-[13px] font-semibold tracking-wide uppercase" style={{ color: '#cfd3db' }}>
+                      <div className="font-cond text-[13px] font-semibold tracking-wide uppercase" style={{ color: '#d6d0c2' }}>
                         Gameweek {h.gw}
                         <small className="block text-[10px] tracking-[.2em]" style={{ color: HERO_DIM }}>{h.home ? 'Home' : 'Away'} · {h.g}G · {h.a}A</small>
                       </div>
@@ -567,7 +446,7 @@ function PlayerHero({ r, verdict, personas, flags, isPenTaker, isSpTaker, streak
                 <div className="rounded-xl border p-3.5" style={HERO_PANEL}>
                   <h4 className="font-cond mb-1.5 text-[11px] font-extrabold tracking-[.34em] uppercase" style={{ color: HERO_GOLD }}>Headlines</h4>
                   {bullets.map((b: { iconId: string; tone: string; html: string }, i: number) => (
-                    <div key={i} className="flex gap-2.5 border-t border-white/5 py-1.5 text-[13.5px] first:border-0" style={{ color: '#c9cdd6' }}>
+                    <div key={i} className="flex gap-2.5 border-t border-white/5 py-1.5 text-[13.5px] first:border-0" style={{ color: '#d6d0c2' }}>
                       <span className={`mt-0.5 ${TONE_TEXT[b.tone] || 'text-info'}`}><Icon name={b.iconId as IconName} size={13} /></span>
                       <span dangerouslySetInnerHTML={{ __html: b.html }} />
                     </div>
@@ -592,15 +471,6 @@ function PlayerHero({ r, verdict, personas, flags, isPenTaker, isSpTaker, streak
 }
 
 // Short axis labels so the radar stays legible with many dimensions.
-const RADAR_SHORT: Record<string, string> = {
-  'Def Contribution': 'Def Contrib', 'Creativity Depth': 'Creat. Depth', 'Finishing Skill': 'Finishing',
-  'Shot Quality': 'Shot Qual', 'BPS / Bonus': 'BPS', 'Clean Sheet': 'Clean Sht', 'Set Pieces': 'Set Piece',
-  'Goal Threat': 'Goals', 'Reliability': 'Reliab.', 'Creativity': 'Creativity',
-}
-function radarAxes(r: RatingRow, dims: Dim[]) {
-  return dims.map(([label, sCol, gCol]) => ({ label: RADAR_SHORT[label] ?? label, a: ratingTo100(str(r, sCol)), b: ratingTo100(str(r, gCol)) }))
-}
-
 /** Dimension breakdown as glanceable 0–100 bars (season) with the compact
  * last-4GW badge alongside — replaces the old star table. */
 function DimBars({ r, dims, overall }: { r: RatingRow; dims: Dim[]; overall: [string, string] }) {
@@ -632,49 +502,6 @@ function DimBars({ r, dims, overall }: { r: RatingRow; dims: Dim[]; overall: [st
         )
       })}
     </div>
-  )
-}
-
-function TierTable({ element, tierPerf }: { element: number; tierPerf: Row[] }) {
-  const rows = tierPerf.filter((t) => num(t, 'element') === element)
-  const byTier = (t: string) => rows.find((x) => str(x, 'opponent_tier') === t) ?? null
-  const tiers: [string, string, Row | null][] = [
-    ['Tier 1 — Top 6', 'Tier 1 - Top 6', byTier('Tier 1 - Top 6')],
-    ['Tier 2 — Mid Upper', 'Tier 2 - Mid Upper', byTier('Tier 2 - Mid Upper')],
-    ['Tier 3 — Rest', 'Tier 3 - Rest', byTier('Tier 3 - Rest')],
-  ]
-  return (
-    <Section title="Performance by Opponent Tier">
-      <div className="overflow-x-auto rounded-xl border border-line">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-line-mid text-[11px] tracking-[0.1em] text-ink-3 uppercase">
-              {['Tier', 'Games', 'Avg Pts', 'Goals', 'Assists', 'Avg Bonus'].map((h, i) => (
-                <th key={h} className={`px-4 py-3 font-semibold ${i === 0 ? 'text-left' : 'text-right'}`}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {tiers.map(([label, , tier]) => (
-              <tr key={label} className="border-b border-line last:border-0">
-                <td className="px-4 py-3 text-ink-2">{label}</td>
-                {tier ? (
-                  <>
-                    <td className="px-4 py-3 text-right font-num tabular-nums">{num(tier, 'games_played')}</td>
-                    <td className="px-4 py-3 text-right font-num tabular-nums text-accent">{(num(tier, 'avg_pts') ?? 0).toFixed(1)}</td>
-                    <td className="px-4 py-3 text-right font-num tabular-nums">{num(tier, 'total_goals')}</td>
-                    <td className="px-4 py-3 text-right font-num tabular-nums">{num(tier, 'total_assists')}</td>
-                    <td className="px-4 py-3 text-right font-num tabular-nums">{(num(tier, 'avg_bonus') ?? 0).toFixed(1)}</td>
-                  </>
-                ) : (
-                  <td colSpan={5} className="px-4 py-3 text-right text-ink-3">No data</td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Section>
   )
 }
 
