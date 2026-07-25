@@ -12,7 +12,7 @@ import { PageSkeleton } from '../components/Skeleton'
 import { PlayerPhoto as PhotoImg } from '../components/PlayerPhoto'
 import { ShareCard } from '../components/ShareCard'
 import { DecisionRow, StoryModules, MatchupBars } from '../components/PlayerStory'
-import { PlayerScatterMap, PlayerZoneMap } from '../components/ShotMap'
+import { PlayerZoneMap } from '../components/ShotMap'
 import { useCore } from '../lib/useData'
 import { num, str, bool } from '../lib/rows'
 import { teamFullNames, teamColors, TOOLTIPS } from '../lib/util'
@@ -232,7 +232,6 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
 
         {pos !== 'GKP' && !unknown && (
           <>
-            <Section title="Shot Map"><PlayerScatterMap element={r.element} /></Section>
             <Section title="Shot Zones"><PlayerZoneMap element={r.element} name={name} /></Section>
           </>
         )}
@@ -365,9 +364,6 @@ function PlayerHero({ r, verdict, personas, flags, isPenTaker, isSpTaker, streak
   const tg = num(r, 'season_total_goals'), txg = num(r, 'season_total_xg')
   const ta = num(r, 'season_total_assists'), txa = num(r, 'season_total_xa')
   const mins = num(r, 'total_mins')
-  const hauls: { gw: number; pts: number; home: boolean; g: number; a: number }[] = (() => {
-    try { const s = str(r, 'season_hauls'); return s ? JSON.parse(s) : [] } catch { return [] }
-  })()
   const bullets = verdict?.bullets ?? []
 
   return (
@@ -426,22 +422,8 @@ function PlayerHero({ r, verdict, personas, flags, isPenTaker, isSpTaker, streak
             {isAtt && <MiniRating k="vs Attackers" v={att} />}
           </div>
 
-          {(hauls.length > 0 || bullets.length > 0) && (
-            <div className="mt-7 grid max-w-2xl gap-3 lg:grid-cols-[236px_1fr]">
-              {hauls.length > 0 && (
-                <div className="rounded-xl border p-3.5" style={HERO_PANEL}>
-                  <h4 className="font-cond mb-1.5 text-[11px] font-extrabold tracking-[.34em] uppercase" style={{ color: HERO_GOLD }}>Biggest Hauls</h4>
-                  {hauls.map((h) => (
-                    <div key={h.gw} className="flex items-center gap-3 border-t border-white/5 py-1.5 first:border-0">
-                      <div className="font-cond w-11 text-[24px] leading-none font-extrabold" style={{ color: tc }}>{h.pts}<small className="text-[11px] font-semibold" style={{ color: HERO_DIM }}>pts</small></div>
-                      <div className="font-cond text-[13px] font-semibold tracking-wide uppercase" style={{ color: '#d6d0c2' }}>
-                        Gameweek {h.gw}
-                        <small className="block text-[10px] tracking-[.2em]" style={{ color: HERO_DIM }}>{h.home ? 'Home' : 'Away'} · {h.g}G · {h.a}A</small>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+          {bullets.length > 0 && (
+            <div className="mt-7 grid max-w-2xl gap-3">
               {bullets.length > 0 && (
                 <div className="rounded-xl border p-3.5" style={HERO_PANEL}>
                   <h4 className="font-cond mb-1.5 text-[11px] font-extrabold tracking-[.34em] uppercase" style={{ color: HERO_GOLD }}>Headlines</h4>

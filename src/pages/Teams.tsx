@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PageShell, EmptyState } from '../components/PageShell'
 import { SectionBanner, StadiumBanner } from '../components/SectionBanner'
+import { TeamStory } from '../components/TeamStory'
 import { SortableTable, type Column } from '../components/SortableTable'
 import { SearchBox } from '../components/SearchBox'
 import { Tabs, type TabDef } from '../components/Tabs'
@@ -137,6 +138,7 @@ export default function Teams() {
 
       {selected && seasonByTeam.has(selected) ? (
         <div className="flex flex-col gap-4">
+          <TeamStory team={selected} data={data} />
           <div className="grid gap-3 md:grid-cols-2">
             <ClubCard team={selected} season={ratingByTeam.get(selected)} gw4={gw4ByTeam.get(selected)} fixtureEase={fixtureEase} />
             <TeamMatchup team={selected} ratingByTeam={ratingByTeam} fixtureEase={fixtureEase} />
