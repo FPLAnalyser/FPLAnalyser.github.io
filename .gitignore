@@ -18,3 +18,5 @@ dev-dist/
 
 # local scratch verification
 _verify.mjs
+_share_test.mjs
+_*.mjs
