@@ -604,7 +604,7 @@ export default function Rankings() {
           )
         })()
       ) : tab === 'totw' ? (
-        <TeamOfTheWeek ratings={ratings} currentGw={data.meta?.current_gw ?? null} onPlayer={toPlayer} />
+        <TeamOfTheWeek ratings={ratings} currentGw={data.meta?.current_gw ?? null} fixtureEase={data.fixtureEase} teamRatings={data.teamRatings} onPlayer={toPlayer} />
       ) : tab === 'form' ? (
         <FormTables rows={seasonToDate} pos={pos} onPlayer={toPlayer} />
       ) : view ? (

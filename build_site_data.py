@@ -493,6 +493,36 @@ form = r4.sort_values("gw_from_fixture").groupby("element").last().reset_index()
 form = form.drop(columns=["gw_from_fixture"])
 row_counts["player_form"] = write_json("player_form", df_to_records(form))
 
+# gameweek_stats: the last N finished gameweeks, per player, at match level —
+# what the Team of the Week cards and the weekly rating are built from. Kept
+# to a short tail so the file stays small enough to ship with the site.
+GW_TAIL = 8
+_gw_cols = ["element", "web_name", "team", "element_type", "gw_from_fixture", "round",
+            "opponent_team", "was_home", "total_points", "minutes", "starts",
+            "goals_scored", "assists", "clean_sheets", "bonus", "bps", "saves",
+            "defensive_contribution", "expected_goals", "expected_assists", "value"]
+try:
+    _gwe = pd.read_csv(os.path.join(DATA_DIR, "player_gw_enriched.csv"))
+    _have = [c for c in _gw_cols if c in _gwe.columns]
+    _gwe = _gwe[_have].copy()
+    _gwkey = "gw_from_fixture" if "gw_from_fixture" in _gwe.columns else "round"
+    _gwe[_gwkey] = pd.to_numeric(_gwe[_gwkey], errors="coerce")
+    _gwe = _gwe.dropna(subset=[_gwkey])
+    _recent = sorted(_gwe[_gwkey].unique())[-GW_TAIL:]
+    _gwe = _gwe[_gwe[_gwkey].isin(_recent)]
+    # Only players who actually featured — a blank row is not a story.
+    if "minutes" in _gwe.columns:
+        _gwe = _gwe[pd.to_numeric(_gwe["minutes"], errors="coerce").fillna(0) > 0]
+    _gwe = _gwe.rename(columns={_gwkey: "gw"})
+    if "round" in _gwe.columns and _gwkey != "round":
+        _gwe = _gwe.drop(columns=["round"])
+    row_counts["gameweek_stats"] = write_json("gameweek_stats", df_to_records(_gwe))
+    print(f"  gameweek_stats over GWs {[int(g) for g in _recent]}")
+except FileNotFoundError:
+    print("  player_gw_enriched.csv not found — gameweek_stats.json skipped "
+          "(expected pre-season; populates once gameweeks are played)")
+    row_counts["gameweek_stats"] = write_json("gameweek_stats", [])
+
 # ── Meta manifest ─────────────────────────────────────────────────────────────
 finished = fixtures[fixtures["finished"].astype(str) == "True"]
 meta = {

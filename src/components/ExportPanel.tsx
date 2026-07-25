@@ -9,25 +9,10 @@ import { shareImageNative } from '../lib/native'
    burned in, so a screenshot that travels always carries its source.
    ════════════════════════════════════════════════════════════════════════ */
 
-/** The by-line. Site name is a placeholder until the brand is finalised;
- * the handle is whatever the user sets once, stored locally. */
+/** Fixed branding. Every export carries the site name and the account for
+ * the chosen platform — a visitor sharing our analysis cannot rewrite the
+ * credit, by design. */
 const SITE_NAME = 'FPL Analyser'
-const HANDLE_KEY = 'fpl_share_handle'
-
-export function getHandle(): string {
-  try {
-    return localStorage.getItem(HANDLE_KEY) ?? ''
-  } catch {
-    return ''
-  }
-}
-export function setHandle(v: string) {
-  try {
-    localStorage.setItem(HANDLE_KEY, v)
-  } catch {
-    /* private mode — the byline just falls back to the site name */
-  }
-}
 
 type Format = 'wide' | 'square' | 'story'
 const FORMATS: { id: Format; label: string; hint: string; w: number; h: number | null; handle: string }[] = [
@@ -98,7 +83,6 @@ export function Exportable({ title, filename, children, className }: {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
-  const [handle, setHandleState] = useState(getHandle())
   const [fmt, setFmt] = useState<Format>('wide')
 
   useEffect(() => {
@@ -119,7 +103,7 @@ export function Exportable({ title, filename, children, className }: {
         logging: false,
       })
       const spec = FORMATS.find((f) => f.id === fmt)!
-      const canvas = brand(shot, spec, title, handle || spec.handle, dark)
+      const canvas = brand(shot, spec, title, spec.handle, dark)
       const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, 'image/png'))
       if (!blob) throw new Error('render failed')
       const name = `${filename ?? title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${fmt}.png`
@@ -174,15 +158,6 @@ export function Exportable({ title, filename, children, className }: {
               </button>
             ))}
           </div>
-          <label className="mb-2 block">
-            <span className="mb-1 block text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Byline — defaults to the account for this platform</span>
-            <input
-              value={handle}
-              onChange={(e) => { setHandleState(e.target.value); setHandle(e.target.value) }}
-              placeholder={FORMATS.find((f) => f.id === fmt)!.handle}
-              className="min-h-9 w-full max-w-xs rounded-lg border border-line-mid bg-surface-2 px-2.5 text-sm text-ink placeholder:text-ink-3 focus:border-line-strong focus:outline-none"
-            />
-          </label>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => run('share')}
