@@ -12,6 +12,7 @@ import { ShareFooter } from '../components/ShareFooter'
 import { SeasonPlanner } from '../components/SeasonPlanner'
 import { Icon } from '../components/Icon'
 import { Pitch } from '../components/Pitch'
+import { PlayerCardSheet } from '../components/PlayerCardSheet'
 import { useCore } from '../lib/useData'
 import { tapHaptic, shareImageNative } from '../lib/native'
 import { num } from '../lib/rows'
@@ -75,6 +76,7 @@ export default function SquadBuilder() {
   const [mode, setMode] = useState<'build' | 'plan'>('build')
   const [pickPos, setPickPos] = useState<Pos>('GKP')
   const [boardView, setBoardView] = useState<'pitch' | 'list'>('pitch')
+  const [sheetFor, setSheetFor] = useState<RatingRow | null>(null)
   const [sort, setSort] = useState<SortKey>('rating')
   const [query, setQuery] = useState('')
   const [note, setNote] = useState<string | null>(null)
@@ -269,14 +271,14 @@ export default function SquadBuilder() {
             </div>
           </div>
           {boardView === 'pitch' ? (
-            <SquadBoard chosen={chosen} fixtureEase={fixtureEase} pickPos={pickPos} onRemove={remove} onPick={(p) => { setPickPos(p); setNote(null) }} />
+            <SquadBoard chosen={chosen} fixtureEase={fixtureEase} pickPos={pickPos} onRemove={remove} onPick={(p) => { setPickPos(p); setNote(null) }} onOpen={setSheetFor} />
           ) : (
             <SquadList
               chosen={chosen}
               fixtureEase={fixtureEase}
               onRemove={remove}
               onPick={(p) => { setPickPos(p); setNote(null) }}
-              onOpen={(r) => navigate(playerHref(String(r.web_name), num(r, 'code')))}
+              onOpen={setSheetFor}
             />
           )}
         </div>
@@ -357,6 +359,15 @@ export default function SquadBuilder() {
       </>
       )}
 
+      {sheetFor && (
+        <PlayerCardSheet
+          player={sheetFor}
+          pool={pool}
+          onClose={() => setSheetFor(null)}
+          onSwap={(out, incoming) => { remove(out.element); add(incoming) }}
+        />
+      )}
+
       <SquadShare chosen={chosen} fixtureEase={fixtureEase} squadScore={squadScore} bestXI={bestXI} spent={spent} unrated={unrated} total={total} open={shareOpen} onClose={() => setShareOpen(false)} />
     </PageShell>
   )
@@ -366,10 +377,9 @@ export default function SquadBuilder() {
  *  as the My Team page. Interactive by default (remove ✕ + empty slots that
  *  jump the picker to that position); `capture` mode drops those for a clean
  *  shareable image. */
-function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, capture }: {
-  chosen: RatingRow[]; fixtureEase: FixtureEaseRow[]; pickPos?: Pos; onRemove?: (el: number) => void; onPick?: (p: Pos) => void; capture?: boolean
+function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, capture }: {
+  chosen: RatingRow[]; fixtureEase: FixtureEaseRow[]; pickPos?: Pos; onRemove?: (el: number) => void; onPick?: (p: Pos) => void; onOpen?: (r: RatingRow) => void; capture?: boolean
 }) {
-  const navigate = useNavigate()
   const wrap = 'relative w-[calc(50%-0.375rem)] sm:w-[112px] lg:w-[118px]'
   return (
     <Pitch maxWidth={capture ? undefined : 780}>
@@ -382,7 +392,7 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, capture }:
             <div key={pos} className="flex flex-wrap justify-center gap-2.5 md:gap-3">
               {players.map((r) => (
                 <div key={r.element} className={wrap}>
-                  <RatingCard r={r} compact window="season" fixtureEase={fixtureEase} onClick={capture ? undefined : () => navigate(playerHref(String(r.web_name), num(r, 'code')))} />
+                  <RatingCard r={r} compact window="season" fixtureEase={fixtureEase} onClick={capture ? undefined : () => onOpen?.(r)} />
                   {onRemove && !capture && (
                     <button aria-label={`Remove ${r.web_name}`} onClick={() => onRemove(r.element)} className="absolute -top-2 -right-2 z-10 grid size-7 place-items-center rounded-full border border-line bg-surface-1 text-ink-2 shadow-lg transition-colors hover:border-bad hover:text-bad">
                       <Icon name="x" size={14} />
