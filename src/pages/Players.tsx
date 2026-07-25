@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PageShell, EmptyState } from '../components/PageShell'
 import { SectionBanner } from '../components/SectionBanner'
@@ -11,7 +11,8 @@ import { TeamBadge, PositionIcon } from '../components/badges'
 import { PageSkeleton } from '../components/Skeleton'
 import { PlayerPhoto as PhotoImg } from '../components/PlayerPhoto'
 import { ShareCard } from '../components/ShareCard'
-import { DecisionRow, StoryModules, MatchupBars } from '../components/PlayerStory'
+import { FixtureChips } from '../components/FixtureChips'
+import { MatchupBars, UnknownModules, minutesRead, formRead, valueRead, defConRead } from '../components/PlayerStory'
 import { PlayerZoneMap } from '../components/ShotMap'
 import { useCore } from '../lib/useData'
 import { num, str, bool } from '../lib/rows'
@@ -202,10 +203,9 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
   const isPenTaker = bool(r, 'is_pen_taker')
   const isSpTaker = bool(r, 'is_setpiece_taker')
 
-  const dims = pos === 'GKP' ? GKP_DIMS : pos === 'DEF' ? DEF_DIMS : ATT_POS_DIMS
   const unknown = num(r, 'season_overall_score') == null
 
-  // Positional peers with a real rating — powers the hero rank, the bullet
+  // Positional peers with a real rating — powers the rank, the bullet
   // gauge's scale and the market scatter.
   const peers = useMemo(
     () => (data.ratings as RatingRow[]).filter((p) => p.position === pos && ratingTo100(num(p, 'season_overall_score')) != null),
@@ -214,32 +214,27 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
 
   return (
     <div className="overflow-hidden rounded-xl border border-line bg-surface-1/50">
-      <PlayerHero r={r} peers={peers} verdict={verdict} personas={personas} flags={flags} isPenTaker={isPenTaker} isSpTaker={isSpTaker} streak={streak} />
+      <IdentStrip r={r} peers={peers} personas={personas} flags={flags} isPenTaker={isPenTaker} isSpTaker={isSpTaker} streak={streak} />
 
-      {/* Story-first flow: market scatter → decision row → story modules →
-          receipts → matchup → shot evidence. Every module opens with a
-          sentence; the numbers are the supporting cast. Unknown players get
-          the know/don't-know page. */}
-      <div className="px-5 pb-5 md:px-6 md:pb-6">
-        {!unknown && <div className="mt-5"><MarketScatter r={r} peers={peers} /></div>}
-
-        <div className="mt-5 mb-6"><DecisionRow r={r} fixtureEase={data.fixtureEase} /></div>
-
-        <Section title="The Story"><StoryModules r={r} data={data} /></Section>
-
-        {!unknown && <PointsEngine r={r} />}
-
-        {!unknown && (
-          <Section title={`Rating Profile — vs ${pos} players`}>
-            <DimBars r={r} dims={dims} overall={['season_overall_score', 'gw4_overall_score']} />
-          </Section>
-        )}
-
-        <div className="mt-6"><MatchupBars element={r.element} tierPerf={data.tierPerf} /></div>
-
-        {pos !== 'GKP' && !unknown && (
+      {/* The Brief flow: narrative first, evidence second, receipts folded.
+          Unknown players get the honest know/don't-know page instead. */}
+      <div className="px-4 pb-5 md:px-6 md:pb-6">
+        {unknown ? (
           <>
-            <Section title="Shot Zones"><PlayerZoneMap element={r.element} name={name} /></Section>
+            <div className="mt-5 grid gap-3 md:grid-cols-2"><UnknownModules r={r} /></div>
+            {data.fixtureEase.some((fx) => fx.team === String(r.team)) && (
+              <div className="mt-4 rounded-xl border border-line bg-surface-1 p-4">
+                <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Next fixtures</div>
+                <FixtureChips fixtureEase={data.fixtureEase} team={String(r.team)} n={6} />
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <TheBrief r={r} data={data} verdict={verdict} />
+            <EvidenceBand r={r} peers={peers} />
+            <div className="mt-6"><MarketScatter r={r} peers={peers} /></div>
+            <Receipts r={r} data={data} name={name} />
           </>
         )}
 
@@ -247,6 +242,42 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
           <ShareCard r={r} fixtureEase={data.fixtureEase} />
         </div>
       </div>
+    </div>
+  )
+}
+
+/* ═══ Receipts — the deep tables, one tab at a time ═══════════════════════ */
+
+function Receipts({ r, data, name }: { r: RatingRow; data: CoreData; name: string }) {
+  const pos = r.position
+  const dims = pos === 'GKP' ? GKP_DIMS : pos === 'DEF' ? DEF_DIMS : ATT_POS_DIMS
+  const tabs = [
+    { id: 'engine', label: 'Points engine' },
+    { id: 'dims', label: 'Dimensions' },
+    { id: 'matchups', label: 'Matchups' },
+    ...(pos !== 'GKP' ? [{ id: 'zones', label: 'Shot zones' }] : []),
+  ]
+  const [tab, setTab] = useState('engine')
+  return (
+    <div className="mt-7">
+      <h3 className="mb-3 text-sm font-semibold tracking-wide text-ink-2 uppercase">Receipts</h3>
+      <div className="mb-4 flex flex-wrap gap-1.5">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`min-h-9 rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${
+              tab === t.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {tab === 'engine' && <PointsEngine r={r} />}
+      {tab === 'dims' && <DimBars r={r} dims={dims} overall={['season_overall_score', 'gw4_overall_score']} />}
+      {tab === 'matchups' && <MatchupBars element={r.element} tierPerf={data.tierPerf} />}
+      {tab === 'zones' && pos !== 'GKP' && <PlayerZoneMap element={r.element} name={name} />}
     </div>
   )
 }
@@ -310,8 +341,6 @@ function PointsEngine({ r }: { r: RatingRow }) {
 
 const POS_LABEL: Record<string, string> = { GKP: 'Goalkeeper', DEF: 'Defender', MID: 'Midfielder', FWD: 'Forward' }
 const HERO_DIM = '#a89f8c'
-const HERO_INK = '#f1efe9'
-const HERO_GOLD = '#ead188' // logo-gold highlight (bright, legible on near-black)
 
 function HeroSilhouette() {
   return (
@@ -327,17 +356,6 @@ function HeroPill({ children, gold, warn, title }: { children: ReactNode; gold?:
   return <span title={title} className={base} style={{ border: '1px solid rgba(201,162,39,.18)', color: warn ? '#e8b04a' : '#d6d0c2', background: 'rgba(255,255,255,.02)' }}>{children}</span>
 }
 
-function StatMini({ v, sub, k }: { v: ReactNode; sub?: string; k: string }) {
-  return (
-    <div>
-      <div className="font-cond text-[22px] leading-none font-extrabold" style={{ color: HERO_INK }}>
-        {v}{sub && <span className="ml-1 text-[12px] font-semibold" style={{ color: HERO_GOLD }}>{sub}</span>}
-      </div>
-      <div className="font-cond mt-1 text-[9.5px] font-semibold tracking-[.22em] uppercase" style={{ color: HERO_DIM }}>{k}</div>
-    </div>
-  )
-}
-
 // Fingerprint dimensions — five per position, the same score fields the
 // dimension bars use, so the dot pattern and the receipts always agree.
 const FP_DIMS: Record<string, [string, string][]> = {
@@ -346,8 +364,193 @@ const FP_DIMS: Record<string, [string, string][]> = {
   ATT: [['Goal threat', 'season_goal_score_rating'], ['Creativity', 'season_creative_score_rating'], ['Set pieces', 'season_set_piece_score_rating'], ['Def con', 'season_dc_score_rating'], ['Reliability', 'season_reliability_score_rating']],
 }
 
+/* ═══ Ident strip — identity only, 72px of it ═════════════════════════════
+   Always-dark band. The name sizes fluidly with a small floor and may wrap,
+   and the rating chip is part of the flex row, so long names shrink instead
+   of clipping on mobile. */
+
+function IdentStrip({ r, peers, personas, flags, isPenTaker, isSpTaker, streak }: {
+  r: RatingRow
+  peers: RatingRow[]
+  personas: string[]
+  flags: string[]
+  isPenTaker: boolean
+  isSpTaker: boolean
+  streak: string
+}) {
+  const name = String(r.web_name)
+  const team = String(r.team)
+  const tc = teamColors[team] ?? '#7ad1ff'
+  const pos = r.position
+  const rating = ratingTo100(num(r, 'season_overall_score'))
+  const rank = rating != null ? 1 + peers.filter((p) => (ratingTo100(num(p, 'season_overall_score')) ?? -1) > rating).length : null
+
+  return (
+    <div className="relative overflow-hidden" style={{ background: `radial-gradient(560px 300px at 92% 0%, ${tc}2e, transparent 62%), linear-gradient(118deg,#12100b 0%,#0b0908 52%,#060504 100%)` }}>
+      <div className="relative z-10 flex items-center gap-3.5 px-4 py-3.5 md:px-6 md:py-4">
+        <div className="relative flex-none" aria-hidden="true">
+          <PhotoImg hero code={r.code} element={r.element} className="h-[64px] w-auto object-contain md:h-[76px]" style={{ filter: 'drop-shadow(0 8px 16px rgba(0,0,0,.55))' }} placeholder={<div className="flex h-[64px] w-[46px] items-end justify-center md:h-[76px]"><HeroSilhouette /></div>} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h1 className="font-display leading-[.95] tracking-[-.005em] uppercase" style={{ fontSize: 'clamp(17px,5vw,27px)', overflowWrap: 'anywhere', background: 'linear-gradient(180deg,#fff 12%,#eee9dd 48%,#a1988a 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>{name}</h1>
+          <div className="font-cond mt-1 text-[11px] font-semibold tracking-[.12em] uppercase" style={{ color: HERO_DIM }}>
+            {POS_LABEL[pos] ?? pos} · <b style={{ color: tc }}>{teamFullNames[team] || team}</b> · £{r.price}m · {r.selected_by_percent}%
+            {streak === '🔥 Hot' && <span className="ml-2 inline-flex items-center gap-1 text-hot normal-case tracking-normal"><Icon name="flame" size={11} solid /> Hot</span>}
+            {streak === '🧊 Cold' && <span className="ml-2 inline-flex items-center gap-1 text-cold normal-case tracking-normal"><Icon name="snow" size={11} /> Cold</span>}
+          </div>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {isPenTaker && <HeroPill gold title="First-choice penalty taker — extra, high-value goal route.">ⓒ Penalties</HeroPill>}
+            {isSpTaker && <HeroPill title="Primary corner / free-kick taker — extra assist and goal routes.">Set pieces</HeroPill>}
+            {personas.slice(0, 2).map((p) => <HeroPill key={p} title={personaTip(p)}>{p}</HeroPill>)}
+            {flags.slice(0, 1).map((fl) => <HeroPill key={fl} warn={!fl.includes('Monster')} title={personaTip(fl)}>{fl}</HeroPill>)}
+          </div>
+        </div>
+        {rating != null && (
+          <div className="flex-none text-center">
+            <div className="metallic-num font-display text-[38px] leading-[.85] md:text-[46px]">{rating}</div>
+            {rank != null && <div className="font-cond mt-1 text-[9px] font-bold tracking-[.1em] whitespace-nowrap uppercase" style={{ color: HERO_DIM }}>#{rank} of {peers.length} {pos}</div>}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ═══ The Brief — the narrative, front and centre ═════════════════════════
+   A verdict line plus up to five generated sentences, each carrying its
+   receipt inline. Built from the corrected reads (starts-when-fit, def-con
+   percentile) so the page can't state what the data doesn't support. */
+
+const READ_TONE: Record<string, string> = { good: 'text-good', warn: 'text-warn', bad: 'text-bad', info: 'text-info', cold: 'text-cold' }
+
+interface BriefLine { key: string; lead: string; tone: string; rest?: string; receipt?: string }
+
+function briefLines(r: RatingRow, data: CoreData): BriefLine[] {
+  const lines: BriefLine[] = []
+  const pos = r.position
+  const m = data.metrics.find((x) => x.element === r.element) ?? null
+  const teamRating = (data.teamRatings ?? []).find((t) => t.team === String(r.team) && str(t, 'window') === 'season')
+  const defRank = teamRating ? num(teamRating, 'defence_rank') : null
+
+  // 1 · minutes — the corrected availability-vs-selection read
+  const mr = minutesRead(r)
+  lines.push({ key: 'mins', lead: `${mr.word}.`, tone: mr.tone, receipt: mr.sub })
+
+  // 2 · position core
+  if (pos === 'DEF' || pos === 'GKP') {
+    const cs = num(r, 'season_m_cs_rate')
+    if (cs != null) {
+      const who = pos === 'GKP' ? 'in front of him' : 'behind him'
+      if (defRank != null && defRank <= 6) lines.push({ key: 'cs', lead: `A real clean-sheet floor —`, tone: 'good', rest: `the league's #${defRank} defence plays ${who}.`, receipt: `Clean sheets in ${Math.round(cs * 100)}% of starts` })
+      else if (defRank != null && defRank >= 15) lines.push({ key: 'cs', lead: `The clean-sheet case is thin —`, tone: 'warn', rest: `a #${defRank}-ranked defence ${who}.`, receipt: `Clean sheets in just ${Math.round(cs * 100)}% of starts` })
+      else lines.push({ key: 'cs', lead: `Clean sheets in ${Math.round(cs * 100)}% of starts`, tone: 'info', rest: defRank != null ? `— a mid-pack #${defRank} defence.` : '.' })
+    }
+    if (pos === 'DEF') {
+      const d = defConRead(r)
+      if (d) lines.push({ key: 'dc', lead: '__dc__', tone: d.hit >= 0.55 || (d.pctl ?? 0) >= 70 ? 'good' : d.hit >= 0.3 ? 'info' : 'warn', receipt: d.support })
+    }
+    if (pos === 'GKP') {
+      const prevented = num(r, 'season_m_prevented')
+      const faced = num(r, 'season_m_shots_faced')
+      if (prevented != null) {
+        const busy = faced != null && faced >= 4.3
+        lines.push({
+          key: 'gk',
+          lead: prevented >= 0.08 ? 'An above-the-line shot-stopper.' : prevented <= -0.08 ? 'The shot-stopping runs below the line.' : 'League-average shot-stopping.',
+          tone: prevented >= 0.08 ? 'good' : prevented <= -0.08 ? 'bad' : 'info',
+          receipt: `${prevented >= 0 ? '+' : ''}${prevented.toFixed(2)} goals prevented per 90${faced != null ? ` · ${faced.toFixed(1)} shots faced a game${busy ? ' — save points are a real floor' : ' — his value is the sheet, not the stops'}` : ''}`,
+        })
+      }
+    }
+  } else {
+    // talisman share
+    const xgShare = m ? (num(m, 'xg_share_season') ?? num(m, 'xg_share_4gw')) : null
+    const xaShare = m ? (num(m, 'xa_share_season') ?? num(m, 'xa_share_4gw')) : null
+    const share = xgShare == null && xaShare == null ? null : ((xgShare ?? 0) + (xaShare ?? 0)) / 2
+    if (share != null && share >= 0.13) {
+      lines.push({
+        key: 'tal',
+        lead: share >= 0.3 ? 'The talisman.' : share >= 0.2 ? 'The focal point.' : 'A key piece of the attack.',
+        tone: 'good',
+        receipt: `${Math.round(share * 100)}% of ${r.team}'s combined xG + xA runs through him`,
+      })
+    }
+    // finishing
+    const tg = num(r, 'season_total_goals'), txg = num(r, 'season_total_xg')
+    if (tg != null && txg != null && txg >= 1.5) {
+      const delta = tg - txg
+      lines.push({
+        key: 'fin',
+        lead: delta >= 1.5 ? 'Finishing above the chances.' : delta <= -1.5 ? 'The luck debt is owed to him.' : 'Scoring exactly what the chances deserve.',
+        tone: delta >= 1.5 ? 'warn' : delta <= -1.5 ? 'cold' : 'good',
+        receipt: `${tg} goals from ${txg.toFixed(1)} xG${delta >= 1.5 ? ' — hot finishing rarely holds' : delta <= -1.5 ? ' — this gap historically closes' : ' — sustainable output'}`,
+      })
+    }
+    // creation, if it's the stronger suit
+    const xa = num(r, 'season_m_xa')
+    const paXa = num(r, 'season_pct_xa')
+    if (xa != null && paXa != null && paXa >= 65 && lines.length < 4) {
+      lines.push({ key: 'cr', lead: 'A genuine creator.', tone: 'good', receipt: `${xa.toFixed(2)} xA per 90 — top ${Math.max(1, 100 - Math.round(paXa))}% of the position` })
+    }
+    // defensive mids
+    const d = defConRead(r)
+    if (d && (num(r, 'season_pct_dc_hit') ?? 0) >= 55 && lines.length < 4) {
+      lines.push({ key: 'dc', lead: 'A def-con floor most attackers lack.', tone: 'good', receipt: d.support })
+    }
+  }
+
+  // 3 · form vs expected
+  const fr = formRead(r)
+  if (fr) lines.push({ key: 'form', lead: `${fr.word}.`, tone: fr.tone, receipt: fr.sub })
+
+  // 4 · value / the catch
+  const vr = valueRead(r)
+  if (vr) {
+    const price = num(r, 'price') ?? 0
+    const peersP = (data.ratings as RatingRow[]).filter((p) => p.position === pos && num(p, 'price') != null)
+    const topBand = peersP.length ? price >= [...peersP].map((p) => num(p, 'price') as number).sort((a, b) => b - a)[Math.max(0, Math.floor(peersP.length * 0.05))] : false
+    lines.push({
+      key: 'value',
+      lead: topBand ? 'The catch: you pay for all of it.' : vr.tone === 'good' ? 'And the price is fair.' : 'Priced for what he is.',
+      tone: topBand ? 'warn' : vr.tone,
+      receipt: `${vr.word} · ${vr.sub}`,
+    })
+  }
+
+  return lines.slice(0, 5)
+}
+
+function TheBrief({ r, data, verdict }: { r: RatingRow; data: CoreData; verdict: ReturnType<typeof buildPlayerVerdict> }) {
+  const lines = briefLines(r, data)
+  const d = r.position === 'DEF' ? defConRead(r) : null
+  const hasFix = data.fixtureEase.some((fx) => fx.team === String(r.team))
+  return (
+    <div className="mt-5">
+      <div className="mb-2 text-[10px] font-extrabold tracking-[0.24em] text-accent uppercase">The Brief</div>
+      {verdict?.verdict && <p className="text-[17px] leading-snug font-bold tracking-[-0.01em] text-ink">{verdict.verdict}.</p>}
+      <div className="mt-2">
+        {lines.map((l) => (
+          <p key={l.key} className="border-t border-line py-2.5 text-[14.5px] leading-snug font-semibold text-ink first:border-t-0">
+            {l.lead === '__dc__' && d ? <span className="[&_em]:not-italic [&_em]:text-accent-2">{d.sentence}</span> : <span className={READ_TONE[l.tone] ?? 'text-ink'}>{l.lead}</span>}
+            {l.rest && <span> {l.rest}</span>}
+            {l.receipt && <span className="mt-0.5 block text-xs font-normal text-ink-3">{l.receipt}</span>}
+          </p>
+        ))}
+      </div>
+      {hasFix && (
+        <div className="border-t border-line pt-2.5">
+          <div className="mb-1.5 text-[10px] font-bold tracking-[0.14em] text-ink-3 uppercase">Next fixtures</div>
+          <FixtureChips fixtureEase={data.fixtureEase} team={String(r.team)} n={4} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ═══ Evidence band — the two charts that earn their place ════════════════ */
+
 /** Promise vs delivery: expected pts/game as the gold fill, actual as the
- * white marker, both on a scale set by the position's best. */
+ * ink marker, both on a scale set by the position's best. */
 function BulletGauge({ r, peers }: { r: RatingRow; peers: RatingRow[] }) {
   const xpg = num(r, 'season_xpts_per_game')
   const ppg = num(r, 'season_ppg')
@@ -356,15 +559,15 @@ function BulletGauge({ r, peers }: { r: RatingRow; peers: RatingRow[] }) {
   const delta = ppg - xpg
   const read = delta > 0.35 ? 'running hot — output above the underlying numbers' : delta < -0.35 ? 'running under — due an uptick' : 'delivering right on expectation'
   return (
-    <div className="mt-5 max-w-xl">
-      <div className="font-cond mb-2 text-[10px] font-extrabold tracking-[.2em] uppercase" style={{ color: HERO_DIM }}>Promise vs delivery — pts / game</div>
-      <div className="relative h-4 rounded-full" style={{ background: 'rgba(255,255,255,.07)' }}>
-        <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.min(100, (xpg / scale) * 100)}%`, background: 'linear-gradient(90deg,#9a761c,#ead188)' }} />
-        <span className="absolute -top-1 -bottom-1 w-[3px] rounded-sm bg-white" style={{ left: `${Math.min(100, (ppg / scale) * 100)}%`, boxShadow: '0 0 8px rgba(255,255,255,.6)' }} />
+    <div>
+      <div className="mb-2 text-[10px] font-extrabold tracking-[0.18em] text-ink-3 uppercase">Promise vs delivery — pts / game</div>
+      <div className="relative h-4 rounded-full bg-white/8">
+        <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.min(100, (xpg / scale) * 100)}%`, background: 'linear-gradient(90deg, var(--accent-strong), var(--accent-2))' }} />
+        <span className="absolute -top-1 -bottom-1 w-[3px] rounded-sm" style={{ left: `${Math.min(100, (ppg / scale) * 100)}%`, background: 'var(--ink)', boxShadow: '0 0 8px rgba(0,0,0,.4)' }} />
       </div>
-      <div className="mt-2 flex flex-wrap justify-between gap-x-4 gap-y-1 text-[12px]" style={{ color: HERO_DIM }}>
-        <span><b style={{ color: HERO_GOLD }}>{xpg.toFixed(1)} expected</b> (gold)</span>
-        <span><b className="text-white">{ppg.toFixed(1)} actual</b> (marker) — {read}</span>
+      <div className="mt-2 flex flex-wrap justify-between gap-x-4 gap-y-1 text-[12px] text-ink-2">
+        <span><b className="metallic-num">{xpg.toFixed(1)} expected</b> (fill)</span>
+        <span><b className="text-ink">{ppg.toFixed(1)} actual</b> (marker) — {read}</span>
       </div>
     </div>
   )
@@ -377,97 +580,32 @@ function Fingerprint({ r }: { r: RatingRow }) {
   const rows = dims.map(([label, col]) => [label, ratingTo100(str(r, col))] as const)
   if (rows.every(([, v]) => v == null)) return null
   return (
-    <div className="w-full max-w-md">
-      <div className="font-cond mb-3 text-[10px] font-extrabold tracking-[.2em] uppercase" style={{ color: HERO_DIM }}>The fingerprint — percentile vs all {r.position}</div>
+    <div>
+      <div className="mb-3 text-[10px] font-extrabold tracking-[0.18em] text-ink-3 uppercase">The fingerprint — percentile vs all {r.position}</div>
       <div className="grid gap-2.5">
         {rows.map(([label, v]) => (
           <div key={label} className="grid grid-cols-[92px_1fr_34px] items-center gap-2.5">
-            <span className="font-cond text-[10px] font-bold tracking-[.08em] uppercase" style={{ color: HERO_DIM }}>{label}</span>
-            <div className="relative h-[5px] rounded-full" style={{ background: 'rgba(255,255,255,.08)' }}>
-              <span className="absolute -top-0.5 -bottom-0.5 left-1/2 w-px" style={{ background: 'rgba(255,255,255,.25)' }} />
+            <span className="text-[10px] font-bold tracking-[.06em] text-ink-2 uppercase">{label}</span>
+            <div className="relative h-[5px] rounded-full bg-white/8">
+              <span className="absolute -top-0.5 -bottom-0.5 left-1/2 w-px bg-ink-3/60" />
               {v != null && (
-                <span className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ left: `${v}%`, background: 'radial-gradient(circle at 35% 30%, #ead188, #9a761c)', boxShadow: '0 0 10px rgba(201,162,39,.5)' }} />
+                <span className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ left: `${v}%`, background: 'radial-gradient(circle at 35% 30%, var(--accent-2), var(--accent-strong))', boxShadow: '0 0 8px color-mix(in srgb, var(--accent) 55%, transparent)' }} />
               )}
             </div>
-            <span className="text-right text-[12px] font-extrabold tabular-nums" style={{ color: v == null ? HERO_DIM : HERO_GOLD }}>{v ?? '—'}</span>
+            <span className={`text-right text-[12px] font-extrabold tabular-nums ${v == null ? 'text-ink-3' : 'metallic-num'}`}>{v ?? '—'}</span>
           </div>
         ))}
       </div>
-      <div className="mt-2.5 text-[11px]" style={{ color: HERO_DIM }}>White line = positional average. The dot pattern <i>is</i> the player.</div>
+      <div className="mt-2.5 text-[11px] text-ink-3">Centre line = positional average. The dot pattern <i>is</i> the player.</div>
     </div>
   )
 }
 
-function PlayerHero({ r, peers, verdict, personas, flags, isPenTaker, isSpTaker, streak }: {
-  r: RatingRow
-  peers: RatingRow[]
-  verdict: ReturnType<typeof buildPlayerVerdict>
-  personas: string[]
-  flags: string[]
-  isPenTaker: boolean
-  isSpTaker: boolean
-  streak: string
-}) {
-  const name = String(r.web_name)
-  const team = String(r.team)
-  const tc = teamColors[team] ?? '#7ad1ff'
-  const pos = r.position
-  const isGk = pos === 'GKP'
-  const rating = ratingTo100(num(r, 'season_overall_score'))
-  const rank = rating != null ? 1 + peers.filter((p) => (ratingTo100(num(p, 'season_overall_score')) ?? -1) > rating).length : null
-  const tp = num(r, 'season_total_points')
-  const tg = num(r, 'season_total_goals'), txg = num(r, 'season_total_xg')
-  const ta = num(r, 'season_total_assists'), txa = num(r, 'season_total_xa')
-  const mins = num(r, 'total_mins')
-
+function EvidenceBand({ r, peers }: { r: RatingRow; peers: RatingRow[] }) {
   return (
-    <div className="relative overflow-hidden" style={{ background: `radial-gradient(700px 480px at 88% 0%, ${tc}30, transparent 62%), radial-gradient(600px 420px at 0% 100%, rgba(201,162,39,.1), transparent 60%), linear-gradient(118deg,#12100b 0%,#0b0908 52%,#060504 100%)` }}>
-      <div className="pointer-events-none absolute inset-0 opacity-50" style={{ background: 'repeating-linear-gradient(118deg, transparent 0 140px, rgba(255,255,255,.016) 140px 142px)' }} />
-
-      <div className="relative z-10 grid gap-x-8 gap-y-6 px-5 py-6 md:grid-cols-[1.1fr_1fr] md:items-center md:px-8 md:py-7">
-        <div className="min-w-0">
-          <div className="flex items-center gap-4">
-            <div className="relative flex-none" aria-hidden="true">
-              <div className="absolute inset-x-0 bottom-0 h-6 rounded-[50%]" style={{ background: `radial-gradient(closest-side, ${tc}40, transparent)` }} />
-              <PhotoImg hero code={r.code} element={r.element} className="h-[120px] w-auto object-contain md:h-[150px]" style={{ filter: 'drop-shadow(0 12px 24px rgba(0,0,0,.6))' }} placeholder={<div className="flex h-[120px] w-[80px] items-end justify-center md:h-[150px] md:w-[100px]"><HeroSilhouette /></div>} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h1 className="font-display leading-[.92] tracking-[-.01em] uppercase" style={{ fontSize: 'clamp(30px,5.5vw,52px)', background: 'linear-gradient(180deg,#fff 12%,#eee9dd 48%,#a1988a 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', filter: 'drop-shadow(0 8px 24px rgba(0,0,0,.6))' }}>{name}</h1>
-              <div className="font-cond mt-1.5 text-[12px] font-semibold tracking-[.14em] uppercase" style={{ color: HERO_DIM }}>
-                {POS_LABEL[pos] ?? pos} · <b style={{ color: tc }}>{teamFullNames[team] || team}</b> · £{r.price}m · {r.selected_by_percent}% owned
-                {streak === '🔥 Hot' && <span className="ml-2 inline-flex items-center gap-1 text-hot normal-case tracking-normal"><Icon name="flame" size={11} solid /> Hot</span>}
-                {streak === '🧊 Cold' && <span className="ml-2 inline-flex items-center gap-1 text-cold normal-case tracking-normal"><Icon name="snow" size={11} /> Cold</span>}
-              </div>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {isPenTaker && <HeroPill gold title="First-choice penalty taker — extra, high-value goal route.">ⓒ Penalties</HeroPill>}
-                {isSpTaker && <HeroPill title="Primary corner / free-kick taker — extra assist and goal routes.">Set pieces</HeroPill>}
-                {personas.slice(0, 2).map((p) => <HeroPill key={p} title={personaTip(p)}>{p}</HeroPill>)}
-                {flags.slice(0, 1).map((f) => <HeroPill key={f} warn={!f.includes('Monster')} title={personaTip(f)}>{f}</HeroPill>)}
-              </div>
-            </div>
-            {rating != null && (
-              <div className="flex-none text-center">
-                <div className="metallic-num font-display text-[52px] leading-[.85] md:text-[64px]">{rating}</div>
-                {rank != null && <div className="font-cond mt-1.5 text-[10px] font-bold tracking-[.12em] uppercase" style={{ color: HERO_DIM }}>#{rank} of {peers.length} {pos}</div>}
-              </div>
-            )}
-          </div>
-
-          {verdict?.verdict && <p className="mt-4 max-w-xl text-[14.5px]" style={{ color: '#d6d0c2' }}>{verdict.verdict}.</p>}
-
-          <BulletGauge r={r} peers={peers} />
-
-          <div className="mt-6 flex flex-wrap gap-x-7 gap-y-3">
-            <StatMini v={tp ?? '—'} k="Points" />
-            {!isGk && <StatMini v={tg ?? '—'} sub={txg != null ? `/ ${txg} xG` : undefined} k="Goals" />}
-            {!isGk && <StatMini v={ta ?? '—'} sub={txa != null ? `/ ${txa} xA` : undefined} k="Assists" />}
-            <StatMini v={mins != null ? mins.toLocaleString() : '—'} k="Minutes" />
-            <StatMini v={num(r, 'season_ppg')?.toFixed(2) ?? '—'} k="Pts / Game" />
-          </div>
-        </div>
-
-        <Fingerprint r={r} />
-      </div>
+    <div className="mt-6 grid gap-6 rounded-xl border border-line bg-surface-1 p-4 md:grid-cols-[1.05fr_1fr] md:items-center">
+      <BulletGauge r={r} peers={peers} />
+      <Fingerprint r={r} />
     </div>
   )
 }

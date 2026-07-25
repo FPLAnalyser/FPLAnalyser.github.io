@@ -12,6 +12,7 @@ import { InfoTip } from '../components/InfoTip'
 import { Icon } from '../components/Icon'
 import { PageSkeleton } from '../components/Skeleton'
 import { EmptyState } from '../components/PageShell'
+import { PlayerCompare, ViewChips, COMPARE_LENSES, type CompareLens } from '../components/CompareScatter'
 import { useCore } from '../lib/useData'
 import { num, str, bool } from '../lib/rows'
 import { ratingToNum, norm, TOOLTIPS, playerHref } from '../lib/util'
@@ -173,6 +174,8 @@ export default function Rankings() {
   const [tab, setTab] = useState('top-rated')
   const [pos, setPos] = useState('ALL')
   const [query, setQuery] = useState('')
+  const [viewMode, setViewMode] = useState<'table' | 'compare'>('table')
+  const [compareLens, setCompareLens] = useState<CompareLens>('value')
 
   const ratings = (data?.ratings ?? []) as RatingRow[]
   const metrics = data?.metrics ?? []
@@ -424,7 +427,10 @@ export default function Rankings() {
 
       {showFilters && (
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {posOptions.length > 1 ? <PillGroup options={posOptions} active={pos} onChange={setPos} /> : <div />}
+        <div className="flex flex-wrap items-center gap-3">
+          {posOptions.length > 1 ? <PillGroup options={posOptions} active={pos} onChange={setPos} /> : null}
+          <ViewChips options={[{ id: 'table', label: 'Table' }, { id: 'compare', label: 'Compare' }]} active={viewMode} onChange={setViewMode} />
+        </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           {showSearch && (
             <div className="relative w-full sm:w-64">
@@ -458,7 +464,31 @@ export default function Rankings() {
       </div>
       )}
 
-      {tab === 'totw' ? (
+      {viewMode === 'compare' && tab !== 'totw' ? (
+        <>
+          <div className="mb-3 flex flex-wrap items-center gap-1.5">
+            {COMPARE_LENSES.map((l) => (
+              <span key={l.id} className="flex items-center gap-1">
+                <button
+                  onClick={() => setCompareLens(l.id)}
+                  className={`min-h-9 rounded-full border px-3 text-[13px] font-semibold transition-colors ${
+                    compareLens === l.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+                  }`}
+                >
+                  {l.label}
+                </button>
+                <InfoTip text={l.tip} />
+              </span>
+            ))}
+          </div>
+          <PlayerCompare
+            rows={(pos === 'ALL' ? ratings : ratings.filter((p) => p.position === pos)).filter((p) => bool(p, 'season_ok')) as RatingRow[]}
+            lens={compareLens}
+            highlightName={query || null}
+            onPlayer={toPlayer}
+          />
+        </>
+      ) : tab === 'totw' ? (
         <TeamOfTheWeek ratings={ratings} currentGw={data.meta?.current_gw ?? null} onPlayer={toPlayer} />
       ) : tab === 'form' ? (
         <FormTables rows={seasonToDate} pos={pos} onPlayer={toPlayer} />

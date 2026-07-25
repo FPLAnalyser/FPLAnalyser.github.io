@@ -68,10 +68,19 @@ export interface Read { word: string; tone: Tone; sub: string }
 export function minutesRead(r: RatingRow): Read {
   const sr = num(r, 'season_start_rate')
   const m90 = num(r, 'season_mins90_rate')
+  const starts = num(r, 'total_starts')
   if (sr == null) return { word: 'No PL minutes', tone: 'info', sub: 'Unrated until games are played' }
   if (sr >= 0.85 && (m90 ?? 0) >= 0.6) return { word: 'Nailed', tone: 'good', sub: `Starts ${pct(sr)} of games · full 90 in ${pct(m90)}` }
   if (sr >= 0.85) return { word: 'Starts, gets hooked', tone: 'good', sub: `${pct(sr)} starts but only ${pct(m90) ?? 'few'} full 90s` }
-  if (sr >= 0.55) return { word: 'Rotation risk', tone: 'warn', sub: `Only ${pct(sr)} starts — a coin-flip most weeks` }
+  // Availability vs selection: a player who plays the full 90 whenever he
+  // starts, with no sub cameos, isn't being rotated — he's been unavailable
+  // (injury/suspension). Never call that a rotation risk.
+  if (sr >= 0.35 && (m90 ?? 0) >= 0.75) {
+    return sr >= 0.55
+      ? { word: 'Starts when fit', tone: 'good', sub: `${starts != null ? `${starts} starts` : pct(sr) + ' of games'}, full shifts when he plays — absences were fitness, not selection` }
+      : { word: 'Starter when available', tone: 'warn', sub: `First choice when fit, but missed ${pct(1 - sr)} of games — check availability` }
+  }
+  if (sr >= 0.55) return { word: 'Rotation risk', tone: 'warn', sub: `Only ${pct(sr)} starts and hooked or benched often — a coin-flip most weeks` }
   return { word: 'Fringe player', tone: 'bad', sub: `${pct(sr)} starts — minutes are the whole problem` }
 }
 
@@ -112,10 +121,13 @@ export function archetypeOf(r: RatingRow): 'unknown' | 'rotation' | 'enabler' | 
   const overall = num(r, 'season_overall_score')
   if (overall == null) return 'unknown'
   const sr = num(r, 'season_start_rate')
+  const m90 = num(r, 'season_mins90_rate')
   const rating = overall * 20
   const price = num(r, 'price') ?? 99
   if (sr != null && sr >= 0.8 && rating <= 58 && price <= 4.8) return 'enabler'
-  if (sr != null && sr >= 0.35 && sr < 0.85) return 'rotation'
+  // Real rotation shows up as partial games (hooked early, sub cameos). A
+  // full-shift player with a sub-85% start rate was absent, not rotated.
+  if (sr != null && sr >= 0.35 && sr < 0.85 && (m90 ?? 0) < 0.75) return 'rotation'
   return 'standard'
 }
 
@@ -270,25 +282,47 @@ function FinishingModule({ r }: { r: RatingRow }) {
   )
 }
 
-function DefConModule({ r }: { r: RatingRow }) {
+/** The Def Con read, shared by the module and the brief. Phrases from the
+ * percentile vs position and the distance to the actions threshold — never
+ * from the raw hit rate alone (a 29% rate can be the 80th percentile). */
+export function defConRead(r: RatingRow): { hit: number; pctl: number | null; actions: number; threshold: number; gap: number; sentence: ReactNode; support: string } | null {
   const hit = f(r, 'dc_hit')
   if (hit == null) return null
-  const cbit = (f(r, 'cbi') ?? 0) + (f(r, 'tackles') ?? 0)
   const isMid = r.position === 'MID' || r.position === 'FWD'
-  if (isMid && (fp(r, 'dc_hit') ?? 0) < 55) return null // only a story for defensive mids
-  const s =
+  // FPL thresholds: defenders need 10 CBIT actions; mids/forwards need 12
+  // including recoveries.
+  const threshold = isMid ? 12 : 10
+  const actions = (f(r, 'cbi') ?? 0) + (f(r, 'tackles') ?? 0) + (isMid ? f(r, 'recoveries') ?? 0 : 0)
+  const pctl = fp(r, 'dc_hit')
+  const gap = threshold - actions
+  const posLabel = isMid ? 'midfielders' : 'defenders'
+  const sentence: ReactNode =
     hit >= 0.55 ? <>Banks the <em>+2 Def Con in {pct(hit)} of starts</em> — points without a clean sheet.</> :
+    (pctl ?? 0) >= 70 || (gap <= 1.5 && hit >= 0.2) ? <><em>Knocking on the Def Con door</em> — +2 in {pct(hit)} of starts, more than {pctl != null ? `${Math.round(pctl / 10) * 10}% of ${posLabel}` : 'most peers'} manage.</> :
     hit >= 0.3 ? <>Hits the Def Con threshold <em>every other week</em> ({pct(hit)}).</> :
     <>Rarely hits the Def Con threshold ({pct(hit)}) — <em>clean sheets or nothing</em>.</>
+  const support =
+    hit >= 0.55 ? `${actions.toFixed(1)} defensive actions per 90 — the threshold is routine, not lucky. Even on a bad night he scores.` :
+    gap <= 1.5 ? `${actions.toFixed(1)} defensive actions per 90, within ${gap <= 1 ? 'one action' : gap.toFixed(1) + ' actions'} of the ${threshold} threshold — kind fixtures tip him over.` :
+    (pctl ?? 0) >= 50 || hit >= 0.3 ? `${actions.toFixed(1)} defensive actions per 90 against a threshold of ${threshold} — above average for the position, but the +2 stays matchup-dependent.` :
+    `${actions.toFixed(1)} defensive actions per 90 against a threshold of ${threshold} — the volume isn't there.`
+  return { hit, pctl, actions, threshold, gap, sentence, support }
+}
+
+function DefConModule({ r }: { r: RatingRow }) {
+  const d = defConRead(r)
+  if (!d) return null
+  const isMid = r.position === 'MID' || r.position === 'FWD'
+  if (isMid && (fp(r, 'dc_hit') ?? 0) < 55) return null // only a story for defensive mids
   return (
     <Module
       kick={isMid ? 'The midfield floor' : 'The floor — points without a clean sheet'}
-      sentence={s}
-      support={cbit > 0 ? <>{cbit.toFixed(1)} clearances, blocks, interceptions and tackles per 90 — {hit >= 0.55 ? 'the threshold is routine, not lucky. Even on a bad night he scores.' : hit >= 0.3 ? 'close enough that kind fixtures tip him over.' : 'the volume just isn’t there.'}</> : undefined}
+      sentence={d.sentence}
+      support={d.actions > 0 ? d.support : undefined}
     >
       <Bars>
-        <BarRow label="DC hits" width={hit * 100} value={pct(hit) ?? '—'} tone={hit >= 0.55 ? 'good' : hit >= 0.3 ? 'gold' : 'bad'} />
-        <BarRow label="CBIT / 90" width={fp(r, 'cbi') ?? 0} value={cbit.toFixed(1)} />
+        <BarRow label="DC hits" width={d.hit * 100} value={pct(d.hit) ?? '—'} tone={d.hit >= 0.55 ? 'good' : (d.pctl ?? 0) >= 70 || d.hit >= 0.3 ? 'gold' : 'bad'} />
+        <BarRow label={isMid ? 'CBIT+R / 90' : 'CBIT / 90'} width={Math.min(100, (d.actions / d.threshold) * 100)} value={d.actions.toFixed(1)} />
       </Bars>
     </Module>
   )
@@ -393,7 +427,7 @@ function WhatHeIsntModule({ r }: { r: RatingRow }) {
   )
 }
 
-function UnknownModules({ r }: { r: RatingRow }) {
+export function UnknownModules({ r }: { r: RatingRow }) {
   const pen = bool(r, 'is_pen_taker')
   const sp = bool(r, 'is_setpiece_taker')
   const roles = [pen && 'the penalties', sp && 'set pieces'].filter(Boolean) as string[]

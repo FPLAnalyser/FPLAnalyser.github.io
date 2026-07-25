@@ -2,11 +2,12 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PageShell, EmptyState } from '../components/PageShell'
 import { SectionBanner, StadiumBanner } from '../components/SectionBanner'
-import { TeamStory } from '../components/TeamStory'
+import { TeamStory, PointsMix } from '../components/TeamStory'
 import { SortableTable, type Column } from '../components/SortableTable'
 import { SearchBox } from '../components/SearchBox'
 import { Tabs, type TabDef } from '../components/Tabs'
 import { ClubCard, TeamMatchup } from '../components/ClubCard'
+import { TeamMap, ViewChips } from '../components/CompareScatter'
 import { StarRating } from '../components/StarRating'
 import { AnimatedCounter } from '../components/AnimatedCounter'
 import { Donut, CHART_COLORS, RatingNumber, ConcentrationBar, scoreTone, SCORE_TEXT } from '../components/viz'
@@ -19,7 +20,7 @@ import { Icon } from '../components/Icon'
 import { useCore } from '../lib/useData'
 import { num, str, bool } from '../lib/rows'
 import { teamFullNames, teamLabel, TOOLTIPS } from '../lib/util'
-import type { FixtureEaseRow, RatingRow, Row, TeamRatingRow } from '../lib/types'
+import type { CoreData, FixtureEaseRow, RatingRow, Row, TeamRatingRow } from '../lib/types'
 
 function Tile({ value, label }: { value: ReactNode; label: string }) {
   return (
@@ -56,6 +57,7 @@ export default function Teams() {
   const { data, error: coreError } = useCore()
   const [params, setParams] = useSearchParams()
   const selected = params.get('team')
+  const [listView, setListView] = useState<'list' | 'map'>('list')
 
   const teamMetrics = data?.teamMetrics ?? []
   const teamRatings = (data?.teamRatings ?? []) as TeamRatingRow[]
@@ -139,12 +141,12 @@ export default function Teams() {
       {selected && seasonByTeam.has(selected) ? (
         <div className="flex flex-col gap-4">
           <TeamStory team={selected} data={data} />
-          <div className="grid gap-3 md:grid-cols-2">
-            <ClubCard team={selected} season={ratingByTeam.get(selected)} gw4={gw4ByTeam.get(selected)} fixtureEase={fixtureEase} />
-            <TeamMatchup team={selected} ratingByTeam={ratingByTeam} fixtureEase={fixtureEase} />
-          </div>
-          <TeamCard
+          <TeamReceipts
             team={selected}
+            data={data}
+            season={ratingByTeam.get(selected)}
+            gw4={gw4ByTeam.get(selected)}
+            ratingByTeam={ratingByTeam}
             metricRows={teamMetrics.filter((t) => String(t.team) === selected)}
             ratingRows={teamRatings.filter((t) => t.team === selected)}
             ratings={ratings}
@@ -175,16 +177,70 @@ export default function Teams() {
         </div>
       ) : (
         <>
-          <div className="mb-3 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">All clubs</div>
-          <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {clubOrder.map((t) => (
-              <ClubCard key={t} team={t} season={ratingByTeam.get(t)} gw4={gw4ByTeam.get(t)} fixtureEase={fixtureEase} onClick={() => selectTeam(t)} />
-            ))}
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">All clubs</div>
+            <ViewChips options={[{ id: 'list', label: 'List' }, { id: 'map', label: 'Map' }]} active={listView} onChange={setListView} />
           </div>
-          <AllTeamsTable rows={seasonRows} ratingByTeam={ratingByTeam} onSelect={selectTeam} />
+          {listView === 'map' ? (
+            <TeamMap ratingByTeam={ratingByTeam} onTeam={selectTeam} />
+          ) : (
+            <>
+              <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {clubOrder.map((t) => (
+                  <ClubCard key={t} team={t} season={ratingByTeam.get(t)} gw4={gw4ByTeam.get(t)} fixtureEase={fixtureEase} onClick={() => selectTeam(t)} />
+                ))}
+              </div>
+              <AllTeamsTable rows={seasonRows} ratingByTeam={ratingByTeam} onSelect={selectTeam} />
+            </>
+          )}
         </>
       )}
     </PageShell>
+  )
+}
+
+/** The folded receipts: the club dashboard and squad tables, stated once
+ * behind tabs so the brief above stays the page. */
+function TeamReceipts({ team, data, season, gw4, ratingByTeam, metricRows, ratingRows, ratings, fixtureEase }: {
+  team: string
+  data: CoreData
+  season: TeamRatingRow | undefined
+  gw4: TeamRatingRow | undefined
+  ratingByTeam: Map<string, TeamRatingRow>
+  metricRows: Row[]
+  ratingRows: TeamRatingRow[]
+  ratings: RatingRow[]
+  fixtureEase: FixtureEaseRow[]
+}) {
+  const [tab, setTab] = useState<'dashboard' | 'squad'>('dashboard')
+  return (
+    <div>
+      <div className="mb-1 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Receipts</div>
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {([['dashboard', 'Club dashboard'], ['squad', 'Squad & tables']] as const).map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            className={`min-h-9 rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${
+              tab === id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {tab === 'dashboard' ? (
+        <div className="grid items-start gap-3 md:grid-cols-2">
+          <ClubCard team={team} season={season} gw4={gw4} fixtureEase={fixtureEase} />
+          <div className="flex flex-col gap-3">
+            <TeamMatchup team={team} ratingByTeam={ratingByTeam} fixtureEase={fixtureEase} />
+            <PointsMix team={team} data={data} />
+          </div>
+        </div>
+      ) : (
+        <TeamCard team={team} metricRows={metricRows} ratingRows={ratingRows} ratings={ratings} fixtureEase={fixtureEase} />
+      )}
+    </div>
   )
 }
 
