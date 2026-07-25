@@ -32,7 +32,7 @@ const IS_NATIVE = typeof window !== 'undefined'
 // Data is namespaced by season on disk: site_data/<season>/<name>.json. The
 // active season is resolved once per page load (index.html sets window.__season
 // from localStorage or the build-time default; switching seasons reloads).
-export const DEFAULT_SEASON = '2025-26'
+export const DEFAULT_SEASON = '2026-27'
 let activeSeason: string | null = null
 export function setActiveSeason(id: string) {
   activeSeason = id

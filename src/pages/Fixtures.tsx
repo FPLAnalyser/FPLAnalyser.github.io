@@ -9,6 +9,7 @@ import { Icon } from '../components/Icon'
 import { PageSkeleton } from '../components/Skeleton'
 import { useCore, useLazyTable } from '../lib/useData'
 import { classifyZone, toPitch } from '../lib/shotzones'
+import { windowGames } from '../components/TeamStory'
 import { num, str } from '../lib/rows'
 import { teamLabel, FDR_COLORS, playerHref } from '../lib/util'
 import type { FixtureEaseRow, RatingRow, Row, TeamRatingRow } from '../lib/types'
@@ -32,6 +33,34 @@ const VIEW_TABS: TabDef[] = [
   { id: 'matchup', label: 'Matchup Explorer' },
 ]
 type View = 'difficulty' | 'rotation' | 'matchup'
+
+/* The grid shows one of three things per cell: our 1–5 difficulty, the
+   projected xG the team's attack should produce in that fixture, or the
+   probability of a clean sheet — with window totals in the Run column. */
+type GridMode = 'diff' | 'xg' | 'cs'
+const MODE_TABS: TabDef[] = [
+  { id: 'diff', label: 'Difficulty' },
+  { id: 'xg', label: 'Projected xG' },
+  { id: 'cs', label: 'Clean sheets' },
+]
+const MODE_TIP: Record<GridMode, string> = {
+  diff: 'Our own difficulty (1 = easy … 5 = hard) from opponent strength on our team ratings.',
+  xg: "Projected expected goals for this team's ATTACK in each fixture: their xG/game baseline × how freely the opponent concedes vs the league × a ±5% venue nudge. The Σ column is the plain sum over the window — the goals their attack should produce across the run.",
+  cs: 'The chance of a clean sheet in each fixture: projected goals conceded (opponent xG/game × our concession rate vs the league × venue) turned into a shutout probability (Poisson, e^−λ). The Σ column sums the probabilities — the number of clean sheets to expect over the window.',
+}
+
+/** Per-game attacking/defensive baselines (Understat chance quality), plus
+ * the league means — the inputs to the fixture projections. */
+interface TeamBase { xg: number; xgc: number }
+
+function projectCell(mode: 'xg' | 'cs', teamBase: TeamBase | undefined, oppBase: TeamBase | undefined, league: TeamBase, venue: 'H' | 'A'): { v: number; assumed: boolean } | null {
+  if (!teamBase || league.xgc <= 0 || league.xg <= 0) return null
+  const assumed = !oppBase
+  const opp = oppBase ?? league // promoted club: league-average assumption, flagged
+  if (mode === 'xg') return { v: teamBase.xg * (opp.xgc / league.xgc) * (venue === 'H' ? 1.05 : 0.95), assumed }
+  const lambda = opp.xg * (teamBase.xgc / league.xgc) * (venue === 'H' ? 0.95 : 1.05)
+  return { v: Math.exp(-lambda), assumed }
+}
 
 /* Our own fixture difficulty is driven by opponent strength from our team
    ratings, split into three lenses. It falls back to FPL's FDR only when the
@@ -141,12 +170,33 @@ export default function Fixtures() {
   const [view, setView] = useState<View>('difficulty')
   const [windowN, setWindowN] = useState<(typeof WINDOWS)[number]>(4)
   const [lens, setLens] = useState<Lens>('overall')
+  const [mode, setMode] = useState<GridMode>('diff')
 
   // Season team ratings (opponent strength) drive our own difficulty.
   const seasonRating = useMemo(() => {
     const m = new Map<string, TeamRatingRow>()
     for (const r of (data?.teamRatings ?? []) as TeamRatingRow[]) if (r.window === 'season') m.set(r.team, r)
     return m
+  }, [data])
+
+  // Per-game xG / xGC baselines for the projection modes (normalised from
+  // window totals — never show a total as a rate).
+  const { baselines, leagueBase } = useMemo(() => {
+    const m = new Map<string, TeamBase>()
+    if (data) {
+      for (const t of data.teamMetrics) {
+        if (str(t, 'window') !== 'season') continue
+        const g = windowGames(t, data)
+        const xg = num(t, 'team_xg')
+        const xgc = num(t, 'team_xgc')
+        if (xg != null && xgc != null && g > 0) m.set(String(t.team), { xg: xg / g, xgc: xgc / g })
+      }
+    }
+    const vals = [...m.values()]
+    const leagueBase: TeamBase = vals.length
+      ? { xg: vals.reduce((s, v) => s + v.xg, 0) / vals.length, xgc: vals.reduce((s, v) => s + v.xgc, 0) / vals.length }
+      : { xg: 1.4, xgc: 1.4 }
+    return { baselines: m, leagueBase }
   }, [data])
 
   // Per-team + league concession profiles for the fixture read (lazy — the
@@ -203,27 +253,45 @@ export default function Fixtures() {
                 ))}
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Rate for</span>
-                {(LENS_TABS).map((l) => (
-                  <span key={l.id} className="flex items-center gap-1">
+                <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Show</span>
+                {MODE_TABS.map((m) => (
+                  <span key={m.id} className="flex items-center gap-1">
                     <button
-                      onClick={() => setLens(l.id as Lens)}
+                      onClick={() => setMode(m.id as GridMode)}
                       className={`min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${
-                        lens === l.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+                        mode === m.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
                       }`}
                     >
-                      {l.label}
+                      {m.label}
                     </button>
-                    <InfoTip text={LENS_TIP[l.id as Lens]} />
+                    <InfoTip text={MODE_TIP[m.id as GridMode]} />
                   </span>
                 ))}
               </div>
+              {mode === 'diff' && (
+                <div className="flex items-center gap-1.5">
+                  <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Rate for</span>
+                  {(LENS_TABS).map((l) => (
+                    <span key={l.id} className="flex items-center gap-1">
+                      <button
+                        onClick={() => setLens(l.id as Lens)}
+                        className={`min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${
+                          lens === l.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+                        }`}
+                      >
+                        {l.label}
+                      </button>
+                      <InfoTip text={LENS_TIP[l.id as Lens]} />
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
             {horizon < windowN && (
               <p className="mb-3 -mt-1 text-xs text-ink-3">The data pipeline currently publishes {horizon} gameweeks ahead — showing all {horizon}.</p>
             )}
 
-            <FixtureGrid fixtureEase={fixtureEase} windowN={windowN} lens={lens} seasonRating={seasonRating} profiles={profiles} league={league} />
+            <FixtureGrid key={mode} fixtureEase={fixtureEase} windowN={windowN} lens={lens} mode={mode} seasonRating={seasonRating} baselines={baselines} leagueBase={leagueBase} profiles={profiles} league={league} />
             <ChipPlanner fixtureEase={fixtureEase} ratings={data.ratings as RatingRow[]} />
           </>
         ) : (
@@ -506,17 +574,22 @@ function RotationPlanner({ ratings: _ratings, fixtureEase, seasonRating }: { rat
    lens. Click any GW header (or the Run column) to rank teams by that week; tap a
    team to expand a scouting read of where its upcoming opponents are weak. */
 function FixtureGrid({
-  fixtureEase, windowN, lens, seasonRating, profiles, league,
+  fixtureEase, windowN, lens, mode, seasonRating, baselines, leagueBase, profiles, league,
 }: {
   fixtureEase: FixtureEaseRow[]
   windowN: number
   lens: Lens
+  mode: GridMode
   seasonRating: Map<string, TeamRatingRow>
+  baselines: Map<string, TeamBase>
+  leagueBase: TeamBase
   profiles: Map<string, Profile>
   league: Profile
 }) {
   const [sortKey, setSortKey] = useState<number | 'run'>('run')
-  const [dir, setDir] = useState<'asc' | 'desc'>('asc') // asc = easiest first
+  // Difficulty: ascending = easiest first. Projections: descending = most
+  // goals / best sheet odds first.
+  const [dir, setDir] = useState<'asc' | 'desc'>(mode === 'diff' ? 'asc' : 'desc')
   const [open, setOpen] = useState<string | null>(null)
 
   const gws = useMemo(
@@ -538,24 +611,42 @@ function FixtureGrid({
         if (!byGw.has(f.gw)) byGw.set(f.gw, [])
         byGw.get(f.gw)!.push(f)
         opponents.push(f.opponent)
-        const { diff, ours } = analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr)
-        if (!ours) usedFdr = true
-        sum += diff
-        count++
+        if (mode === 'diff') {
+          const { diff, ours } = analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr)
+          if (!ours) usedFdr = true
+          sum += diff
+          count++
+        } else {
+          const p = projectCell(mode, baselines.get(team), baselines.get(f.opponent), leagueBase, f.venue)
+          if (p) {
+            if (p.assumed) usedFdr = true
+            sum += p.v
+            count++
+          }
+        }
       }
-      return { team, byGw, opponents, run: count ? sum / count : null, usedFdr }
+      // Difficulty runs average; projection runs are plain sums (total xG /
+      // expected clean sheets over the window).
+      return { team, byGw, opponents, run: count ? (mode === 'diff' ? sum / count : sum) : null, usedFdr }
     })
-  }, [fixtureEase, gwSet, lens, seasonRating])
+  }, [fixtureEase, gwSet, lens, mode, seasonRating, baselines, leagueBase])
 
-  // Mean of our difficulty for a team in one gameweek (blanks → null, doubles → avg).
-  const gwDiff = (r: (typeof rows)[number], gw: number): number | null => {
+  // A team's value in one gameweek (blanks → null; doubles → avg diff / summed projection).
+  const gwVal = (r: (typeof rows)[number], gw: number): number | null => {
     const fs = r.byGw.get(gw)
     if (!fs || !fs.length) return null
-    return fs.reduce((s, f) => s + analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr).diff, 0) / fs.length
+    if (mode === 'diff') return fs.reduce((s, f) => s + analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr).diff, 0) / fs.length
+    let sum = 0
+    let any = false
+    for (const f of fs) {
+      const p = projectCell(mode, baselines.get(r.team), baselines.get(f.opponent), leagueBase, f.venue)
+      if (p) { sum += p.v; any = true }
+    }
+    return any ? sum : null
   }
 
   const sorted = useMemo(() => {
-    const val = (r: (typeof rows)[number]) => (sortKey === 'run' ? r.run : gwDiff(r, sortKey))
+    const val = (r: (typeof rows)[number]) => (sortKey === 'run' ? r.run : gwVal(r, sortKey))
     return [...rows].sort((a, b) => {
       const av = val(a)
       const bv = val(b)
@@ -565,7 +656,7 @@ function FixtureGrid({
       return dir === 'asc' ? av - bv : bv - av
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, sortKey, dir, lens, seasonRating])
+  }, [rows, sortKey, dir, lens, mode, seasonRating])
 
   const clickHeader = (key: number | 'run') => {
     if (sortKey === key) setDir((d) => (d === 'asc' ? 'desc' : 'asc'))
@@ -583,7 +674,7 @@ function FixtureGrid({
     <div className="mb-8">
       <div className="mb-2 flex items-center gap-1.5 text-[11px] text-ink-3">
         <span>Tap a gameweek to sort by that week; tap a team for the read on its run.</span>
-        <InfoTip text="Our own difficulty (1 = easy … 5 = hard), not FPL's FDR: each cell is coloured by how strong the opponent is on our team ratings, in the lens you pick above (Attack uses the opponent's defence rating; Defence uses their attack rating). Where an opponent has no rating yet (a promoted club, pre-season) we fall back to FPL's FDR and mark the cell with a dot. The Run column is the window average." />
+        <InfoTip text={MODE_TIP[mode] + (mode === 'diff' ? " Where an opponent has no rating yet (a promoted club, pre-season) we fall back to FPL's FDR and mark the cell with a dot. The Run column is the window average." : ' Promoted opponents have no top-flight baseline yet, so a league-average opponent is assumed and the cell is marked with a dot.')} />
       </div>
       <div className="overflow-x-auto rounded-xl border border-line">
         <table className="w-full border-collapse text-sm">
@@ -593,7 +684,7 @@ function FixtureGrid({
               {gws.map((gw) => (
                 <th key={gw} onClick={() => clickHeader(gw)} className={headCls}>GW{gw}{arrow(gw)}</th>
               ))}
-              <th onClick={() => clickHeader('run')} className={headCls}>Run{arrow('run')}</th>
+              <th onClick={() => clickHeader('run')} className={headCls}>{mode === 'diff' ? 'Run' : mode === 'xg' ? 'Σ xG' : 'Σ sheets'}{arrow('run')}</th>
             </tr>
           </thead>
           <tbody>
@@ -613,11 +704,29 @@ function FixtureGrid({
                         {fs && fs.length ? (
                           <span className="flex flex-col items-center gap-1">
                             {fs.map((f, i) => {
-                              const { diff, ours } = analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr)
-                              const [bg, fg] = FDR_COLORS[Math.max(1, Math.min(5, Math.round(diff)))] || FDR_COLORS[3]
+                              if (mode === 'diff') {
+                                const { diff, ours } = analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr)
+                                const [bg, fg] = FDR_COLORS[Math.max(1, Math.min(5, Math.round(diff)))] || FDR_COLORS[3]
+                                return (
+                                  <span key={i} className="inline-block w-full min-w-[54px] rounded px-1 py-1 text-[11px] font-semibold whitespace-nowrap" style={{ background: bg, color: fg }} title={`GW${gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(f.opponent)} — difficulty ${diff.toFixed(1)}${ours ? '' : ' (FPL FDR — opponent unrated)'}`}>
+                                    {f.opponent} <span className="opacity-70">({f.venue})</span>{!ours && <span className="opacity-70"> ·</span>}
+                                  </span>
+                                )
+                              }
+                              const p = projectCell(mode, baselines.get(r.team), baselines.get(f.opponent), leagueBase, f.venue)
+                              if (!p) return <span key={i} className="text-ink-3">—</span>
+                              const strength = mode === 'xg'
+                                ? Math.max(6, Math.min(78, ((p.v - 0.7) / 1.7) * 78))
+                                : Math.max(6, Math.min(64, p.v * 100))
+                              const hue = mode === 'xg' ? 'var(--accent)' : 'var(--good)'
+                              const label = mode === 'xg' ? p.v.toFixed(2) : `${Math.round(p.v * 100)}%`
+                              const tip = mode === 'xg'
+                                ? `GW${gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(f.opponent)} — projected ${p.v.toFixed(2)} xG${p.assumed ? ' (promoted opponent: league-average assumption)' : ''}`
+                                : `GW${gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(f.opponent)} — ${Math.round(p.v * 100)}% clean-sheet chance${p.assumed ? ' (promoted opponent: league-average assumption)' : ''}`
                               return (
-                                <span key={i} className="inline-block w-full min-w-[54px] rounded px-1 py-1 text-[11px] font-semibold whitespace-nowrap" style={{ background: bg, color: fg }} title={`GW${gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(f.opponent)} — difficulty ${diff.toFixed(1)}${ours ? '' : ' (FPL FDR — opponent unrated)'}`}>
-                                  {f.opponent} <span className="opacity-70">({f.venue})</span>{!ours && <span className="opacity-70"> ·</span>}
+                                <span key={i} className="inline-block w-full min-w-[54px] rounded px-1 py-0.5 whitespace-nowrap" style={{ background: `color-mix(in srgb, ${hue} ${strength.toFixed(0)}%, transparent)` }} title={tip}>
+                                  <span className="block text-[9px] leading-tight font-semibold text-ink-2 opacity-80">{f.opponent} ({f.venue}){p.assumed ? ' ·' : ''}</span>
+                                  <span className="font-num block text-[12px] leading-tight font-bold tabular-nums text-ink">{label}</span>
                                 </span>
                               )
                             })}
@@ -629,8 +738,10 @@ function FixtureGrid({
                     )
                   })}
                   <td className="px-2 py-2 text-center">
-                    {r.run == null ? <span className="text-ink-3">—</span> : (
+                    {r.run == null ? <span className="text-ink-3">—</span> : mode === 'diff' ? (
                       <span className="font-num text-sm font-semibold tabular-nums" style={{ color: runColor(r.run) }}>{r.run.toFixed(1)}</span>
+                    ) : (
+                      <span className="font-num text-sm font-bold tabular-nums metallic-num">{r.run.toFixed(1)}</span>
                     )}
                   </td>
                 </tr>
@@ -646,15 +757,24 @@ function FixtureGrid({
           </tbody>
         </table>
       </div>
-      {/* Difficulty legend */}
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-ink-3">
-        <span>Our difficulty:</span>
-        {([1, 2, 3, 4, 5] as const).map((d) => {
-          const [bg, fg] = FDR_COLORS[d]
-          return <span key={d} className="rounded px-1.5 py-0.5 font-semibold" style={{ background: bg, color: fg }}>{d}</span>
-        })}
-        <span>1 = easiest, 5 = hardest · “·” = FPL FDR fallback (opponent unrated)</span>
-      </div>
+      {/* legend */}
+      {mode === 'diff' ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-ink-3">
+          <span>Our difficulty:</span>
+          {([1, 2, 3, 4, 5] as const).map((d) => {
+            const [bg, fg] = FDR_COLORS[d]
+            return <span key={d} className="rounded px-1.5 py-0.5 font-semibold" style={{ background: bg, color: fg }}>{d}</span>
+          })}
+          <span>1 = easiest, 5 = hardest · “·” = FPL FDR fallback (opponent unrated)</span>
+        </div>
+      ) : (
+        <div className="mt-2 text-[11px] text-ink-3">
+          {mode === 'xg'
+            ? 'Deeper gold = more projected goals. The Σ column is the plain sum over the window — e.g. 1.85 + 1.70 + 1.84 + 1.71 = 7.1 xG over four gameweeks.'
+            : 'Deeper green = better shutout odds. The Σ column sums the probabilities — the number of clean sheets to expect over the window.'}
+          {' '}“·” = promoted opponent, league-average assumption. Projections use each side’s per-game xG/xGC baselines (Understat chance quality) with a ±5% venue nudge.
+        </div>
+      )}
     </div>
   )
 }

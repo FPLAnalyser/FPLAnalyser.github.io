@@ -81,6 +81,25 @@ function BuyRow({ p, why, onOpen }: { p: RatingRow; why: string; onOpen: () => v
 
 /* ════════ the component ════════ */
 
+/** Games in a team-metrics window, so totals can normalise to per-game. The
+ * season window carries season totals; 4gw/6gw windows carry 4/6-game
+ * totals. Never show a window total as a rate — that's the 48.8-xG/game bug. */
+export function windowGames(metrics: Row | null, data: CoreData): number {
+  if (!metrics) return 1
+  const g = num(metrics, 'games')
+  if (g != null && g > 0) return g
+  const w = str(metrics, 'window')
+  if (w === '4gw') return 4
+  if (w === '6gw') return 6
+  const nextGw = data.meta?.next_gw != null ? Number(data.meta.next_gw) : null
+  return nextGw != null && !isNaN(nextGw) && nextGw > 1 ? Math.min(38, nextGw - 1) : 38
+}
+
+/** Rank → verdict tier. The single source of truth for "good": the verdict
+ * sentence, the decision cells and the route-in all read from here. */
+const tierOf = (rank: number | null): 'strong' | 'mid' | 'weak' | null =>
+  rank == null ? null : rank <= 6 ? 'strong' : rank <= 14 ? 'mid' : 'weak'
+
 export function TeamStory({ team, data }: { team: string; data: CoreData }) {
   const navigate = useNavigate()
   const rating = (data.teamRatings as TeamRatingRow[]).find((t) => t.team === team && str(t, 'window') === 'season') ?? null
@@ -97,8 +116,9 @@ export function TeamStory({ team, data }: { team: string; data: CoreData }) {
   const spShare = rating ? num(rating, 'set_piece_share') : null
   const spThreat = rating ? Boolean(rating.set_piece_threat) : false
   const csRate = metrics ? num(metrics, 'cs_rate') : null
-  const xg = metrics ? num(metrics, 'team_xg') : null
-  const xgc = metrics ? num(metrics, 'team_xgc') : null
+  const games = windowGames(metrics, data)
+  const xg = metrics && num(metrics, 'team_xg') != null ? (num(metrics, 'team_xg') as number) / games : null
+  const xgc = metrics && num(metrics, 'team_xgc') != null ? (num(metrics, 'team_xgc') as number) / games : null
   const top1 = metrics ? str(metrics, 'top1_player') : null
   const top1Share = metrics ? num(metrics, 'top1_share') : null
 
@@ -122,48 +142,74 @@ export function TeamStory({ team, data }: { team: string; data: CoreData }) {
     )
   }
 
-  /* ── verdict sentence ── */
-  const strongA = aRank != null && aRank <= 6
-  const strongD = dRank != null && dRank <= 6
-  const weakA = aRank != null && aRank >= 15
-  const weakD = dRank != null && dRank >= 15
+  /* ── verdict sentence — generated from ranks only, so it can never
+        contradict the decision cells ── */
+  const aTier = tierOf(aRank)
+  const dTier = tierOf(dRank)
   let verdict: ReactNode = null
-  if (strongA && strongD) verdict = <>A complete FPL ecosystem — <em>attack and defence both elite</em>. The question isn't whether to invest, it's which price band.</>
-  else if (strongA && weakD) verdict = <><em>Buy the front, never the back.</em> A real attack bolted to a defence that gives everything up.</>
-  else if (strongD && weakA) verdict = <>The defence is the product — <em>clean sheets and Def Con</em>. Attacking routes in are thin.</>
-  else if (weakA && weakD) verdict = <>Hard to love: <em className="text-warn">no reliable route in</em> at either end. Enablers and fixture punts only.</>
-  else if (strongA) verdict = <>An <em>attack-first</em> side — the forward assets carry the FPL value.</>
-  else if (strongD) verdict = <>A <em>defence-first</em> side — the cheap clean-sheet route is the play.</>
-  else verdict = <>Mid-table in every sense — <em>the fixtures decide</em> when their players are worth owning.</>
+  if (aTier === 'strong' && dTier === 'strong') verdict = <>A complete FPL ecosystem — <em>top-six at both ends</em> (#{aRank} attack, #{dRank} defence). The question isn't whether to invest, it's which price band.</>
+  else if (aTier === 'strong' && dTier === 'weak') verdict = <><em>Buy the front, never the back.</em> A #{aRank} attack bolted to a #{dRank} defence that gives everything up.</>
+  else if (dTier === 'strong' && aTier === 'weak') verdict = <>The defence is the product — <em>clean sheets and Def Con</em> from a #{dRank} back line. Attacking routes in are thin (#{aRank}).</>
+  else if (aTier === 'weak' && dTier === 'weak') verdict = <>Bottom-third at <em>both ends</em> — #{aRank} attack, #{dRank} defence — so the case here <em className="text-warn">isn't the team, it's individuals</em>. Buy the players, not the badge.</>
+  else if (aTier === 'strong') verdict = <>An <em>attack-first</em> side (#{aRank}) — the forward assets carry the FPL value.</>
+  else if (dTier === 'strong') verdict = <>A <em>defence-first</em> side (#{dRank}) — the cheap clean-sheet route is the play.</>
+  else verdict = <>Mid-table in every sense — #{aRank ?? '–'} attack, #{dRank ?? '–'} defence. <em>The fixtures decide</em> when their players are worth owning.</>
 
-  /* ── decision-row reads ── */
-  const aWord = aRank == null ? 'Unrated' : aRank <= 4 ? 'Elite' : aRank <= 8 ? 'Strong' : aRank <= 14 ? 'Mid-pack' : 'Weak'
-  const aTone = aRank == null ? 'text-info' : aRank <= 8 ? 'text-good' : aRank <= 14 ? 'text-ink' : 'text-bad'
-  const dWord = dRank == null ? 'Unrated' : dRank <= 4 ? 'Best tier' : dRank <= 8 ? 'Solid' : dRank <= 14 ? 'Shaky' : 'Avoid'
-  const dTone = dRank == null ? 'text-info' : dRank <= 8 ? 'text-good' : dRank <= 14 ? 'text-warn' : 'text-bad'
+  /* ── decision-row reads (same tiers as the verdict) ── */
+  const aWord = aRank == null ? 'Unrated' : aRank <= 4 ? 'Elite' : aTier === 'strong' ? 'Strong' : aTier === 'mid' ? 'Mid-pack' : 'Weak'
+  const aTone = aRank == null ? 'text-info' : aTier === 'strong' ? 'text-good' : aTier === 'mid' ? 'text-ink' : 'text-bad'
+  const dWord = dRank == null ? 'Unrated' : dRank <= 4 ? 'Best tier' : dTier === 'strong' ? 'Solid' : dTier === 'mid' ? 'Shaky' : 'Avoid'
+  const dTone = dRank == null ? 'text-info' : dTier === 'strong' ? 'text-good' : dTier === 'mid' ? 'text-warn' : 'text-bad'
 
   /* ── route in ── */
   const topAtt = byRating.find((p) => p.position === 'MID' || p.position === 'FWD')
-  const topDefOrGk = byRating.find((p) => p.position === 'DEF' || p.position === 'GKP')
+  // The def-con exception: a defender whose hit rate sits in the top decile
+  // of the position earns points without clean sheets, so a weak defence
+  // doesn't disqualify him. This is what surfaces the Andersens.
+  const dcException = byRating.find((p) => p.position === 'DEF' && (num(p, 'season_pct_dc_hit') ?? 0) >= 90)
+  const topDefOrGk = byRating.find((p) => (p.position === 'DEF' || p.position === 'GKP') && p !== dcException)
+  const defTrap = dTier === 'weak'
   const topValue = [...players]
-    .filter((p) => (num(p, 'price') ?? 99) <= 6 && p !== topAtt && p !== topDefOrGk)
+    .filter((p) => (num(p, 'price') ?? 99) <= 6 && p !== topAtt && p !== topDefOrGk && p !== dcException)
     .sort((a, b) => (num(b, 'season_value_score_rating') ?? 0) - (num(a, 'season_value_score_rating') ?? 0))[0]
-  const attWhy = topAtt && top1 && String(topAtt.web_name) === top1 && top1Share != null
+  const attWhy = topAtt && top1 && String(topAtt.web_name) === top1 && top1Share != null && top1Share >= 0.15
     ? `The talisman — ${pct(top1Share)} of the team's points`
     : 'The highest-rated route into the attack'
-  const defWhy = topDefOrGk
-    ? (dRank != null && dRank <= 6 ? 'Cheapest share of a real defence' : (num(topDefOrGk, 'season_m_dc_hit') ?? 0) >= 0.45 ? 'Def Con floor — points without sheets' : 'Best of the defensive options')
+  const dcWhy = dcException
+    ? `Def-con floor: +2 in ${pct(num(dcException, 'season_m_dc_hit'))} of starts — top decile. Doesn't need the sheets.`
     : ''
-  const defTrap = dRank != null && dRank >= 15
+  const defWhy = topDefOrGk
+    ? (dTier === 'strong'
+        ? 'Cheapest share of a real defence'
+        : topDefOrGk.position === 'GKP' && defTrap
+          ? 'Busy-keeper save points — the defence guarantees shots to stop'
+          : (num(topDefOrGk, 'season_m_dc_hit') ?? 0) >= 0.45 ? 'Def Con floor — points without sheets' : 'Best of the defensive options')
+    : ''
+  // In a weak defence, only keepers (save points) and the def-con exception
+  // survive; outfield defenders bought for sheets are the trap.
+  const showTopDef = topDefOrGk != null && (!defTrap || topDefOrGk.position === 'GKP')
 
   return (
     <div className="mb-5 flex flex-col gap-4">
-      <div className="rounded-xl border border-line bg-surface-1 p-4"><Sentence>{verdict}</Sentence></div>
+      <div className="rounded-xl border border-line bg-surface-1 p-4">
+        <Kick>The brief</Kick>
+        <Sentence>{verdict}</Sentence>
+        {(xg != null || csRate != null) && (
+          <Support>
+            {xg != null && <><b className="text-ink">{xg.toFixed(2)} xG/game</b>{aRank != null ? ` (#${aRank})` : ''}</>}
+            {xgc != null && <> · <b className="text-ink">{xgc.toFixed(2)} xGC/game</b>{dRank != null ? ` (#${dRank})` : ''}</>}
+            {csRate != null && <> · clean sheets in <b className="text-ink">{pct(csRate)}</b> of games</>}
+            {top1Share != null && top1 && (top1Share >= 0.22
+              ? <> · {top1} alone takes <b className="text-ink">{pct(top1Share)}</b> of the points</>
+              : <> · no player takes more than <b className="text-ink">{pct(top1Share)}</b> of the points</>)}
+          </Support>
+        )}
+      </div>
 
-      {/* decision row */}
-      <div className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
-        <DCell label="Attack" word={aWord} tone={aTone} sub={aRank != null ? `#${aRank} of 20${xg != null ? ` · ${xg.toFixed(1)} xG/game` : ''}` : 'Appears after GW1'} />
-        <DCell label="Clean-sheet odds" word={dWord} tone={dTone} sub={csRate != null ? `CS in ${pct(csRate)}${xgc != null ? ` · ${xgc.toFixed(1)} xGC/game` : ''}` : dRank != null ? `#${dRank} defence` : 'Appears after GW1'} />
+      {/* the one decision band — these facts appear nowhere else */}
+      <div className={`grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 ${hasFix ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+        <DCell label="Attack" word={aWord} tone={aTone} sub={aRank != null ? `#${aRank} of 20${xg != null ? ` · ${xg.toFixed(2)} xG/game` : ''}` : 'Appears after GW1'} />
+        <DCell label="Clean sheets" word={dWord} tone={dTone} sub={csRate != null ? `CS in ${pct(csRate)}${xgc != null ? ` · ${xgc.toFixed(2)} xGC/game` : ''}` : dRank != null ? `#${dRank} defence` : 'Appears after GW1'} />
         <DCell
           label="Signature"
           word={spThreat ? 'Set pieces' : top1Share != null && top1Share >= 0.22 ? 'One-man team' : 'Spread threat'}
@@ -178,64 +224,59 @@ export function TeamStory({ team, data }: { team: string; data: CoreData }) {
         )}
       </div>
 
-      {/* modules */}
-      <div className="grid items-start gap-3 md:grid-cols-2">
-        {metrics && (
-          <div className="rounded-xl border border-line bg-surface-1 p-4">
-            <Kick>Where the points come from</Kick>
-            <Sentence>
-              {(num(metrics, 'cs_pts_pct') ?? 0) > (num(metrics, 'goal_pts_pct') ?? 0)
-                ? <>A <em>defence-led</em> points profile — sheets before goals.</>
-                : <>An <em>attack-led</em> points profile — goals carry the load.</>}
-            </Sentence>
-            <div className="mt-3 flex flex-col gap-2">
-              {num(metrics, 'goal_pts_pct') != null && <BarRow label="Goals" width={num(metrics, 'goal_pts_pct')! * 180} value={pct(num(metrics, 'goal_pts_pct')) ?? '—'} />}
-              {num(metrics, 'assist_pts_pct') != null && <BarRow label="Assists" width={num(metrics, 'assist_pts_pct')! * 180} value={pct(num(metrics, 'assist_pts_pct')) ?? '—'} tone="info" />}
-              {num(metrics, 'cs_pts_pct') != null && <BarRow label="Clean sheets" width={num(metrics, 'cs_pts_pct')! * 180} value={pct(num(metrics, 'cs_pts_pct')) ?? '—'} tone="good" />}
-            </div>
-            {spThreat && spShare != null && (
-              <Support>Plus the set-piece engine: {pct(spShare)} of their xG starts from a corner or free kick — their defenders out-score most teams' midfielders.</Support>
+      {/* the route in */}
+      {(topAtt || dcException || showTopDef || topValue) && (
+        <div className="rounded-xl border border-line bg-surface-1 p-4">
+          <Kick>The route in — ranked</Kick>
+          <div className="mt-1">
+            {dcException && defTrap && <BuyRow p={dcException} why={dcWhy} onOpen={() => navigate(playerHref(String(dcException.web_name), num(dcException, 'code')))} />}
+            {topAtt && <BuyRow p={topAtt} why={attWhy} onOpen={() => navigate(playerHref(String(topAtt.web_name), num(topAtt, 'code')))} />}
+            {dcException && !defTrap && <BuyRow p={dcException} why={dcWhy} onOpen={() => navigate(playerHref(String(dcException.web_name), num(dcException, 'code')))} />}
+            {showTopDef && <BuyRow p={topDefOrGk!} why={defWhy} onOpen={() => navigate(playerHref(String(topDefOrGk!.web_name), num(topDefOrGk!, 'code')))} />}
+            {topValue && <BuyRow p={topValue} why="Best value per £ in the squad" onOpen={() => navigate(playerHref(String(topValue.web_name), num(topValue, 'code')))} />}
+            {defTrap && (
+              <div className="flex items-center gap-2.5 border-t border-line py-2">
+                <span className="grid w-8 shrink-0 place-items-center text-lg font-extrabold text-bad">✕</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-bold text-ink">The clean-sheet case</span>
+                  <span className="block text-[11px] text-ink-2">Any defender bought for sheets</span>
+                </span>
+                <span className="max-w-[26ch] text-right text-[11px] leading-tight text-bad">
+                  {csRate != null ? `CS in ${pct(csRate)}, ` : ''}#{dRank} defence — buy the def-con, never the sheets
+                </span>
+              </div>
             )}
           </div>
-        )}
+        </div>
+      )}
+    </div>
+  )
+}
 
-        {xg != null && xgc != null && (
-          <div className="rounded-xl border border-line bg-surface-1 p-4">
-            <Kick>The two truths</Kick>
-            <Sentence>
-              {xg >= 1.5 && xgc >= 1.5 ? <>Attack like the good sides, <em className="text-bad">defend like the bad ones</em> — chaos, priced accordingly.</>
-                : xg >= 1.5 ? <>Create plenty, <em>concede little</em> — control at both ends.</>
-                : xgc <= 1.2 ? <>Low-event football: <em>few goals, fewer conceded</em>. Sheets over hauls.</>
-                : <>Out-created more often than not — <em className="text-warn">returns lean on moments</em>.</>}
-            </Sentence>
-            <div className="mt-3 flex flex-col gap-2">
-              <BarRow label="xG / game" width={xg * 38} value={xg.toFixed(1)} tone="good" />
-              <BarRow label="xGC / game" width={xgc * 38} value={xgc.toFixed(1)} tone={xgc >= 1.5 ? 'bad' : 'info'} />
-            </div>
-          </div>
-        )}
-
-        {(topAtt || topDefOrGk) && (
-          <div className="rounded-xl border border-line bg-surface-1 p-4 md:col-span-2">
-            <Kick>The route in — ranked</Kick>
-            <div className="mt-1">
-              {topAtt && <BuyRow p={topAtt} why={attWhy} onOpen={() => navigate(playerHref(String(topAtt.web_name), num(topAtt, 'code')))} />}
-              {topDefOrGk && !defTrap && <BuyRow p={topDefOrGk} why={defWhy} onOpen={() => navigate(playerHref(String(topDefOrGk.web_name), num(topDefOrGk, 'code')))} />}
-              {topValue && <BuyRow p={topValue} why="Best value per £ in the squad" onOpen={() => navigate(playerHref(String(topValue.web_name), num(topValue, 'code')))} />}
-              {defTrap && (
-                <div className="flex items-center gap-2.5 border-t border-line py-2">
-                  <span className="grid w-8 shrink-0 place-items-center text-lg font-extrabold text-bad">✕</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-bold text-ink">Their defenders</span>
-                    <span className="block text-[11px] text-ink-2">Any price</span>
-                  </span>
-                  <span className="max-w-[24ch] text-right text-[11px] leading-tight text-bad">#{dRank} defence — enablers only, never starters</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+/** Points-mix receipt (goals / assists / clean sheets share of FPL points) —
+ * lives in the folded receipts on the Teams page, stated once. */
+export function PointsMix({ team, data }: { team: string; data: CoreData }) {
+  const metrics = (data.teamMetrics as Row[]).find((t) => String(t.team) === team && str(t, 'window') === 'season') ?? null
+  const rating = (data.teamRatings as TeamRatingRow[]).find((t) => t.team === team && str(t, 'window') === 'season') ?? null
+  if (!metrics) return null
+  const spThreat = rating ? Boolean(rating.set_piece_threat) : false
+  const spShare = rating ? num(rating, 'set_piece_share') : null
+  return (
+    <div className="rounded-xl border border-line bg-surface-1 p-4">
+      <Kick>Where the points come from</Kick>
+      <Sentence>
+        {(num(metrics, 'cs_pts_pct') ?? 0) > (num(metrics, 'goal_pts_pct') ?? 0)
+          ? <>A <em>defence-led</em> points profile — sheets before goals.</>
+          : <>An <em>attack-led</em> points profile — goals carry the load.</>}
+      </Sentence>
+      <div className="mt-3 flex flex-col gap-2">
+        {num(metrics, 'goal_pts_pct') != null && <BarRow label="Goals" width={num(metrics, 'goal_pts_pct')! * 180} value={pct(num(metrics, 'goal_pts_pct')) ?? '—'} />}
+        {num(metrics, 'assist_pts_pct') != null && <BarRow label="Assists" width={num(metrics, 'assist_pts_pct')! * 180} value={pct(num(metrics, 'assist_pts_pct')) ?? '—'} tone="info" />}
+        {num(metrics, 'cs_pts_pct') != null && <BarRow label="Clean sheets" width={num(metrics, 'cs_pts_pct')! * 180} value={pct(num(metrics, 'cs_pts_pct')) ?? '—'} tone="good" />}
       </div>
+      {spThreat && spShare != null && (
+        <Support>Plus the set-piece engine: {pct(spShare)} of their xG starts from a corner or free kick — their defenders out-score most teams' midfielders.</Support>
+      )}
     </div>
   )
 }
