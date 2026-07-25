@@ -176,17 +176,17 @@ export function TeamStory({ team, data }: { team: string; data: CoreData }) {
     ? `The talisman — ${pct(top1Share)} of the team's points`
     : 'The highest-rated route into the attack'
   const dcWhy = dcException
-    ? `Def-con floor: +2 in ${pct(num(dcException, 'season_m_dc_hit'))} of starts — top decile. Doesn't need the sheets.`
+    ? `Def-con floor: +2 in ${pct(num(dcException, 'season_m_dc_hit'))} of starts — top decile. Doesn't need the clean sheets.`
     : ''
   const defWhy = topDefOrGk
     ? (dTier === 'strong'
         ? 'Cheapest share of a real defence'
         : topDefOrGk.position === 'GKP' && defTrap
           ? 'Busy-keeper save points — the defence guarantees shots to stop'
-          : (num(topDefOrGk, 'season_m_dc_hit') ?? 0) >= 0.45 ? 'Def Con floor — points without sheets' : 'Best of the defensive options')
+          : (num(topDefOrGk, 'season_m_dc_hit') ?? 0) >= 0.45 ? 'Def Con floor — points without clean sheets' : 'Best of the defensive options')
     : ''
   // In a weak defence, only keepers (save points) and the def-con exception
-  // survive; outfield defenders bought for sheets are the trap.
+  // survive; outfield defenders bought for clean sheets are the trap.
   const showTopDef = topDefOrGk != null && (!defTrap || topDefOrGk.position === 'GKP')
 
   return (
@@ -239,10 +239,10 @@ export function TeamStory({ team, data }: { team: string; data: CoreData }) {
                 <span className="grid w-8 shrink-0 place-items-center text-lg font-extrabold text-bad">✕</span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-bold text-ink">The clean-sheet case</span>
-                  <span className="block text-[11px] text-ink-2">Any defender bought for sheets</span>
+                  <span className="block text-[11px] text-ink-2">Any defender bought for clean sheets</span>
                 </span>
                 <span className="max-w-[26ch] text-right text-[11px] leading-tight text-bad">
-                  {csRate != null ? `CS in ${pct(csRate)}, ` : ''}#{dRank} defence — buy the def-con, never the sheets
+                  {csRate != null ? `CS in ${pct(csRate)}, ` : ''}#{dRank} defence — buy the def-con, never the clean sheets
                 </span>
               </div>
             )}
@@ -266,7 +266,7 @@ export function PointsMix({ team, data }: { team: string; data: CoreData }) {
       <Kick>Where the points come from</Kick>
       <Sentence>
         {(num(metrics, 'cs_pts_pct') ?? 0) > (num(metrics, 'goal_pts_pct') ?? 0)
-          ? <>A <em>defence-led</em> points profile — sheets before goals.</>
+          ? <>A <em>defence-led</em> points profile — clean sheets before goals.</>
           : <>An <em>attack-led</em> points profile — goals carry the load.</>}
       </Sentence>
       <div className="mt-3 flex flex-col gap-2">

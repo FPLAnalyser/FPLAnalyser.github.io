@@ -458,7 +458,7 @@ function briefLines(r: RatingRow, data: CoreData): BriefLine[] {
           key: 'gk',
           lead: prevented >= 0.08 ? 'An above-the-line shot-stopper.' : prevented <= -0.08 ? 'The shot-stopping runs below the line.' : 'League-average shot-stopping.',
           tone: prevented >= 0.08 ? 'good' : prevented <= -0.08 ? 'bad' : 'info',
-          receipt: `${prevented >= 0 ? '+' : ''}${prevented.toFixed(2)} goals prevented per 90${faced != null ? ` · ${faced.toFixed(1)} shots faced a game${busy ? ' — save points are a real floor' : ' — his value is the sheet, not the stops'}` : ''}`,
+          receipt: `${prevented >= 0 ? '+' : ''}${prevented.toFixed(2)} goals prevented per 90${faced != null ? ` · ${faced.toFixed(1)} shots faced a game${busy ? ' — save points are a real floor' : ' — his value is the clean sheet, not the stops'}` : ''}`,
         })
       }
     }
@@ -630,6 +630,7 @@ function MarketScatter({ r, peers }: { r: RatingRow; peers: RatingRow[] }) {
   const pos = r.position
   const myRating = ratingTo100(num(r, 'season_overall_score'))
   const myPrice = num(r, 'price')
+  const [hovered, setHovered] = useState<number | null>(null)
 
   const pts = useMemo(
     () =>
@@ -713,7 +714,15 @@ function MarketScatter({ r, peers }: { r: RatingRow; peers: RatingRow[] }) {
           <line x1={X(xMin)} y1={Y(clampY(fit(xMin)))} x2={X(xMax)} y2={Y(clampY(fit(xMax)))} stroke="var(--ink-3)" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.55" />
           {/* peers */}
           {pts.filter((d) => d.p.element !== r.element).map((d) => (
-            <circle key={String(d.p.element)} cx={X(d.x)} cy={Y(d.y)} r="3.5" fill="var(--ink-3)" opacity="0.35">
+            <circle
+              key={String(d.p.element)}
+              cx={X(d.x)} cy={Y(d.y)}
+              r={hovered === d.p.element ? 5.5 : 3.5}
+              fill={hovered === d.p.element ? 'var(--ink-2)' : 'var(--ink-3)'}
+              opacity={hovered === d.p.element ? 0.9 : 0.35}
+              onMouseEnter={() => setHovered(d.p.element)}
+              onMouseLeave={() => setHovered(null)}
+            >
               <title>{String(d.p.web_name)} — {d.y} at £{d.x}m</title>
             </circle>
           ))}
@@ -721,6 +730,23 @@ function MarketScatter({ r, peers }: { r: RatingRow; peers: RatingRow[] }) {
           <circle cx={X(myPrice)} cy={Y(myRating)} r="10" fill="var(--accent)" opacity="0.18" />
           <circle cx={X(myPrice)} cy={Y(myRating)} r="6" fill="var(--accent)" stroke="var(--surface-1)" strokeWidth="1.5" />
           <text x={X(myPrice) + (myPrice > (xMin + xMax) / 2 ? -12 : 12)} y={Math.max(16, Y(myRating) - 10)} textAnchor={myPrice > (xMin + xMax) / 2 ? 'end' : 'start'} fontSize="12" fontWeight="700" fill="var(--accent)">{String(r.web_name)} · {myRating}</text>
+          {/* instant hover label */}
+          {hovered != null && (() => {
+            const d = pts.find((p) => p.p.element === hovered)
+            if (!d) return null
+            return (
+              <text
+                x={X(d.x) + (d.x > (xMin + xMax) / 2 ? -9 : 9)}
+                y={Math.max(16, Y(d.y) - 8)}
+                textAnchor={d.x > (xMin + xMax) / 2 ? 'end' : 'start'}
+                fontSize="11.5" fontWeight="700" fill="var(--ink)"
+                stroke="var(--surface-1)" strokeWidth="4" style={{ paintOrder: 'stroke' }}
+                className="pointer-events-none"
+              >
+                {String(d.p.web_name)} · {d.y} · £{d.x}m
+              </text>
+            )
+          })()}
           <text x={PAD.l} y={PAD.t - 2} fontSize="9.5" fill="var(--ink-3)" style={{ textTransform: 'uppercase', letterSpacing: '.12em' }}>Rating ↑</text>
           <text x={W - PAD.r} y={H - 4} textAnchor="end" fontSize="9.5" fill="var(--ink-3)" style={{ textTransform: 'uppercase', letterSpacing: '.12em' }}>Price →</text>
         </svg>

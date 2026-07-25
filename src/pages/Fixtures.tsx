@@ -588,7 +588,7 @@ function FixtureGrid({
 }) {
   const [sortKey, setSortKey] = useState<number | 'run'>('run')
   // Difficulty: ascending = easiest first. Projections: descending = most
-  // goals / best sheet odds first.
+  // goals / best clean-sheet odds first.
   const [dir, setDir] = useState<'asc' | 'desc'>(mode === 'diff' ? 'asc' : 'desc')
   const [open, setOpen] = useState<string | null>(null)
 
@@ -684,7 +684,7 @@ function FixtureGrid({
               {gws.map((gw) => (
                 <th key={gw} onClick={() => clickHeader(gw)} className={headCls}>GW{gw}{arrow(gw)}</th>
               ))}
-              <th onClick={() => clickHeader('run')} className={headCls}>{mode === 'diff' ? 'Run' : mode === 'xg' ? 'Σ xG' : 'Σ sheets'}{arrow('run')}</th>
+              <th onClick={() => clickHeader('run')} className={headCls}>{mode === 'diff' ? 'Run' : mode === 'xg' ? 'Σ xG' : 'Σ clean sheets'}{arrow('run')}</th>
             </tr>
           </thead>
           <tbody>

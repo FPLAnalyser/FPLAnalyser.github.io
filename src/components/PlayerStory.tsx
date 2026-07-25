@@ -382,7 +382,7 @@ function KeeperModules({ r, data }: { r: RatingRow; data: CoreData }) {
           sentence={defRank != null && defRank <= 4
             ? <>The league's <em>#{defRank} defence</em> plays in front of him.</>
             : <>Clean sheets in <em>{pct(cs)}</em> of starts{defRank != null ? ` — a #${defRank}-ranked defence` : ''}.</>}
-          support={xgc != null ? <>{xgc.toFixed(2)} expected goals conceded per 90 — the sheet odds start with the team, not the keeper.</> : undefined}
+          support={xgc != null ? <>{xgc.toFixed(2)} expected goals conceded per 90 — the clean-sheet odds start with the team, not the keeper.</> : undefined}
         >
           <Bars>
             <BarRow label="CS rate" width={(cs ?? 0) * 160} value={pct(cs) ?? '—'} tone="good" />
@@ -398,7 +398,7 @@ function KeeperModules({ r, data }: { r: RatingRow; data: CoreData }) {
             : <>Stops what he should — <em>league-average</em> shot-stopping.</>}
           support={busy
             ? <>{faced!.toFixed(1)} shots faced a game — a busy keeper, so save points are his real floor.</>
-            : faced != null ? <>Only {faced.toFixed(1)} shots faced a game — the quiet cost of a good defence: his value is the sheet, not the stops.</> : undefined}
+            : faced != null ? <>Only {faced.toFixed(1)} shots faced a game — the quiet cost of a good defence: his value is the clean sheet, not the stops.</> : undefined}
         >
           <Bars>
             <BarRow label="Prevented" width={fp(r, 'prevented') ?? 0} value={`${prevented >= 0 ? '+' : ''}${prevented.toFixed(2)}`} tone={prevented >= 0.08 ? 'good' : prevented <= -0.08 ? 'bad' : 'gold'} />
