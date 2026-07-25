@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PageHeader, PageShell, EmptyState } from '../components/PageShell'
+import { PageShell, EmptyState } from '../components/PageShell'
+import { SectionBanner } from '../components/SectionBanner'
 import { Tabs, type TabDef } from '../components/Tabs'
 import { TeamBadge, PositionIcon } from '../components/badges'
 import { InfoTip } from '../components/InfoTip'
@@ -166,7 +167,7 @@ export default function Fixtures() {
   if (!data) {
     return (
       <PageShell>
-        <PageHeader title="Fixture Analysis" subtitle="Our own difficulty ratings for every upcoming game — grid, chips and matchups" />
+        <SectionBanner imgKey="fixtures" title="Fixtures" subtitle="Our own difficulty ratings for every upcoming game — grid, chips and matchups" />
         <PageSkeleton error={coreError} />
       </PageShell>
     )
@@ -178,7 +179,7 @@ export default function Fixtures() {
 
   return (
     <PageShell>
-      <PageHeader title="Fixture Analysis" subtitle="Our own difficulty ratings for every upcoming game — grid, chips and matchups" />
+      <SectionBanner imgKey="fixtures" title="Fixtures" subtitle="Our own difficulty ratings for every upcoming game — grid, chips and matchups" />
 
       <div className="mb-4"><Tabs tabs={VIEW_TABS} active={view} onChange={(id) => setView(id as View)} layoutId="fx-view" /></div>
 

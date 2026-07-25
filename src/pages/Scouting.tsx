@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PageHeader, PageShell } from '../components/PageShell'
+import { PageShell } from '../components/PageShell'
+import { SectionBanner } from '../components/SectionBanner'
 import { SearchBox } from '../components/SearchBox'
 import { Tabs, type TabDef } from '../components/Tabs'
 import { TeamBadge } from '../components/badges'
@@ -233,7 +234,7 @@ export default function Scouting() {
 
   return (
     <PageShell>
-      <PageHeader title="Scouting Report" subtitle="Per-90 percentiles vs positional peers — compare players head-to-head or discover who fits your criteria" />
+      <SectionBanner imgKey="scouting" title="Scouting" subtitle="Per-90 percentiles vs positional peers — compare players head-to-head or discover who fits your criteria" />
 
       <div className="mb-4"><Tabs tabs={MODE_TABS} active={mode} onChange={(id) => setMode(id as ScoutMode)} layoutId="scout-mode" /></div>
 

@@ -1,6 +1,7 @@
 import { useMemo, type CSSProperties, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { PageHeader, PageShell, EmptyState } from '../components/PageShell'
+import { PageShell, EmptyState } from '../components/PageShell'
+import { SectionBanner } from '../components/SectionBanner'
 import { SearchBox } from '../components/SearchBox'
 import { StarRating, ratingTo100 } from '../components/StarRating'
 import { Radar, MiniBar, ConcentrationBar, CHART_COLORS, type Tone } from '../components/viz'
@@ -87,7 +88,7 @@ export default function Players() {
   if (!data) {
     return (
       <PageShell>
-        <PageHeader title="Player Search" subtitle="Search for any player to see their FPL Analyser ratings, stats and form" />
+        <SectionBanner imgKey="players" title="Player Search" subtitle="Search for any player to see their FPL Analyser ratings, stats and form" />
         <PageSkeleton error={coreError} />
       </PageShell>
     )
@@ -107,7 +108,7 @@ export default function Players() {
 
   return (
     <PageShell>
-      <PageHeader title="Player Search" subtitle="Search for any player to see their FPL Analyser ratings, stats and form" />
+      <SectionBanner imgKey="players" title="Player Search" subtitle="Search for any player to see their FPL Analyser ratings, stats and form" />
       <div className="mb-6">
         <SearchBox
           items={ratings.filter((p) => p.web_name)}
