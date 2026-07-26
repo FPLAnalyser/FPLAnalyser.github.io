@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { Children, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { PlayerPhoto } from './PlayerPhoto'
@@ -236,13 +236,13 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
         ))}
       </Pitch>
 
-      <Dugout boosted={benchBoost}>
+      <KitRail boosted={benchBoost}>
         {week
           ? benchOrder.map((el) => card(el, true))
           : partial!.bench.map((slot, j) => (slot.el != null
               ? card(slot.el, true)
               : <EmptySlot key={`be${j}`} pos={slot.pos} onClick={() => onPickSlot?.(slot.pos)} />))}
-      </Dugout>
+      </KitRail>
 
       {sheet != null && rowOf(sheet) && week && (
         <PlayerCardSheet
@@ -315,34 +315,47 @@ function EmptySlot({ pos, onClick }: { pos: Pos4; onClick: () => void }) {
 
 const ratingWord = (r: number) => (r >= 85 ? 'elite week' : r >= 70 ? 'strong' : r >= 50 ? 'about par' : r >= 30 ? 'below par' : 'poor week')
 
-/** The bench, as a dugout: a dark technical bay under the stand rather than a
- *  grey box — and unmistakably lit when Bench Boost is on. */
-function Dugout({ boosted, children }: { boosted: boolean; children: React.ReactNode }) {
+/** The bench as a kit rail: the four reserves hung on hooks under a metal
+ *  bar, the way shirts wait in a changing room. Not selected is said by the
+ *  form — hung up, not on the pitch — before any colour has to say it. The
+ *  whole rail turns gold when Bench Boost puts them back in the game. */
+function KitRail({ boosted, children }: { boosted: boolean; children: React.ReactNode }) {
   return (
     <div className="mx-auto mt-2.5" style={{ maxWidth: 660 }}>
       <div
-        className={`relative overflow-hidden rounded-2xl border transition-colors ${boosted ? 'border-accent' : 'border-line-strong'}`}
+        className={`rounded-2xl border px-3 pt-2.5 pb-3 transition-colors ${boosted ? 'border-accent' : 'border-line-strong'}`}
         style={{
           background: boosted
-            ? 'linear-gradient(180deg, color-mix(in oklab, var(--accent) 26%, #10161d) 0%, color-mix(in oklab, var(--accent) 10%, #0d1218) 100%)'
-            : 'linear-gradient(180deg,#1a212a 0%,#12181f 100%)',
-          boxShadow: boosted ? '0 0 0 1px color-mix(in oklab, var(--accent) 45%, transparent), 0 10px 30px -12px color-mix(in oklab, var(--accent) 55%, transparent)' : '0 8px 24px -18px #000',
+            ? 'linear-gradient(180deg, color-mix(in oklab, var(--accent) 22%, #14161a) 0%, #0f1319 100%)'
+            : 'linear-gradient(180deg,#171D25 0%,#10151b 100%)',
+          boxShadow: boosted
+            ? '0 0 0 1px color-mix(in oklab, var(--accent) 45%, transparent), 0 10px 30px -12px color-mix(in oklab, var(--accent) 55%, transparent)'
+            : '0 8px 24px -18px #000',
         }}
       >
-        {/* the roof line of the dugout */}
-        <div className="h-1 w-full" style={{ background: boosted ? 'var(--accent)' : 'linear-gradient(90deg,transparent,rgba(255,255,255,.16),transparent)' }} />
-        {/* faint seat ribbing so it reads as a bay, not a panel */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 opacity-[0.35]"
-          style={{ background: 'repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 2px, transparent 2px 22px)' }}
-        />
-        <div className="relative px-3 py-2.5">
-          <div className="mb-2 flex items-center gap-2">
-            <span className={`text-[10px] font-extrabold tracking-[0.2em] uppercase ${boosted ? 'text-accent' : 'text-white/45'}`}>Bench</span>
-            {boosted && <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-accent-contrast">Bench Boost — all 15 score</span>}
+        <div className="mb-1 flex items-center gap-2">
+          <span className={`text-[10px] font-extrabold tracking-[0.2em] uppercase ${boosted ? 'text-accent' : 'text-white/45'}`}>Bench</span>
+          {boosted && <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-accent-contrast">Bench Boost — all 15 score</span>}
+        </div>
+
+        <div className="relative pt-1">
+          {/* the rail itself, running the full width behind the hooks */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 top-[9px] h-[3px] rounded-full"
+            style={{ background: boosted ? 'linear-gradient(180deg,#F7E3A6,#B98B2C)' : 'linear-gradient(180deg,#9AA7B5,#4A545F)' }}
+          />
+          <div className="relative flex justify-center gap-1.5 sm:gap-2.5">
+            {Children.map(children, (child, i) => (
+              <span key={i} className={`${CARD_W} flex flex-col items-center [&>*]:max-w-none [&>*]:w-full`}>
+                <span
+                  aria-hidden="true"
+                  className={`mb-1 h-4 w-2.5 shrink-0 rounded-b-md border-2 border-t-0 ${boosted ? 'border-accent' : 'border-white/45'}`}
+                />
+                {child}
+              </span>
+            ))}
           </div>
-          <div className="flex justify-center gap-1.5 sm:gap-2.5">{children}</div>
         </div>
       </div>
     </div>
