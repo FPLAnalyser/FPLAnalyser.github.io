@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { PageShell, EmptyState } from '../components/PageShell'
 import { SectionBanner } from '../components/SectionBanner'
 import { SeasonWrapped } from '../components/SeasonWrapped'
+import { ManagerCard } from '../components/ManagerCard'
 import { SkeletonBlock } from '../components/Skeleton'
 import { StarRating } from '../components/StarRating'
 import { Tabs, type TabDef } from '../components/Tabs'
@@ -171,6 +172,19 @@ function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
 
       {tab === 'squad' ? (
         <>
+          {/* Your card for the week: what it returned, where it ranked, and a
+              rating for the decisions rather than the players. */}
+          <SectionHeader>Your Gameweek</SectionHeader>
+          <div className="mb-7">
+            <ManagerCard
+              picksData={picksData}
+              historyData={historyData}
+              entryData={entryData}
+              ratings={data.ratings}
+              teamName={entryData?.name ? String(entryData.name) : undefined}
+            />
+          </div>
+
           <SectionHeader>Team Ratings</SectionHeader>
           <div className="mb-2 flex flex-wrap gap-x-8 gap-y-5">
             <RatingStat label="Avg Overall Rating" node={<StarRating value={overallAvg} size={12} />} />
