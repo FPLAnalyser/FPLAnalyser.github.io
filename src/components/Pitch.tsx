@@ -89,9 +89,25 @@ export function initialsOf(name: string): string {
  *  there is; `max-w` stops them ballooning on a desktop. */
 export const CARD_W = 'min-w-0 flex-1 basis-0 max-w-[84px]'
 
-/** Compact pitch card — rating, photo, name, price and the next four
- * fixtures. Sized so a full XI fits the pitch without scrolling. */
-export function PitchCard({ rating, name, team, price, code, element, fixtures, onClick, footer }: {
+/** Rating tiers. The band a player falls in is what the card's material says,
+ *  so a shelf of them sorts itself before you read a single name. `ice` is not
+ *  a rating band — it marks Team of the Week, which is a different object from
+ *  your own squad and shouldn't read like one. */
+export type Tier = 'elite' | 'gold' | 'steel' | 'graphite' | 'ice'
+export const tierOf = (rating: number | null): Tier =>
+  rating == null ? 'graphite' : rating >= 90 ? 'elite' : rating >= 80 ? 'gold' : rating >= 70 ? 'steel' : 'graphite'
+
+const TIER_SKIN: Record<Tier, { border: string; bg: string; glow?: string }> = {
+  elite: { border: 'rgba(246,237,214,.55)', bg: 'linear-gradient(165deg,rgba(40,34,22,.97),rgba(13,11,8,.97))', glow: '0 0 18px -4px rgba(201,162,39,.55)' },
+  gold: { border: 'rgba(201,162,39,.42)', bg: 'linear-gradient(165deg,rgba(33,29,22,.96),rgba(13,11,8,.96))' },
+  steel: { border: 'rgba(201,207,214,.34)', bg: 'linear-gradient(165deg,rgba(26,29,33,.96),rgba(10,12,14,.96))' },
+  graphite: { border: 'rgba(255,255,255,.14)', bg: 'linear-gradient(165deg,rgba(28,27,25,.96),rgba(11,11,10,.96))' },
+  ice: { border: 'rgba(232,251,255,.42)', bg: 'linear-gradient(165deg,rgba(19,36,48,.97),rgba(6,13,18,.97))', glow: '0 0 18px -4px rgba(127,212,245,.5)' },
+}
+
+/** Compact pitch card — rating, photo, name and the next fixtures. Sized so a
+ * full XI fits the pitch without scrolling. */
+export function PitchCard({ rating, name, team, price, code, element, fixtures, onClick, footer, tier }: {
   rating: number | null
   name: string
   team: string
@@ -101,33 +117,43 @@ export function PitchCard({ rating, name, team, price, code, element, fixtures, 
   fixtures?: ReactNode
   onClick?: () => void
   footer?: ReactNode
+  /** Override the band derived from the rating — Team of the Week uses `ice`. */
+  tier?: Tier
 }) {
+  const t = tier ?? tierOf(rating)
+  const skin = TIER_SKIN[t]
   return (
     <button
       onClick={onClick}
       // Width comes from the row (see CARD_W on the wrapper) — the card just
       // fills whatever slot it's given.
-      className="w-full rounded-lg border border-accent/40 p-1 text-center transition-transform hover:-translate-y-0.5 sm:p-1.5"
-      style={{ background: 'linear-gradient(165deg,rgba(33,29,22,.96),rgba(13,11,8,.96))' }}
+      className={`tier-${t} w-full rounded-lg border text-center transition-transform hover:-translate-y-0.5`}
+      style={{ background: skin.bg, borderColor: skin.border, boxShadow: skin.glow }}
     >
-      <div className="metallic-num font-num text-[13px] leading-none font-extrabold tabular-nums sm:text-[15px]">{rating ?? '—'}</div>
-      {/* The monogram sits *under* the headshot rather than instead of it, so
-          a photo that can't be rasterised into a share PNG leaves initials
-          behind rather than an empty hole. */}
-      <span className="relative mx-auto my-1 block w-7 sm:w-8" style={{ height: 32 }}>
-        <span className="absolute inset-0 grid place-items-center rounded bg-white/6 text-[11px] font-extrabold text-white/40">
-          {initialsOf(name)}
+      {/* the tier, as area rather than perimeter */}
+      <div className="tier-cap" />
+      <div className="px-1 pt-1 pb-2 sm:px-1.5 sm:pt-1.5 sm:pb-2.5">
+        <div className="tier-num font-num text-[13px] leading-none font-extrabold tabular-nums sm:text-[15px]">{rating ?? '—'}</div>
+        {/* The monogram sits *under* the headshot rather than instead of it, so
+            a photo that can't be rasterised into a share PNG leaves initials
+            behind rather than an empty hole. */}
+        <span className="relative mx-auto my-1 block w-7 sm:w-8" style={{ height: 32 }}>
+          <span className="absolute inset-0 grid place-items-center rounded bg-white/6 text-[11px] font-extrabold text-white/40">
+            {initialsOf(name)}
+          </span>
+          <PlayerPhoto
+            code={code} element={element}
+            className="relative h-full w-full rounded object-cover object-top"
+            placeholder={<span />}
+          />
         </span>
-        <PlayerPhoto
-          code={code} element={element}
-          className="relative h-full w-full rounded object-cover object-top"
-          placeholder={<span />}
-        />
-      </span>
-      <div className="truncate text-[9.5px] leading-tight font-bold text-white sm:text-[10.5px]">{name}</div>
-      <div className="truncate text-[8px] text-white/55 sm:text-[9px]">{team}{price != null ? ` · £${price}m` : ''}</div>
-      {fixtures && <div className="mt-1 flex justify-center gap-[2px]">{fixtures}</div>}
-      {footer}
+        <div className="capture-line truncate text-[9.5px] leading-tight font-bold text-white sm:text-[10.5px]">{name}</div>
+        {/* Club and price step aside on a phone: the fixtures are what you're
+            actually checking, and they imply the club anyway. */}
+        <div className="hidden truncate text-[8px] text-white/55 sm:block sm:text-[9px]">{team}{price != null ? ` · £${price}m` : ''}</div>
+        {fixtures && <div className="mt-1">{fixtures}</div>}
+        {footer}
+      </div>
     </button>
   )
 }

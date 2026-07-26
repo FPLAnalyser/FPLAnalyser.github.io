@@ -187,6 +187,48 @@ body {
    numerals come out as solid blocks; and it measures truncating text into a
    line box a few pixels short, slicing the glyphs. Both are swapped for
    equivalents it can actually draw, then swapped straight back. */
+/* ── Rating tiers ─────────────────────────────────────────────────────────
+   A 2px foil edge is a lovely detail on a full-size card and completely
+   invisible at pitch scale, where a squad is eleven 80px tiles. The tier
+   needs area, not perimeter: a bar across the head of the card, plus the
+   numeral in the tier's own metal. Elite keeps the live foil and the glow so
+   the top of the shelf still feels earned. */
+.tier-cap { height: 4px; border-radius: 7px 7px 0 0; }
+.tier-elite .tier-cap { background: linear-gradient(90deg,#8A6E36,#FFFBF0,#D8BE86); }
+.tier-gold  .tier-cap { background: linear-gradient(90deg,#8A6E36,#ead188); }
+.tier-steel .tier-cap { background: linear-gradient(90deg,#6d747c,#C9CFD6); }
+.tier-graphite .tier-cap { background: linear-gradient(90deg,#3f3a31,#6b665c); }
+.tier-ice   .tier-cap { background: linear-gradient(90deg,#3d8fb4,#e8fbff,#7fd4f5); }
+
+.tier-num { -webkit-background-clip: text; background-clip: text; color: transparent; }
+.tier-elite .tier-num { background-image: linear-gradient(180deg,#fffbf0,#f6edd6 52%,#c9a227); }
+.tier-gold  .tier-num { background-image: linear-gradient(180deg,#ead188,#c9a227 52%,#9a761c); }
+.tier-steel .tier-num { background-image: linear-gradient(180deg,#e8ecf1,#aeb4bc 52%,#7c838c); }
+.tier-graphite .tier-num { background-image: linear-gradient(180deg,#c6c3bb,#8e8a80 52%,#65625b); }
+.tier-ice   .tier-num { background-image: linear-gradient(180deg,#e8fbff,#7fd4f5 52%,#3d8fb4); }
+
+/* Team of the Week gets a cooler, darker pitch under the ice cards, so the
+   whole surface reads as a different object at thumbnail size. */
+.totw-pitch {
+  background:
+    repeating-linear-gradient(180deg, rgba(255,255,255,.045) 0 7.14%, rgba(0,0,0,.06) 7.14% 14.28%),
+    radial-gradient(120% 70% at 50% 0%, rgba(127,212,245,.16), transparent 62%),
+    linear-gradient(180deg,#12603a 0%,#0e5232 45%,#0b4429 100%) !important;
+}
+
+/* Same rasteriser limit as .metallic-num — flat ink while capturing. */
+[data-capturing] .tier-num {
+  background-image: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  line-height: 1.4 !important;
+}
+[data-capturing] .tier-elite .tier-num,
+[data-capturing] .tier-gold  .tier-num { color: #ead188 !important; }
+[data-capturing] .tier-steel .tier-num { color: #dfe4ea !important; }
+[data-capturing] .tier-graphite .tier-num { color: #b9b6ae !important; }
+[data-capturing] .tier-ice .tier-num { color: #c6ecfa !important; }
+
 [data-capturing] .metallic-num {
   background: none !important;
   -webkit-background-clip: border-box !important;
@@ -197,7 +239,10 @@ body {
   overflow: visible !important;
   text-overflow: clip !important;
 }
-[data-capturing] .truncate,
+/* The line-height bump is only for the text that was actually being sliced —
+   card names and the big numerals. Applying it to every truncating element
+   pushed the fixture pills straight out through the bottom of the card. */
+[data-capturing] .capture-line,
 [data-capturing] .metallic-num {
   line-height: 1.4 !important;
 }
