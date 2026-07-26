@@ -45,11 +45,16 @@ async function hideUnrasterisable(node: HTMLElement): Promise<() => void> {
         img.src = img.src
         return
       }
+      // Mark the slot so its monogram shows in place of the missing photo.
       img.style.visibility = 'hidden'
+      img.closest('.photo-slot')?.setAttribute('data-nophoto', '')
       hidden.push(img)
     }),
   )
-  return () => hidden.forEach((i) => (i.style.visibility = ''))
+  return () => hidden.forEach((i) => {
+    i.style.visibility = ''
+    i.closest('.photo-slot')?.removeAttribute('data-nophoto')
+  })
 }
 
 const twoFrames = () =>

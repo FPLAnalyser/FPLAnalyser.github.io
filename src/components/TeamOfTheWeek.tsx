@@ -112,7 +112,7 @@ function TotwCard({ pick, delay, onClick, projected }: { pick: Pick; delay: numb
       onClick={onClick}
       // Ice rather than gold: Team of the Week is not your squad, and until now
       // it read exactly like one. Same card, different metal.
-      className="totw-card tier-ice min-w-0 max-w-[88px] flex-1 basis-0 rounded-lg border text-center transition-transform hover:-translate-y-0.5"
+      className="totw-card tier-ice min-w-0 max-w-[108px] flex-1 basis-0 rounded-lg border text-center transition-transform hover:-translate-y-0.5"
       style={{
         animationDelay: `${delay}s`,
         background: 'linear-gradient(165deg,#132430,#060d12)',
@@ -120,7 +120,6 @@ function TotwCard({ pick, delay, onClick, projected }: { pick: Pick; delay: numb
         boxShadow: '0 0 18px -4px rgba(127,212,245,.5)',
       }}
     >
-      <div className="tier-cap" />
       <div className="p-1 sm:p-1.5">
         <div className="flex items-start justify-between">
           <span className="tier-num font-num text-[14px] leading-none font-extrabold tabular-nums">{cornerRating(pick, Boolean(projected)) ?? '—'}</span>
@@ -129,9 +128,9 @@ function TotwCard({ pick, delay, onClick, projected }: { pick: Pick; delay: numb
           )}
           {projected && score != null && <span className="rounded px-1 py-0.5 font-num text-[9px] font-extrabold tabular-nums" style={{ border: '1px solid rgba(127,212,245,.5)', color: '#a9e4f8' }}>{score.toFixed(1)}</span>}
         </div>
-        <span className="relative mx-auto my-1 block w-7 sm:w-8" style={{ height: 32 }}>
-          <span className="absolute inset-0 grid place-items-center rounded bg-white/6 text-[11px] font-extrabold text-white/40">{initialsOf(String(r.web_name))}</span>
-          <PlayerPhoto code={num(r, 'code')} element={num(r, 'element')} className="relative h-full w-full rounded object-cover object-top" placeholder={<span />} />
+        <span className="photo-slot relative mx-auto my-1 block w-8 sm:w-9" style={{ height: 36 }}>
+          <span className="photo-mono absolute inset-0 place-items-center text-[11px] font-extrabold text-white/35">{initialsOf(String(r.web_name))}</span>
+          <PlayerPhoto code={num(r, 'code')} element={num(r, 'element')} className="relative h-full w-full object-contain object-top" placeholder={<span className="grid h-full w-full place-items-center text-[11px] font-extrabold text-white/35">{initialsOf(String(r.web_name))}</span>} />
         </span>
         <div className="capture-line truncate text-[9.5px] leading-tight font-bold text-white sm:text-[10.5px]">{String(r.web_name)}</div>
         <div className="mt-0.5 hidden items-center justify-center gap-1 text-[8px] text-white/55 sm:flex sm:text-[9px]">
@@ -300,7 +299,7 @@ export function TeamOfTheWeek({
       {chips}
 
       <Exportable title={title}>
-        <Pitch key={`${runId}-${view}`} maxWidth={560} className="totw-pitch">
+        <Pitch key={`${runId}-${view}`} maxWidth={760} className="totw-pitch">
           <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
             <div className="text-[12px] font-extrabold tracking-[0.2em] text-white uppercase">{title}</div>
             <div className="flex items-center gap-2">

@@ -745,9 +745,16 @@ df = df.merge(ownership_map, on="element", how="left")
 order_cols = ["penalties_order", "corners_and_indirect_freekicks_order", "direct_freekicks_order"]
 takers = season_summary[["id"] + [c for c in order_cols if c in season_summary.columns]].rename(columns={"id": "element"})
 df = df.merge(takers, on="element", how="left")
-df["is_pen_taker"] = (df.get("penalties_order") == 1)
-df["is_setpiece_taker"] = ((df.get("corners_and_indirect_freekicks_order") == 1) |
-                           (df.get("direct_freekicks_order") == 1))
+# On the list at all, not just first on it. FPL publishes an ORDER, and the
+# second-choice taker is the one who steps up when the first is off the pitch
+# or out of the side — Thiago is Brentford's number two and was taking them.
+# `penalties_order` is kept alongside so the UI can say first choice or second
+# rather than flattening the two.
+_pen = pd.to_numeric(df.get("penalties_order"), errors="coerce")
+_cor = pd.to_numeric(df.get("corners_and_indirect_freekicks_order"), errors="coerce")
+_fk = pd.to_numeric(df.get("direct_freekicks_order"), errors="coerce")
+df["is_pen_taker"] = _pen.le(2).fillna(False)
+df["is_setpiece_taker"] = (_cor.le(2).fillna(False) | _fk.le(2).fillna(False))
 
 # GATE: additive-only — every column the website relied on must still exist
 LEGACY_SAMPLE = ["season_overall_rating", "gw4_overall_rating", "season_att_overall_rating",

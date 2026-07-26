@@ -175,7 +175,7 @@ export function SeasonPlanner({ base, byEl, pool, fixtureEase, startGw }: {
       {/* Pitch — the shared one, so the planner and the builder are the same
           object with the same proportions and the same phone behaviour. */}
       <Pitch
-        maxWidth={560}
+        maxWidth={760}
         footer={
           <>
             {week.chip === 'bench-boost' && <div className="mb-1.5 -mt-1 text-[10px] font-semibold text-accent-2">Bench Boost active — all 15 score</div>}
@@ -256,11 +256,10 @@ function PlayerChip({ onOpen, captain, vice, fix, rating, name, code, element, t
     <button onClick={onOpen} className={`${CARD_W} tier-${bench ? 'graphite' : tierOf(rating)} relative rounded-lg border text-center transition-transform hover:-translate-y-0.5`} style={benchSkin(bench, rating)}>
       {(captain || vice) && <span className={`absolute -top-1.5 -left-1.5 z-10 grid size-5 place-items-center rounded-full text-[10px] font-bold ${captain ? 'bg-accent text-accent-contrast' : 'bg-surface-3 text-ink'}`}>{captain ? 'C' : 'V'}</span>}
       {transferred && <span className="absolute -top-1.5 -right-1.5 z-10 grid size-4 place-items-center rounded-full bg-good text-[9px] text-white"><Icon name="check" size={10} /></span>}
-      <span className="tier-cap block" />
       <span className="block p-1 sm:p-1.5">
-        <span className="relative mx-auto block h-8 w-7 sm:w-8">
-          <span className="absolute inset-0 grid place-items-center rounded bg-white/6 text-[11px] font-extrabold text-white/40">{initialsOf(name)}</span>
-          <PlayerPhoto code={code} element={element} className="relative h-full w-full rounded object-cover object-top" placeholder={<span />} />
+        <span className="photo-slot relative mx-auto block h-9 w-8 sm:w-9">
+          <span className="photo-mono absolute inset-0 place-items-center text-[11px] font-extrabold text-white/35">{initialsOf(name)}</span>
+          <PlayerPhoto code={code} element={element} className="relative h-full w-full object-contain object-top" placeholder={<span className="grid h-full w-full place-items-center text-[11px] font-extrabold text-white/35">{initialsOf(name)}</span>} />
         </span>
         <span className="mt-1 block w-full capture-line truncate text-[9.5px] leading-tight font-bold text-white sm:text-[11px]">{name}</span>
         {/* The opponent by name, not a colour tick — on a phone this is the

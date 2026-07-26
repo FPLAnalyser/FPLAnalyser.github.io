@@ -468,7 +468,7 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, ca
 
   return (
     <Pitch
-      maxWidth={capture ? undefined : 560}
+      maxWidth={capture ? undefined : 760}
       footer={
         capture && !bench.length ? undefined : (
           <div className="flex justify-center gap-1 sm:gap-2">
