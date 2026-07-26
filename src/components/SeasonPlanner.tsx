@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TeamBadge } from './badges'
 import { PlayerPhoto } from './PlayerPhoto'
-import { Pitch, CARD_W, initialsOf } from './Pitch'
+import { Pitch, CARD_W, initialsOf, tierOf } from './Pitch'
 import { Icon } from './Icon'
 import { tapHaptic } from '../lib/native'
 import { num } from '../lib/rows'
@@ -253,20 +253,38 @@ function PlayerChip({ onOpen, captain, vice, fix, rating, name, code, element, t
 }) {
   const [bg, fg] = fix ? (FDR_COLORS[fix.fdr] || FDR_COLORS[3]) : ['#39424E', '#E8EDF3']
   return (
-    <button onClick={onOpen} className={`${CARD_W} relative flex flex-col items-center rounded-lg border p-1 text-center transition-transform hover:-translate-y-0.5 sm:p-1.5 ${bench ? 'border-white/12 bg-black/30' : 'border-accent/40'}`} style={bench ? undefined : { background: 'linear-gradient(165deg,rgba(33,29,22,.96),rgba(13,11,8,.96))' }}>
+    <button onClick={onOpen} className={`${CARD_W} tier-${bench ? 'graphite' : tierOf(rating)} relative rounded-lg border text-center transition-transform hover:-translate-y-0.5`} style={benchSkin(bench, rating)}>
       {(captain || vice) && <span className={`absolute -top-1.5 -left-1.5 z-10 grid size-5 place-items-center rounded-full text-[10px] font-bold ${captain ? 'bg-accent text-accent-contrast' : 'bg-surface-3 text-ink'}`}>{captain ? 'C' : 'V'}</span>}
       {transferred && <span className="absolute -top-1.5 -right-1.5 z-10 grid size-4 place-items-center rounded-full bg-good text-[9px] text-white"><Icon name="check" size={10} /></span>}
-      <span className="relative block h-8 w-7 sm:w-8">
-        <span className="absolute inset-0 grid place-items-center rounded bg-white/6 text-[11px] font-extrabold text-white/40">{initialsOf(name)}</span>
-        <PlayerPhoto code={code} element={element} className="relative h-full w-full rounded object-cover object-top" placeholder={<span />} />
+      <span className="tier-cap block" />
+      <span className="block p-1 sm:p-1.5">
+        <span className="relative mx-auto block h-8 w-7 sm:w-8">
+          <span className="absolute inset-0 grid place-items-center rounded bg-white/6 text-[11px] font-extrabold text-white/40">{initialsOf(name)}</span>
+          <PlayerPhoto code={code} element={element} className="relative h-full w-full rounded object-cover object-top" placeholder={<span />} />
+        </span>
+        <span className="mt-1 block w-full capture-line truncate text-[9.5px] leading-tight font-bold text-white sm:text-[11px]">{name}</span>
+        {/* The opponent by name, not a colour tick — on a phone this is the
+            single most useful thing on the card. */}
+        <span className="mt-0.5 block w-full truncate rounded px-1 text-[8.5px] font-bold sm:text-[9px]" style={{ background: bg, color: fg }}>{fix ? `${fix.opponent} (${fix.venue})` : 'No game'}</span>
+        <span className="tier-num font-num mt-0.5 block text-[10px] font-extrabold tabular-nums sm:text-[11px]">{rating || '—'}</span>
       </span>
-      <div className="mt-1 w-full truncate text-[9.5px] leading-tight font-bold text-white sm:text-[11px]">{name}</div>
-      {/* The opponent by name, not a colour tick — on a phone this is the
-          single most useful thing on the card. */}
-      <div className="mt-0.5 w-full truncate rounded px-1 text-[8.5px] font-bold sm:text-[9px]" style={{ background: bg, color: fg }}>{fix ? `${fix.opponent} (${fix.venue})` : 'No game'}</div>
-      <div className="mt-0.5 font-num text-[10px] font-bold tabular-nums text-accent-2 sm:text-[11px]">{rating || '—'}</div>
     </button>
   )
+}
+
+/** Bench cards drop out of the tier system: they aren't playing, and lighting
+ *  them up the same as the XI is a lie about who's scoring this week. */
+function benchSkin(bench: boolean | undefined, rating: number) {
+  if (bench) return { background: 'rgba(0,0,0,.32)', borderColor: 'rgba(255,255,255,.12)' }
+  const t = tierOf(rating)
+  return {
+    background: t === 'steel' ? 'linear-gradient(165deg,rgba(26,29,33,.96),rgba(10,12,14,.96))'
+      : t === 'graphite' ? 'linear-gradient(165deg,rgba(28,27,25,.96),rgba(11,11,10,.96))'
+      : 'linear-gradient(165deg,rgba(33,29,22,.96),rgba(13,11,8,.96))',
+    borderColor: t === 'elite' ? 'rgba(246,237,214,.55)' : t === 'gold' ? 'rgba(201,162,39,.42)'
+      : t === 'steel' ? 'rgba(201,207,214,.34)' : 'rgba(255,255,255,.14)',
+    boxShadow: t === 'elite' ? '0 0 18px -4px rgba(201,162,39,.55)' : undefined,
+  }
 }
 
 function ActionSheet({ name, isStarter, isCaptain, isVice, canBench, onCaptain, onVice, onToggle, onTransfer, onView, onClose }: {

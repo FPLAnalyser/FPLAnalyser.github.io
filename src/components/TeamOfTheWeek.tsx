@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { TeamBadge } from './badges'
 import { Icon } from './Icon'
-import { Pitch } from './Pitch'
+import { Pitch, initialsOf } from './Pitch'
 import { PlayerPhoto } from './PlayerPhoto'
 import { Exportable } from './ExportPanel'
 import { PlayerCardSheet } from './PlayerCardSheet'
@@ -110,41 +110,47 @@ function TotwCard({ pick, delay, onClick, projected }: { pick: Pick; delay: numb
   return (
     <button
       onClick={onClick}
-      // Width comes from the row: five have to fit across a phone-width pitch,
-      // so the slots divide what there is rather than each claiming a fixed
-      // width and wrapping the row.
-      className="totw-card min-w-0 max-w-[88px] flex-1 basis-0 rounded-lg border border-accent/45 p-1 text-center transition-transform hover:-translate-y-0.5 sm:p-1.5"
-      style={{ animationDelay: `${delay}s`, background: 'linear-gradient(165deg,#211d16,#0d0b08)' }}
+      // Ice rather than gold: Team of the Week is not your squad, and until now
+      // it read exactly like one. Same card, different metal.
+      className="totw-card tier-ice min-w-0 max-w-[88px] flex-1 basis-0 rounded-lg border text-center transition-transform hover:-translate-y-0.5"
+      style={{
+        animationDelay: `${delay}s`,
+        background: 'linear-gradient(165deg,#132430,#060d12)',
+        borderColor: 'rgba(232,251,255,.42)',
+        boxShadow: '0 0 18px -4px rgba(127,212,245,.5)',
+      }}
     >
-      <div className="flex items-start justify-between">
-        <span className="metallic-num font-num text-[14px] leading-none font-extrabold tabular-nums">{cornerRating(pick, Boolean(projected)) ?? '—'}</span>
-        {pts != null && (
-          <span className="rounded bg-accent px-1 py-0.5 font-num text-[10px] leading-none font-extrabold tabular-nums text-[#10131b]">{pts}</span>
-        )}
-        {projected && score != null && <span className="rounded border border-accent/50 px-1 py-0.5 font-num text-[9px] font-extrabold tabular-nums text-accent-2">{score.toFixed(1)}</span>}
-      </div>
-      <PlayerPhoto
-        code={num(r, 'code')} element={num(r, 'element')}
-        className="mx-auto my-1 w-7 rounded object-cover object-top sm:w-8" style={{ height: 32 }}
-        placeholder={<span className="mx-auto my-1 block w-7 rounded bg-white/5 sm:w-8" style={{ height: 32 }} />}
-      />
-      <div className="truncate text-[9.5px] leading-tight font-bold text-white sm:text-[10.5px]">{String(r.web_name)}</div>
-      <div className="mt-0.5 flex items-center justify-center gap-1 text-[8px] text-white/55 sm:text-[9px]">
-        <TeamBadge team={String(r.team)} size={9} />{String(r.team)} · £{r.price}m
-      </div>
-      {gw && (
-        <div className="mt-1 border-t border-white/10 pt-1 text-[9px] leading-tight text-white/75">
-          {(goals ?? 0) > 0 && <span className="mr-1">{goals}G</span>}
-          {(assists ?? 0) > 0 && <span className="mr-1">{assists}A</span>}
-          {(cs ?? 0) > 0 && <span className="mr-1">CS</span>}
-          {(bonus ?? 0) > 0 && <span className="mr-1 text-accent-2">+{bonus}B</span>}
-          {(goals ?? 0) === 0 && (assists ?? 0) === 0 && (cs ?? 0) === 0 && (bonus ?? 0) === 0 && <span>—</span>}
-          <span className="mt-0.5 block text-white/45">
-            {xg != null ? `${xg.toFixed(2)} xG` : ''}{xg != null && xa != null ? ' · ' : ''}{xa != null ? `${xa.toFixed(2)} xA` : ''}
-          </span>
+      <div className="tier-cap" />
+      <div className="p-1 sm:p-1.5">
+        <div className="flex items-start justify-between">
+          <span className="tier-num font-num text-[14px] leading-none font-extrabold tabular-nums">{cornerRating(pick, Boolean(projected)) ?? '—'}</span>
+          {pts != null && (
+            <span className="rounded px-1 py-0.5 font-num text-[10px] leading-none font-extrabold tabular-nums" style={{ background: '#7fd4f5', color: '#06212e' }}>{pts}</span>
+          )}
+          {projected && score != null && <span className="rounded px-1 py-0.5 font-num text-[9px] font-extrabold tabular-nums" style={{ border: '1px solid rgba(127,212,245,.5)', color: '#a9e4f8' }}>{score.toFixed(1)}</span>}
         </div>
-      )}
-      {projected && <div className="mt-1 border-t border-white/10 pt-1 text-[9px] text-white/70">{score.toFixed(1)} proj pts</div>}
+        <span className="relative mx-auto my-1 block w-7 sm:w-8" style={{ height: 32 }}>
+          <span className="absolute inset-0 grid place-items-center rounded bg-white/6 text-[11px] font-extrabold text-white/40">{initialsOf(String(r.web_name))}</span>
+          <PlayerPhoto code={num(r, 'code')} element={num(r, 'element')} className="relative h-full w-full rounded object-cover object-top" placeholder={<span />} />
+        </span>
+        <div className="capture-line truncate text-[9.5px] leading-tight font-bold text-white sm:text-[10.5px]">{String(r.web_name)}</div>
+        <div className="mt-0.5 hidden items-center justify-center gap-1 text-[8px] text-white/55 sm:flex sm:text-[9px]">
+          <TeamBadge team={String(r.team)} size={9} />{String(r.team)} · £{r.price}m
+        </div>
+        {gw && (
+          <div className="mt-1 border-t border-white/10 pt-1 text-[9px] leading-tight text-white/75">
+            {(goals ?? 0) > 0 && <span className="mr-1">{goals}G</span>}
+            {(assists ?? 0) > 0 && <span className="mr-1">{assists}A</span>}
+            {(cs ?? 0) > 0 && <span className="mr-1">CS</span>}
+            {(bonus ?? 0) > 0 && <span className="mr-1" style={{ color: '#a9e4f8' }}>+{bonus}B</span>}
+            {(goals ?? 0) === 0 && (assists ?? 0) === 0 && (cs ?? 0) === 0 && (bonus ?? 0) === 0 && <span>—</span>}
+            <span className="mt-0.5 block text-white/45">
+              {xg != null ? `${xg.toFixed(2)} xG` : ''}{xg != null && xa != null ? ' · ' : ''}{xa != null ? `${xa.toFixed(2)} xA` : ''}
+            </span>
+          </div>
+        )}
+        {projected && <div className="mt-1 border-t border-white/10 pt-1 text-[9px] text-white/70">{score.toFixed(1)} proj pts</div>}
+      </div>
     </button>
   )
 }
@@ -294,7 +300,7 @@ export function TeamOfTheWeek({
       {chips}
 
       <Exportable title={title}>
-        <Pitch key={`${runId}-${view}`} maxWidth={560}>
+        <Pitch key={`${runId}-${view}`} maxWidth={560} className="totw-pitch">
           <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
             <div className="text-[12px] font-extrabold tracking-[0.2em] text-white uppercase">{title}</div>
             <div className="flex items-center gap-2">

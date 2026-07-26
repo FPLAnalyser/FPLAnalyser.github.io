@@ -5,7 +5,7 @@ import { SectionBanner } from '../components/SectionBanner'
 import { PageSkeleton } from '../components/Skeleton'
 import { Tabs, type TabDef } from '../components/Tabs'
 import { TeamBadge } from '../components/badges'
-import { FixtureChips } from '../components/FixtureChips'
+import { FixtureChips, FixtureNames } from '../components/FixtureChips'
 import { PlayerPhoto } from '../components/PlayerPhoto'
 import { ShareFooter } from '../components/ShareFooter'
 import { SeasonPlanner } from '../components/SeasonPlanner'
@@ -436,7 +436,7 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, ca
         price={num(r, 'price')}
         code={num(r, 'code')}
         element={num(r, 'element')}
-        fixtures={<FixtureChips fixtureEase={fixtureEase} team={String(r.team)} n={3} compact />}
+        fixtures={<FixtureNames fixtureEase={fixtureEase} team={String(r.team)} n={3} />}
         onClick={capture ? undefined : () => onOpen?.(r)}
       />
       {onRemove && !capture && (

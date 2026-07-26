@@ -57,3 +57,42 @@ export function FixtureChips({
     </span>
   )
 }
+
+/**
+ * Named fixtures for a pitch card: the opponent and venue, coloured by
+ * difficulty. Three colour ticks tell you the run is amber-red-red; they
+ * don't tell you against whom, which is the thing you're actually checking on
+ * a phone. Two on a small screen, three once there's room.
+ */
+export function FixtureNames({ fixtureEase, team, n = 3 }: { fixtureEase: FixtureEaseRow[]; team: string; n?: number }) {
+  const upcoming = (fixtureEase || [])
+    .filter((f) => f.team === team)
+    .sort((a, b) => a.gw - b.gw)
+    .slice(0, n)
+  if (!upcoming.length) return null
+  return (
+    // No fixed height here on purpose: html2canvas lays these pills out a
+    // hair taller than the browser does, and clamping the stack clipped the
+    // text in the exported PNG. The card carries a couple of pixels of bottom
+    // padding to absorb it instead.
+    <span className="block">
+      {upcoming.map((f, i) => {
+        const [bg, fg] = FDR_COLORS[f.fdr] || FDR_COLORS[3]
+        return (
+          <span
+            key={i}
+            // The third fixture is a nicety, not a necessity — it waits for a
+            // screen with room for it.
+            // Explicit box height rather than a line-height: the rasteriser
+            // rounds line boxes differently and the stack grew past the card.
+            className={`mt-[2px] h-[12px] truncate rounded-[3px] px-1 text-[8px] leading-[12px] font-extrabold sm:h-[13px] sm:text-[9px] sm:leading-[13px] ${i >= 2 ? 'hidden sm:block' : 'block'}`}
+            style={{ background: bg, color: fg }}
+            title={`GW${f.gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamFullNames[f.opponent] || f.opponent} (FDR ${f.fdr})`}
+          >
+            {f.opponent} ({f.venue})
+          </span>
+        )
+      })}
+    </span>
+  )
+}
