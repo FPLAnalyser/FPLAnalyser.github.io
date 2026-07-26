@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { Icon } from './Icon'
 import { Exportable } from './ExportPanel'
 import { num, bool } from '../lib/rows'
@@ -164,10 +165,13 @@ export function SquadRatingSheet({ chosen, pool, squadScore, bestXI, fixtureEase
     [chosen],
   )
 
-  return (
-    <div className="fixed inset-0 z-[200] flex items-end justify-center overflow-y-auto bg-black/70 p-3 backdrop-blur-sm sm:items-center" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="w-full max-w-[620px] rounded-2xl border border-line bg-surface-1" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between gap-3 border-b border-line p-4">
+  return createPortal(
+    // The panel scrolls inside itself and never grows past the viewport. It
+    // used to grow, and on a phone the overflow ran off the TOP — taking the
+    // close button with it, which left no way out but a refresh.
+    <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="flex max-h-[88dvh] w-full max-w-[620px] flex-col overflow-hidden rounded-2xl border border-line bg-surface-1" onClick={(e) => e.stopPropagation()}>
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-line p-4">
           <div>
             <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Squad rating</div>
             <div className="mt-1 flex items-baseline gap-3">
@@ -179,6 +183,7 @@ export function SquadRatingSheet({ chosen, pool, squadScore, bestXI, fixtureEase
           <button onClick={onClose} aria-label="Close" className="grid size-9 shrink-0 place-items-center rounded-lg border border-line-mid text-ink-2 hover:text-ink"><Icon name="x" size={16} /></button>
         </div>
 
+        <div className="min-h-0 flex-1 overflow-y-auto">
         <Exportable title="My squad — the rating, broken down">
           <div className="flex flex-col gap-5 p-4">
             {/* the arithmetic */}
@@ -250,7 +255,9 @@ export function SquadRatingSheet({ chosen, pool, squadScore, bestXI, fixtureEase
             )}
           </div>
         </Exportable>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

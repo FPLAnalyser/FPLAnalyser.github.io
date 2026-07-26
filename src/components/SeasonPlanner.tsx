@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
 import { PlayerPhoto } from './PlayerPhoto'
 import { FoilShell, Pitch, CARD_W, initialsOf, tierOf } from './Pitch'
 import { PlayerCardSheet } from './PlayerCardSheet'
@@ -9,7 +8,7 @@ import { xpForGw, useXpModel, useMarketOdds, gwBenchmark, gwRating } from '../li
 import { Icon } from './Icon'
 import { tapHaptic } from '../lib/native'
 import { num } from '../lib/rows'
-import { FDR_COLORS, playerHref } from '../lib/util'
+import { FDR_COLORS } from '../lib/util'
 import { CHIP_LABEL, type Chip } from '../lib/planner'
 import type { Planner } from '../lib/usePlanner'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
@@ -46,7 +45,6 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
   /** The read on the squad, rendered high on the page where it's seen. */
   read?: React.ReactNode
 }) {
-  const navigate = useNavigate()
   const xpModel = useXpModel()
   const market = useMarketOdds()
   const { gw, gws, setGw, week, ft, banked, hit, usedChips, spend } = planner
@@ -236,13 +234,13 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
         ))}
       </Pitch>
 
-      <BenchShelf boosted={benchBoost}>
+      <BenchSpine boosted={benchBoost}>
         {week
           ? benchOrder.map((el) => card(el, true))
           : partial!.bench.map((slot, j) => (slot.el != null
               ? card(slot.el, true)
               : <EmptySlot key={`be${j}`} pos={slot.pos} onClick={() => onPickSlot?.(slot.pos)} />))}
-      </BenchShelf>
+      </BenchSpine>
 
       {sheet != null && rowOf(sheet) && week && (
         <PlayerCardSheet
@@ -260,7 +258,6 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
               onVice={() => { tapHaptic('light'); planner.makeVice(sheet); setSheet(null) }}
               onSwap={() => beginSub(sheet)}
               onTransfer={() => { onArmTransfer?.(sheet); setSheet(null) }}
-              onProfile={() => navigate(playerHref(nameOf(sheet), num(rowOf(sheet) ?? {}, 'code')))}
             />
           }
         />
@@ -315,24 +312,34 @@ function EmptySlot({ pos, onClick }: { pos: Pos4; onClick: () => void }) {
 
 const ratingWord = (r: number) => (r >= 85 ? 'elite week' : r >= 70 ? 'strong' : r >= 50 ? 'about par' : r >= 30 ? 'below par' : 'poor week')
 
-/** The bench as a hairline shelf: no container, no hardware. A rule with the
- *  label set into it, and the four reserves standing on the page beneath —
- *  they read as bench because they're below the line and wearing graphite,
- *  which is all the saying it needs. Bench Boost warms the rule and the
- *  cards find their real metal. */
-function BenchShelf({ boosted, children }: { boosted: boolean; children: React.ReactNode }) {
+/** The bench as a spine: the label turned on its side into a coloured edge,
+ *  so it costs width rather than height — the bench adds no vertical chrome
+ *  to the board at all. The edge fills solid gold under Bench Boost, which
+ *  is a loud signal for very little ink. */
+function BenchSpine({ boosted, children }: { boosted: boolean; children: React.ReactNode }) {
   return (
-    <div className="mx-auto mt-3" style={{ maxWidth: 660 }}>
-      <div className="mb-2 flex items-center gap-2.5">
-        <span className={`shrink-0 text-[10px] font-extrabold tracking-[0.2em] uppercase transition-colors ${boosted ? 'text-accent' : 'text-ink-3'}`}>Bench</span>
+    <div className="mx-auto mt-2.5" style={{ maxWidth: 660 }}>
+      <div
+        className={`flex items-stretch gap-2.5 overflow-hidden rounded-xl border py-2 pr-2.5 transition-colors ${boosted ? 'border-accent' : 'border-line-strong'}`}
+        style={{
+          background: boosted
+            ? 'linear-gradient(180deg, color-mix(in oklab, var(--accent) 18%, #14161a), #0f1319)'
+            : 'linear-gradient(180deg,#151b23,#10151b)',
+        }}
+      >
         <span
-          aria-hidden="true"
-          className={`h-px min-w-0 flex-1 ${boosted ? '' : 'bg-line-strong'}`}
-          style={boosted ? { background: 'linear-gradient(90deg, var(--accent), transparent)' } : undefined}
-        />
-        {boosted && <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-accent-contrast">All 15 score</span>}
+          className="-my-2 grid w-[26px] shrink-0 place-items-center"
+          style={{ background: boosted ? 'linear-gradient(180deg,#F7E3A6,#B98B2C)' : 'linear-gradient(180deg,#39424E,#232B35)' }}
+        >
+          <span
+            className={`text-[8.5px] font-extrabold tracking-[0.24em] uppercase ${boosted ? 'text-[#17130A]' : 'text-white/55'}`}
+            style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+          >
+            {boosted ? 'Boost' : 'Subs'}
+          </span>
+        </span>
+        <div className="flex min-w-0 flex-1 justify-center gap-1.5 sm:gap-2.5">{children}</div>
       </div>
-      <div className="flex justify-center gap-1.5 sm:gap-2.5">{children}</div>
     </div>
   )
 }
@@ -415,9 +422,9 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
 }
 
 /** What you can do to a player in your squad, shown inside his card. */
-function SquadActions({ isStarter, isCaptain, isVice, canSwap, onCaptain, onVice, onSwap, onTransfer, onProfile }: {
+function SquadActions({ isStarter, isCaptain, isVice, canSwap, onCaptain, onVice, onSwap, onTransfer }: {
   isStarter: boolean; isCaptain: boolean; isVice: boolean; canSwap: boolean
-  onCaptain: () => void; onVice: () => void; onSwap: () => void; onTransfer: () => void; onProfile: () => void
+  onCaptain: () => void; onVice: () => void; onSwap: () => void; onTransfer: () => void
 }) {
   const btn = 'inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors disabled:opacity-40'
   return (
@@ -426,7 +433,6 @@ function SquadActions({ isStarter, isCaptain, isVice, canSwap, onCaptain, onVice
       <button onClick={onVice} className={`${btn} ${isVice ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}><Icon name="shield" size={13} /> {isVice ? 'Vice' : 'Make vice'}</button>
       <button onClick={onSwap} disabled={!canSwap} className={`${btn} border-line-mid text-ink-2 hover:border-line-strong hover:text-ink`}><Icon name="pitch" size={13} /> {isStarter ? 'Bench him' : 'Bring on'}</button>
       <button onClick={onTransfer} className={`${btn} border-bad/45 text-bad hover:bg-bad/10`}><Icon name="users" size={13} /> Transfer out</button>
-      <button onClick={onProfile} className={`${btn} border-line-mid text-ink-2 hover:border-line-strong hover:text-ink`}><Icon name="eye" size={13} /> Full profile</button>
     </div>
   )
 }
