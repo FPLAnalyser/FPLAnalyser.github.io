@@ -31,8 +31,11 @@ def get(url):
         return json.load(r)
 
 
+# The API always describes the season FPL is running right now, which is the
+# newest entry in seasons.json — not "current", which tracks the last season
+# with a full stats build (they differ all pre-season).
 with open(os.path.join(ROOT, "seasons.json"), encoding="utf-8") as f:
-    season = json.load(f)["current"]
+    season = json.load(f)["seasons"][0]["id"]
 out_path = os.path.join(ROOT, season, "availability.json")
 
 boot = get(f"{API}/bootstrap-static/")
