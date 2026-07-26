@@ -138,12 +138,14 @@ def is_half(x):
 
 # ── The Odds API ────────────────────────────────────────────────────────────
 def bulk_markets(key):
-    """One request: every priced PL fixture with h2h + spreads + totals."""
-    url = (f"{ODDS_HOST}/odds/?apiKey={key}&regions=uk"
+    """One request: every priced PL fixture with h2h + spreads + totals.
+       ODDS_REGIONS widens the bookmaker pool (cost = markets x regions)."""
+    regions = os.environ.get("ODDS_REGIONS", "uk").strip() or "uk"
+    url = (f"{ODDS_HOST}/odds/?apiKey={key}&regions={regions}"
            f"&markets=h2h,spreads,totals&oddsFormat=decimal")
     events, headers = get(url)
     remaining = headers.get("x-requests-remaining", "?")
-    print(f"The Odds API bulk: {len(events)} priced fixtures | cost "
+    print(f"The Odds API bulk ({regions}): {len(events)} priced fixtures | cost "
           f"{headers.get('x-requests-last', '?')} | credits remaining: {remaining}")
     return events, remaining
 
@@ -318,7 +320,8 @@ if __name__ == "__main__":
         json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
 
     gws = sorted({m["gw"] for m in matches})
-    print(f"{out_path}: {len(matches)} fixtures with market lambdas, gameweeks "
-          f"{f'{gws[0]}-{gws[-1]}' if gws else 'none'}")
+    per_gw = {g: sum(1 for m in matches if m["gw"] == g) for g in gws}
+    print(f"{out_path}: {len(matches)} fixtures with market lambdas | per gameweek: "
+          f"{per_gw if per_gw else 'none'}")
     if unmatched:
         print(f"unmatched ({len(unmatched)}): {unmatched[:6]}")

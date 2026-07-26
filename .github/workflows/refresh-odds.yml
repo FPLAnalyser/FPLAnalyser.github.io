@@ -14,6 +14,10 @@ on:
         description: 'Also pull team totals per fixture (~1 credit each)'
         type: boolean
         default: false
+      regions:
+        description: 'Bookmaker regions (cost = markets x regions)'
+        type: string
+        default: 'uk'
 
 permissions:
   contents: write
@@ -39,6 +43,7 @@ jobs:
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           ENRICH: ${{ inputs.enrich && '1' || '' }}
+          ODDS_REGIONS: ${{ inputs.regions || 'uk' }}
       - name: Commit if changed
         run: |
           git add site_data/*/odds.json
