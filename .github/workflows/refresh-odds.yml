@@ -9,6 +9,11 @@ on:
   schedule:
     - cron: '20 6 * * *'   # daily, after the availability refresh
   workflow_dispatch:
+    inputs:
+      enrich:
+        description: 'Also pull team totals per fixture (~1 credit each)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -33,6 +38,7 @@ jobs:
       - run: python refresh_odds.py
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          ENRICH: ${{ inputs.enrich && '1' || '' }}
       - name: Commit if changed
         run: |
           git add site_data/*/odds.json
