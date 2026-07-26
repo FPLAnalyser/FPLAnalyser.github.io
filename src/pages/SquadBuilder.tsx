@@ -12,6 +12,7 @@ import { SeasonPlanner } from '../components/SeasonPlanner'
 import { Icon } from '../components/Icon'
 import { Pitch, PitchCard, CARD_W } from '../components/Pitch'
 import { PlayerCardSheet } from '../components/PlayerCardSheet'
+import { SquadRatingSheet } from '../components/SquadRatingSheet'
 import { useCore } from '../lib/useData'
 import { tapHaptic, shareImageNative } from '../lib/native'
 import { rasterise } from '../lib/capture'
@@ -73,7 +74,6 @@ export default function SquadBuilder() {
   const [picked, setPicked] = useState<number[]>(() => {
     try { const s = localStorage.getItem(STORE_KEY); return s ? JSON.parse(s) : [] } catch { return [] }
   })
-  const [mode, setMode] = useState<'build' | 'plan'>('build')
   const [pickPos, setPickPos] = useState<Pos>('GKP')
   const [boardView, setBoardView] = useState<'pitch' | 'list'>('pitch')
   const [sheetFor, setSheetFor] = useState<RatingRow | null>(null)
@@ -85,6 +85,7 @@ export default function SquadBuilder() {
   const [minDim, setMinDim] = useState<Record<string, number>>({})
   const [showFilters, setShowFilters] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
+  const [ratingOpen, setRatingOpen] = useState(false)
 
   const fixtureEase = (data?.fixtureEase ?? []) as FixtureEaseRow[]
   // You build for one gameweek — the next one to be played — and then plan
@@ -205,30 +206,20 @@ export default function SquadBuilder() {
 
   return (
     <PageShell>
-      <SectionBanner imgKey="squad" title="Squad Builder" subtitle={`Pick your Gameweek ${buildGw} fifteen within £100m, then plan forward — transfers, captain and chips`} />
+      <SectionBanner imgKey="squad" title="Squad Builder" subtitle={`Pick your Gameweek ${buildGw} fifteen within £100m, then step forward week by week — transfers, captain and chips`} />
 
-      {/* Build / Plan toggle */}
-      <div className="mb-5 flex flex-wrap items-center gap-2">
-        <button onClick={() => setMode('build')} className={`min-h-9 rounded-full border px-4 text-sm font-semibold transition-colors ${mode === 'build' ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}>Build GW{buildGw} squad</button>
-        <button onClick={() => (complete && valid) && setMode('plan')} disabled={!(complete && valid)} className={`min-h-9 rounded-full border px-4 text-sm font-semibold transition-colors ${mode === 'plan' ? 'border-accent bg-accent-soft text-accent' : complete && valid ? 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink' : 'border-line text-ink-3 opacity-40'}`}>Plan GW{buildGw + 1} onwards</button>
-        {!(complete && valid) && <span className="text-xs text-ink-3">Complete a valid 15 to start planning</span>}
-      </div>
-
-      {mode === 'plan' && complete && valid ? (
-        <SeasonPlanner
-          base={picked}
-          byEl={byEl}
-          pool={pool}
-          fixtureEase={fixtureEase}
-          startGw={buildGw}
-        />
-      ) : (
       <>
       {/* Summary bar */}
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Budget left" value={`£${remaining.toFixed(1)}m`} tone={remaining < 0 ? 'bad' : 'ink'} sub={`of £${BUDGET.toFixed(0)}m`} />
         <Stat label="Players" value={`${total}/15`} tone={total === 15 ? 'good' : 'ink'} sub={`£${spent.toFixed(1)}m spent`} />
-        <Stat label="Squad rating" value={squadScore == null ? '—' : String(squadScore)} tone="accent" sub={unrated ? `${unrated} unrated` : 'avg of 15'} />
+        <Stat
+          label="Squad rating"
+          value={squadScore == null ? '—' : String(squadScore)}
+          tone="accent"
+          sub={unrated ? `${unrated} unrated` : 'tap to break down'}
+          onClick={total >= 5 ? () => setRatingOpen(true) : undefined}
+        />
         <Stat label="Best XI" value={bestXI == null ? '—' : String(bestXI)} tone="accent" sub="top starting 11" />
       </div>
 
@@ -359,15 +350,31 @@ export default function SquadBuilder() {
           </div>
         </div>
       </div>
-      </>
+
+      {/* Once the fifteen is legal the same page keeps going: the gameweek
+          scroller, chips and transfers pick up from GW1 rather than living
+          behind a second tab. */}
+      {complete && valid && (
+        <div className="mt-8 border-t border-line pt-6">
+          <SeasonPlanner base={picked} byEl={byEl} pool={pool} fixtureEase={fixtureEase} startGw={buildGw} />
+        </div>
       )}
+      </>
 
       {sheetFor && (
         <PlayerCardSheet
           player={sheetFor}
           pool={pool}
+          fixtureEase={fixtureEase}
           onClose={() => setSheetFor(null)}
           onSwap={(out, incoming) => { remove(out.element); add(incoming) }}
+        />
+      )}
+
+      {ratingOpen && (
+        <SquadRatingSheet
+          chosen={chosen} pool={pool} squadScore={squadScore} bestXI={bestXI}
+          fixtureEase={fixtureEase} gw={buildGw} onClose={() => setRatingOpen(false)}
         />
       )}
 
@@ -616,14 +623,19 @@ function RangeRow({ label, kind, value, min, max, step, display, onChange }: {
   )
 }
 
-function Stat({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: 'ink' | 'good' | 'bad' | 'accent' }) {
+function Stat({ label, value, sub, tone, onClick }: { label: string; value: string; sub?: string; tone?: 'ink' | 'good' | 'bad' | 'accent'; onClick?: () => void }) {
   const color = tone === 'good' ? 'text-good' : tone === 'bad' ? 'text-bad' : tone === 'accent' ? 'text-accent' : 'text-ink'
-  return (
-    <div className="rounded-xl border border-line bg-surface-1/60 p-3 text-center">
+  const body = (
+    <>
       <div className={`font-display text-2xl leading-none tabular-nums ${color}`}>{value}</div>
       <div className="mt-1 text-[10px] font-semibold tracking-[0.1em] text-ink-2 uppercase">{label}</div>
       {sub && <div className="text-[10px] text-ink-3">{sub}</div>}
-    </div>
+    </>
+  )
+  const box = 'rounded-xl border border-line bg-surface-1/60 p-3 text-center'
+  if (!onClick) return <div className={box}>{body}</div>
+  return (
+    <button onClick={onClick} className={`${box} w-full transition-colors hover:border-accent/60 hover:bg-surface-2/60`}>{body}</button>
   )
 }
 

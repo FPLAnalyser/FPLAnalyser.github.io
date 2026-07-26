@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TeamBadge } from './badges'
 import { PlayerPhoto } from './PlayerPhoto'
+import { Pitch, CARD_W, initialsOf } from './Pitch'
 import { Icon } from './Icon'
 import { tapHaptic } from '../lib/native'
 import { num } from '../lib/rows'
@@ -171,24 +172,25 @@ export function SeasonPlanner({ base, byEl, pool, fixtureEase, startGw }: {
         <button onClick={autoXI} className="ml-auto inline-flex min-h-8 items-center gap-1 rounded-full border border-line-mid px-2.5 text-xs font-medium text-ink-2 transition-colors hover:border-line-strong hover:text-ink"><Icon name="bolt" size={12} /> Auto-pick XI</button>
       </div>
 
-      {/* Pitch */}
-      <div className="relative overflow-hidden rounded-3xl p-3 md:p-5" style={{ background: 'radial-gradient(120% 80% at 50% 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.5) 100%), repeating-linear-gradient(90deg, #0e2117 0 9%, #10281c 9% 18%), linear-gradient(180deg, #10281c, #0c1c13)' }}>
-        <div className="flex flex-col gap-3 md:gap-4">
-          {rowsByPos(week.xi).map((row, i) => row.length > 0 && (
-            <div key={i} className="flex flex-wrap justify-center gap-2 md:gap-3">
-              {row.map((el) => <PlayerChip key={el} el={el} onOpen={() => setSheet(el)} captain={week.captain === el} vice={week.vice === el} fix={fixtureAt(teamOf(el))} rating={Math.round(ratingOf(el))} name={nameOf(el)} code={num(byEl.get(el) ?? {}, 'code')} element={el} transferred={week.transfers.some((t) => t.in === el)} />)}
+      {/* Pitch — the shared one, so the planner and the builder are the same
+          object with the same proportions and the same phone behaviour. */}
+      <Pitch
+        maxWidth={560}
+        footer={
+          <>
+            {week.chip === 'bench-boost' && <div className="mb-1.5 -mt-1 text-[10px] font-semibold text-accent-2">Bench Boost active — all 15 score</div>}
+            <div className="flex justify-center gap-1 sm:gap-2">
+              {week.bench.map((el) => <PlayerChip key={el} el={el} onOpen={() => setSheet(el)} captain={week.captain === el} vice={week.vice === el} fix={fixtureAt(teamOf(el))} rating={Math.round(ratingOf(el))} name={nameOf(el)} code={num(byEl.get(el) ?? {}, 'code')} element={el} transferred={week.transfers.some((t) => t.in === el)} bench />)}
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Bench */}
-      <div className="mt-3 rounded-2xl border border-line bg-surface-1/60 p-3">
-        <div className="mb-2 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Bench {week.chip === 'bench-boost' && <span className="text-accent normal-case tracking-normal">· Bench Boost active — all 15 score</span>}</div>
-        <div className="flex flex-wrap justify-center gap-2 md:gap-3">
-          {week.bench.map((el) => <PlayerChip key={el} el={el} onOpen={() => setSheet(el)} captain={week.captain === el} vice={week.vice === el} fix={fixtureAt(teamOf(el))} rating={Math.round(ratingOf(el))} name={nameOf(el)} code={num(byEl.get(el) ?? {}, 'code')} element={el} transferred={week.transfers.some((t) => t.in === el)} bench />)}
-        </div>
-      </div>
+          </>
+        }
+      >
+        {rowsByPos(week.xi).map((row, i) => row.length > 0 && (
+          <div key={i} className="flex justify-center gap-1 sm:gap-2">
+            {row.map((el) => <PlayerChip key={el} el={el} onOpen={() => setSheet(el)} captain={week.captain === el} vice={week.vice === el} fix={fixtureAt(teamOf(el))} rating={Math.round(ratingOf(el))} name={nameOf(el)} code={num(byEl.get(el) ?? {}, 'code')} element={el} transferred={week.transfers.some((t) => t.in === el)} />)}
+          </div>
+        ))}
+      </Pitch>
 
       {gw > startGw && week.transfers.length > 0 && (
         <div className="mt-3 flex flex-col gap-1.5 rounded-2xl border border-line bg-surface-1/60 p-3 text-sm">
@@ -251,13 +253,18 @@ function PlayerChip({ onOpen, captain, vice, fix, rating, name, code, element, t
 }) {
   const [bg, fg] = fix ? (FDR_COLORS[fix.fdr] || FDR_COLORS[3]) : ['#39424E', '#E8EDF3']
   return (
-    <button onClick={onOpen} className={`relative flex w-[86px] flex-col items-center rounded-xl border p-1.5 text-center transition-transform hover:-translate-y-0.5 ${bench ? 'border-line bg-surface-2/50' : 'border-white/10 bg-black/25'}`}>
-      {(captain || vice) && <span className={`absolute -left-1.5 -top-1.5 z-10 grid size-5 place-items-center rounded-full text-[10px] font-bold ${captain ? 'bg-accent text-accent-contrast' : 'bg-surface-3 text-ink'}`}>{captain ? 'C' : 'V'}</span>}
-      {transferred && <span className="absolute -right-1.5 -top-1.5 z-10 grid size-4 place-items-center rounded-full bg-good text-[9px] text-white"><Icon name="check" size={10} /></span>}
-      <PlayerPhoto code={code} element={element} className="h-10 w-8 rounded object-cover object-top" placeholder={<div className="h-10 w-8 rounded bg-surface-3" />} />
-      <div className="mt-1 w-full truncate text-[11px] font-semibold text-ink">{name}</div>
-      <div className="mt-0.5 w-full truncate rounded px-1 text-[9px] font-semibold" style={{ background: bg, color: fg }}>{fix ? `${fix.opponent} (${fix.venue})` : 'No game'}</div>
-      <div className="mt-0.5 font-num text-[11px] font-bold tabular-nums text-accent">{rating || '—'}</div>
+    <button onClick={onOpen} className={`${CARD_W} relative flex flex-col items-center rounded-lg border p-1 text-center transition-transform hover:-translate-y-0.5 sm:p-1.5 ${bench ? 'border-white/12 bg-black/30' : 'border-accent/40'}`} style={bench ? undefined : { background: 'linear-gradient(165deg,rgba(33,29,22,.96),rgba(13,11,8,.96))' }}>
+      {(captain || vice) && <span className={`absolute -top-1.5 -left-1.5 z-10 grid size-5 place-items-center rounded-full text-[10px] font-bold ${captain ? 'bg-accent text-accent-contrast' : 'bg-surface-3 text-ink'}`}>{captain ? 'C' : 'V'}</span>}
+      {transferred && <span className="absolute -top-1.5 -right-1.5 z-10 grid size-4 place-items-center rounded-full bg-good text-[9px] text-white"><Icon name="check" size={10} /></span>}
+      <span className="relative block h-8 w-7 sm:w-8">
+        <span className="absolute inset-0 grid place-items-center rounded bg-white/6 text-[11px] font-extrabold text-white/40">{initialsOf(name)}</span>
+        <PlayerPhoto code={code} element={element} className="relative h-full w-full rounded object-cover object-top" placeholder={<span />} />
+      </span>
+      <div className="mt-1 w-full truncate text-[9.5px] leading-tight font-bold text-white sm:text-[11px]">{name}</div>
+      {/* The opponent by name, not a colour tick — on a phone this is the
+          single most useful thing on the card. */}
+      <div className="mt-0.5 w-full truncate rounded px-1 text-[8.5px] font-bold sm:text-[9px]" style={{ background: bg, color: fg }}>{fix ? `${fix.opponent} (${fix.venue})` : 'No game'}</div>
+      <div className="mt-0.5 font-num text-[10px] font-bold tabular-nums text-accent-2 sm:text-[11px]">{rating || '—'}</div>
     </button>
   )
 }

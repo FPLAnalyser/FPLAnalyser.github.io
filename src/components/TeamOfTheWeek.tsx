@@ -332,7 +332,7 @@ export function TeamOfTheWeek({
         </Pitch>
       </Exportable>
 
-      {sheetFor && <PlayerCardSheet player={sheetFor} pool={ratings} onClose={() => setSheetFor(null)} />}
+      {sheetFor && <PlayerCardSheet player={sheetFor} pool={ratings} fixtureEase={fixtureEase} onClose={() => setSheetFor(null)} />}
     </>
   )
 }

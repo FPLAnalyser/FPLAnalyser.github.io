@@ -5,8 +5,9 @@ import { ratingTo100 } from './StarRating'
 import { Icon } from './Icon'
 import { Exportable } from './ExportPanel'
 import { num, str } from '../lib/rows'
+import { FDR_COLORS } from '../lib/util'
 import { playerHref, teamLabel } from '../lib/util'
-import type { RatingRow } from '../lib/types'
+import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
 /* ════════════════════════════════════════════════════════════════════════
    The card drill-down: tap a player card anywhere (Squad Builder, My Team,
@@ -61,16 +62,19 @@ function CompareRow({ label, a, b }: { label: string; a: number | null; b: numbe
   )
 }
 
-export function PlayerCardSheet({ player, pool, onClose, onSwap }: {
+export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap }: {
   player: RatingRow
   /** Candidates for the compare tab — normally every rated player. */
   pool: RatingRow[]
+  /** Upcoming fixtures, so the card can show the run rather than the maths. */
+  fixtureEase?: FixtureEaseRow[]
   onClose: () => void
   /** Optional: perform a transfer in the caller's squad. */
   onSwap?: (out: RatingRow, incoming: RatingRow) => void
 }) {
   const navigate = useNavigate()
   const [tab, setTab] = useState<'rating' | 'compare'>('rating')
+  const [show, setShow] = useState<'rating' | 'xpts'>('rating')
   const [rivalId, setRivalId] = useState<number | null>(null)
 
   useEffect(() => {
@@ -98,11 +102,11 @@ export function PlayerCardSheet({ player, pool, onClose, onSwap }: {
   }, [peers, rating, price])
   const rival = rivalId != null ? peers.find((p) => p.element === rivalId) ?? defaultRival : defaultRival
 
-  const xpg = num(player, 'season_xpts_per_game')
-  const startRate = num(player, 'season_start_rate')
-  const availFactor = startRate != null ? Math.pow(Math.max(0, Math.min(1, startRate)), 0.75) : null
   const adjusted = num(player, 'season_xpts_adjusted')
-  const starts = num(player, 'total_starts')
+  const next = useMemo(
+    () => (fixtureEase ?? []).filter((f) => f.team === player.team).sort((a, b) => a.gw - b.gw).slice(0, 4),
+    [fixtureEase, player.team],
+  )
 
   const dims = dimsFor(pos)
   const dimVal = (r: RatingRow, col: string) => ratingTo100(str(r, col))
@@ -128,9 +132,19 @@ export function PlayerCardSheet({ player, pool, onClose, onSwap }: {
           <div className="min-w-0 flex-1">
             <div className="truncate text-[18px] font-extrabold tracking-[-0.01em] text-ink">{String(player.web_name)}</div>
             <div className="text-[12.5px] text-ink-2">{pos} · {teamLabel(String(player.team))} · £{price}m{player.selected_by_percent != null ? ` · ${player.selected_by_percent}% owned` : ''}</div>
-            {adjusted != null && <div className="mt-0.5 text-[12px] font-semibold text-accent-2">{adjusted.toFixed(2)} expected points / game</div>}
           </div>
-          {rating != null && <div className="metallic-num font-display shrink-0 text-[34px] leading-none">{rating}</div>}
+          <div className="shrink-0 text-right">
+            <div className="metallic-num font-display text-[34px] leading-none">
+              {show === 'xpts' ? (adjusted != null ? adjusted.toFixed(1) : '—') : (rating ?? '—')}
+            </div>
+            <button
+              onClick={() => setShow((v) => (v === 'rating' ? 'xpts' : 'rating'))}
+              className="mt-0.5 text-[10px] font-extrabold tracking-[0.12em] text-ink-3 uppercase transition-colors hover:text-accent"
+              title="Switch between the FPL Analyser rating and expected points a game"
+            >
+              {show === 'xpts' ? 'xPts / game ⇄' : 'Rating ⇄'}
+            </button>
+          </div>
           <button onClick={onClose} aria-label="Close" className="shrink-0 rounded-lg p-1.5 text-ink-3 transition-colors hover:text-ink"><Icon name="x" size={18} /></button>
         </div>
 
@@ -166,13 +180,22 @@ export function PlayerCardSheet({ player, pool, onClose, onSwap }: {
                     return <Bar key={label} label={label} value={v} tone={v != null && v >= 80 ? 'good' : v != null && v < 40 ? 'bad' : undefined} />
                   })}
                 </div>
-                {xpg != null && (
-                  <div className="mt-3.5 rounded-lg border border-line bg-surface-2/60 px-3 py-2.5 font-num text-[13px] leading-relaxed tabular-nums text-ink-2">
-                    expected points / game <b className="metallic-num">{xpg.toFixed(2)}</b><br />
-                    × availability factor <b className="metallic-num">{availFactor != null ? availFactor.toFixed(2) : '—'}</b>
-                    {starts != null && <span className="text-ink-3"> ({starts} starts)</span>}<br />
-                    = adjusted xPts <b className="metallic-num">{adjusted != null ? adjusted.toFixed(2) : '—'}</b>
-                    {rating != null && <> → scaled vs all {pos} = <b className="metallic-num">{rating}</b></>}
+                {/* The next four fixtures, not the derivation. What the rating
+                    is made of belongs on the card; how it is calculated does
+                    not need to be printed for anyone to copy. */}
+                {next.length > 0 && (
+                  <div className="mt-3.5 rounded-lg border border-line bg-surface-2/60 px-3 py-2.5">
+                    <div className="mb-1.5 text-[10px] font-extrabold tracking-[0.16em] text-ink-3 uppercase">Next {next.length}</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {next.map((f) => {
+                        const [bg, fg] = FDR_COLORS[f.fdr] || FDR_COLORS[3]
+                        return (
+                          <span key={f.gw} className="rounded px-2 py-1 text-[12px] font-bold" style={{ background: bg, color: fg }}>
+                            {f.opponent} ({f.venue})<span className="ml-1 opacity-70">GW{f.gw}</span>
+                          </span>
+                        )
+                      })}
+                    </div>
                   </div>
                 )}
                 {weakest && (
