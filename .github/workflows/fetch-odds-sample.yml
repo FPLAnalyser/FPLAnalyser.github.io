@@ -1,0 +1,33 @@
+name: Fetch odds data
+
+# Pulls Premier League odds CSVs from football-data.co.uk (free, no key):
+# the completed season's results-with-closing-odds for model validation, and
+# the forthcoming-fixtures file with current 1X2 / over-under odds. On demand.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download odds CSVs
+        run: |
+          mkdir -p odds
+          curl -fsSL "https://www.football-data.co.uk/mmz4281/2526/E0.csv" -o odds/E0_2025-26.csv
+          curl -fsSL "https://www.football-data.co.uk/fixtures.csv" -o odds/fixtures_upcoming.csv || true
+          wc -c odds/*.csv
+      - name: Commit if changed
+        run: |
+          git add odds/
+          if git diff --cached --quiet; then
+            echo "No changes."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Fetch odds sample from football-data.co.uk"
+          git push
