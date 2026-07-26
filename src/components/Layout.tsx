@@ -46,7 +46,7 @@ export function Layout() {
       >
         <div className="mx-auto flex h-14 max-w-[1760px] items-center gap-2 px-3 md:h-[70px] md:px-6">
           <NavLink to="/" end className="flex shrink-0 flex-col justify-center leading-none" aria-label="FPL Analyser — home">
-            <span className="text-[17px] font-extrabold tracking-tight text-ink md:text-xl">
+            <span className="text-[15px] font-extrabold tracking-tight text-ink sm:text-[17px] md:text-xl">
               <span className="metallic-num">FPL</span> Analyser
             </span>
             <span className="mt-0.5 hidden text-[9px] font-semibold tracking-[0.22em] text-ink-3 uppercase md:block">
@@ -85,7 +85,7 @@ export function Layout() {
           <div className="ml-auto flex shrink-0 items-center gap-0.5 md:ml-3 xl:ml-2">
             {/* Search trigger — everything below xl (inline box takes over at xl) */}
             <button
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-ink-2 transition-colors hover:text-ink xl:hidden"
+              className="flex min-h-11 min-w-10 items-center justify-center rounded-md text-ink-2 transition-colors hover:text-ink sm:min-w-11 xl:hidden"
               aria-label="Search players & teams"
               onClick={() => setSearchOpen(true)}
             >
@@ -94,7 +94,7 @@ export function Layout() {
             <SeasonSwitcher />
             <ThemeSwitcher />
             <button
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-ink-2 transition-colors hover:text-ink"
+              className="flex min-h-11 min-w-10 items-center justify-center rounded-md text-ink-2 transition-colors hover:text-ink sm:min-w-11"
               title="How it works"
               aria-label="How it works"
               onClick={() => setHelpOpen(true)}

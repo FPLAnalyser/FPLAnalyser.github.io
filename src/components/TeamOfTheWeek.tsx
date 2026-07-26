@@ -110,7 +110,10 @@ function TotwCard({ pick, delay, onClick, projected }: { pick: Pick; delay: numb
   return (
     <button
       onClick={onClick}
-      className="totw-card w-[78px] rounded-lg border border-accent/45 p-1.5 text-center transition-transform hover:-translate-y-0.5 sm:w-[88px]"
+      // Width comes from the row: five have to fit across a phone-width pitch,
+      // so the slots divide what there is rather than each claiming a fixed
+      // width and wrapping the row.
+      className="totw-card min-w-0 max-w-[88px] flex-1 basis-0 rounded-lg border border-accent/45 p-1 text-center transition-transform hover:-translate-y-0.5 sm:p-1.5"
       style={{ animationDelay: `${delay}s`, background: 'linear-gradient(165deg,#211d16,#0d0b08)' }}
     >
       <div className="flex items-start justify-between">
@@ -122,11 +125,11 @@ function TotwCard({ pick, delay, onClick, projected }: { pick: Pick; delay: numb
       </div>
       <PlayerPhoto
         code={num(r, 'code')} element={num(r, 'element')}
-        className="mx-auto my-1 w-8 rounded object-cover object-top" style={{ height: 38 }}
-        placeholder={<span className="mx-auto my-1 block w-8 rounded bg-white/5" style={{ height: 38 }} />}
+        className="mx-auto my-1 w-7 rounded object-cover object-top sm:w-8" style={{ height: 32 }}
+        placeholder={<span className="mx-auto my-1 block w-7 rounded bg-white/5 sm:w-8" style={{ height: 32 }} />}
       />
-      <div className="truncate text-[10.5px] font-bold text-white">{String(r.web_name)}</div>
-      <div className="mt-0.5 flex items-center justify-center gap-1 text-[9px] text-white/55">
+      <div className="truncate text-[9.5px] leading-tight font-bold text-white sm:text-[10.5px]">{String(r.web_name)}</div>
+      <div className="mt-0.5 flex items-center justify-center gap-1 text-[8px] text-white/55 sm:text-[9px]">
         <TeamBadge team={String(r.team)} size={9} />{String(r.team)} · £{r.price}m
       </div>
       {gw && (
@@ -310,7 +313,7 @@ export function TeamOfTheWeek({
           <div className="mb-4 max-w-[62ch] text-[11.5px] text-white/70">{sub}</div>
           <div className="flex flex-col gap-3">
             {shown.rows.map((row, i) => (
-              <div key={i} className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
+              <div key={i} className="flex justify-center gap-1 sm:gap-2">
                 {row.map((pick) => {
                   delay += 0.16
                   return (
