@@ -114,6 +114,7 @@ export function RatingCard({
   onClick,
   captain,
   viceCaptain,
+  flag,
   streak,
   window = 'season',
   fixtureEase,
@@ -124,6 +125,8 @@ export function RatingCard({
   onClick?: () => void
   captain?: boolean
   viceCaptain?: boolean
+  /** Availability chip from the live layer — INJ / SUS / chance-%. */
+  flag?: { label: string; tone: 'bad' | 'warn' | 'flat'; title: string } | null
   streak?: string | null
   window?: RatingWindow
   fixtureEase?: FixtureEaseRow[]
@@ -167,6 +170,9 @@ export function RatingCard({
           {/* pulled-rare foil sweep — 90+ only, so it stays special */}
           <div className="foil-shine" aria-hidden="true" />
         </>
+      )}
+      {flag && (
+        <span title={flag.title} className={`absolute z-10 rounded px-1.5 py-0.5 font-extrabold tracking-wide ${compact ? 'top-2 left-2 text-[8.5px]' : 'top-3 left-3 text-[10px]'} ${flag.tone === 'bad' ? 'bg-bad text-white' : 'bg-warn text-black'}`}>{flag.label}</span>
       )}
       {captain && <span className={`absolute z-10 grid place-items-center rounded-full bg-accent font-bold text-accent-contrast ${compact ? 'top-2 right-2 size-5 text-[10px]' : 'top-3 right-3 size-6 text-[11px]'}`}>C</span>}
       {viceCaptain && <span className={`absolute z-10 grid place-items-center rounded-full bg-surface-3 font-bold text-ink ${compact ? 'top-2 right-2 size-5 text-[10px]' : 'top-3 right-3 size-6 text-[11px]'}`}>V</span>}

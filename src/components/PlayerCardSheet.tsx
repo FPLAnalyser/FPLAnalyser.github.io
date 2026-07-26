@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PlayerPhoto } from './PlayerPhoto'
-import { ratingTo100 } from './StarRating'
+import { ratingTo100, exactTo100 } from './StarRating'
 import { Icon } from './Icon'
 import { Exportable } from './ExportPanel'
-import { num, str } from '../lib/rows'
+import { num } from '../lib/rows'
 import { FDR_COLORS } from '../lib/util'
 import { playerHref, teamLabel } from '../lib/util'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
@@ -109,7 +109,8 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap }: 
   )
 
   const dims = dimsFor(pos)
-  const dimVal = (r: RatingRow, col: string) => ratingTo100(str(r, col))
+  // Exact, not star-quantised: the norm column has the value to the number.
+  const dimVal = (r: RatingRow, col: string) => exactTo100(r, col)
   const weakest = dims.reduce<{ label: string; v: number } | null>((acc, [label, col]) => {
     const v = dimVal(player, col)
     return v != null && (acc == null || v < acc.v) ? { label, v } : acc

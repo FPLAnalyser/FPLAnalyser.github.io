@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { PageShell, EmptyState } from '../components/PageShell'
 import { SectionBanner } from '../components/SectionBanner'
 import { SearchBox } from '../components/SearchBox'
-import { StarRating, ratingTo100 } from '../components/StarRating'
+import { StarRating, ratingTo100, exactTo100 } from '../components/StarRating'
 import { MiniBar, ConcentrationBar, CHART_COLORS, type Tone } from '../components/viz'
 import { InfoTip } from '../components/InfoTip'
 import { Icon, type IconName } from '../components/Icon'
@@ -17,6 +17,7 @@ import { MatchupBars, UnknownModules, minutesRead, formRead, valueRead, defConRe
 import { PlayerZoneMap } from '../components/ShotMap'
 import { useCore } from '../lib/useData'
 import { num, str, bool } from '../lib/rows'
+import { useAvailability, availFor, availBadge, type AvailBadgeInfo } from '../lib/availability'
 import { teamFullNames, teamColors, searchText, TOOLTIPS } from '../lib/util'
 import { buildPlayerBundle, buildPlayerVerdict } from '../lib/insights/narrative'
 import type { CoreData, RatingRow } from '../lib/types'
@@ -189,6 +190,7 @@ function Tile({ value, label }: { value: ReactNode; label: ReactNode }) {
 function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) {
   const name = String(r.web_name)
   const pos = r.position
+  const avail = useAvailability()
 
   // Key related tables by the player's element (unique), never web_name.
   const p4 = data.personas4.find((p) => p.element === r.element) ?? null
@@ -202,8 +204,14 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
 
   const personas = (p4 && str(p4, 'personas') && str(p4, 'personas') !== 'None') ? String(p4.personas).split(', ') : []
   const flags = p4 && str(p4, 'flags') ? String(p4.flags).split(', ') : []
-  const isPenTaker = bool(r, 'is_pen_taker')
-  const isSpTaker = bool(r, 'is_setpiece_taker')
+  // Live layer first: set-piece duty changes with transfers and manager whim,
+  // so the daily availability refresh outranks the season snapshot.
+  const live = availFor(avail, num(r, 'element'), num(r, 'code'))
+  const isPenTaker = live?.pen_order != null ? live.pen_order <= 2 : bool(r, 'is_pen_taker')
+  const isSpTaker = live && (live.corner_order != null || live.fk_order != null)
+    ? (live.corner_order ?? 9) <= 2 || (live.fk_order ?? 9) <= 2
+    : bool(r, 'is_setpiece_taker')
+  const availFlag = availBadge(live)
 
   const unknown = num(r, 'season_overall_score') == null
 
@@ -216,7 +224,7 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
 
   return (
     <div className="overflow-hidden rounded-xl border border-line bg-surface-1/50">
-      <IdentStrip r={r} peers={peers} personas={personas} flags={flags} isPenTaker={isPenTaker} isSpTaker={isSpTaker} streak={streak} />
+      <IdentStrip r={r} peers={peers} personas={personas} flags={flags} isPenTaker={isPenTaker} isSpTaker={isSpTaker} streak={streak} availFlag={availFlag} />
 
       {/* The Brief flow: narrative first, evidence second, receipts folded.
           Unknown players get the honest know/don't-know page instead. */}
@@ -376,7 +384,7 @@ const FP_DIMS: Record<string, [string, string][]> = {
    and the rating chip is part of the flex row, so long names shrink instead
    of clipping on mobile. */
 
-function IdentStrip({ r, peers, personas, flags, isPenTaker, isSpTaker, streak }: {
+function IdentStrip({ r, peers, personas, flags, isPenTaker, isSpTaker, streak, availFlag }: {
   r: RatingRow
   peers: RatingRow[]
   personas: string[]
@@ -384,6 +392,7 @@ function IdentStrip({ r, peers, personas, flags, isPenTaker, isSpTaker, streak }
   isPenTaker: boolean
   isSpTaker: boolean
   streak: string
+  availFlag?: AvailBadgeInfo | null
 }) {
   const name = String(r.web_name)
   const team = String(r.team)
@@ -406,6 +415,11 @@ function IdentStrip({ r, peers, personas, flags, isPenTaker, isSpTaker, streak }
             {streak === '🧊 Cold' && <span className="ml-2 inline-flex items-center gap-1 text-cold"><Icon name="snow" size={12} /> Cold</span>}
           </div>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {availFlag && (
+              <span title={availFlag.title} className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10.5px] font-extrabold tracking-wide ${availFlag.tone === 'bad' ? 'bg-bad text-white' : 'bg-warn text-black'}`}>
+                {availFlag.label === 'INJ' ? 'Injured' : availFlag.label === 'SUS' ? 'Suspended' : availFlag.label === 'OUT' ? 'Unavailable' : `${availFlag.label} fit`}
+              </span>
+            )}
             {isPenTaker && <HeroPill gold title="First-choice penalty taker — extra, high-value goal route.">ⓒ Penalties</HeroPill>}
             {isSpTaker && <HeroPill title="Primary corner / free-kick taker — extra assist and goal routes.">Set pieces</HeroPill>}
             {personas.slice(0, 2).map((p) => <HeroPill key={p} title={personaTip(p)}>{p}</HeroPill>)}
@@ -603,7 +617,7 @@ function BulletGauge({ r, peers }: { r: RatingRow; peers: RatingRow[] }) {
  * midline. The dot pattern is the player. */
 function Fingerprint({ r }: { r: RatingRow }) {
   const dims = FP_DIMS[r.position === 'GKP' ? 'GKP' : r.position === 'DEF' ? 'DEF' : 'ATT']
-  const rows = dims.map(([label, col]) => [label, ratingTo100(str(r, col))] as const)
+  const rows = dims.map(([label, col]) => [label, exactTo100(r, col)] as const)
   if (rows.every(([, v]) => v == null)) return null
   return (
     <div>
@@ -805,7 +819,7 @@ function DimBars({ r, dims, overall }: { r: RatingRow; dims: Dim[]; overall: [st
         <span className="shrink-0"><StarRating value={num(r, overall[1])} size={10} /></span>
       </div>
       {dims.map(([label, sCol, gCol, tipKey]) => {
-        const s = ratingTo100(str(r, sCol))
+        const s = exactTo100(r, sCol)
         return (
           <div key={label} className="flex items-center gap-3 border-b border-line px-4 py-2.5 last:border-0">
             <span className="inline-flex w-28 shrink-0 items-center gap-1 text-sm text-ink-2 sm:w-32">
