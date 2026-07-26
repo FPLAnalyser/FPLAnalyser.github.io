@@ -38,9 +38,8 @@ export function squadNarrative(chosen: RatingRow[], fixtureEase: FixtureEaseRow[
   const outfield = chosen.filter((r) => r.position !== 'GKP')
 
   // Penalties — the single most repeatable source of points in the game.
-  // FPL publishes an ORDER, and second on the list still takes them when the
-  // first choice is off the pitch or out of the side, so both count — named
-  // with their order rather than lumped together.
+  // Only the club's FIRST-choice taker counts: FPL publishes a full order,
+  // but everyone below #1 only inherits the ball when he's off the pitch.
   // Live orders when the daily refresh has run; the season snapshot otherwise.
   // Duty moves between seasons (Thiago went from Brentford's #2 to #1), so the
   // freshest source always wins.
@@ -49,22 +48,14 @@ export function squadNarrative(chosen: RatingRow[], fixtureEase: FixtureEaseRow[
     if (live && avail?.generatedAt) return live.pen_order ?? null
     return num(r, 'penalties_order')
   }
-  const pens = chosen.filter((r) => (penOrder(r) ?? 9) <= 2)
-  const penName = (r: RatingRow) => {
-    const o = penOrder(r)
-    return `${r.web_name}${o === 1 ? ' (1st)' : o === 2 ? ' (2nd)' : ''}`
-  }
-  const firsts = pens.filter((r) => penOrder(r) === 1).length
-  if (pens.length >= 4) {
-    out.push({ tone: 'good', head: `${pens.length} penalty takers`, body: `${pens.map(penName).join(', ')}. Penalties are the most repeatable points in the game — this many is a deliberate edge, not an accident.` })
+  const pens = chosen.filter((r) => penOrder(r) === 1)
+  const penNames = pens.map((r) => r.web_name).join(', ')
+  if (pens.length >= 3) {
+    out.push({ tone: 'good', head: `${pens.length} penalty takers`, body: `${penNames} are all first choice from the spot. Penalties are the most repeatable points in the game — this many is a deliberate edge, not an accident.` })
   } else if (pens.length === 0) {
-    out.push({ tone: 'warn', head: 'No penalty takers', body: 'Nobody in the fifteen is on the spot-kick list. Roughly one goal in nine comes from the spot; you are giving that up.' })
+    out.push({ tone: 'warn', head: 'No penalty takers', body: 'Nobody in the fifteen is first choice from the spot. Roughly one goal in nine comes from a penalty; you are giving that up.' })
   } else {
-    out.push({
-      tone: firsts > 0 ? 'flat' : 'warn',
-      head: `${pens.length} penalty taker${pens.length > 1 ? 's' : ''}`,
-      body: pens.map(penName).join(', ') + (firsts === 0 ? ' — all second on their club\u2019s list, so they only take them when the first choice is off.' : '.'),
-    })
+    out.push({ tone: 'flat', head: `${pens.length} penalty taker${pens.length > 1 ? 's' : ''}`, body: `${penNames} — first choice from the spot.` })
   }
 
   // Set-piece delivery — corners and free kicks only, ranked across all

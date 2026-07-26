@@ -42,7 +42,7 @@ export function xpForGw(
   for (const f of fixes) sum += base * (FDR_MULT[f.fdr] ?? 1)
   if (avail) {
     const p = availFor(avail, num(r, 'element'), num(r, 'code'))
-    sum *= availabilityFactor(p, avail.deadlines.get(gw) ?? null)
+    sum *= availabilityFactor(p, gw, avail)
   }
   return sum
 }

@@ -45,11 +45,21 @@ events = [
     for e in boot["events"]
 ]
 
+# Kickoff times matter because FPL's news dates name FIXTURES: "Expected back
+# 22 Aug" means he plays the game ON 22 Aug, so the site must compare return
+# dates against each team's kickoff in a gameweek, not the deadline before it.
+fixtures = [
+    {"gw": f["event"], "h": f["team_h"], "a": f["team_a"], "k": f["kickoff_time"]}
+    for f in get(f"{API}/fixtures/")
+    if f.get("event") and f.get("kickoff_time")
+]
+
 players = []
 for el in boot["elements"]:
     row = {
         "element": el["id"],
         "code": el["code"],
+        "team": el["team"],
         "status": el.get("status", "a"),
     }
     # Only ship the noisy fields when they carry information — keeps the file
@@ -72,12 +82,14 @@ for el in boot["elements"]:
 payload = {
     "generated_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     "events": events,
+    "fixtures": fixtures,
     "players": players,
 }
 with open(out_path, "w", encoding="utf-8") as f:
     json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
 
 flagged = sum(1 for p in players if p["status"] != "a")
-pens = sum(1 for p in players if p.get("pen_order") in (1, 2))
+pens = sum(1 for p in players if p.get("pen_order") == 1)
 print(f"{out_path}: {len(players)} players ({flagged} flagged unavailable/doubtful, "
-      f"{pens} on a penalty list), {len(events)} gameweek deadlines")
+      f"{pens} first-choice penalty takers), {len(events)} gameweek deadlines, "
+      f"{len(fixtures)} fixtures")

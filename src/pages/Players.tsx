@@ -207,7 +207,9 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
   // Live layer first: set-piece duty changes with transfers and manager whim,
   // so the daily availability refresh outranks the season snapshot.
   const live = availFor(avail, num(r, 'element'), num(r, 'code'))
-  const isPenTaker = live?.pen_order != null ? live.pen_order <= 2 : bool(r, 'is_pen_taker')
+  // Only the club's first-choice taker counts; once the live layer has
+  // loaded, a missing order there means FPL lists him nowhere.
+  const isPenTaker = avail.generatedAt ? live?.pen_order === 1 : bool(r, 'is_pen_taker')
   const isSpTaker = live && (live.corner_order != null || live.fk_order != null)
     ? (live.corner_order ?? 9) <= 2 || (live.fk_order ?? 9) <= 2
     : bool(r, 'is_setpiece_taker')

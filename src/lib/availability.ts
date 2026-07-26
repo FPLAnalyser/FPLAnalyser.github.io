@@ -15,6 +15,8 @@ export interface AvailPlayer {
   /** FPL's own letter: a available · d doubtful · i injured · s suspended ·
    *  u unavailable (e.g. left the league) · n not eligible */
   status: string
+  /** FPL team id — keys into the fixtures list. */
+  team?: number
   news?: string
   news_added?: string
   chance?: number
@@ -23,16 +25,20 @@ export interface AvailPlayer {
   fk_order?: number
 }
 export interface AvailEvent { gw: number; deadline: string; finished: boolean }
-interface AvailFile { generated_at: string; events: AvailEvent[]; players: AvailPlayer[] }
+/** One fixture: gameweek, home/away FPL team ids, kickoff time. */
+export interface AvailFixture { gw: number; h: number; a: number; k: string }
+interface AvailFile { generated_at: string; events: AvailEvent[]; players: AvailPlayer[]; fixtures?: AvailFixture[] }
 
 export interface Availability {
   byElement: Map<number, AvailPlayer>
   byCode: Map<number, AvailPlayer>
   deadlines: Map<number, Date>
+  /** `${teamId}:${gw}` → that team's kickoff times in the gameweek. */
+  kickoffs: Map<string, Date[]>
   generatedAt: string | null
 }
 
-const EMPTY: Availability = { byElement: new Map(), byCode: new Map(), deadlines: new Map(), generatedAt: null }
+const EMPTY: Availability = { byElement: new Map(), byCode: new Map(), deadlines: new Map(), kickoffs: new Map(), generatedAt: null }
 
 export function useAvailability(): Availability {
   const q = useLazyTable<AvailFile>('availability')
@@ -47,7 +53,15 @@ export function useAvailability(): Availability {
     }
     const deadlines = new Map<number, Date>()
     for (const e of d.events ?? []) deadlines.set(e.gw, new Date(e.deadline))
-    return { byElement, byCode, deadlines, generatedAt: d.generated_at ?? null }
+    const kickoffs = new Map<string, Date[]>()
+    for (const f of d.fixtures ?? []) {
+      const when = new Date(f.k)
+      for (const team of [f.h, f.a]) {
+        const key = `${team}:${f.gw}`
+        kickoffs.set(key, [...(kickoffs.get(key) ?? []), when])
+      }
+    }
+    return { byElement, byCode, deadlines, kickoffs, generatedAt: d.generated_at ?? null }
   }, [q.data])
 }
 
@@ -68,8 +82,11 @@ export function availFor(a: Availability, element?: number | null, code?: number
 const MONTHS: Record<string, number> = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 }
 
 /** The return date FPL buries in the news line — "Expected back 22 Aug",
- *  "Suspended until 30 Aug". Year inferred from the news date: if the month
- *  reads as earlier than when the news was posted, it means next year. */
+ *  "Suspended until 6 Sep". Crucially, that date IS a fixture date: it names
+ *  the game the player is expected back FOR, not a recovery day he sits out.
+ *  Returned as midnight UTC so any kickoff on that calendar day counts as
+ *  available. Year inferred from the news date: if the month reads as earlier
+ *  than when the news was posted, it means next year. */
 export function returnDateFrom(p: AvailPlayer | null): Date | null {
   if (!p?.news) return null
   const m = /(?:back|until)\s+(\d{1,2})\s+([A-Za-z]{3})/i.exec(p.news)
@@ -80,19 +97,27 @@ export function returnDateFrom(p: AvailPlayer | null): Date | null {
   const anchor = p.news_added ? new Date(p.news_added) : new Date()
   let year = anchor.getFullYear()
   if (mon < anchor.getMonth() - 1) year += 1
-  return new Date(Date.UTC(year, mon, day, 23, 59))
+  return new Date(Date.UTC(year, mon, day))
 }
 
 /** How much of a player you can expect for a given gameweek, 0–1.
  *
- *  Injured/suspended players with a stated return date score 0 for every
- *  gameweek whose deadline falls before it. With no date, FPL's own
- *  chance-of-playing carries it; with neither, an i/s/u flag means 0 rather
- *  than a hopeful guess. */
-export function availabilityFactor(p: AvailPlayer | null, deadline: Date | null): number {
+ *  A stated return date is matched against the player's team's kickoff in
+ *  that gameweek — he plays the fixture on that date, so "Suspended until
+ *  6 Sep" keeps a player OUT of every week whose game falls before 6 Sep and
+ *  IN for the week whose game is on it. Without fixture data the gameweek
+ *  deadline stands in (conservative by at most the boundary week). With no
+ *  date at all, FPL's own chance-of-playing carries it; with neither, an
+ *  i/s/u flag means 0 rather than a hopeful guess. */
+export function availabilityFactor(p: AvailPlayer | null, gw: number, a: Availability): number {
   if (!p || p.status === 'a') return 1
   const back = returnDateFrom(p)
-  if (back && deadline) return deadline >= back ? 1 : 0
+  if (back) {
+    const kicks = p.team != null ? a.kickoffs.get(`${p.team}:${gw}`) : undefined
+    if (kicks?.length) return kicks.some((k) => k >= back) ? 1 : 0
+    const deadline = a.deadlines.get(gw)
+    if (deadline) return deadline >= back ? 1 : 0
+  }
   if (p.status === 'd') return (p.chance ?? 75) / 100
   if (p.chance != null) return p.chance / 100
   return 0 // i / s / u / n with no date and no stated chance
