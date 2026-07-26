@@ -10,7 +10,7 @@ import { PlayerPhoto } from '../components/PlayerPhoto'
 import { ShareFooter } from '../components/ShareFooter'
 import { SeasonPlanner } from '../components/SeasonPlanner'
 import { Icon } from '../components/Icon'
-import { Pitch, PitchCard } from '../components/Pitch'
+import { Pitch, PitchCard, CARD_W } from '../components/Pitch'
 import { PlayerCardSheet } from '../components/PlayerCardSheet'
 import { useCore } from '../lib/useData'
 import { tapHaptic, shareImageNative } from '../lib/native'
@@ -86,6 +86,9 @@ export default function SquadBuilder() {
   const [shareOpen, setShareOpen] = useState(false)
 
   const fixtureEase = (data?.fixtureEase ?? []) as FixtureEaseRow[]
+  // You build for one gameweek — the next one to be played — and then plan
+  // forward from it. Everything on this page is anchored to that number.
+  const buildGw = fixtureEase.length ? Math.min(...fixtureEase.map((f) => f.gw)) : (data?.meta?.next_gw ?? 1)
 
   const pool = useMemo(
     () => ((data?.ratings ?? []) as RatingRow[]).filter(
@@ -201,12 +204,12 @@ export default function SquadBuilder() {
 
   return (
     <PageShell>
-      <SectionBanner imgKey="squad" title="Squad Builder" subtitle="Pick a full 15 within £100m, then plan your gameweeks — transfers, captain and chips" />
+      <SectionBanner imgKey="squad" title="Squad Builder" subtitle={`Pick your Gameweek ${buildGw} fifteen within £100m, then plan forward — transfers, captain and chips`} />
 
       {/* Build / Plan toggle */}
       <div className="mb-5 flex flex-wrap items-center gap-2">
-        <button onClick={() => setMode('build')} className={`min-h-9 rounded-full border px-4 text-sm font-semibold transition-colors ${mode === 'build' ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}>Build squad</button>
-        <button onClick={() => (complete && valid) && setMode('plan')} disabled={!(complete && valid)} className={`min-h-9 rounded-full border px-4 text-sm font-semibold transition-colors ${mode === 'plan' ? 'border-accent bg-accent-soft text-accent' : complete && valid ? 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink' : 'border-line text-ink-3 opacity-40'}`}>Plan gameweeks</button>
+        <button onClick={() => setMode('build')} className={`min-h-9 rounded-full border px-4 text-sm font-semibold transition-colors ${mode === 'build' ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}>Build GW{buildGw} squad</button>
+        <button onClick={() => (complete && valid) && setMode('plan')} disabled={!(complete && valid)} className={`min-h-9 rounded-full border px-4 text-sm font-semibold transition-colors ${mode === 'plan' ? 'border-accent bg-accent-soft text-accent' : complete && valid ? 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink' : 'border-line text-ink-3 opacity-40'}`}>Plan GW{buildGw + 1} onwards</button>
         {!(complete && valid) && <span className="text-xs text-ink-3">Complete a valid 15 to start planning</span>}
       </div>
 
@@ -216,7 +219,7 @@ export default function SquadBuilder() {
           byEl={byEl}
           pool={pool}
           fixtureEase={fixtureEase}
-          startGw={fixtureEase.length ? Math.min(...fixtureEase.map((f) => f.gw)) : (data.meta?.next_gw ?? 1)}
+          startGw={buildGw}
         />
       ) : (
       <>
@@ -254,7 +257,7 @@ export default function SquadBuilder() {
         {/* Pitch view of the squad */}
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Your squad</div>
+            <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Your GW{buildGw} squad</div>
             <div className="ml-auto flex gap-1.5">
               {(['pitch', 'list'] as const).map((v) => (
                 <button
@@ -367,58 +370,115 @@ export default function SquadBuilder() {
         />
       )}
 
-      <SquadShare chosen={chosen} fixtureEase={fixtureEase} squadScore={squadScore} bestXI={bestXI} spent={spent} unrated={unrated} total={total} open={shareOpen} onClose={() => setShareOpen(false)} />
+      <SquadShare chosen={chosen} fixtureEase={fixtureEase} squadScore={squadScore} bestXI={bestXI} spent={spent} unrated={unrated} total={total} gw={buildGw} open={shareOpen} onClose={() => setShareOpen(false)} />
     </PageShell>
   )
 }
 
-/** The squad laid out on a pitch, one row per position — the same card visual
- *  as the My Team page. Interactive by default (remove ✕ + empty slots that
- *  jump the picker to that position); `capture` mode drops those for a clean
- *  shareable image. */
+/** Split a squad into a starting XI and a four-man bench.
+ *
+ *  The formation is the legal shape (DEF 3–5, MID 2–5, FWD 1–3) that maximises
+ *  the total rating of the eleven; while the squad is still short it falls back
+ *  to 4-4-2 so the pitch has a stable shape to fill in. Within each position the
+ *  best-rated go on the pitch and the rest sit on the bench, keeper first —
+ *  which is exactly how FPL orders a bench. */
+function pickEleven(squad: RatingRow[]): { form: Record<Pos, number>; xi: RatingRow[]; bench: RatingRow[] } {
+  const sorted = (p: Pos) => squad.filter((r) => r.position === p).sort((a, b) => (ovOf(b) ?? -1) - (ovOf(a) ?? -1))
+  const by: Record<Pos, RatingRow[]> = { GKP: sorted('GKP'), DEF: sorted('DEF'), MID: sorted('MID'), FWD: sorted('FWD') }
+  const sumTop = (arr: RatingRow[], n: number) => arr.slice(0, n).reduce((a, r) => a + (ovOf(r) ?? 0), 0)
+
+  let form: Record<Pos, number> = { GKP: 1, DEF: 4, MID: 4, FWD: 2 }
+  if (by.GKP.length && by.DEF.length >= 3 && by.MID.length >= 2 && by.FWD.length >= 1) {
+    let bestSum = -1
+    for (let d = 3; d <= 5; d++) {
+      for (let m = 2; m <= 5; m++) {
+        const f = 10 - d - m
+        if (f < 1 || f > 3) continue
+        if (by.DEF.length < d || by.MID.length < m || by.FWD.length < f) continue
+        const sum = (ovOf(by.GKP[0]) ?? 0) + sumTop(by.DEF, d) + sumTop(by.MID, m) + sumTop(by.FWD, f)
+        if (sum > bestSum) { bestSum = sum; form = { GKP: 1, DEF: d, MID: m, FWD: f } }
+      }
+    }
+  }
+
+  const xi: RatingRow[] = []
+  const subs: RatingRow[] = []
+  for (const { pos } of SLOTS) {
+    by[pos].forEach((r, i) => (i < form[pos] ? xi : subs).push(r))
+  }
+  const bench = [...subs.filter((r) => r.position === 'GKP'), ...subs.filter((r) => r.position !== 'GKP')]
+  return { form, xi, bench }
+}
+
+/** The squad laid out on a pitch: the starting XI in formation, the bench in a
+ *  band across the foot of the pitch. Interactive by default (remove ✕ + empty
+ *  slots that jump the picker to that position); `capture` mode drops those for
+ *  a clean shareable image. */
 function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, capture }: {
   chosen: RatingRow[]; fixtureEase: FixtureEaseRow[]; pickPos?: Pos; onRemove?: (el: number) => void; onPick?: (p: Pos) => void; onOpen?: (r: RatingRow) => void; capture?: boolean
 }) {
-  const wrap = 'relative'
+  const { form, xi, bench } = pickEleven(chosen)
+
+  const card = (r: RatingRow) => (
+    <div key={r.element} className={`relative ${CARD_W}`}>
+      <PitchCard
+        rating={num(r, 'season_overall_score') != null ? Math.round((num(r, 'season_overall_score') as number) * 20) : null}
+        name={String(r.web_name)}
+        team={String(r.team)}
+        price={num(r, 'price')}
+        code={num(r, 'code')}
+        element={num(r, 'element')}
+        fixtures={<FixtureChips fixtureEase={fixtureEase} team={String(r.team)} n={3} compact />}
+        onClick={capture ? undefined : () => onOpen?.(r)}
+      />
+      {onRemove && !capture && (
+        <button aria-label={`Remove ${r.web_name}`} onClick={() => onRemove(r.element)} className="absolute -top-1.5 -right-1.5 z-10 grid size-5 place-items-center rounded-full border border-line bg-surface-1 text-ink-2 shadow-lg transition-colors hover:border-bad hover:text-bad sm:-top-2 sm:-right-2 sm:size-7">
+          <Icon name="x" size={11} />
+        </button>
+      )}
+    </div>
+  )
+
+  const slot = (pos: Pos, key: string) => (
+    <button
+      key={key}
+      onClick={() => onPick?.(pos)}
+      className={`${CARD_W} grid min-h-[76px] place-items-center rounded-lg border-2 border-dashed text-[9.5px] font-medium transition-colors sm:min-h-[92px] sm:text-[10px] ${
+        pickPos === pos ? 'border-accent/70 text-accent' : 'border-white/20 text-white/75 hover:border-white/45 hover:text-white'
+      }`}
+    >
+      <span className="flex flex-col items-center gap-1"><Icon name="search" size={14} /> Add {pos}</span>
+    </button>
+  )
+
+  // Bench capacity per position is whatever the formation leaves over.
+  const benchNeed: Pos[] = []
+  for (const { pos, count } of SLOTS) {
+    const short = count - form[pos] - bench.filter((r) => r.position === pos).length
+    for (let i = 0; i < short; i++) benchNeed.push(pos)
+  }
+
   return (
-    <Pitch maxWidth={capture ? undefined : 560}>
-      <div className="relative flex flex-col gap-3 md:gap-4">
-        {SLOTS.map(({ pos, count }) => {
-          const players = chosen.filter((r) => r.position === pos)
+    <Pitch
+      maxWidth={capture ? undefined : 560}
+      footer={
+        capture && !bench.length ? undefined : (
+          <div className="flex justify-center gap-1 sm:gap-2">
+            {bench.map(card)}
+            {!capture && benchNeed.map((pos, i) => slot(pos, `b${pos}${i}`))}
+          </div>
+        )
+      }
+    >
+      <div className="relative flex flex-col gap-2 sm:gap-3 md:gap-4">
+        {SLOTS.map(({ pos }) => {
+          const players = xi.filter((r) => r.position === pos)
           if (capture && !players.length) return null
-          const empties = capture ? 0 : Math.max(0, count - players.length)
+          const empties = capture ? 0 : Math.max(0, form[pos] - players.length)
           return (
-            <div key={pos} className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
-              {players.map((r) => (
-                <div key={r.element} className={wrap}>
-                  <PitchCard
-                    rating={num(r, 'season_overall_score') != null ? Math.round((num(r, 'season_overall_score') as number) * 20) : null}
-                    name={String(r.web_name)}
-                    team={String(r.team)}
-                    price={num(r, 'price')}
-                    code={num(r, 'code')}
-                    element={num(r, 'element')}
-                    fixtures={<FixtureChips fixtureEase={fixtureEase} team={String(r.team)} n={3} compact />}
-                    onClick={capture ? undefined : () => onOpen?.(r)}
-                  />
-                  {onRemove && !capture && (
-                    <button aria-label={`Remove ${r.web_name}`} onClick={() => onRemove(r.element)} className="absolute -top-2 -right-2 z-10 grid size-7 place-items-center rounded-full border border-line bg-surface-1 text-ink-2 shadow-lg transition-colors hover:border-bad hover:text-bad">
-                      <Icon name="x" size={14} />
-                    </button>
-                  )}
-                </div>
-              ))}
-              {Array.from({ length: empties }).map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => onPick?.(pos)}
-                  className={`w-[74px] sm:w-[84px] grid min-h-[92px] place-items-center rounded-lg border-2 border-dashed text-[10px] font-medium transition-colors ${
-                    pickPos === pos ? 'border-accent/70 text-accent' : 'border-white/20 text-white/75 hover:border-white/45 hover:text-white'
-                  }`}
-                >
-                  <span className="flex flex-col items-center gap-1"><Icon name="search" size={16} /> Add {pos}</span>
-                </button>
-              ))}
+            <div key={pos} className="flex justify-center gap-1 sm:gap-2">
+              {players.map(card)}
+              {Array.from({ length: empties }).map((_, i) => slot(pos, `${pos}${i}`))}
             </div>
           )
         })}
@@ -474,8 +534,8 @@ function SquadList({ chosen, fixtureEase, onRemove, onPick, onOpen }: {
 }
 
 /** Share / download the squad as a branded PNG (rasterised client-side). */
-function SquadShare({ chosen, fixtureEase, squadScore, bestXI, spent, unrated, total, open, onClose }: {
-  chosen: RatingRow[]; fixtureEase: FixtureEaseRow[]; squadScore: number | null; bestXI: number | null; spent: number; unrated: number; total: number; open: boolean; onClose: () => void
+function SquadShare({ chosen, fixtureEase, squadScore, bestXI, spent, unrated, total, gw, open, onClose }: {
+  chosen: RatingRow[]; fixtureEase: FixtureEaseRow[]; squadScore: number | null; bestXI: number | null; spent: number; unrated: number; total: number; gw: number; open: boolean; onClose: () => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [busy, setBusy] = useState(false)
@@ -513,7 +573,7 @@ function SquadShare({ chosen, fixtureEase, squadScore, bestXI, spent, unrated, t
       <div className="w-full max-w-[560px]" onClick={(e) => e.stopPropagation()}>
         <div ref={ref} className="rounded-3xl bg-[#0c0b09] p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="font-display text-lg leading-none text-ink">FPL <span className="text-accent">Analyser</span><div className="mt-1 text-[10px] font-semibold tracking-[0.14em] text-ink-3 uppercase">My Squad</div></div>
+            <div className="font-display text-lg leading-none text-ink">FPL <span className="text-accent">Analyser</span><div className="mt-1 text-[10px] font-semibold tracking-[0.14em] text-ink-3 uppercase">My GW{gw} Squad</div></div>
             <div className="flex gap-4 text-center">
               <div><div className="font-display text-2xl leading-none text-accent tabular-nums">{squadScore ?? '—'}</div><div className="text-[9px] tracking-[0.1em] text-ink-3 uppercase">Squad</div></div>
               <div><div className="font-display text-2xl leading-none text-accent tabular-nums">{bestXI ?? '—'}</div><div className="text-[9px] tracking-[0.1em] text-ink-3 uppercase">Best XI</div></div>
@@ -564,31 +624,12 @@ function Stat({ label, value, sub, tone }: { label: string; value: string; sub?:
   )
 }
 
-/** Best legal starting XI rating (1 GK; DEF 3–5; MID 2–5; FWD 1–3; 11 total),
- *  maximising the sum of player ratings, returned as a 0–100 average. */
+/** Best legal starting XI rating, as a 0–100 average. Reads the same eleven the
+ *  pitch shows, so the headline number and the shirts never disagree. */
 function bestElevenScore(squad: RatingRow[]): number | null {
-  const byPos = (p: Pos) => squad
-    .filter((r) => r.position === p)
-    .map(ovOf)
-    .filter((v): v is number => v != null)
-    .sort((a, b) => b - a)
-  const gk = byPos('GKP')
-  const def = byPos('DEF')
-  const mid = byPos('MID')
-  const fwd = byPos('FWD')
-  if (!gk.length || def.length < 3 || mid.length < 2 || !fwd.length) return null
-  const topN = (arr: number[], n: number) => arr.slice(0, n).reduce((a, b) => a + b, 0)
-  let best = -1
-  for (let d = 3; d <= 5; d++) {
-    for (let m = 2; m <= 5; m++) {
-      const f = 10 - d - m
-      if (f < 1 || f > 3) continue
-      if (def.length < d || mid.length < m || fwd.length < f) continue
-      const sum = gk[0] + topN(def, d) + topN(mid, m) + topN(fwd, f)
-      if (sum > best) best = sum
-    }
-  }
-  return best < 0 ? null : Math.round(best / 11)
+  const { xi } = pickEleven(squad)
+  if (xi.length < 11) return null
+  return Math.round(xi.reduce((a, r) => a + (ovOf(r) ?? 0), 0) / 11)
 }
 
 /** Auto-build the best-value squad: start from the cheapest legal 15, then

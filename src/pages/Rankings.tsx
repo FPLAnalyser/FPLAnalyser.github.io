@@ -591,15 +591,19 @@ export default function Rankings() {
           // Single-position tabs (Goalkeepers, Clean Sheets) imply the
           // position even though their pill filter is hidden.
           const comparePos = tab === 'goalkeepers' ? 'GKP' : tab === 'clean-sheets' ? 'DEF' : pos
+          const lenses = compareLenses(comparePos === 'GKP' ? 'GKP' : comparePos === 'DEF' ? 'DEF' : 'ATT')
+          // The keeper-only lenses vanish when you switch position — fall back
+          // to price × rating rather than rendering an empty chart.
+          const activeLens = lenses.some((l) => l.id === compareLens) ? compareLens : 'value'
           return (
         <>
           <div className="mb-3 flex flex-wrap items-center gap-1.5">
-            {compareLenses(comparePos === 'GKP' ? 'GKP' : comparePos === 'DEF' ? 'DEF' : 'ATT').map((l) => (
+            {lenses.map((l) => (
               <span key={l.id} className="flex items-center gap-1">
                 <button
                   onClick={() => setCompareLens(l.id)}
                   className={`min-h-9 rounded-full border px-3 text-[13px] font-semibold transition-colors ${
-                    compareLens === l.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+                    activeLens === l.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
                   }`}
                 >
                   {l.label}
@@ -608,10 +612,10 @@ export default function Rankings() {
               </span>
             ))}
           </div>
-          <Exportable title={`${comparePos === 'ALL' ? 'Players' : comparePos} — ${compareLens === 'value' ? 'price vs rating' : compareLens === 'roles' ? 'role map' : 'momentum'}`}>
+          <Exportable title={`${comparePos === 'ALL' ? 'Players' : comparePos} — ${activeLens === 'value' ? 'price vs rating' : activeLens === 'roles' ? 'role map' : activeLens === 'triple' ? 'three-way map' : activeLens === 'workload' ? 'keeper workload' : 'momentum'}`}>
             <PlayerCompare
               rows={(comparePos === 'ALL' ? ratings : ratings.filter((p) => p.position === comparePos)).filter((p) => bool(p, 'season_ok') && passesFilters(p)) as RatingRow[]}
-              lens={compareLens}
+              lens={activeLens}
               highlightName={query || null}
               onPlayer={toPlayer}
             />

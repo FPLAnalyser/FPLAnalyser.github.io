@@ -26,12 +26,15 @@ export function ThemeSwitcher() {
         onClick={toggleMode}
         aria-label={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         title={mode === 'dark' ? 'Light mode' : 'Dark mode'}
-        className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-ink-2 transition-colors hover:text-ink"
+        className="flex min-h-11 min-w-10 items-center justify-center rounded-md text-ink-2 transition-colors hover:text-ink sm:min-w-11"
       >
         <Icon name={mode === 'dark' ? 'moon' : 'sun'} size={16} />
       </button>
 
-      <div ref={wrapRef} className="relative">
+      {/* The accent picker is a preference, not a tool — on a phone the header
+          has room for the controls people actually reach for, so it waits
+          until there's width for it. */}
+      <div ref={wrapRef} className="relative hidden sm:block">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
