@@ -6,7 +6,6 @@ import { PageSkeleton } from '../components/Skeleton'
 import { Tabs, type TabDef } from '../components/Tabs'
 import { TeamBadge } from '../components/badges'
 import { FixtureChips, FixtureNames } from '../components/FixtureChips'
-import { PlayerPhoto } from '../components/PlayerPhoto'
 import { ShareFooter } from '../components/ShareFooter'
 import { SeasonPlanner } from '../components/SeasonPlanner'
 import { Icon } from '../components/Icon'
@@ -17,6 +16,8 @@ import { useCore } from '../lib/useData'
 import { tapHaptic, shareImageNative } from '../lib/native'
 import { rasterise } from '../lib/capture'
 import { num } from '../lib/rows'
+import { useAvailability, availBadge, availFor, type Availability } from '../lib/availability'
+import { xpForGw } from '../lib/xp'
 import { teamLabel, playerHref } from '../lib/util'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
@@ -45,6 +46,33 @@ const PICK_TABS: TabDef[] = [
   { id: 'MID', label: 'MID' },
   { id: 'FWD', label: 'FWD' },
 ]
+/** What the corner of every card shows: the rating, the price, or projected
+ *  points for the gameweek being viewed. */
+export type Metric = 'rating' | 'price' | 'xp'
+const METRICS: { id: Metric; label: string }[] = [
+  { id: 'rating', label: 'Rating' },
+  { id: 'price', label: '£' },
+  { id: 'xp', label: 'xP' },
+]
+
+function MetricChips({ metric, onChange }: { metric: Metric; onChange: (m: Metric) => void }) {
+  return (
+    <div className="flex gap-1.5">
+      {METRICS.map((m) => (
+        <button
+          key={m.id}
+          onClick={() => onChange(m.id)}
+          className={`min-h-8 rounded-full border px-3 text-[12px] font-semibold transition-colors ${
+            metric === m.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+          }`}
+        >
+          {m.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 type SortKey = 'rating' | 'price' | 'value' | 'owned'
 const SORT_TABS: TabDef[] = [
   { id: 'rating', label: 'Rating' },
@@ -75,7 +103,7 @@ export default function SquadBuilder() {
     try { const s = localStorage.getItem(STORE_KEY); return s ? JSON.parse(s) : [] } catch { return [] }
   })
   const [pickPos, setPickPos] = useState<Pos>('GKP')
-  const [boardView, setBoardView] = useState<'pitch' | 'list'>('pitch')
+  const [metric, setMetric] = useState<Metric>('rating')
   const [sheetFor, setSheetFor] = useState<RatingRow | null>(null)
   const [sort, setSort] = useState<SortKey>('rating')
   const [query, setQuery] = useState('')
@@ -87,6 +115,7 @@ export default function SquadBuilder() {
   const [shareOpen, setShareOpen] = useState(false)
   const [ratingOpen, setRatingOpen] = useState(false)
 
+  const avail = useAvailability()
   const fixtureEase = (data?.fixtureEase ?? []) as FixtureEaseRow[]
   // You build for one gameweek — the next one to be played — and then plan
   // forward from it. Everything on this page is anchored to that number.
@@ -245,36 +274,26 @@ export default function SquadBuilder() {
         {complete && !valid && <span className="text-sm font-medium text-bad">Over budget by £{Math.abs(remaining).toFixed(1)}m</span>}
       </div>
 
+      {complete ? (
+        /* The fifteen exists, so the working view IS the planner: gameweek
+           scroller, chips, captain/bench/transfer on tap — no second tab, no
+           gate. The build grid below only exists while the squad is short. */
+        <>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Your squad — week by week</div>
+            <div className="ml-auto"><MetricChips metric={metric} onChange={setMetric} /></div>
+          </div>
+          <SeasonPlanner base={picked} byEl={byEl} pool={pool} fixtureEase={fixtureEase} startGw={buildGw} metric={metric} avail={avail} />
+        </>
+      ) : (
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
         {/* Pitch view of the squad */}
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Your GW{buildGw} squad</div>
-            <div className="ml-auto flex gap-1.5">
-              {(['pitch', 'list'] as const).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setBoardView(v)}
-                  className={`min-h-8 rounded-full border px-3 text-[12px] font-semibold capitalize transition-colors ${
-                    boardView === v ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
-                  }`}
-                >
-                  {v}
-                </button>
-              ))}
-            </div>
+            <div className="ml-auto"><MetricChips metric={metric} onChange={setMetric} /></div>
           </div>
-          {boardView === 'pitch' ? (
-            <SquadBoard chosen={chosen} fixtureEase={fixtureEase} pickPos={pickPos} onRemove={remove} onPick={(p) => { setPickPos(p); setNote(null) }} onOpen={setSheetFor} />
-          ) : (
-            <SquadList
-              chosen={chosen}
-              fixtureEase={fixtureEase}
-              onRemove={remove}
-              onPick={(p) => { setPickPos(p); setNote(null) }}
-              onOpen={setSheetFor}
-            />
-          )}
+          <SquadBoard chosen={chosen} fixtureEase={fixtureEase} pickPos={pickPos} onRemove={remove} onPick={(p) => { setPickPos(p); setNote(null) }} onOpen={setSheetFor} metric={metric} gw={buildGw} avail={avail} />
         </div>
 
         {/* Player picker */}
@@ -327,7 +346,13 @@ export default function SquadBuilder() {
                   <TeamBadge team={String(r.team)} size={16} />
                   <div className="min-w-0 flex-1">
                     <button className="block w-full text-left" onClick={() => navigate(playerHref(String(r.web_name), num(r, 'code')))}>
-                      <div className="truncate text-sm font-medium text-ink hover:text-accent">{String(r.web_name)}</div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate text-sm font-medium text-ink hover:text-accent">{String(r.web_name)}</span>
+                        {(() => {
+                          const f = availBadge(availFor(avail, num(r, 'element'), num(r, 'code')))
+                          return f ? <span title={f.title} className={`shrink-0 rounded px-1 py-0.5 text-[8.5px] leading-none font-extrabold ${f.tone === 'bad' ? 'bg-bad text-white' : 'bg-warn text-black'}`}>{f.label}</span> : null
+                        })()}
+                      </div>
                       <div className="text-[11px] text-ink-3">{teamLabel(String(r.team))} · £{priceOf(r).toFixed(1)}m · {Math.round(num(r, 'selected_by_percent') ?? 0)}% owned</div>
                     </button>
                     <div className="mt-1"><FixtureChips fixtureEase={fixtureEase} team={String(r.team)} n={4} /></div>
@@ -350,14 +375,6 @@ export default function SquadBuilder() {
           </div>
         </div>
       </div>
-
-      {/* Once the fifteen is legal the same page keeps going: the gameweek
-          scroller, chips and transfers pick up from GW1 rather than living
-          behind a second tab. */}
-      {complete && valid && (
-        <div className="mt-8 border-t border-line pt-6">
-          <SeasonPlanner base={picked} byEl={byEl} pool={pool} fixtureEase={fixtureEase} startGw={buildGw} />
-        </div>
       )}
       </>
 
@@ -374,7 +391,7 @@ export default function SquadBuilder() {
       {ratingOpen && (
         <SquadRatingSheet
           chosen={chosen} pool={pool} squadScore={squadScore} bestXI={bestXI}
-          fixtureEase={fixtureEase} gw={buildGw} onClose={() => setRatingOpen(false)}
+          fixtureEase={fixtureEase} gw={buildGw} avail={avail} onClose={() => setRatingOpen(false)}
         />
       )}
 
@@ -422,20 +439,34 @@ function pickEleven(squad: RatingRow[]): { form: Record<Pos, number>; xi: Rating
  *  band across the foot of the pitch. Interactive by default (remove ✕ + empty
  *  slots that jump the picker to that position); `capture` mode drops those for
  *  a clean shareable image. */
-function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, capture }: {
+function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, capture, metric = 'rating', gw, avail }: {
   chosen: RatingRow[]; fixtureEase: FixtureEaseRow[]; pickPos?: Pos; onRemove?: (el: number) => void; onPick?: (p: Pos) => void; onOpen?: (r: RatingRow) => void; capture?: boolean
+  metric?: Metric; gw?: number; avail?: Availability
 }) {
   const { form, xi, bench } = pickEleven(chosen)
+
+  // The corner figure under the active metric. The tier (card metal) always
+  // comes from the rating, so switching to £ or xP recolours nothing.
+  const cornerFor = (r: RatingRow): string | null => {
+    if (metric === 'price') return num(r, 'price') != null ? `£${num(r, 'price')}` : null
+    if (metric === 'xp' && gw != null) {
+      const v = xpForGw(r, gw, fixtureEase, avail)
+      return v == null ? '—' : v.toFixed(1)
+    }
+    return null
+  }
 
   const card = (r: RatingRow) => (
     <div key={r.element} className={`relative ${CARD_W}`}>
       <PitchCard
         rating={num(r, 'season_overall_score') != null ? Math.round((num(r, 'season_overall_score') as number) * 20) : null}
+        cornerText={cornerFor(r)}
         name={String(r.web_name)}
         team={String(r.team)}
         price={num(r, 'price')}
         code={num(r, 'code')}
         element={num(r, 'element')}
+        flag={avail ? availBadge(availFor(avail, num(r, 'element'), num(r, 'code'))) : null}
         fixtures={<FixtureNames fixtureEase={fixtureEase} team={String(r.team)} n={3} />}
         onClick={capture ? undefined : () => onOpen?.(r)}
       />
@@ -492,52 +523,6 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, ca
         })}
       </div>
     </Pitch>
-  )
-}
-
-/** The build list: one dense row per player, grouped by position, with the
- *  numbers you actually pick on in aligned columns. */
-function SquadList({ chosen, fixtureEase, onRemove, onPick, onOpen }: {
-  chosen: RatingRow[]; fixtureEase: FixtureEaseRow[]; onRemove: (el: number) => void; onPick: (p: Pos) => void; onOpen: (r: RatingRow) => void
-}) {
-  return (
-    <div className="overflow-hidden rounded-xl border border-line">
-      {SLOTS.map(({ pos, count }) => {
-        const players = chosen.filter((r) => r.position === pos)
-        const empties = Math.max(0, count - players.length)
-        return (
-          <div key={pos}>
-            <div className="border-b border-line bg-surface-2/60 px-3 py-1.5 text-[11px] font-extrabold tracking-[0.16em] text-ink-3 uppercase">
-              {POS_LABEL[pos]} · {players.length}/{count}
-            </div>
-            {players.map((r) => {
-              const rating = num(r, 'season_overall_score')
-              return (
-                <div key={r.element} className="flex items-center gap-3 border-b border-line px-3 py-2 last:border-b-0 hover:bg-surface-2/40">
-                  <button onClick={() => onOpen(r)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                    <PlayerPhoto code={num(r, 'code')} element={num(r, 'element')} className="w-7 shrink-0 rounded object-cover object-top" style={{ height: 34 }} placeholder={<span className="block w-7 shrink-0 rounded bg-surface-3" style={{ height: 34 }} />} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[14px] font-bold text-ink">{String(r.web_name)}</span>
-                      <span className="block text-[12px] text-ink-3">{String(r.team)}</span>
-                    </span>
-                  </button>
-                  <span className="font-num w-[58px] shrink-0 text-right text-[13px] font-semibold tabular-nums text-ink-2">£{num(r, 'price')}m</span>
-                  <span className="metallic-num font-num w-[38px] shrink-0 text-right text-[14px] font-extrabold tabular-nums">{rating != null ? Math.round(rating * 20) : '—'}</span>
-                  <span className="hidden w-[120px] shrink-0 sm:block"><FixtureChips fixtureEase={fixtureEase} team={String(r.team)} n={4} /></span>
-                  <button onClick={() => onRemove(r.element)} aria-label={`Remove ${r.web_name}`} className="shrink-0 px-1 text-ink-3 transition-colors hover:text-bad"><Icon name="x" size={14} /></button>
-                </div>
-              )
-            })}
-            {Array.from({ length: empties }).map((_, i) => (
-              <button key={i} onClick={() => onPick(pos)} className="flex w-full items-center gap-3 border-b border-line px-3 py-2.5 text-left last:border-b-0 hover:bg-surface-2/40">
-                <span className="grid h-[34px] w-7 shrink-0 place-items-center rounded border border-dashed border-line-mid text-ink-3"><Icon name="search" size={12} /></span>
-                <span className="text-[13px] text-ink-3 italic">Empty slot — tap to pick a {POS_LABEL[pos].toLowerCase().replace(/s$/, '')}</span>
-              </button>
-            ))}
-          </div>
-        )
-      })}
-    </div>
   )
 }
 

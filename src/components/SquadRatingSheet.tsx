@@ -3,6 +3,7 @@ import { Icon } from './Icon'
 import { Exportable } from './ExportPanel'
 import { num, bool } from '../lib/rows'
 import { teamLabel } from '../lib/util'
+import { availFor, type Availability } from '../lib/availability'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -31,7 +32,7 @@ export interface NarrativeLine { tone: 'good' | 'warn' | 'flat'; head: string; b
 /** Read the squad's character from what's actually in it. Every line is a
  *  fact about the fifteen, not a score — the tone says whether it's a
  *  strength, a risk, or just a shape worth knowing about. */
-export function squadNarrative(chosen: RatingRow[], fixtureEase: FixtureEaseRow[], gw: number): NarrativeLine[] {
+export function squadNarrative(chosen: RatingRow[], fixtureEase: FixtureEaseRow[], gw: number, avail?: Availability): NarrativeLine[] {
   const out: NarrativeLine[] = []
   if (chosen.length < 5) return out
   const outfield = chosen.filter((r) => r.position !== 'GKP')
@@ -40,12 +41,20 @@ export function squadNarrative(chosen: RatingRow[], fixtureEase: FixtureEaseRow[
   // FPL publishes an ORDER, and second on the list still takes them when the
   // first choice is off the pitch or out of the side, so both count — named
   // with their order rather than lumped together.
-  const pens = chosen.filter((r) => bool(r, 'is_pen_taker'))
+  // Live orders when the daily refresh has run; the season snapshot otherwise.
+  // Duty moves between seasons (Thiago went from Brentford's #2 to #1), so the
+  // freshest source always wins.
+  const penOrder = (r: RatingRow): number | null => {
+    const live = avail ? availFor(avail, num(r, 'element'), num(r, 'code')) : null
+    if (live && avail?.generatedAt) return live.pen_order ?? null
+    return num(r, 'penalties_order')
+  }
+  const pens = chosen.filter((r) => (penOrder(r) ?? 9) <= 2)
   const penName = (r: RatingRow) => {
-    const o = num(r, 'penalties_order')
+    const o = penOrder(r)
     return `${r.web_name}${o === 1 ? ' (1st)' : o === 2 ? ' (2nd)' : ''}`
   }
-  const firsts = pens.filter((r) => num(r, 'penalties_order') === 1).length
+  const firsts = pens.filter((r) => penOrder(r) === 1).length
   if (pens.length >= 4) {
     out.push({ tone: 'good', head: `${pens.length} penalty takers`, body: `${pens.map(penName).join(', ')}. Penalties are the most repeatable points in the game — this many is a deliberate edge, not an accident.` })
   } else if (pens.length === 0) {
@@ -126,16 +135,17 @@ export function squadNarrative(chosen: RatingRow[], fixtureEase: FixtureEaseRow[
   return out
 }
 
-export function SquadRatingSheet({ chosen, pool, squadScore, bestXI, fixtureEase, gw, onClose }: {
+export function SquadRatingSheet({ chosen, pool, squadScore, bestXI, fixtureEase, gw, avail, onClose }: {
   chosen: RatingRow[]
   pool: RatingRow[]
+  avail?: Availability
   squadScore: number | null
   bestXI: number | null
   fixtureEase: FixtureEaseRow[]
   gw: number
   onClose: () => void
 }) {
-  const lines = useMemo(() => squadNarrative(chosen, fixtureEase, gw), [chosen, fixtureEase, gw])
+  const lines = useMemo(() => squadNarrative(chosen, fixtureEase, gw, avail), [chosen, fixtureEase, gw, avail])
 
   // Per position: your average against the BEST you could have had — the top
   // N rated players at that position, where N is how many you own. Measuring

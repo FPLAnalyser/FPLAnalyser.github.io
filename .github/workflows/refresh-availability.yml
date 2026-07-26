@@ -1,0 +1,38 @@
+name: Refresh availability data
+
+# Pulls injuries/suspensions, chance-of-playing, set-piece duty and gameweek
+# deadlines from the live FPL API into site_data/<season>/availability.json.
+# A push to main from here triggers the Pages deploy, so the site follows the
+# real world within a day (or on demand via workflow_dispatch).
+on:
+  schedule:
+    - cron: '0 6 * * *'   # daily, 06:00 UTC — after overnight press-conference news lands
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-availability
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python refresh_availability.py
+      - name: Commit if changed
+        run: |
+          if git diff --quiet; then
+            echo "No changes."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site_data/*/availability.json
+          git commit -m "Refresh availability data from the FPL API"
+          git push

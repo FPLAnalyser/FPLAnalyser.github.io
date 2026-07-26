@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TeamBadge } from './badges'
 import { PlayerPhoto } from './PlayerPhoto'
-import { Pitch, CARD_W, initialsOf, tierOf } from './Pitch'
+import { FoilShell, Pitch, CARD_W, initialsOf, tierOf } from './Pitch'
+import { availBadge, availFor, type Availability } from '../lib/availability'
+import { xpForGw } from '../lib/xp'
 import { Icon } from './Icon'
 import { tapHaptic } from '../lib/native'
 import { num } from '../lib/rows'
@@ -23,12 +25,15 @@ const POS_ORDER: Pos[] = ['GKP', 'DEF', 'MID', 'FWD']
  * extras cost 4pts). The same engine will drive the My Team page. Persists to
  * localStorage, keyed to the base squad so a rebuild starts fresh.
  */
-export function SeasonPlanner({ base, byEl, pool, fixtureEase, startGw }: {
+export function SeasonPlanner({ base, byEl, pool, fixtureEase, startGw, metric = 'rating', avail }: {
   base: number[]
   byEl: Map<number, RatingRow>
   pool: RatingRow[]
   fixtureEase: FixtureEaseRow[]
   startGw: number
+  /** What the chip's corner shows — rating, price or that week's xP. */
+  metric?: 'rating' | 'price' | 'xp'
+  avail?: Availability
 }) {
   const navigate = useNavigate()
   const posOf = (el: number) => String(byEl.get(el)?.position ?? 'MID') as Pos
@@ -36,6 +41,20 @@ export function SeasonPlanner({ base, byEl, pool, fixtureEase, startGw }: {
   const priceOf = (el: number) => num(byEl.get(el) ?? {}, 'price') ?? 0
   const teamOf = (el: number) => String(byEl.get(el)?.team ?? '')
   const nameOf = (el: number) => String(byEl.get(el)?.web_name ?? '')
+
+  // The chip corner under the active metric, for the WEEK BEING VIEWED —
+  // xP swings with the fixture, so it recomputes as you step through.
+  const cornerOf = (el: number, gw: number): string => {
+    const r = byEl.get(el)
+    if (!r) return '—'
+    if (metric === 'price') return num(r, 'price') != null ? `£${num(r, 'price')}` : '—'
+    if (metric === 'xp') {
+      const v = xpForGw(r, gw, fixtureEase, avail)
+      return v == null ? '—' : v.toFixed(1)
+    }
+    const rt = ratingOf(el)
+    return rt ? String(Math.round(rt)) : '—'
+  }
 
   const gws = useMemo(
     () => [...new Set(fixtureEase.map((f) => f.gw))].filter((g) => g >= startGw).sort((a, b) => a - b),
@@ -180,14 +199,14 @@ export function SeasonPlanner({ base, byEl, pool, fixtureEase, startGw }: {
           <>
             {week.chip === 'bench-boost' && <div className="mb-1.5 -mt-1 text-[10px] font-semibold text-accent-2">Bench Boost active — all 15 score</div>}
             <div className="flex justify-center gap-1 sm:gap-2">
-              {week.bench.map((el) => <PlayerChip key={el} el={el} onOpen={() => setSheet(el)} captain={week.captain === el} vice={week.vice === el} fix={fixtureAt(teamOf(el))} rating={Math.round(ratingOf(el))} name={nameOf(el)} code={num(byEl.get(el) ?? {}, 'code')} element={el} transferred={week.transfers.some((t) => t.in === el)} bench />)}
+              {week.bench.map((el) => <PlayerChip key={el} el={el} onOpen={() => setSheet(el)} captain={week.captain === el} vice={week.vice === el} fix={fixtureAt(teamOf(el))} rating={Math.round(ratingOf(el))} corner={cornerOf(el, gw)} flag={avail ? availBadge(availFor(avail, el, num(byEl.get(el) ?? {}, 'code'))) : null} name={nameOf(el)} code={num(byEl.get(el) ?? {}, 'code')} element={el} transferred={week.transfers.some((t) => t.in === el)} bench />)}
             </div>
           </>
         }
       >
         {rowsByPos(week.xi).map((row, i) => row.length > 0 && (
           <div key={i} className="flex justify-center gap-1 sm:gap-2">
-            {row.map((el) => <PlayerChip key={el} el={el} onOpen={() => setSheet(el)} captain={week.captain === el} vice={week.vice === el} fix={fixtureAt(teamOf(el))} rating={Math.round(ratingOf(el))} name={nameOf(el)} code={num(byEl.get(el) ?? {}, 'code')} element={el} transferred={week.transfers.some((t) => t.in === el)} />)}
+            {row.map((el) => <PlayerChip key={el} el={el} onOpen={() => setSheet(el)} captain={week.captain === el} vice={week.vice === el} fix={fixtureAt(teamOf(el))} rating={Math.round(ratingOf(el))} corner={cornerOf(el, gw)} flag={avail ? availBadge(availFor(avail, el, num(byEl.get(el) ?? {}, 'code'))) : null} name={nameOf(el)} code={num(byEl.get(el) ?? {}, 'code')} element={el} transferred={week.transfers.some((t) => t.in === el)} />)}
           </div>
         ))}
       </Pitch>
@@ -248,42 +267,32 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: 'in
   )
 }
 
-function PlayerChip({ onOpen, captain, vice, fix, rating, name, code, element, transferred, bench }: {
-  el: number; onOpen: () => void; captain: boolean; vice: boolean; fix: FixtureEaseRow | null; rating: number; name: string; code: number | null; element: number; transferred: boolean; bench?: boolean
+function PlayerChip({ onOpen, captain, vice, fix, rating, corner, flag, name, code, element, transferred, bench }: {
+  el: number; onOpen: () => void; captain: boolean; vice: boolean; fix: FixtureEaseRow | null; rating: number
+  corner: string; flag?: { label: string; tone: 'bad' | 'warn' | 'flat'; title: string } | null
+  name: string; code: number | null; element: number; transferred: boolean; bench?: boolean
 }) {
   const [bg, fg] = fix ? (FDR_COLORS[fix.fdr] || FDR_COLORS[3]) : ['#39424E', '#E8EDF3']
   return (
-    <button onClick={onOpen} className={`${CARD_W} tier-${bench ? 'graphite' : tierOf(rating)} relative rounded-lg border text-center transition-transform hover:-translate-y-0.5`} style={benchSkin(bench, rating)}>
+    <span className={`${CARD_W} relative`}>
       {(captain || vice) && <span className={`absolute -top-1.5 -left-1.5 z-10 grid size-5 place-items-center rounded-full text-[10px] font-bold ${captain ? 'bg-accent text-accent-contrast' : 'bg-surface-3 text-ink'}`}>{captain ? 'C' : 'V'}</span>}
       {transferred && <span className="absolute -top-1.5 -right-1.5 z-10 grid size-4 place-items-center rounded-full bg-good text-[9px] text-white"><Icon name="check" size={10} /></span>}
-      <span className="block p-1 sm:p-1.5">
+      <FoilShell tier={bench ? 'graphite' : tierOf(rating || null)} onClick={onOpen} className="w-full" innerClassName="px-1 pt-1 pb-1.5 sm:px-1.5">
+        {flag && (
+          <span title={flag.title} className={`absolute top-1 left-1 z-10 rounded px-1 py-0.5 text-[7.5px] leading-none font-extrabold tracking-wide ${flag.tone === 'bad' ? 'bg-bad text-white' : 'bg-warn text-black'}`}>{flag.label}</span>
+        )}
         <span className="photo-slot relative mx-auto block h-9 w-8 sm:w-9">
           <span className="photo-mono absolute inset-0 place-items-center text-[11px] font-extrabold text-white/35">{initialsOf(name)}</span>
           <PlayerPhoto code={code} element={element} className="relative h-full w-full object-contain object-top" placeholder={<span className="grid h-full w-full place-items-center text-[11px] font-extrabold text-white/35">{initialsOf(name)}</span>} />
         </span>
-        <span className="mt-1 block w-full capture-line truncate text-[9.5px] leading-tight font-bold text-white sm:text-[11px]">{name}</span>
+        <span className="capture-line mt-1 block w-full truncate text-[9.5px] leading-tight font-bold text-white sm:text-[11px]">{name}</span>
         {/* The opponent by name, not a colour tick — on a phone this is the
             single most useful thing on the card. */}
         <span className="mt-0.5 block w-full truncate rounded px-1 text-[8.5px] font-bold sm:text-[9px]" style={{ background: bg, color: fg }}>{fix ? `${fix.opponent} (${fix.venue})` : 'No game'}</span>
-        <span className="tier-num font-num mt-0.5 block text-[10px] font-extrabold tabular-nums sm:text-[11px]">{rating || '—'}</span>
-      </span>
-    </button>
+        <span className="tier-num font-num mt-0.5 block text-[10px] font-extrabold tabular-nums sm:text-[11px]">{corner}</span>
+      </FoilShell>
+    </span>
   )
-}
-
-/** Bench cards drop out of the tier system: they aren't playing, and lighting
- *  them up the same as the XI is a lie about who's scoring this week. */
-function benchSkin(bench: boolean | undefined, rating: number) {
-  if (bench) return { background: 'rgba(0,0,0,.32)', borderColor: 'rgba(255,255,255,.12)' }
-  const t = tierOf(rating)
-  return {
-    background: t === 'steel' ? 'linear-gradient(165deg,rgba(26,29,33,.96),rgba(10,12,14,.96))'
-      : t === 'graphite' ? 'linear-gradient(165deg,rgba(28,27,25,.96),rgba(11,11,10,.96))'
-      : 'linear-gradient(165deg,rgba(33,29,22,.96),rgba(13,11,8,.96))',
-    borderColor: t === 'elite' ? 'rgba(246,237,214,.55)' : t === 'gold' ? 'rgba(201,162,39,.42)'
-      : t === 'steel' ? 'rgba(201,207,214,.34)' : 'rgba(255,255,255,.14)',
-    boxShadow: t === 'elite' ? '0 0 18px -4px rgba(201,162,39,.55)' : undefined,
-  }
 }
 
 function ActionSheet({ name, isStarter, isCaptain, isVice, canBench, onCaptain, onVice, onToggle, onTransfer, onView, onClose }: {

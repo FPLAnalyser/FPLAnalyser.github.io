@@ -1,3 +1,4 @@
+import { num } from '../lib/rows'
 import { ratingToNum } from '../lib/util'
 
 /** Convert a 0–5 rating (number or pipeline star string) to a 0–100 score. */
@@ -64,4 +65,16 @@ export function RatingBadge({ value, className }: { value: number | string | nul
       <span className="text-[10px] font-semibold opacity-60">/100</span>
     </span>
   )
+}
+
+
+/** Dimension score to 0–100 AT FULL PRECISION. The star strings quantise to
+ *  half a star (= 10 points), which made every percentile read as a multiple
+ *  of ten; the pipeline stores the exact value right next to them in the
+ *  matching `_score_norm` column, so read that and only fall back to parsing
+ *  stars for rows that predate the norm columns. */
+export function exactTo100(r: Record<string, unknown>, starCol: string): number | null {
+  const exact = num(r as never, starCol.replace(/_rating$/, '_norm'))
+  if (exact != null) return Math.round(Math.max(0, Math.min(100, ((exact - 1) / 4) * 100)))
+  return ratingTo100((r as Record<string, unknown>)[starCol] as string)
 }

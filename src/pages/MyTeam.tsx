@@ -19,6 +19,7 @@ import { fplFetch, getCurrentGwFallback, fetchEntry, fetchEntryHistory, fetchLea
 import { buildContext, runRules, SEVERITY_META } from '../lib/insights/engine'
 import { RULES } from '../lib/insights/rules'
 import type { CoreData, FixtureEaseRow, RatingRow, Row } from '../lib/types'
+import { useAvailability, availBadge, availFor } from '../lib/availability'
 
 const TEAM_ID_KEY = 'fpl_team_id'
 
@@ -311,6 +312,7 @@ function RatingWindowToggle({ value, onChange }: { value: RatingWindow; onChange
  */
 function PlayerCardSlot({ e, win, fixtureEase }: { e: Enriched; win: RatingWindow; fixtureEase: FixtureEaseRow[]; bench?: boolean }) {
   const navigate = useNavigate()
+  const avail = useAvailability()
   const { pick, r, std } = e
   const wrap = 'w-[calc(50%-0.375rem)] sm:w-[224px] lg:w-[240px]'
   if (!r) {
@@ -326,6 +328,7 @@ function PlayerCardSlot({ e, win, fixtureEase }: { e: Enriched; win: RatingWindo
         onClick={() => navigate(playerHref(String(r.web_name), num(r, 'code')))}
         captain={pick.is_captain}
         viceCaptain={pick.is_vice_captain}
+        flag={availBadge(availFor(avail, pick.element, num(r, 'code')))}
         streak={std ? str(std, 'streak') : ''}
       />
     </div>

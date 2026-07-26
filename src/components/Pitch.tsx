@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { type CSSProperties, type ReactNode } from 'react'
 import { PlayerPhoto } from './PlayerPhoto'
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -97,18 +97,68 @@ export type Tier = 'elite' | 'gold' | 'steel' | 'graphite' | 'ice'
 export const tierOf = (rating: number | null): Tier =>
   rating == null ? 'graphite' : rating >= 90 ? 'elite' : rating >= 80 ? 'gold' : rating >= 70 ? 'steel' : 'graphite'
 
-const TIER_SKIN: Record<Tier, { border: string; bg: string; glow?: string }> = {
-  elite: { border: 'rgba(246,237,214,.55)', bg: 'linear-gradient(165deg,rgba(40,34,22,.97),rgba(13,11,8,.97))', glow: '0 0 18px -4px rgba(201,162,39,.55)' },
-  gold: { border: 'rgba(201,162,39,.42)', bg: 'linear-gradient(165deg,rgba(33,29,22,.96),rgba(13,11,8,.96))' },
-  steel: { border: 'rgba(201,207,214,.34)', bg: 'linear-gradient(165deg,rgba(26,29,33,.96),rgba(10,12,14,.96))' },
-  graphite: { border: 'rgba(255,255,255,.14)', bg: 'linear-gradient(165deg,rgba(28,27,25,.96),rgba(11,11,10,.96))' },
-  ice: { border: 'rgba(232,251,255,.42)', bg: 'linear-gradient(165deg,rgba(19,36,48,.97),rgba(6,13,18,.97))', glow: '0 0 18px -4px rgba(127,212,245,.5)' },
+/** The card's material, per tier — the padded gradient EDGE (the foil) and
+ *  the stock behind the content. This is the thicker edge from the mockup:
+ *  2px of metal all the way round, 2.5px + glow for elite, rather than a
+ *  1px border that disappears at pitch scale. */
+const TIER_SKIN: Record<Tier, { edge: string; stock: string; glow?: string; pad?: number }> = {
+  elite: {
+    edge: 'conic-gradient(from 210deg,#8A6E36,#F6EDD6,#FFFBF0,#D8BE86,#6E5A2E,#F6EDD6,#8A6E36)',
+    stock: 'linear-gradient(168deg,#241f16,#141009 56%,#0c0906)',
+    glow: '0 0 0 1px rgba(255,251,240,.18), 0 0 18px -2px rgba(201,162,39,.5)',
+    pad: 2.5,
+  },
+  gold: {
+    edge: 'linear-gradient(160deg,#5f4d26,#c9a227,#ead188,#50411f)',
+    stock: 'linear-gradient(168deg,#241f16,#141009 56%,#0c0906)',
+  },
+  steel: {
+    edge: 'linear-gradient(160deg,#5C636B,#C9CFD6,#e8ecf1,#4a5057)',
+    stock: 'linear-gradient(168deg,#1a1d21,#12151a 56%,#0a0c0e)',
+  },
+  graphite: {
+    edge: 'linear-gradient(160deg,#33302a,#55524a,#33302a)',
+    stock: 'linear-gradient(168deg,#1c1b19,#131211 56%,#0b0b0a)',
+  },
+  ice: {
+    edge: 'conic-gradient(from 210deg,#1d4f6b,#7fd4f5,#e8fbff,#4a9fc4,#153c52,#7fd4f5,#1d4f6b)',
+    stock: 'linear-gradient(168deg,#132430,#0b171f 56%,#060d12)',
+    glow: '0 0 0 1px rgba(232,251,255,.16), 0 0 18px -2px rgba(127,212,245,.4)',
+    pad: 2.5,
+  },
+}
+
+/** The foil shell shared by every card variant: gradient edge outside, stock
+ *  inside. Children render on the stock. */
+export function FoilShell({ tier, className, style, onClick, children, innerClassName }: {
+  tier: Tier
+  className?: string
+  style?: CSSProperties
+  onClick?: () => void
+  children: ReactNode
+  innerClassName?: string
+}) {
+  const skin = TIER_SKIN[tier]
+  return (
+    <button
+      onClick={onClick}
+      className={`tier-${tier} relative overflow-hidden rounded-[9px] text-center transition-transform hover:-translate-y-0.5 ${className ?? ''}`}
+      style={{ padding: skin.pad ?? 2, background: skin.edge, boxShadow: skin.glow, ...style }}
+    >
+      <span className={`block rounded-[7px] ${innerClassName ?? ''}`} style={{ background: skin.stock }}>
+        {children}
+      </span>
+    </button>
+  )
 }
 
 /** Compact pitch card — rating, photo, name and the next fixtures. Sized so a
  * full XI fits the pitch without scrolling. */
-export function PitchCard({ rating, name, team, price, code, element, fixtures, onClick, footer, tier }: {
+export function PitchCard({ rating, cornerText, name, team, price, code, element, fixtures, onClick, footer, tier, flag }: {
   rating: number | null
+  /** Override for the corner figure (price, projected points…) — the TIER
+   *  still comes from the rating, so the card's metal keeps meaning quality. */
+  cornerText?: string | null
   name: string
   team: string
   price: number | null
@@ -119,19 +169,22 @@ export function PitchCard({ rating, name, team, price, code, element, fixtures, 
   footer?: ReactNode
   /** Override the band derived from the rating — Team of the Week uses `ice`. */
   tier?: Tier
+  /** Availability chip: INJ / SUS / chance-% — from the live layer. */
+  flag?: { label: string; tone: 'bad' | 'warn' | 'flat'; title: string } | null
 }) {
   const t = tier ?? tierOf(rating)
-  const skin = TIER_SKIN[t]
   return (
-    <button
-      onClick={onClick}
-      // Width comes from the row (see CARD_W on the wrapper) — the card just
-      // fills whatever slot it's given.
-      className={`tier-${t} w-full rounded-lg border text-center transition-transform hover:-translate-y-0.5`}
-      style={{ background: skin.bg, borderColor: skin.border, boxShadow: skin.glow }}
-    >
-      <div className="px-1 pt-1 pb-2 sm:px-1.5 sm:pt-1.5 sm:pb-2.5">
-        <div className="tier-num font-num text-[13px] leading-none font-extrabold tabular-nums sm:text-[15px]">{rating ?? '—'}</div>
+    <FoilShell tier={t} onClick={onClick} className="w-full">
+      {flag && (
+        <span
+          title={flag.title}
+          className={`absolute top-1 left-1 z-10 rounded px-1 py-0.5 text-[7.5px] leading-none font-extrabold tracking-wide text-white ${flag.tone === 'bad' ? 'bg-bad' : 'bg-warn text-black'}`}
+        >
+          {flag.label}
+        </span>
+      )}
+      <span className="block px-1 pt-1 pb-2 sm:px-1.5 sm:pt-1.5 sm:pb-2.5">
+        <span className="tier-num font-num block text-[13px] leading-none font-extrabold tabular-nums sm:text-[15px]">{cornerText ?? rating ?? '—'}</span>
         {/* The headshot sits straight on the card — no plate behind it. These
             are transparent cut-outs, so a filled box shows through the player
             and reads as a mistake. The monogram is the fallback for when there
@@ -146,13 +199,13 @@ export function PitchCard({ rating, name, team, price, code, element, fixtures, 
             placeholder={<span className="grid h-full w-full place-items-center text-[11px] font-extrabold text-white/35">{initialsOf(name)}</span>}
           />
         </span>
-        <div className="capture-line truncate text-[9.5px] leading-tight font-bold text-white sm:text-[10.5px]">{name}</div>
+        <span className="capture-line block truncate text-[9.5px] leading-tight font-bold text-white sm:text-[10.5px]">{name}</span>
         {/* Club and price step aside on a phone: the fixtures are what you're
             actually checking, and they imply the club anyway. */}
-        <div className="hidden truncate text-[8px] text-white/55 sm:block sm:text-[9px]">{team}{price != null ? ` · £${price}m` : ''}</div>
-        {fixtures && <div className="mt-1">{fixtures}</div>}
+        <span className="hidden truncate text-[8px] text-white/55 sm:block sm:text-[9px]">{team}{price != null ? ` · £${price}m` : ''}</span>
+        {fixtures && <span className="mt-1 block">{fixtures}</span>}
         {footer}
-      </div>
-    </button>
+      </span>
+    </FoilShell>
   )
 }
