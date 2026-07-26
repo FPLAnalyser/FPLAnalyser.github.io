@@ -12,6 +12,7 @@ import { classifyZone, toPitch } from '../lib/shotzones'
 import { windowGames } from '../components/TeamStory'
 import { Exportable } from '../components/ExportPanel'
 import { num, str } from '../lib/rows'
+import { useMarketOdds, type MarketOdds } from '../lib/xp'
 import { teamLabel, FDR_COLORS, playerHref } from '../lib/util'
 import type { FixtureEaseRow, RatingRow, Row, TeamRatingRow } from '../lib/types'
 
@@ -54,7 +55,13 @@ const MODE_TIP: Record<GridMode, string> = {
  * the league means — the inputs to the fixture projections. */
 interface TeamBase { xg: number; xgc: number }
 
-function projectCell(mode: 'xg' | 'cs', teamBase: TeamBase | undefined, oppBase: TeamBase | undefined, league: TeamBase, venue: 'H' | 'A'): { v: number; assumed: boolean } | null {
+function projectCell(mode: 'xg' | 'cs', teamBase: TeamBase | undefined, oppBase: TeamBase | undefined, league: TeamBase, venue: 'H' | 'A', mkt?: { for: number; against: number } | null): { v: number; assumed: boolean; market?: boolean } | null {
+  // Bookmaker-implied goal expectancies outrank the stats baselines for any
+  // fixture the market has priced — they already carry team news, transfers
+  // and promoted-club strength the season history can't know.
+  if (mkt) {
+    return mode === 'xg' ? { v: mkt.for, assumed: false, market: true } : { v: Math.exp(-mkt.against), assumed: false, market: true }
+  }
   if (!teamBase || league.xgc <= 0 || league.xg <= 0) return null
   const assumed = !oppBase
   const opp = oppBase ?? league // promoted club: league-average assumption, flagged
@@ -62,6 +69,9 @@ function projectCell(mode: 'xg' | 'cs', teamBase: TeamBase | undefined, oppBase:
   const lambda = opp.xg * (teamBase.xgc / league.xgc) * (venue === 'H' ? 0.95 : 1.05)
   return { v: Math.exp(-lambda), assumed }
 }
+
+const mktOf = (market: MarketOdds | null, team: string, f: { gw: number; opponent: string }) =>
+  market?.byKey.get(`${team}:${f.gw}:${f.opponent}`) ?? null
 
 /* Our own fixture difficulty is driven by opponent strength from our team
    ratings, split into three lenses. It falls back to FPL's FDR only when the
@@ -589,6 +599,7 @@ function FixtureGrid({
   profiles: Map<string, Profile>
   league: Profile
 }) {
+  const market = useMarketOdds()
   const [sortKey, setSortKey] = useState<number | 'run'>('run')
   // Difficulty: ascending = easiest first. Projections: descending = most
   // goals / best clean-sheet odds first.
@@ -620,7 +631,7 @@ function FixtureGrid({
           sum += diff
           count++
         } else {
-          const p = projectCell(mode, baselines.get(team), baselines.get(f.opponent), leagueBase, f.venue)
+          const p = projectCell(mode, baselines.get(team), baselines.get(f.opponent), leagueBase, f.venue, mktOf(market, team, f))
           if (p) {
             if (p.assumed) usedFdr = true
             sum += p.v
@@ -632,7 +643,7 @@ function FixtureGrid({
       // expected clean sheets over the window).
       return { team, byGw, opponents, run: count ? (mode === 'diff' ? sum / count : sum) : null, usedFdr }
     })
-  }, [fixtureEase, gwSet, lens, mode, seasonRating, baselines, leagueBase])
+  }, [fixtureEase, gwSet, lens, mode, seasonRating, baselines, leagueBase, market])
 
   // A team's value in one gameweek (blanks → null; doubles → avg diff / summed projection).
   const gwVal = (r: (typeof rows)[number], gw: number): number | null => {
@@ -642,7 +653,7 @@ function FixtureGrid({
     let sum = 0
     let any = false
     for (const f of fs) {
-      const p = projectCell(mode, baselines.get(r.team), baselines.get(f.opponent), leagueBase, f.venue)
+      const p = projectCell(mode, baselines.get(r.team), baselines.get(f.opponent), leagueBase, f.venue, mktOf(market, r.team, f))
       if (p) { sum += p.v; any = true }
     }
     return any ? sum : null
@@ -716,7 +727,7 @@ function FixtureGrid({
                                   </span>
                                 )
                               }
-                              const p = projectCell(mode, baselines.get(r.team), baselines.get(f.opponent), leagueBase, f.venue)
+                              const p = projectCell(mode, baselines.get(r.team), baselines.get(f.opponent), leagueBase, f.venue, mktOf(market, r.team, f))
                               if (!p) return <span key={i} className="text-ink-3">—</span>
                               const strength = mode === 'xg'
                                 ? Math.max(6, Math.min(78, ((p.v - 0.7) / 1.7) * 78))

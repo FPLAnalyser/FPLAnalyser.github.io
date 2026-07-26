@@ -4,7 +4,7 @@ import { TeamBadge } from './badges'
 import { PlayerPhoto } from './PlayerPhoto'
 import { FoilShell, Pitch, CARD_W, initialsOf, tierOf } from './Pitch'
 import { availBadge, availFor, type Availability } from '../lib/availability'
-import { xpForGw } from '../lib/xp'
+import { xpForGw, useXpModel, useMarketOdds } from '../lib/xp'
 import { Icon } from './Icon'
 import { tapHaptic } from '../lib/native'
 import { num } from '../lib/rows'
@@ -36,6 +36,8 @@ export function SeasonPlanner({ base, byEl, pool, fixtureEase, startGw, metric =
   avail?: Availability
 }) {
   const navigate = useNavigate()
+  const xpModel = useXpModel()
+  const market = useMarketOdds()
   const posOf = (el: number) => String(byEl.get(el)?.position ?? 'MID') as Pos
   const ratingOf = (el: number) => (num(byEl.get(el) ?? {}, 'season_overall_score') ?? 0) * 20
   const priceOf = (el: number) => num(byEl.get(el) ?? {}, 'price') ?? 0
@@ -49,7 +51,7 @@ export function SeasonPlanner({ base, byEl, pool, fixtureEase, startGw, metric =
     if (!r) return '—'
     if (metric === 'price') return num(r, 'price') != null ? `£${num(r, 'price')}` : '—'
     if (metric === 'xp') {
-      const v = xpForGw(r, gw, fixtureEase, avail)
+      const v = xpForGw(r, gw, fixtureEase, avail, xpModel, market)
       return v == null ? '—' : v.toFixed(1)
     }
     const rt = ratingOf(el)

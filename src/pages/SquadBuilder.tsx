@@ -17,7 +17,7 @@ import { tapHaptic, shareImageNative } from '../lib/native'
 import { rasterise } from '../lib/capture'
 import { num } from '../lib/rows'
 import { useAvailability, availBadge, availFor, type Availability } from '../lib/availability'
-import { xpForGw } from '../lib/xp'
+import { xpForGw, useXpModel, useMarketOdds } from '../lib/xp'
 import { teamLabel, playerHref } from '../lib/util'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
@@ -444,13 +444,15 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, ca
   metric?: Metric; gw?: number; avail?: Availability
 }) {
   const { form, xi, bench } = pickEleven(chosen)
+  const xpModel = useXpModel()
+  const market = useMarketOdds()
 
   // The corner figure under the active metric. The tier (card metal) always
   // comes from the rating, so switching to £ or xP recolours nothing.
   const cornerFor = (r: RatingRow): string | null => {
     if (metric === 'price') return num(r, 'price') != null ? `£${num(r, 'price')}` : null
     if (metric === 'xp' && gw != null) {
-      const v = xpForGw(r, gw, fixtureEase, avail)
+      const v = xpForGw(r, gw, fixtureEase, avail, xpModel, market)
       return v == null ? '—' : v.toFixed(1)
     }
     return null
