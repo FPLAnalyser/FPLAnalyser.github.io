@@ -22,7 +22,7 @@ const POS_ORDER = ['GKP', 'DEF', 'MID', 'FWD'] as const
  * dugout beneath it, and every action on a player one tap away. State lives in
  * usePlanner so the list beside the board can transfer into it.
  */
-export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onArmTransfer, armedOut, squadScore, onOpenSquadRating }: {
+export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onArmTransfer, armedOut, squadScore, onOpenSquadRating, partialSquad, onPickSlot, onAutoPick, read }: {
   planner: Planner
   byEl: Map<number, RatingRow>
   pool: RatingRow[]
@@ -36,6 +36,15 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
   /** The squad's own 0–100 rating, shown here so the page needn't repeat it. */
   squadScore?: number | null
   onOpenSquadRating?: () => void
+  /** While the fifteen is incomplete the planner can't run, so the board
+   *  lays out whoever has been picked against empty slots — same page,
+   *  same furniture, just not full yet. */
+  partialSquad?: number[]
+  onPickSlot?: (pos: 'GKP' | 'DEF' | 'MID' | 'FWD') => void
+  /** Auto pick: build the fifteen when short, best XI when complete. */
+  onAutoPick?: () => void
+  /** The read on the squad, rendered high on the page where it's seen. */
+  read?: React.ReactNode
 }) {
   const navigate = useNavigate()
   const xpModel = useXpModel()
@@ -83,14 +92,20 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
   )
   const rating = teamXp == null ? null : gwRating(teamXp, benchmark)
 
-  if (!week) return null
-
   const gwIdx = gws.indexOf(gw)
-  const partners = subFor != null ? planner.partnersFor(subFor) : []
+  const partners = subFor != null && week ? planner.partnersFor(subFor) : []
   const rowsByPos = (list: number[]) => POS_ORDER.map((p) => list.filter((e) => planner.posOf(e) === p))
   // The reserve keeper always sits in the first bench slot, the way a
   // teamsheet lists him — the outfield subs come on in the order after.
-  const benchOrder = [...week.bench].sort((a, b) => (planner.posOf(a) === 'GKP' ? -1 : 0) - (planner.posOf(b) === 'GKP' ? -1 : 0))
+  const benchOrder = week
+    ? [...week.bench].sort((a, b) => (planner.posOf(a) === 'GKP' ? -1 : 0) - (planner.posOf(b) === 'GKP' ? -1 : 0))
+    : []
+
+  // Without a full fifteen the planner has nothing to plan, so the board
+  // lays the picked players into the same shape and leaves the rest as
+  // empty slots — the page never changes character, it just fills up.
+  const partial = !week ? layoutPartial(partialSquad ?? [], planner.posOf, (el) => ratingOf(el)) : null
+  const picked = partialSquad?.length ?? 0
 
   const beginSub = (el: number) => {
     setSheet(null)
@@ -107,16 +122,16 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
     setSheet(el)
   }
 
-  const benchBoost = week.chip === 'bench-boost'
-  const tripleCap = week.chip === 'triple-captain'
-  const ftLeft = ft === Infinity ? Infinity : Math.max(0, ft - week.transfers.length)
+  const benchBoost = week?.chip === 'bench-boost'
+  const tripleCap = week?.chip === 'triple-captain'
+  const ftLeft = ft === Infinity ? Infinity : Math.max(0, ft - (week?.transfers.length ?? 0))
 
   const card = (el: number, onBench: boolean) => (
     <PlayerChip
       key={el}
       onOpen={() => onCardTap(el)}
-      captain={week.captain === el}
-      vice={week.vice === el}
+      captain={week?.captain === el}
+      vice={week?.vice === el}
       tripleCap={tripleCap}
       fixtures={fixturesFor(teamOf(el))}
       rating={ratingOf(el)}
@@ -125,7 +140,7 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
       name={nameOf(el)}
       code={num(rowOf(el) ?? {}, 'code')}
       element={el}
-      transferred={week.transfers.some((t) => t.in === el)}
+      transferred={!!week?.transfers.some((t) => t.in === el)}
       armedOut={armedOut === el}
       bench={onBench && !benchBoost}
       highlight={subFor != null && partners.includes(el)}
@@ -136,79 +151,100 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
 
   return (
     <div>
-      {/* Gameweek nav — the number and nothing else; the detail below carries it */}
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <StepButton dir="prev" disabled={gwIdx <= 0} onClick={() => { setGw(gws[gwIdx - 1]); tapHaptic('select') }} />
-        <div className="font-display text-xl font-bold text-ink">Gameweek {gw}</div>
-        <StepButton dir="next" disabled={gwIdx >= gws.length - 1} onClick={() => { setGw(gws[gwIdx + 1]); tapHaptic('select') }} />
-      </div>
-
-      {/* One row of numbers for the whole page — no repeats above it */}
-      <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Stat label="Projected points" value={teamXp == null ? '—' : teamXp.toFixed(1)} tone="accent" sub="what this XI should score" onClick={teamXp == null ? undefined : () => setDetail('xp')} />
-        <Stat label="GW rating" value={rating == null ? '—' : String(rating)} tone={rating != null && rating >= 70 ? 'good' : 'ink'} sub={rating == null ? '' : ratingWord(rating)} onClick={rating == null ? undefined : () => setDetail('rating')} />
-        <Stat label="Squad rating" value={squadScore == null ? '—' : String(squadScore)} tone="accent" sub="what you've built" onClick={onOpenSquadRating} />
-        <Stat label="In the bank" value={`£${(BUDGET - spend).toFixed(1)}m`} tone={spend > BUDGET ? 'bad' : 'ink'} sub={`£${spend.toFixed(1)}m squad`} />
-      </div>
-
-      {/* Chips */}
-      <div className="mb-3 flex flex-wrap items-center gap-1.5">
-        <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Chip</span>
-        {(Object.keys(CHIP_LABEL) as Chip[]).map((c) => {
-          const usedElsewhere = usedChips.has(c) && week.chip !== c
-          return (
-            <button key={c} disabled={usedElsewhere} onClick={() => planner.setChip(c)} className={`min-h-8 rounded-full border px-2.5 text-xs font-medium transition-colors ${week.chip === c ? 'border-accent bg-accent-soft text-accent' : usedElsewhere ? 'border-line text-ink-3 opacity-40' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}>{CHIP_LABEL[c]}</button>
-          )
-        })}
-        <button onClick={() => { tapHaptic('medium'); planner.autoXI() }} className="ml-auto inline-flex min-h-8 items-center gap-1 rounded-full border border-line-mid px-2.5 text-xs font-medium text-ink-2 transition-colors hover:border-line-strong hover:text-ink"><Icon name="bolt" size={12} /> Auto pick</button>
-      </div>
-
-      {/* Transfers — above the pitch, where you can act on them */}
-      <div className="mb-3 rounded-2xl border border-line bg-surface-1/60 px-3 py-2.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Transfers</span>
-          <span className={`font-num rounded-md px-2 py-0.5 text-sm font-bold tabular-nums ${hit > 0 ? 'bg-bad/15 text-bad' : 'bg-surface-3 text-ink'}`}>
-            {ft === Infinity ? `${week.transfers.length} · unlimited` : `${week.transfers.length}/${banked}`}
-          </span>
-          {ft === Infinity
-            ? <span className="text-xs font-semibold text-accent">{week.chip ? CHIP_LABEL[week.chip] : 'Opening squad'} — no limit</span>
-            : <span className="text-xs text-ink-3">{ftLeft} free left{hit > 0 ? <span className="font-semibold text-bad"> · −{hit} pts</span> : ''}</span>}
-          {week.transfers.length === 0 && <span className="ml-auto text-xs text-ink-3">Tap a player to transfer him out</span>}
+      {/* Everything above the pitch is held to the pitch's own width, so the
+          page reads as one column instead of a wide band of boxes. */}
+      <div className="mx-auto" style={{ maxWidth: 660 }}>
+        {/* Gameweek nav */}
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <StepButton dir="prev" disabled={gwIdx <= 0} onClick={() => { setGw(gws[gwIdx - 1]); tapHaptic('select') }} />
+          <div className="font-display text-xl font-bold text-ink">Gameweek {gw}</div>
+          <StepButton dir="next" disabled={gwIdx >= gws.length - 1} onClick={() => { setGw(gws[gwIdx + 1]); tapHaptic('select') }} />
         </div>
-        {week.transfers.length > 0 && (
-          <div className="mt-2 flex flex-col gap-1 border-t border-line pt-2">
-            {week.transfers.map((t) => (
-              <div key={t.out} className="flex items-center gap-2 text-sm">
-                <span className="truncate text-bad">{nameOf(t.out)}</span>
-                <Icon name="arrow-right" size={13} className="shrink-0 text-ink-3" />
-                <span className="truncate text-good">{nameOf(t.in)}</span>
-                <button onClick={() => planner.undoTransfer(t.out)} className="ml-auto shrink-0 text-xs text-ink-3 hover:text-ink">undo</button>
-              </div>
-            ))}
+
+        {/* One row of numbers for the whole page */}
+        <div className="mb-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <Stat label="Projected points" value={teamXp == null ? '—' : teamXp.toFixed(1)} tone="accent" sub={week ? 'what this XI should score' : `${picked}/15 picked`} onClick={teamXp == null || !week ? undefined : () => setDetail('xp')} />
+          <Stat label="GW rating" value={rating == null ? '—' : String(rating)} tone={rating != null && rating >= 70 ? 'good' : 'ink'} sub={rating == null ? 'complete your squad' : ratingWord(rating)} onClick={rating == null ? undefined : () => setDetail('rating')} />
+          <Stat label="Squad rating" value={squadScore == null ? '—' : String(squadScore)} tone="accent" sub="what you've built" onClick={squadScore == null ? undefined : onOpenSquadRating} />
+          <Stat label="In the bank" value={`£${(BUDGET - spend).toFixed(1)}m`} tone={spend > BUDGET ? 'bad' : 'ink'} sub={`£${spend.toFixed(1)}m squad`} />
+        </div>
+
+        {/* The read on the squad, right under the numbers it explains */}
+        {read}
+
+        {/* Chips */}
+        <div className="mt-2.5 mb-2.5 flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Chip</span>
+          {(Object.keys(CHIP_LABEL) as Chip[]).map((c) => {
+            const usedElsewhere = usedChips.has(c) && week?.chip !== c
+            return (
+              <button key={c} disabled={!week || usedElsewhere} onClick={() => planner.setChip(c)} className={`min-h-8 rounded-full border px-2.5 text-xs font-medium transition-colors ${week?.chip === c ? 'border-accent bg-accent-soft text-accent' : usedElsewhere || !week ? 'border-line text-ink-3 opacity-40' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}>{CHIP_LABEL[c]}</button>
+            )
+          })}
+          <button onClick={() => { tapHaptic('medium'); (onAutoPick ?? planner.autoXI)() }} className="ml-auto inline-flex min-h-8 items-center gap-1.5 rounded-full bg-accent px-3 text-xs font-bold text-accent-contrast transition-colors hover:bg-accent-strong">
+            <Icon name="bolt" size={12} /> Auto pick
+          </button>
+        </div>
+
+        {/* Transfers — above the pitch, where you can act on them */}
+        <div className="mb-2.5 rounded-2xl border border-line bg-surface-1/60 px-3 py-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">{week ? 'Transfers' : 'Squad'}</span>
+            <span className={`font-num rounded-md px-2 py-0.5 text-sm font-bold tabular-nums ${hit > 0 ? 'bg-bad/15 text-bad' : 'bg-surface-3 text-ink'}`}>
+              {!week ? `${picked}/15` : ft === Infinity ? `${week.transfers.length} · unlimited` : `${week.transfers.length}/${banked}`}
+            </span>
+            {!week
+              ? <span className="text-xs text-ink-3">Pick {15 - picked} more from the list{picked === 0 ? ' — or hit Auto pick' : ''}</span>
+              : ft === Infinity
+                ? <span className="text-xs font-semibold text-accent">{week.chip ? CHIP_LABEL[week.chip] : 'Opening squad'} — no limit</span>
+                : <span className="text-xs text-ink-3">{ftLeft} free left{hit > 0 ? <span className="font-semibold text-bad"> · −{hit} pts</span> : ''}</span>}
+            {week && week.transfers.length === 0 && <span className="ml-auto text-xs text-ink-3">Tap a player to transfer him out</span>}
+          </div>
+          {week && week.transfers.length > 0 && (
+            <div className="mt-2 flex flex-col gap-1 border-t border-line pt-2">
+              {week.transfers.map((t) => (
+                <div key={t.out} className="flex items-center gap-2 text-sm">
+                  <span className="truncate text-bad">{nameOf(t.out)}</span>
+                  <Icon name="arrow-right" size={13} className="shrink-0 text-ink-3" />
+                  <span className="truncate text-good">{nameOf(t.in)}</span>
+                  <button onClick={() => planner.undoTransfer(t.out)} className="ml-auto shrink-0 text-xs text-ink-3 hover:text-ink">undo</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {subFor != null && week && (
+          <div className="mb-2 flex items-center gap-2 rounded-xl border border-accent/40 bg-accent-soft px-3 py-2 text-sm text-accent">
+            <Icon name="target" size={14} />
+            <span className="font-medium">
+              {week.xi.includes(subFor) ? `Who comes on for ${nameOf(subFor)}?` : `Who makes way for ${nameOf(subFor)}?`}
+              {partners.length ? ' Tap a highlighted player.' : ' No legal swap — the formation won’t allow it.'}
+            </span>
+            <button onClick={() => setSubFor(null)} className="ml-auto text-xs font-semibold hover:underline">Cancel</button>
           </div>
         )}
       </div>
 
-      {subFor != null && (
-        <div className="mb-2 flex items-center gap-2 rounded-xl border border-accent/40 bg-accent-soft px-3 py-2 text-sm text-accent">
-          <Icon name="target" size={14} />
-          <span className="font-medium">
-            {week.xi.includes(subFor) ? `Who comes on for ${nameOf(subFor)}?` : `Who makes way for ${nameOf(subFor)}?`}
-            {partners.length ? ' Tap a highlighted player.' : ' No legal swap — the formation won’t allow it.'}
-          </span>
-          <button onClick={() => setSubFor(null)} className="ml-auto text-xs font-semibold hover:underline">Cancel</button>
-        </div>
-      )}
-
       <Pitch maxWidth={660}>
-        {rowsByPos(week.xi).map((row, i) => row.length > 0 && (
-          <div key={i} className="flex justify-center gap-1.5 sm:gap-2.5">{row.map((el) => card(el, false))}</div>
+        {(week ? rowsByPos(week.xi).map((row) => row.map((el) => ({ el }))) : partial!.xi).map((row, i) => row.length > 0 && (
+          <div key={i} className="flex justify-center gap-1.5 sm:gap-2.5">
+            {row.map((slot, j) => (slot.el != null
+              ? card(slot.el, false)
+              : <EmptySlot key={`e${j}`} pos={(slot as { pos: 'GKP' | 'DEF' | 'MID' | 'FWD' }).pos} onClick={() => onPickSlot?.((slot as { pos: 'GKP' | 'DEF' | 'MID' | 'FWD' }).pos)} />))}
+          </div>
         ))}
       </Pitch>
 
-      <Dugout boosted={benchBoost}>{benchOrder.map((el) => card(el, true))}</Dugout>
+      <Dugout boosted={benchBoost}>
+        {week
+          ? benchOrder.map((el) => card(el, true))
+          : partial!.bench.map((slot, j) => (slot.el != null
+              ? card(slot.el, true)
+              : <EmptySlot key={`be${j}`} pos={slot.pos} onClick={() => onPickSlot?.(slot.pos)} />))}
+      </Dugout>
 
-      {sheet != null && rowOf(sheet) && (
+      {sheet != null && rowOf(sheet) && week && (
         <PlayerCardSheet
           player={rowOf(sheet) as RatingRow}
           pool={pool}
@@ -230,7 +266,7 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
         />
       )}
 
-      {detail === 'xp' && teamXp != null && (
+      {detail === 'xp' && teamXp != null && week && (
         <XpSheet
           gw={gw} total={teamXp} hit={hit} capMult={capMult}
           rows={scoring.map((el) => ({ el, name: nameOf(el), team: teamOf(el), xp: xpOf(el), captain: week.captain === el, bench: week.bench.includes(el) }))}
@@ -242,6 +278,38 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
         <RatingSheet gw={gw} total={teamXp} rating={rating} benchmark={benchmark} onClose={() => setDetail(null)} />
       )}
     </div>
+  )
+}
+
+type Pos4 = 'GKP' | 'DEF' | 'MID' | 'FWD'
+type Slot = { el: number | null; pos: Pos4 }
+
+/** Lay a part-built squad into the same 15 slots the finished board uses:
+ *  a 4-4-2 eleven and a four-man bench (keeper first). Best-rated players
+ *  take the pitch; the rest of the slots stay empty and clickable. */
+function layoutPartial(squad: number[], posOf: (el: number) => Pos4, ratingOf: (el: number) => number): { xi: Slot[][]; bench: Slot[] } {
+  const pool: Record<Pos4, number[]> = { GKP: [], DEF: [], MID: [], FWD: [] }
+  for (const el of squad) pool[posOf(el)]?.push(el)
+  for (const k of Object.keys(pool) as Pos4[]) pool[k].sort((a, b) => ratingOf(b) - ratingOf(a))
+  const take = (p: Pos4) => pool[p].shift() ?? null
+  const row = (p: Pos4, n: number): Slot[] => Array.from({ length: n }, () => ({ el: take(p), pos: p }))
+  const xi = [row('GKP', 1), row('DEF', 4), row('MID', 4), row('FWD', 2)]
+  const bench: Slot[] = [{ el: take('GKP'), pos: 'GKP' }, { el: take('DEF'), pos: 'DEF' }, { el: take('MID'), pos: 'MID' }, { el: take('FWD'), pos: 'FWD' }]
+  return { xi, bench }
+}
+
+/** An unfilled place in the squad — same footprint as a card, so the board
+ *  holds its shape from the first pick to the fifteenth. */
+function EmptySlot({ pos, onClick }: { pos: Pos4; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`${CARD_W} grid place-items-center rounded-xl border border-dashed border-white/25 bg-black/20 text-white/55 transition-colors hover:border-accent hover:bg-accent-soft/20 hover:text-accent`}
+      style={{ height: 125 }}
+    >
+      <span className="grid size-6 place-items-center rounded-full border border-current text-[13px] leading-none font-bold">+</span>
+      <span className="mt-1 text-[9.5px] font-extrabold tracking-[0.12em] uppercase">{pos}</span>
+    </button>
   )
 }
 

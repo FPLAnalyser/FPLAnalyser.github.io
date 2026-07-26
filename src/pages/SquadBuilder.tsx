@@ -262,71 +262,40 @@ export default function SquadBuilder() {
       <SectionBanner imgKey="squad" title="Squad Builder" subtitle={`Pick your Gameweek ${buildGw} fifteen within £100m, then step forward week by week — transfers, captain and chips`} />
 
       <>
-      {/* Summary bar — build phase only; the board carries these once the
-          fifteen exists, and showing both was the same four numbers twice. */}
-      {!complete && (
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Budget left" value={`£${remaining.toFixed(1)}m`} tone={remaining < 0 ? 'bad' : 'ink'} sub={`of £${BUDGET.toFixed(0)}m`} />
-        <Stat label="Players" value={`${total}/15`} tone={total === 15 ? 'good' : 'ink'} sub={`£${spent.toFixed(1)}m spent`} />
-        <Stat
-          label="Squad rating"
-          value={squadScore == null ? '—' : String(squadScore)}
-          tone="accent"
-          sub={unrated ? `${unrated} unrated` : 'tap to break down'}
-          onClick={total >= 5 ? () => setRatingOpen(true) : undefined}
-        />
-        <Stat label="Best XI" value={bestXI == null ? '—' : String(bestXI)} tone="accent" sub="top starting 11" />
-      </div>
-      )}
-
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <button onClick={autoPick} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent-strong">
-          <Icon name="bolt" size={14} /> Auto-pick best value
-        </button>
-        {total > 0 && (
+      {/* Share and clear sit beside the board; auto pick lives on the board
+          itself, and a "valid squad" badge only repeated what 15/15 says. */}
+      {total > 0 && (
+        <div className="mx-auto mb-3 flex max-w-[660px] flex-wrap items-center gap-2">
           <button onClick={() => setShareOpen(true)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-line-mid px-3.5 text-sm font-medium text-ink transition-colors hover:border-line-strong">
             <Icon name="trend-up" size={14} /> Share / download
           </button>
-        )}
-        {total > 0 && (
           <button onClick={clear} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-line-mid px-3.5 text-sm font-medium text-ink-2 transition-colors hover:border-line-strong hover:text-ink">
             <Icon name="x" size={14} /> Clear
           </button>
-        )}
-        {valid && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-good/12 px-3 py-1 text-sm font-semibold text-good">
-            <Icon name="check" size={14} /> Valid squad
-          </span>
-        )}
-        {complete && !valid && <span className="text-sm font-medium text-bad">Over budget by £{Math.abs(remaining).toFixed(1)}m</span>}
-      </div>
+          {complete && !valid && <span className="text-sm font-medium text-bad">Over budget by £{Math.abs(remaining).toFixed(1)}m</span>}
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
-        {/* The board: the planner once fifteen players exist, the build grid
-            until then. Either way the list beside it stays put. */}
+        {/* The board — the same object from an empty squad to a full one:
+            unfilled places are just empty slots you tap to fill. */}
         <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">
-              {complete ? 'Your squad — week by week' : `Your GW${buildGw} squad`}
-            </div>
+          <div className="mx-auto mb-2 flex max-w-[660px] flex-wrap items-center gap-2">
+            <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Your squad — week by week</div>
             <div className="ml-auto"><MetricChips metric={metric} onChange={setMetric} /></div>
           </div>
-          {complete ? (
-            <SeasonPlanner
-              planner={planner} byEl={byEl} pool={pool} fixtureEase={fixtureEase}
-              metric={metric} avail={avail}
-              armedOut={armedOut}
-              squadScore={liveScore}
-              onOpenSquadRating={() => setRatingOpen(true)}
-              onArmTransfer={(el) => { setArmedOut(el); setPendingIn(null); setPickPos(String(byEl.get(el)?.position ?? 'MID') as Pos); setQuery('') }}
-            />
-          ) : (
-            <SquadBoard chosen={chosen} fixtureEase={fixtureEase} pickPos={pickPos} onRemove={remove} onPick={(p) => { setPickPos(p); setNote(null) }} onOpen={setSheetFor} metric={metric} gw={buildGw} avail={avail} />
-          )}
-
-          {/* The read on the squad, in the open. This is the insight the page
-              exists to give, so it shouldn't be hidden behind a tap. */}
-          {complete && <SquadRead chosen={liveChosen} fixtureEase={fixtureEase} gw={liveGw} avail={avail} onOpen={() => setRatingOpen(true)} />}
+          <SeasonPlanner
+            planner={planner} byEl={byEl} pool={pool} fixtureEase={fixtureEase}
+            metric={metric} avail={avail}
+            armedOut={armedOut}
+            squadScore={liveScore}
+            onOpenSquadRating={() => setRatingOpen(true)}
+            partialSquad={picked}
+            onPickSlot={(p) => { setPickPos(p as Pos); setQuery(''); setNote(null) }}
+            onAutoPick={complete ? planner.autoXI : autoPick}
+            read={<SquadRead chosen={liveChosen} fixtureEase={fixtureEase} gw={liveGw} avail={avail} onOpen={() => setRatingOpen(true)} />}
+            onArmTransfer={(el) => { setArmedOut(el); setPendingIn(null); setPickPos(String(byEl.get(el)?.position ?? 'MID') as Pos); setQuery('') }}
+          />
         </div>
 
         {/* Player list — always here, whether you're building or transferring */}
@@ -749,22 +718,6 @@ function RangeRow({ label, kind, value, min, max, step, display, onChange }: {
         className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-surface-3 accent-accent"
       />
     </div>
-  )
-}
-
-function Stat({ label, value, sub, tone, onClick }: { label: string; value: string; sub?: string; tone?: 'ink' | 'good' | 'bad' | 'accent'; onClick?: () => void }) {
-  const color = tone === 'good' ? 'text-good' : tone === 'bad' ? 'text-bad' : tone === 'accent' ? 'text-accent' : 'text-ink'
-  const body = (
-    <>
-      <div className={`font-display text-2xl leading-none tabular-nums ${color}`}>{value}</div>
-      <div className="mt-1 text-[10px] font-semibold tracking-[0.1em] text-ink-2 uppercase">{label}</div>
-      {sub && <div className="text-[10px] text-ink-3">{sub}</div>}
-    </>
-  )
-  const box = 'rounded-xl border border-line bg-surface-1/60 p-3 text-center'
-  if (!onClick) return <div className={box}>{body}</div>
-  return (
-    <button onClick={onClick} className={`${box} w-full transition-colors hover:border-accent/60 hover:bg-surface-2/60`}>{body}</button>
   )
 }
 
