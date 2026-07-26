@@ -323,7 +323,7 @@ function KitRail({ boosted, children }: { boosted: boolean; children: React.Reac
   return (
     <div className="mx-auto mt-2.5" style={{ maxWidth: 660 }}>
       <div
-        className={`rounded-2xl border px-3 pt-2.5 pb-3 transition-colors ${boosted ? 'border-accent' : 'border-line-strong'}`}
+        className={`rounded-2xl border px-3 pt-2 pb-2.5 transition-colors ${boosted ? 'border-accent' : 'border-line-strong'}`}
         style={{
           background: boosted
             ? 'linear-gradient(180deg, color-mix(in oklab, var(--accent) 22%, #14161a) 0%, #0f1319 100%)'
@@ -338,19 +338,21 @@ function KitRail({ boosted, children }: { boosted: boolean; children: React.Reac
           {boosted && <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-accent-contrast">Bench Boost — all 15 score</span>}
         </div>
 
-        <div className="relative pt-1">
-          {/* the rail itself, running the full width behind the hooks */}
+        <div className="relative">
+          {/* A thin rail the hooks straddle, rather than a bar with hooks
+              slung under it — the difference is about 14px of height and
+              the whole thing reading as trim instead of furniture. */}
           <div
             aria-hidden="true"
-            className="absolute inset-x-0 top-[9px] h-[3px] rounded-full"
-            style={{ background: boosted ? 'linear-gradient(180deg,#F7E3A6,#B98B2C)' : 'linear-gradient(180deg,#9AA7B5,#4A545F)' }}
+            className="absolute inset-x-0 top-[5px] h-px rounded-full"
+            style={{ background: boosted ? 'linear-gradient(90deg,transparent,var(--accent),transparent)' : 'linear-gradient(90deg,transparent,rgba(255,255,255,.38),transparent)' }}
           />
           <div className="relative flex justify-center gap-1.5 sm:gap-2.5">
             {Children.map(children, (child, i) => (
               <span key={i} className={`${CARD_W} flex flex-col items-center [&>*]:max-w-none [&>*]:w-full`}>
                 <span
                   aria-hidden="true"
-                  className={`mb-1 h-4 w-2.5 shrink-0 rounded-b-md border-2 border-t-0 ${boosted ? 'border-accent' : 'border-white/45'}`}
+                  className={`-mt-px mb-1 h-2.5 w-2 shrink-0 rounded-b-[3px] border border-t-0 ${boosted ? 'border-accent' : 'border-white/40'}`}
                 />
                 {child}
               </span>
