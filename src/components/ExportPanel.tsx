@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Icon } from './Icon'
 import { shareImageNative } from '../lib/native'
+import { rasterise } from '../lib/capture'
 
 /* ════════════════════════════════════════════════════════════════════════
    Share anything: wrap a table or chart in <Exportable> and it gains a
@@ -115,13 +116,7 @@ export function Exportable({ title, filename, children, className }: {
     setMsg('')
     try {
       const dark = !document.documentElement.classList.contains('light')
-      const { default: html2canvas } = await import('html2canvas-pro')
-      const shot = await html2canvas(ref.current, {
-        backgroundColor: dark ? '#0c0b09' : '#ffffff',
-        scale: 2,
-        useCORS: true,
-        logging: false,
-      })
+      const shot = await rasterise(ref.current, dark)
       const spec = FORMATS.find((f) => f.id === fmt)!
       const canvas = brand(shot, spec, title, spec.handle, dark)
       const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, 'image/png'))

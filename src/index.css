@@ -181,6 +181,27 @@ body {
   color: transparent;
 }
 
+/* ── Capture mode (see src/lib/capture.ts) ───────────────────────────────
+   While a share image is being rasterised the document carries
+   `data-capturing`. html2canvas has no background-clip:text, so the gold
+   numerals come out as solid blocks; and it measures truncating text into a
+   line box a few pixels short, slicing the glyphs. Both are swapped for
+   equivalents it can actually draw, then swapped straight back. */
+[data-capturing] .metallic-num {
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  color: var(--accent-2) !important;
+}
+[data-capturing] .truncate {
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+[data-capturing] .truncate,
+[data-capturing] .metallic-num {
+  line-height: 1.4 !important;
+}
+
 /* Icons (inline SVG sprite in index.html) */
 .icon {
   display: inline-block; vertical-align: -0.18em;

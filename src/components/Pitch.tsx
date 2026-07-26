@@ -73,6 +73,14 @@ export function Pitch({ children, footer, className, maxWidth }: { children: Rea
   )
 }
 
+/** Initials for the monogram behind a headshot: "B.Fernandes" → BF,
+ *  "Calvert-Lewin" → CL, "Raya" → RA. */
+export function initialsOf(name: string): string {
+  const parts = String(name).split(/[\s.\-']+/).filter(Boolean)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return String(name).slice(0, 2).toUpperCase()
+}
+
 /** Sizing for a pitch slot — card or empty alike, so rows line up.
  *
  *  Cards share the row's width rather than claiming a fixed one: five across a
@@ -103,12 +111,19 @@ export function PitchCard({ rating, name, team, price, code, element, fixtures, 
       style={{ background: 'linear-gradient(165deg,rgba(33,29,22,.96),rgba(13,11,8,.96))' }}
     >
       <div className="metallic-num font-num text-[13px] leading-none font-extrabold tabular-nums sm:text-[15px]">{rating ?? '—'}</div>
-      <PlayerPhoto
-        code={code} element={element}
-        className="mx-auto my-1 w-7 rounded object-cover object-top sm:w-8"
-        style={{ height: 32 }}
-        placeholder={<span className="mx-auto my-1 block w-7 rounded bg-white/5 sm:w-8" style={{ height: 32 }} />}
-      />
+      {/* The monogram sits *under* the headshot rather than instead of it, so
+          a photo that can't be rasterised into a share PNG leaves initials
+          behind rather than an empty hole. */}
+      <span className="relative mx-auto my-1 block w-7 sm:w-8" style={{ height: 32 }}>
+        <span className="absolute inset-0 grid place-items-center rounded bg-white/6 text-[11px] font-extrabold text-white/40">
+          {initialsOf(name)}
+        </span>
+        <PlayerPhoto
+          code={code} element={element}
+          className="relative h-full w-full rounded object-cover object-top"
+          placeholder={<span />}
+        />
+      </span>
       <div className="truncate text-[9.5px] leading-tight font-bold text-white sm:text-[10.5px]">{name}</div>
       <div className="truncate text-[8px] text-white/55 sm:text-[9px]">{team}{price != null ? ` · £${price}m` : ''}</div>
       {fixtures && <div className="mt-1 flex justify-center gap-[2px]">{fixtures}</div>}

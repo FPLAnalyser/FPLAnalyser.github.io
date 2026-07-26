@@ -14,6 +14,7 @@ import { Pitch, PitchCard, CARD_W } from '../components/Pitch'
 import { PlayerCardSheet } from '../components/PlayerCardSheet'
 import { useCore } from '../lib/useData'
 import { tapHaptic, shareImageNative } from '../lib/native'
+import { rasterise } from '../lib/capture'
 import { num } from '../lib/rows'
 import { teamLabel, playerHref } from '../lib/util'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
@@ -546,8 +547,7 @@ function SquadShare({ chosen, fixtureEase, squadScore, bestXI, spent, unrated, t
     if (!ref.current) return
     setBusy(true); setMsg('')
     try {
-      const { default: html2canvas } = await import('html2canvas-pro')
-      const canvas = await html2canvas(ref.current, { backgroundColor: '#0c0b09', scale: 2, useCORS: true, logging: false })
+      const canvas = await rasterise(ref.current, true)
       const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, 'image/png'))
       if (!blob) throw new Error('render failed')
       // Native: hand the PNG to the OS share sheet via Capacitor.
@@ -571,17 +571,20 @@ function SquadShare({ chosen, fixtureEase, squadScore, bestXI, spent, unrated, t
   return (
     <div className="fixed inset-0 z-[200] grid place-items-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm" onClick={onClose} role="dialog" aria-modal="true">
       <div className="w-full max-w-[560px]" onClick={(e) => e.stopPropagation()}>
-        <div ref={ref} className="rounded-3xl bg-[#0c0b09] p-4">
+        {/* The share card is always drawn on the same near-black, whatever
+            theme the app is in — so it sets its own ink rather than reading
+            theme tokens, which the rasteriser resolves unreliably. */}
+        <div ref={ref} className="rounded-3xl bg-[#0c0b09] p-4" style={{ color: '#f4efe3' }}>
           <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="font-display text-lg leading-none text-ink">FPL <span className="text-accent">Analyser</span><div className="mt-1 text-[10px] font-semibold tracking-[0.14em] text-ink-3 uppercase">My GW{gw} Squad</div></div>
+            <div className="font-display text-lg leading-none whitespace-nowrap">FPL <span style={{ color: '#c9a227' }}>Analyser</span><div className="mt-1 text-[10px] font-semibold tracking-[0.14em] uppercase" style={{ color: '#8a8172' }}>My GW{gw} Squad</div></div>
             <div className="flex gap-4 text-center">
-              <div><div className="font-display text-2xl leading-none text-accent tabular-nums">{squadScore ?? '—'}</div><div className="text-[9px] tracking-[0.1em] text-ink-3 uppercase">Squad</div></div>
-              <div><div className="font-display text-2xl leading-none text-accent tabular-nums">{bestXI ?? '—'}</div><div className="text-[9px] tracking-[0.1em] text-ink-3 uppercase">Best XI</div></div>
-              <div><div className="font-display text-2xl leading-none text-ink tabular-nums">£{spent.toFixed(1)}</div><div className="text-[9px] tracking-[0.1em] text-ink-3 uppercase">Spend</div></div>
+              <div><div className="font-display text-2xl leading-none tabular-nums" style={{ color: '#c9a227' }}>{squadScore ?? '—'}</div><div className="text-[9px] tracking-[0.1em] whitespace-nowrap uppercase" style={{ color: '#8a8172' }}>Squad</div></div>
+              <div><div className="font-display text-2xl leading-none tabular-nums" style={{ color: '#c9a227' }}>{bestXI ?? '—'}</div><div className="text-[9px] tracking-[0.1em] whitespace-nowrap uppercase" style={{ color: '#8a8172' }}>Best XI</div></div>
+              <div><div className="font-display text-2xl leading-none tabular-nums">£{spent.toFixed(1)}</div><div className="text-[9px] tracking-[0.1em] whitespace-nowrap uppercase" style={{ color: '#8a8172' }}>Spend</div></div>
             </div>
           </div>
           <SquadBoard chosen={chosen} fixtureEase={fixtureEase} capture />
-          {unrated > 0 && <div className="mt-2 text-center text-[10px] text-ink-3">{unrated} player{unrated > 1 ? 's' : ''} new to the league (unrated)</div>}
+          {unrated > 0 && <div className="mt-2 text-center text-[10px]" style={{ color: '#8a8172' }}>{unrated} player{unrated > 1 ? 's' : ''} new to the league (unrated)</div>}
           <ShareFooter />
         </div>
         <div className="mt-3 flex flex-wrap justify-center gap-2">

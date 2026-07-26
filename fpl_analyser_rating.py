@@ -186,7 +186,11 @@ def calc_metrics(group, position, mins, wk):
         m["chances"] = vp("pl_chances_created")
         m["big_chances"] = vp("pl_big_chances_created")
         m["creativity_depth"] = combined_per90(group, ["us_xg_chain", "us_xg_buildup"], mv)
-        m["set_piece"] = combined_per90(group, ["pl_crosses", "pl_corners_taken", "pl_fk_crosses"], mv)
+        # DEAD BALLS ONLY. This used to include `pl_crosses`, which counts every
+        # cross including open play — and it dwarfs the dead-ball columns. A
+        # forward who drifts wide and whips one in was being scored as a
+        # set-piece taker on the strength of open-play crossing.
+        m["set_piece"] = combined_per90(group, ["pl_corners_taken", "pl_fk_crosses"], mv)
         box = valid_sum(group, "us_shots_six_yard")
         pen = valid_sum(group, "us_shots_penalty_area")
         m["shot_quality"] = ratio(valid_sum(group, "us_npxg"))
@@ -259,8 +263,14 @@ ATT_BLENDS = {"goal": GOAL_BLEND, "creative": CREATIVE_BLEND, "dc": DC_BLEND_ATT
 # Metrics where a LOWER raw value is better (percentile inverted).
 INVERT = {"xgc", "dist_faced"}
 # Orphan dimensions surfaced on the card AND folded into a parent above.
-ORPHAN_DIMS = {"shot_quality": "shot_quality", "finishing_skill": "finishing",
-               "creativity_depth": "creativity_depth", "set_piece": "set_piece"}
+# Each maps to (source metric, percentile pool). Most are read against the
+# player's own position; set-piece duty is the exception — it is an absolute
+# job, not a positional trait. Forwards essentially never take dead balls
+# (median 0.2 deliveries/90), so a within-position percentile turned an
+# occasional corner into an 80-rated "set-piece threat". Ranked across every
+# outfielder instead, so one scale means one thing.
+ORPHAN_DIMS = {"shot_quality": ("shot_quality", "pct"), "finishing_skill": ("finishing", "pct"),
+               "creativity_depth": ("creativity_depth", "pct"), "set_piece": ("set_piece", "outpct")}
 
 # ── Goalkeeper shot-load faced (team-level, attributed to a club's keepers) ───
 # From data/understat_shots.csv: for each defending team, how many shots they
@@ -352,7 +362,7 @@ for element, group in gw.groupby("element"):
     for k, v in gw4_m.items():
         row[f"gw4_m_{k}"] = v
     # Orphan display scores (also folded into a parent dimension downstream).
-    for orphan, metric in ORPHAN_DIMS.items():
+    for orphan, (metric, _pool) in ORPHAN_DIMS.items():
         row[f"season_{orphan}_score"] = season_m.get(metric, np.nan)
         row[f"gw4_{orphan}_score"] = gw4_m.get(metric, np.nan)
     # value / start / mins90 live in the metric namespace too so they percentile
@@ -432,6 +442,9 @@ def add_percentiles(mask, pool):
 for pos in ("GKP", "DEF", "MID", "FWD"):
     add_percentiles(df["position"] == pos, "pct")
 add_percentiles(df["position"].isin(["MID", "FWD"]), "attpct")
+# All-outfield pool — for metrics whose meaning is absolute rather than
+# position-relative (set-piece duty).
+add_percentiles(df["position"].isin(["DEF", "MID", "FWD"]), "outpct")
 
 def blend_to_5(row, prefix, blend, pool):
     """Weighted mean of sub-metric percentiles → 1-5 (missing metrics drop out,
@@ -459,8 +472,8 @@ for prefix in ("season", "gw4"):
             # Raw 0-100 composite kept for sort/ranking consumers (Rankings.tsx)
             df.loc[pm, f"{prefix}_{dim}_score"] = ((norm - 1) / 4 * 100).round(1)
     # Orphan display dims (percentile of their own metric)
-    for orphan, metric in ORPHAN_DIMS.items():
-        col = f"{prefix}_pct_{metric}"
+    for orphan, (metric, pool) in ORPHAN_DIMS.items():
+        col = f"{prefix}_{pool}_{metric}"
         if col in df.columns:
             df.loc[ok, f"{prefix}_{orphan}_score_norm"] = df.loc[ok, col].apply(pct_to_5)
     # Value + Sortino risk (both surfaced, NOT in the rating) + reliability + mins90
