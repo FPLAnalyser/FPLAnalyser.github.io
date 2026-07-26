@@ -70,6 +70,10 @@ function projectCell(mode: 'xg' | 'cs', teamBase: TeamBase | undefined, oppBase:
   return { v: Math.exp(-lambda), assumed }
 }
 
+// Expected-goals anchors for reading a market line as 1–5 difficulty.
+const MKT_EASY = 2.5
+const MKT_HARD = 0.6
+
 const mktOf = (market: MarketOdds | null, team: string, f: { gw: number; opponent: string }) =>
   market?.byKey.get(`${team}:${f.gw}:${f.opponent}`) ?? null
 
@@ -90,7 +94,19 @@ const LENS_TIP: Record<Lens, string> = {
 
 /** Our own 1 (easy) … 5 (hard) fixture difficulty from the opponent's team
  *  rating, per lens. Falls back to FPL's FDR when the opponent has no rating. */
-function analyserDiff(opp: TeamRatingRow | undefined, lens: Lens, venue: 'H' | 'A', fdr: number): { diff: number; ours: boolean } {
+function analyserDiff(opp: TeamRatingRow | undefined, lens: Lens, venue: 'H' | 'A', fdr: number, mkt?: { for: number; against: number } | null): { diff: number; ours: boolean; market?: boolean } {
+  // A priced fixture states the difficulty outright: the goals the market
+  // expects this team to score set how kind it is for their attack, and the
+  // goals it expects them to concede set how kind it is for their defence.
+  if (mkt) {
+    const scale = (lam: number, harderWhenHigher: boolean) => {
+      const t = (lam - MKT_EASY) / (MKT_HARD - MKT_EASY)
+      return Math.max(1, Math.min(5, harderWhenHigher ? 1 + 4 * t : 5 - 4 * t))
+    }
+    const atk = scale(mkt.for, false)      // expected to score more → easier
+    const def = scale(mkt.against, true)   // expected to concede more → harder
+    return { diff: lens === 'attack' ? atk : lens === 'defence' ? def : (atk + def) / 2, ours: true, market: true }
+  }
   if (!opp) return { diff: fdr, ours: false }
   const att = num(opp, 'attack') ?? 50
   const def = num(opp, 'defence') ?? 50
@@ -192,7 +208,7 @@ export default function Fixtures() {
 
   // Per-game xG / xGC baselines for the projection modes (normalised from
   // window totals — never show a total as a rate).
-  const { baselines, leagueBase } = useMemo(() => {
+  const { baselines: rawBaselines, leagueBase } = useMemo(() => {
     const m = new Map<string, TeamBase>()
     if (data) {
       for (const t of data.teamMetrics) {
@@ -209,6 +225,19 @@ export default function Fixtures() {
       : { xg: 1.4, xgc: 1.4 }
     return { baselines: m, leagueBase }
   }, [data])
+
+  // Promoted clubs have no season history, so their cells would be blank.
+  // The odds layer backs their attack/defence out of every priced fixture
+  // against a club we do know — a real baseline that sharpens each week,
+  // rather than a league-average stand-in.
+  const marketStrength = useMarketOdds()
+  const baselines = useMemo(() => {
+    const m = new Map(rawBaselines)
+    for (const [team, v] of Object.entries(marketStrength?.strength ?? {})) {
+      if (!m.has(team)) m.set(team, { xg: v.att, xgc: v.def })
+    }
+    return m
+  }, [rawBaselines, marketStrength])
 
   // Per-team + league concession profiles for the fixture read (lazy — the
   // grid only needs them for the expandable commentary).
@@ -301,6 +330,7 @@ export default function Fixtures() {
             {horizon < windowN && (
               <p className="mb-3 -mt-1 text-xs text-ink-3">The data pipeline currently publishes {horizon} gameweeks ahead — showing all {horizon}.</p>
             )}
+            <MarketNote market={marketStrength} />
 
             <Exportable title={mode === 'diff' ? `Fixture difficulty — next ${windowN}` : mode === 'xg' ? `Projected xG — next ${windowN}` : `Clean sheet odds — next ${windowN}`}>
             <FixtureGrid key={mode} fixtureEase={fixtureEase} windowN={windowN} lens={lens} mode={mode} seasonRating={seasonRating} baselines={baselines} leagueBase={leagueBase} profiles={profiles} league={league} />
@@ -581,6 +611,32 @@ function RotationPlanner({ ratings: _ratings, fixtureEase, seasonRating }: { rat
   )
 }
 
+/** Says where the numbers come from. Bookmakers price the next gameweek or
+ *  two and no further, so the grid is part market, part model — and it should
+ *  be obvious which, rather than implied. */
+function MarketNote({ market }: { market: MarketOdds | null }) {
+  const gws = useMemo(() => {
+    const set = new Set<number>()
+    for (const k of market?.byKey.keys() ?? []) {
+      const gw = Number(k.split(':')[1])
+      if (Number.isFinite(gw)) set.add(gw)
+    }
+    return [...set].sort((a, b) => a - b)
+  }, [market])
+  if (!gws.length) return null
+  const span = gws.length === 1 ? `Gameweek ${gws[0]}` : `Gameweeks ${gws[0]}–${gws[gws.length - 1]}`
+  return (
+    <p className="mb-3 -mt-1 flex flex-wrap items-center gap-1.5 text-xs text-ink-3">
+      <span className="inline-block size-1.5 rounded-full bg-accent" />
+      <span>
+        <span className="font-semibold text-ink-2">{span}</span> use live bookmaker odds — the goals the market expects each
+        team to score and concede. Later weeks use our own model until the books price them.
+      </span>
+      <InfoTip text="Match-result and over/under odds are refreshed daily and solved into an expected-goals figure for each side of every fixture. Where a fixture is priced, that number drives its projected goals, clean-sheet odds and difficulty; beyond the market's horizon the grid falls back to team strength from the season's underlying numbers. No odds are shown or sold — only what they imply." />
+    </p>
+  )
+}
+
 /* ── Fixture grid: one column per gameweek, orderable by any week ──────────────
    Rows are teams; each gameweek is its own column showing the opponent, coloured
    by OUR own difficulty (opponent strength from our team ratings) in the chosen
@@ -626,7 +682,7 @@ function FixtureGrid({
         byGw.get(f.gw)!.push(f)
         opponents.push(f.opponent)
         if (mode === 'diff') {
-          const { diff, ours } = analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr)
+          const { diff, ours } = analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr, mktOf(market, team, f))
           if (!ours) usedFdr = true
           sum += diff
           count++
@@ -649,7 +705,7 @@ function FixtureGrid({
   const gwVal = (r: (typeof rows)[number], gw: number): number | null => {
     const fs = r.byGw.get(gw)
     if (!fs || !fs.length) return null
-    if (mode === 'diff') return fs.reduce((s, f) => s + analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr).diff, 0) / fs.length
+    if (mode === 'diff') return fs.reduce((s, f) => s + analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr, mktOf(market, r.team, f)).diff, 0) / fs.length
     let sum = 0
     let any = false
     for (const f of fs) {
@@ -719,7 +775,7 @@ function FixtureGrid({
                           <span className="flex flex-col items-center gap-1">
                             {fs.map((f, i) => {
                               if (mode === 'diff') {
-                                const { diff, ours } = analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr)
+                                const { diff, ours } = analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr, mktOf(market, r.team, f))
                                 const [bg, fg] = FDR_COLORS[Math.max(1, Math.min(5, Math.round(diff)))] || FDR_COLORS[3]
                                 return (
                                   <span key={i} className="inline-block w-full min-w-[54px] rounded px-1 py-1 text-[11px] font-semibold whitespace-nowrap" style={{ background: bg, color: fg }} title={`GW${gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(f.opponent)} — difficulty ${diff.toFixed(1)}${ours ? '' : ' (FPL FDR — opponent unrated)'}`}>

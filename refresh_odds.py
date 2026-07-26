@@ -310,11 +310,59 @@ if __name__ == "__main__":
         lh, la = solve(cons)
         matches.append({"gw": gw, "h": h, "a": a, "lh": lh, "la": la, "src": used})
 
+    # ── market-implied strength for clubs with no Premier League record ──────
+    # A promoted club's own history tells us nothing, but every priced fixture
+    # against a club we DO know is an equation with one unknown:
+    #     λ_home = att_home x (def_away / league_def) x home_advantage
+    # Solve it the other way round and the market hands us their attack and
+    # defence directly — and sharpens both every time another fixture is
+    # priced. Written alongside the lambdas so the site can use these strengths
+    # for the club's UNPRICED fixtures too, instead of a blanket prior.
+    strength = {}
+    model_path = os.path.join(ROOT, season, "xp_model.json")
+    if os.path.exists(model_path):
+        with open(model_path, encoding="utf-8") as f:
+            model = json.load(f)
+        known = {k: v for k, v in model.get("teams", {}).items() if not v.get("prior")}
+        lg = model.get("league", {})
+        lg_att, lg_def, h_adv = lg.get("att"), lg.get("def"), lg.get("hAtt", 1.0)
+        short_by_id = {t["id"]: t["short_name"] for t in boot["teams"]}
+        acc = {}
+        if lg_att and lg_def:
+            for m in matches:
+                hs, as_ = short_by_id.get(m["h"]), short_by_id.get(m["a"])
+                for side, opp, lam_for, lam_against, at_home in (
+                    (hs, as_, m["lh"], m["la"], True),
+                    (as_, hs, m["la"], m["lh"], False),
+                ):
+                    if side is None or opp is None or side in known or opp not in known:
+                        continue
+                    # Venue multiplier applies to whoever is attacking:
+                    #   λ_us   = att_us x (def_them / lg_def) x venue_us
+                    #   λ_them = att_them x (def_us / lg_def) x venue_them
+                    # with venue_them = 1 / venue_us.
+                    venue_us = h_adv if at_home else 1 / h_adv
+                    a = acc.setdefault(side, {"att": [], "def": []})
+                    a["att"].append(lam_for * lg_def / (known[opp]["def"] * venue_us))
+                    a["def"].append(lam_against * lg_def * venue_us / known[opp]["att"])
+        for team, a in acc.items():
+            if a["att"] and a["def"]:
+                strength[team] = {
+                    "att": round(sum(a["att"]) / len(a["att"]), 3),
+                    "def": round(sum(a["def"]) / len(a["def"]), 3),
+                    "n": len(a["att"]),
+                }
+        if strength:
+            print("market-implied strength for clubs with no PL record: "
+                  + ", ".join(f"{t} att {v['att']:.2f} def {v['def']:.2f} (from {v['n']} priced)"
+                              for t, v in sorted(strength.items())))
+
     out_path = os.path.join(ROOT, season, "odds.json")
     payload = {
         "generated_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source": source,
         "matches": sorted(matches, key=lambda m: (m["gw"], m["h"])),
+        "strength": strength,
     }
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))

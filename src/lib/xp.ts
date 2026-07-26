@@ -38,7 +38,7 @@ interface XpPlayer {
 }
 interface XpModelFile {
   league: { att: number; def: number; hAtt: number }
-  teams: Record<string, { att: number; def: number }>
+  teams: Record<string, { att: number; def: number; prior?: boolean }>
   dcCurve: Record<string, Record<string, number>>
   players: XpPlayer[]
 }
@@ -57,11 +57,19 @@ export function useXpModel(): XpModel | null {
   }, [q.data])
 }
 
-interface OddsFile { matches: { gw: number; h: number; a: number; lh: number; la: number }[] }
+interface OddsFile {
+  matches: { gw: number; h: number; a: number; lh: number; la: number }[]
+  /** Attack/defence backed out of the odds for clubs with no PL record. */
+  strength?: Record<string, { att: number; def: number; n: number }>
+}
 interface TeamRow { short_name?: string }
 /** Market-implied goals for/against, keyed `${team}:${gw}:${opponent}` so
- *  double gameweeks resolve to the right fixture. */
-export interface MarketOdds { byKey: Map<string, { for: number; against: number }> }
+ *  double gameweeks resolve to the right fixture, plus any club strengths the
+ *  odds imply for sides the season history can't rate. */
+export interface MarketOdds {
+  byKey: Map<string, { for: number; against: number }>
+  strength: Record<string, { att: number; def: number; n: number }>
+}
 
 export function useMarketOdds(): MarketOdds | null {
   const odds = useLazyTable<OddsFile>('odds')
@@ -80,13 +88,27 @@ export function useMarketOdds(): MarketOdds | null {
       byKey.set(`${hs}:${m.gw}:${as}`, { for: m.lh, against: m.la })
       byKey.set(`${as}:${m.gw}:${hs}`, { for: m.la, against: m.lh })
     }
-    return { byKey }
+    return { byKey, strength: o.strength ?? {} }
   }, [odds.data, teams.data])
 }
 
 // ── the maths ───────────────────────────────────────────────────────────────
 
 const FACT = [1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880, 3628800, 39916800]
+
+/** A club's attack/defence per game. Promoted sides carry a flagged prior in
+ *  the model; wherever the market has priced them we can solve their real
+ *  strength out of the odds, so that always wins. */
+export function strengthOf(
+  team: string,
+  model: XpModel | null,
+  market: MarketOdds | null,
+): { att: number; def: number } | undefined {
+  const base = model?.teams[team]
+  const implied = market?.strength?.[team]
+  if (implied && (!base || base.prior)) return { att: implied.att, def: implied.def }
+  return base
+}
 
 /** E[floor(K/div)] for K ~ Poisson(lam): expected goals-conceded hits (div 2)
  *  or save points (div 3). */
@@ -103,10 +125,11 @@ function componentXp(
   fix: FixtureEaseRow,
   model: XpModel,
   mkt: { for: number; against: number } | null,
+  market: MarketOdds | null,
 ): number {
   const lg = model.league
-  const t = model.teams[fix.team]
-  const o = model.teams[fix.opponent]
+  const t = strengthOf(fix.team, model, market)
+  const o = strengthOf(fix.opponent, model, market)
   const home = fix.venue === 'H'
   const hA = lg.hAtt || 1
 
@@ -161,7 +184,7 @@ export function xpForGw(
     sum = 0
     for (const f of fixes) {
       const mkt = market?.byKey.get(`${f.team}:${gw}:${f.opponent}`) ?? null
-      sum += componentXp(p, String(r.position), f, model, mkt)
+      sum += componentXp(p, String(r.position), f, model, mkt, market ?? null)
     }
   } else {
     const base = num(r, 'season_xpts_per_game')

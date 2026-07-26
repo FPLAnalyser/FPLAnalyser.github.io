@@ -42,17 +42,20 @@ with open(os.path.join(SITE, season, "teams.json"), encoding="utf-8") as f:
     tj = json.load(f)
 current = [t["short_name"] for t in (tj["rows"] if isinstance(tj, dict) and "rows" in tj else tj)]
 
-# Promoted clubs have no PL record: give them the mean of last season's three
-# weakest attacks / leakiest defences — a modest prior the market will
-# overrule for every fixture it prices.
+# Promoted clubs have no PL record: seed them with the mean of last season's
+# three weakest attacks / leakiest defences and FLAG it as a prior, so the
+# market layer can replace the guess with strengths implied by real odds.
 weak_att = float(np.mean(sorted(att.values())[:3]))
 weak_def = float(np.mean(sorted(dfc.values())[-3:]))
 teams = {}
 for short in current:
+    known = short in att and short in dfc
     teams[short] = {
         "att": round(att.get(short, weak_att), 3),
         "def": round(dfc.get(short, weak_def), 3),
     }
+    if not known:
+        teams[short]["prior"] = True
 
 h_att = float(np.sqrt(
     played[played["was_home"]]["expected_goals"].sum()
@@ -112,5 +115,6 @@ payload = {
 out = os.path.join(SITE, season, "xp_model.json")
 with open(out, "w", encoding="utf-8") as f:
     json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
-print(f"{out}: {len(players)} players, {len(teams)} teams "
-      f"(promoted prior att {weak_att:.2f} / def {weak_def:.2f}), home-attack x{h_att:.3f}")
+priors = [t for t, v in teams.items() if v.get("prior")]
+print(f"{out}: {len(players)} players, {len(teams)} teams, home-attack x{h_att:.3f}"
+      f" | no PL record, on prior att {weak_att:.2f}/def {weak_def:.2f}: {priors or 'none'}")
