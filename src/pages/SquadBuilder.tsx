@@ -12,7 +12,7 @@ import { SeasonPlanner } from '../components/SeasonPlanner'
 import { Icon } from '../components/Icon'
 import { Pitch, PitchCard, CARD_W } from '../components/Pitch'
 import { PlayerCardSheet } from '../components/PlayerCardSheet'
-import { SquadRatingSheet } from '../components/SquadRatingSheet'
+import { SquadRatingSheet, squadNarrative } from '../components/SquadRatingSheet'
 import { useCore } from '../lib/useData'
 import { tapHaptic, shareImageNative } from '../lib/native'
 import { rasterise } from '../lib/capture'
@@ -181,6 +181,8 @@ export default function SquadBuilder() {
   const clear = () => { setNote(null); persist([]) }
 
   // Squad rating: average of rated players (unrated shown separately).
+  // NOTE: `live` below re-points this at the planner's squad for the week on
+  // screen, so selling a player drops him out of the narrative immediately.
   const rated = chosen.map(ovOf).filter((v): v is number => v != null)
   const squadScore = rated.length ? Math.round(rated.reduce((a, b) => a + b, 0) / rated.length) : null
   const unrated = chosen.length - rated.length
@@ -194,6 +196,15 @@ export default function SquadBuilder() {
   // it's an add list, after it's the transfer market for the week on screen.
   const plannerSquad = complete && planner.week ? planner.squad : picked
   const armedRow = armedOut != null ? byEl.get(armedOut) ?? null : null
+  // Everything that describes "your squad" reads from the week on screen.
+  const liveChosen = useMemo(
+    () => plannerSquad.map((el) => byEl.get(el)).filter(Boolean) as RatingRow[],
+    [plannerSquad, byEl],
+  )
+  const liveRated = liveChosen.map(ovOf).filter((v): v is number => v != null)
+  const liveScore = liveRated.length ? Math.round(liveRated.reduce((a, b) => a + b, 0) / liveRated.length) : null
+  const liveBestXI = useMemo(() => bestElevenScore(liveChosen), [liveChosen])
+  const liveGw = complete ? planner.gw : buildGw
 
   // Auto-pick a strong, valid squad within budget (greedy by rating with a
   // minimum-price reservation for the slots still to fill).
@@ -251,7 +262,9 @@ export default function SquadBuilder() {
       <SectionBanner imgKey="squad" title="Squad Builder" subtitle={`Pick your Gameweek ${buildGw} fifteen within £100m, then step forward week by week — transfers, captain and chips`} />
 
       <>
-      {/* Summary bar */}
+      {/* Summary bar — build phase only; the board carries these once the
+          fifteen exists, and showing both was the same four numbers twice. */}
+      {!complete && (
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Budget left" value={`£${remaining.toFixed(1)}m`} tone={remaining < 0 ? 'bad' : 'ink'} sub={`of £${BUDGET.toFixed(0)}m`} />
         <Stat label="Players" value={`${total}/15`} tone={total === 15 ? 'good' : 'ink'} sub={`£${spent.toFixed(1)}m spent`} />
@@ -264,6 +277,7 @@ export default function SquadBuilder() {
         />
         <Stat label="Best XI" value={bestXI == null ? '—' : String(bestXI)} tone="accent" sub="top starting 11" />
       </div>
+      )}
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <button onClick={autoPick} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent-strong">
@@ -302,11 +316,17 @@ export default function SquadBuilder() {
               planner={planner} byEl={byEl} pool={pool} fixtureEase={fixtureEase}
               metric={metric} avail={avail}
               armedOut={armedOut}
+              squadScore={liveScore}
+              onOpenSquadRating={() => setRatingOpen(true)}
               onArmTransfer={(el) => { setArmedOut(el); setPendingIn(null); setPickPos(String(byEl.get(el)?.position ?? 'MID') as Pos); setQuery('') }}
             />
           ) : (
             <SquadBoard chosen={chosen} fixtureEase={fixtureEase} pickPos={pickPos} onRemove={remove} onPick={(p) => { setPickPos(p); setNote(null) }} onOpen={setSheetFor} metric={metric} gw={buildGw} avail={avail} />
           )}
+
+          {/* The read on the squad, in the open. This is the insight the page
+              exists to give, so it shouldn't be hidden behind a tap. */}
+          {complete && <SquadRead chosen={liveChosen} fixtureEase={fixtureEase} gw={liveGw} avail={avail} onOpen={() => setRatingOpen(true)} />}
         </div>
 
         {/* Player list — always here, whether you're building or transferring */}
@@ -432,13 +452,46 @@ export default function SquadBuilder() {
 
       {ratingOpen && (
         <SquadRatingSheet
-          chosen={chosen} pool={pool} squadScore={squadScore} bestXI={bestXI}
-          fixtureEase={fixtureEase} gw={buildGw} avail={avail} onClose={() => setRatingOpen(false)}
+          chosen={liveChosen} pool={pool} squadScore={liveScore} bestXI={liveBestXI}
+          fixtureEase={fixtureEase} gw={liveGw} avail={avail} onClose={() => setRatingOpen(false)}
         />
       )}
 
       <SquadShare chosen={chosen} fixtureEase={fixtureEase} squadScore={squadScore} bestXI={bestXI} spent={spent} unrated={unrated} total={total} gw={buildGw} open={shareOpen} onClose={() => setShareOpen(false)} />
     </PageShell>
+  )
+}
+
+/** The squad's character, on the page rather than behind a button: the three
+ *  most telling lines, with the rest a click away. */
+function SquadRead({ chosen, fixtureEase, gw, avail, onOpen }: {
+  chosen: RatingRow[]; fixtureEase: FixtureEaseRow[]; gw: number; avail: Availability; onOpen: () => void
+}) {
+  const lines = useMemo(() => squadNarrative(chosen, fixtureEase, gw, avail), [chosen, fixtureEase, gw, avail])
+  if (!lines.length) return null
+  // Warnings first — a risk you haven't seen is worth more than a strength
+  // you already know about.
+  const order = { warn: 0, good: 1, flat: 2 } as Record<string, number>
+  const top = [...lines].sort((a, b) => order[a.tone] - order[b.tone]).slice(0, 3)
+  const dot = { good: 'bg-good', warn: 'bg-warn', flat: 'bg-ink-3' } as Record<string, string>
+  return (
+    <div className="mt-3 rounded-2xl border border-line bg-surface-1/60 p-3">
+      <div className="mb-2 flex items-center gap-2">
+        <span className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">The read on your squad</span>
+        <button onClick={onOpen} className="ml-auto text-xs font-semibold text-accent hover:underline">Full breakdown →</button>
+      </div>
+      <div className="flex flex-col gap-2">
+        {top.map((l, i) => (
+          <button key={i} onClick={onOpen} className="flex gap-2 text-left transition-colors hover:opacity-80">
+            <span className={`mt-1.5 size-1.5 shrink-0 rounded-full ${dot[l.tone]}`} />
+            <span className="min-w-0 text-sm">
+              <span className="font-semibold text-ink">{l.head}</span>
+              <span className="text-ink-2"> — {l.body}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 

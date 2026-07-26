@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PlayerPhoto } from './PlayerPhoto'
 import { ratingTo100, exactTo100 } from './StarRating'
@@ -62,7 +62,7 @@ function CompareRow({ label, a, b }: { label: string; a: number | null; b: numbe
   )
 }
 
-export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap }: {
+export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap, actions }: {
   player: RatingRow
   /** Candidates for the compare tab — normally every rated player. */
   pool: RatingRow[]
@@ -71,6 +71,9 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap }: 
   onClose: () => void
   /** Optional: perform a transfer in the caller's squad. */
   onSwap?: (out: RatingRow, incoming: RatingRow) => void
+  /** Optional: squad controls (captain, bench, transfer) when the card is
+   *  opened from a team the reader owns rather than from a browse list. */
+  actions?: ReactNode
 }) {
   const navigate = useNavigate()
   const [tab, setTab] = useState<'rating' | 'compare'>('rating')
@@ -148,6 +151,9 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap }: 
           </div>
           <button onClick={onClose} aria-label="Close" className="shrink-0 rounded-lg p-1.5 text-ink-3 transition-colors hover:text-ink"><Icon name="x" size={18} /></button>
         </div>
+        {actions && (
+          <div className="border-b border-line bg-surface-2/40 px-4 py-2.5">{actions}</div>
+        )}
 
         {/* tabs */}
         <div className="flex flex-wrap gap-1.5 border-b border-line px-4 py-2.5">
