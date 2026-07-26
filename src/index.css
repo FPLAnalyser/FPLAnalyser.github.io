@@ -188,17 +188,10 @@ body {
    line box a few pixels short, slicing the glyphs. Both are swapped for
    equivalents it can actually draw, then swapped straight back. */
 /* ── Rating tiers ─────────────────────────────────────────────────────────
-   A 2px foil edge is a lovely detail on a full-size card and completely
-   invisible at pitch scale, where a squad is eleven 80px tiles. The tier
-   needs area, not perimeter: a bar across the head of the card, plus the
-   numeral in the tier's own metal. Elite keeps the live foil and the glow so
-   the top of the shelf still feels earned. */
-.tier-cap { height: 4px; border-radius: 7px 7px 0 0; }
-.tier-elite .tier-cap { background: linear-gradient(90deg,#8A6E36,#FFFBF0,#D8BE86); }
-.tier-gold  .tier-cap { background: linear-gradient(90deg,#8A6E36,#ead188); }
-.tier-steel .tier-cap { background: linear-gradient(90deg,#6d747c,#C9CFD6); }
-.tier-graphite .tier-cap { background: linear-gradient(90deg,#3f3a31,#6b665c); }
-.tier-ice   .tier-cap { background: linear-gradient(90deg,#3d8fb4,#e8fbff,#7fd4f5); }
+   The tier is carried by two things and no more: the colour of the foil edge
+   and the colour of the rating. A bar across the head of the card also
+   worked, but it read as chrome bolted on rather than as material — so it's
+   gone. Elite keeps the live foil and the glow. */
 
 .tier-num { -webkit-background-clip: text; background-clip: text; color: transparent; }
 .tier-elite .tier-num { background-image: linear-gradient(180deg,#fffbf0,#f6edd6 52%,#c9a227); }
@@ -215,6 +208,14 @@ body {
     radial-gradient(120% 70% at 50% 0%, rgba(127,212,245,.16), transparent 62%),
     linear-gradient(180deg,#12603a 0%,#0e5232 45%,#0b4429 100%) !important;
 }
+
+/* The monogram is a FALLBACK, not a backdrop: headshots are transparent
+   cut-outs, so anything behind them shows straight through the player. It
+   only appears when there is no photo — either because none exists, or
+   because the rasteriser couldn't fetch it for a share image (capture.ts
+   marks the slot). */
+.photo-mono { display: none; }
+.photo-slot[data-nophoto] .photo-mono { display: grid; }
 
 /* Same rasteriser limit as .metallic-num — flat ink while capturing. */
 [data-capturing] .tier-num {

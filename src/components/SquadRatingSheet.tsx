@@ -37,13 +37,25 @@ export function squadNarrative(chosen: RatingRow[], fixtureEase: FixtureEaseRow[
   const outfield = chosen.filter((r) => r.position !== 'GKP')
 
   // Penalties — the single most repeatable source of points in the game.
+  // FPL publishes an ORDER, and second on the list still takes them when the
+  // first choice is off the pitch or out of the side, so both count — named
+  // with their order rather than lumped together.
   const pens = chosen.filter((r) => bool(r, 'is_pen_taker'))
+  const penName = (r: RatingRow) => {
+    const o = num(r, 'penalties_order')
+    return `${r.web_name}${o === 1 ? ' (1st)' : o === 2 ? ' (2nd)' : ''}`
+  }
+  const firsts = pens.filter((r) => num(r, 'penalties_order') === 1).length
   if (pens.length >= 4) {
-    out.push({ tone: 'good', head: `${pens.length} penalty takers`, body: `${pens.map((r) => r.web_name).join(', ')}. Penalties are the most repeatable points in the game — this many is a deliberate edge, not an accident.` })
+    out.push({ tone: 'good', head: `${pens.length} penalty takers`, body: `${pens.map(penName).join(', ')}. Penalties are the most repeatable points in the game — this many is a deliberate edge, not an accident.` })
   } else if (pens.length === 0) {
-    out.push({ tone: 'warn', head: 'No penalty takers', body: 'Nobody in the fifteen is on spot-kicks. Roughly one goal in nine comes from the spot; you are giving that up.' })
+    out.push({ tone: 'warn', head: 'No penalty takers', body: 'Nobody in the fifteen is on the spot-kick list. Roughly one goal in nine comes from the spot; you are giving that up.' })
   } else {
-    out.push({ tone: 'flat', head: `${pens.length} penalty taker${pens.length > 1 ? 's' : ''}`, body: pens.map((r) => r.web_name).join(', ') + '.' })
+    out.push({
+      tone: firsts > 0 ? 'flat' : 'warn',
+      head: `${pens.length} penalty taker${pens.length > 1 ? 's' : ''}`,
+      body: pens.map(penName).join(', ') + (firsts === 0 ? ' — all second on their club\u2019s list, so they only take them when the first choice is off.' : '.'),
+    })
   }
 
   // Set-piece delivery — corners and free kicks only, ranked across all
@@ -125,12 +137,25 @@ export function SquadRatingSheet({ chosen, pool, squadScore, bestXI, fixtureEase
 }) {
   const lines = useMemo(() => squadNarrative(chosen, fixtureEase, gw), [chosen, fixtureEase, gw])
 
-  // Per position: your average against what everyone else gets from that
-  // position, so a 74 means something.
+  // Per position: your average against the BEST you could have had — the top
+  // N rated players at that position, where N is how many you own. Measuring
+  // against the average of all 98 rated defenders was useless: half of them
+  // are bench fodder, so any sane squad scored +25 and the number said
+  // nothing. Against the best available it reads as a deficit, which is both
+  // honest and actionable.
   const byPos = useMemo(() => ORDER.map((p) => {
     const mine = chosen.filter((r) => r.position === p).map(ov).filter((v): v is number => v != null)
-    const all = pool.filter((r) => r.position === p && bool(r, 'season_ok')).map(ov).filter((v): v is number => v != null)
-    return { pos: p, n: mine.length, mine: mine.length ? Math.round(mean(mine)) : null, league: all.length ? Math.round(mean(all)) : null }
+    const best = pool
+      .filter((r) => r.position === p && bool(r, 'season_ok'))
+      .map(ov).filter((v): v is number => v != null)
+      .sort((a, b) => b - a)
+      .slice(0, Math.max(mine.length, 1))
+    return {
+      pos: p,
+      n: mine.length,
+      mine: mine.length ? Math.round(mean(mine)) : null,
+      best: best.length ? Math.round(mean(best)) : null,
+    }
   }), [chosen, pool])
 
   const ranked = useMemo(
@@ -160,26 +185,30 @@ export function SquadRatingSheet({ chosen, pool, squadScore, bestXI, fixtureEase
               <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Where the number comes from</div>
               <div className="flex flex-col gap-2.5">
                 {byPos.map((b) => (
-                  <div key={b.pos} className="grid grid-cols-[104px_minmax(0,1fr)_74px] items-center gap-3">
+                  <div key={b.pos} className="grid grid-cols-[104px_minmax(0,1fr)_98px] items-center gap-3">
                     <span className="text-[13px] font-medium text-ink-2">{POS_LABEL[b.pos]}<span className="text-ink-3"> ({b.n})</span></span>
                     <span className="relative h-2.5 rounded-full bg-surface-3">
                       <span className="absolute inset-y-0 left-0 rounded-full bg-accent" style={{ width: `${b.mine ?? 0}%` }} />
-                      {b.league != null && (
-                        <span className="absolute inset-y-[-3px] w-px bg-ink-2" style={{ left: `${b.league}%` }} title={`League average ${b.league}`} />
+                      {b.best != null && (
+                        <span className="absolute inset-y-[-3px] w-px bg-ink-2" style={{ left: `${b.best}%` }} title={`Best ${b.n} available average ${b.best}`} />
                       )}
                     </span>
                     <span className="text-right font-num text-[13px] font-bold tabular-nums text-ink">
                       {b.mine ?? '—'}
-                      {b.mine != null && b.league != null && (
-                        <span className={`ml-1 text-[11px] font-semibold ${b.mine >= b.league ? 'text-good' : 'text-bad'}`}>
-                          {b.mine >= b.league ? '+' : ''}{b.mine - b.league}
+                      {b.mine != null && b.best != null && (
+                        <span className={`ml-1.5 whitespace-nowrap text-[11px] font-semibold ${b.mine >= b.best ? 'text-good' : 'text-ink-3'}`}>
+                          {b.mine >= b.best ? 'at the ceiling' : `${b.mine - b.best} vs best`}
                         </span>
                       )}
                     </span>
                   </div>
                 ))}
               </div>
-              <div className="mt-2 text-xs text-ink-3">The bar is your average for that position; the tick is what everyone else averages there. The number on the right is the gap.</div>
+              <div className="mt-2 text-xs text-ink-3">
+                The bar is your average for that position. The tick is the average of the best {byPos.map((b) => b.n).join('/')} rated
+                players available in that position — the ceiling for a squad of your shape, ignoring budget. The figure on the right is
+                how far under it you are, so it is a gap to close rather than a pat on the back.
+              </div>
             </div>
 
             {/* the character */}

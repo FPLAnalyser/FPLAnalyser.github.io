@@ -87,7 +87,7 @@ export function initialsOf(name: string): string {
  *  320px phone simply cannot be 84px each, and a fixed width there wraps the
  *  row and pushes the forwards out of the frame. `flex-1 basis-0` divides what
  *  there is; `max-w` stops them ballooning on a desktop. */
-export const CARD_W = 'min-w-0 flex-1 basis-0 max-w-[84px]'
+export const CARD_W = 'min-w-0 flex-1 basis-0 max-w-[108px]'
 
 /** Rating tiers. The band a player falls in is what the card's material says,
  *  so a shelf of them sorts itself before you read a single name. `ice` is not
@@ -130,21 +130,20 @@ export function PitchCard({ rating, name, team, price, code, element, fixtures, 
       className={`tier-${t} w-full rounded-lg border text-center transition-transform hover:-translate-y-0.5`}
       style={{ background: skin.bg, borderColor: skin.border, boxShadow: skin.glow }}
     >
-      {/* the tier, as area rather than perimeter */}
-      <div className="tier-cap" />
       <div className="px-1 pt-1 pb-2 sm:px-1.5 sm:pt-1.5 sm:pb-2.5">
         <div className="tier-num font-num text-[13px] leading-none font-extrabold tabular-nums sm:text-[15px]">{rating ?? '—'}</div>
-        {/* The monogram sits *under* the headshot rather than instead of it, so
-            a photo that can't be rasterised into a share PNG leaves initials
-            behind rather than an empty hole. */}
-        <span className="relative mx-auto my-1 block w-7 sm:w-8" style={{ height: 32 }}>
-          <span className="absolute inset-0 grid place-items-center rounded bg-white/6 text-[11px] font-extrabold text-white/40">
+        {/* The headshot sits straight on the card — no plate behind it. These
+            are transparent cut-outs, so a filled box shows through the player
+            and reads as a mistake. The monogram is the fallback for when there
+            is no photo at all. */}
+        <span className="photo-slot relative mx-auto my-1 block w-8 sm:w-9" style={{ height: 36 }}>
+          <span className="photo-mono absolute inset-0 place-items-center text-[11px] font-extrabold text-white/35">
             {initialsOf(name)}
           </span>
           <PlayerPhoto
             code={code} element={element}
-            className="relative h-full w-full rounded object-cover object-top"
-            placeholder={<span />}
+            className="relative h-full w-full object-contain object-top"
+            placeholder={<span className="grid h-full w-full place-items-center text-[11px] font-extrabold text-white/35">{initialsOf(name)}</span>}
           />
         </span>
         <div className="capture-line truncate text-[9.5px] leading-tight font-bold text-white sm:text-[10.5px]">{name}</div>
