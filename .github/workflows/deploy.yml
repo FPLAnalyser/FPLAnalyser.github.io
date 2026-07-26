@@ -3,9 +3,17 @@ name: Deploy to GitHub Pages
 # Builds the Vite app and deploys it to GitHub Pages. Runs on every push to main
 # — including the Python pipeline's data commits, so a fresh site_data drop
 # rebuilds and publishes automatically. Also runnable on demand.
+#
+# The workflow_run trigger exists because the availability refresh commits with
+# the workflow GITHUB_TOKEN, and GitHub's recursion guard means those pushes
+# never fire `on: push` — without it the daily data would land on main but the
+# live site would keep serving the old file.
 on:
   push:
     branches: [main]
+  workflow_run:
+    workflows: ["Refresh availability data"]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
