@@ -45,20 +45,30 @@ export function squadAt(state: PlannerState, gw: number): number[] {
   return squad
 }
 
-const isFreeChip = (c: Chip | null) => c === 'wildcard' || c === 'free-hit'
+export const isFreeChip = (c: Chip | null) => c === 'wildcard' || c === 'free-hit'
 
-/** Free transfers available at the START of `gw` (before this week's moves).
- *  1 to begin with, +1 each gameweek, banked up to MAX_FT; wildcard/free-hit
- *  weeks don't consume transfers. The initial squad (startGw) is unlimited. */
-export function freeTransfers(state: PlannerState, gw: number): number {
+/** Free transfers banked entering `gw`, before this week's moves and before
+ *  any chip. One to begin with, +1 a week, capped at MAX_FT. A wildcard or
+ *  free hit freezes the bank: the week after the chip starts with exactly
+ *  what the chip week started with. */
+export function bankedTransfers(state: PlannerState, gw: number): number {
   if (gw <= state.startGw) return Infinity
   let ft = 1 // available at startGw + 1
   for (let g = state.startGw + 2; g <= gw; g++) {
     const prev = state.weeks[g - 1]
-    const used = prev && !isFreeChip(prev.chip) ? prev.transfers.length : 0
+    if (prev && isFreeChip(prev.chip)) continue // chip week: bank untouched
+    const used = prev ? prev.transfers.length : 0
     ft = Math.min(MAX_FT, Math.max(0, ft - used) + 1)
   }
   return ft
+}
+
+/** Transfers you can make in `gw` for free — unlimited on a wildcard or free
+ *  hit week, and unlimited while picking the opening squad. */
+export function freeTransfers(state: PlannerState, gw: number): number {
+  if (gw <= state.startGw) return Infinity
+  if (isFreeChip(state.weeks[gw]?.chip ?? null)) return Infinity
+  return bankedTransfers(state, gw)
 }
 
 /** Points hit for `gw` given the transfers made that week. */
@@ -145,4 +155,40 @@ export function toggleStarter(
     }
   }
   return null
+}
+
+
+/** Who this player can legally swap with: bench options for a starter, XI
+ *  options for a substitute. Empty when no swap keeps a legal formation —
+ *  which is the honest answer for, say, the only goalkeeper. */
+export function subPartners(
+  el: number,
+  xi: number[],
+  bench: number[],
+  posOf: (e: number) => Pos,
+): number[] {
+  if (xi.includes(el)) {
+    return bench.filter((b) => validXI(xi.map((x) => (x === el ? b : x)), posOf))
+  }
+  if (bench.includes(el)) {
+    return xi.filter((s) => validXI(xi.map((x) => (x === s ? el : x)), posOf))
+  }
+  return []
+}
+
+/** Swap a named starter with a named substitute. Returns null if the pair
+ *  isn't one starter and one sub, or the result would be an illegal shape. */
+export function swapPlayers(
+  a: number,
+  b: number,
+  xi: number[],
+  bench: number[],
+  posOf: (e: number) => Pos,
+): { xi: number[]; bench: number[] } | null {
+  const starter = xi.includes(a) ? a : xi.includes(b) ? b : null
+  const sub = bench.includes(a) ? a : bench.includes(b) ? b : null
+  if (starter == null || sub == null) return null
+  const nextXI = xi.map((x) => (x === starter ? sub : x))
+  if (!validXI(nextXI, posOf)) return null
+  return { xi: nextXI, bench: bench.map((x) => (x === sub ? starter : x)) }
 }

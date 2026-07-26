@@ -2,7 +2,7 @@ export type IconName =
   | 'flame' | 'snow' | 'star' | 'target' | 'shield' | 'bolt' | 'hand' | 'ball'
   | 'coin' | 'calendar' | 'trend-up' | 'trend-down' | 'alert' | 'eye' | 'info'
   | 'check' | 'search' | 'users' | 'pitch' | 'trophy' | 'crown' | 'clock' | 'x'
-  | 'sun' | 'moon'
+  | 'sun' | 'moon' | 'chevron-left' | 'chevron-right' | 'arrow-right'
 
 interface IconProps {
   name: IconName

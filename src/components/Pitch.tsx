@@ -56,8 +56,10 @@ export function Pitch({ children, footer, className, maxWidth }: { children: Rea
           <circle cx="150" cy="360" r="2.4" />
         </g>
       </svg>
-      {/* ratio floor — zero content, height = width × 92/68 */}
-      <div aria-hidden="true" className="col-start-1 row-start-1 w-full" style={{ paddingTop: 'calc(92 / 68 * 100%)' }} />
+      {/* Ratio floor — a MINIMUM height, not a fixed one. A phone needs the
+          full portrait shape to fit four rows of cards; a wide pitch does
+          not, and holding 92:68 there just paints empty grass. */}
+      <div aria-hidden="true" className="col-start-1 row-start-1 w-full pt-[135%] sm:pt-[104%] lg:pt-[96%]" />
       <div className="relative col-start-1 row-start-1 flex flex-col">
         <div className="flex flex-1 flex-col justify-around gap-2">{children}</div>
         {footer && (
@@ -87,7 +89,7 @@ export function initialsOf(name: string): string {
  *  320px phone simply cannot be 84px each, and a fixed width there wraps the
  *  row and pushes the forwards out of the frame. `flex-1 basis-0` divides what
  *  there is; `max-w` stops them ballooning on a desktop. */
-export const CARD_W = 'min-w-0 flex-1 basis-0 max-w-[108px]'
+export const CARD_W = 'min-w-0 flex-1 basis-0 max-w-[108px] sm:max-w-[118px]'
 
 /** Rating tiers. The band a player falls in is what the card's material says,
  *  so a shelf of them sorts itself before you read a single name. `ice` is not

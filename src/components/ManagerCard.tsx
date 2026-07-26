@@ -126,15 +126,15 @@ export function ManagerCard({ picksData, historyData, entryData, ratings, teamNa
           disabled={idx <= 0}
           onClick={() => setIdx((i) => Math.max(0, i - 1))}
           aria-label="Previous gameweek"
-          className="grid size-9 place-items-center rounded-lg border border-line-mid text-ink-2 transition-colors hover:text-ink disabled:opacity-30"
-        ><Icon name="trend-up" size={15} className="-rotate-90" /></button>
+          className="grid size-9 place-items-center rounded-full border border-accent/45 text-accent transition-colors hover:border-accent hover:bg-accent-soft disabled:border-line disabled:text-ink-3 disabled:opacity-35 disabled:hover:bg-transparent"
+        ><Icon name="chevron-left" size={16} /></button>
         <div className="flex-1 text-center text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Gameweek {e.event}</div>
         <button
           disabled={idx >= entries.length - 1}
           onClick={() => setIdx((i) => Math.min(entries.length - 1, i + 1))}
           aria-label="Next gameweek"
-          className="grid size-9 place-items-center rounded-lg border border-line-mid text-ink-2 transition-colors hover:text-ink disabled:opacity-30"
-        ><Icon name="trend-up" size={15} className="rotate-90" /></button>
+          className="grid size-9 place-items-center rounded-full border border-accent/45 text-accent transition-colors hover:border-accent hover:bg-accent-soft disabled:border-line disabled:text-ink-3 disabled:opacity-35 disabled:hover:bg-transparent"
+        ><Icon name="chevron-right" size={16} /></button>
       </div>
 
       <Exportable title={`${name} — Gameweek ${e.event}`}>

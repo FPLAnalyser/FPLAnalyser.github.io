@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
 import { SectionBanner } from '../components/SectionBanner'
@@ -18,6 +19,7 @@ import { rasterise } from '../lib/capture'
 import { num } from '../lib/rows'
 import { useAvailability, availBadge, availFor, type Availability } from '../lib/availability'
 import { xpForGw, useXpModel, useMarketOdds } from '../lib/xp'
+import { usePlanner } from '../lib/usePlanner'
 import { teamLabel, playerHref } from '../lib/util'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
@@ -114,6 +116,11 @@ export default function SquadBuilder() {
   const [showFilters, setShowFilters] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [ratingOpen, setRatingOpen] = useState(false)
+  // Transfers run through the list beside the board: either arm the player
+  // leaving (tap him on the pitch) or pick the player coming in and choose
+  // who he replaces.
+  const [armedOut, setArmedOut] = useState<number | null>(null)
+  const [pendingIn, setPendingIn] = useState<RatingRow | null>(null)
 
   const avail = useAvailability()
   const fixtureEase = (data?.fixtureEase ?? []) as FixtureEaseRow[]
@@ -181,6 +188,12 @@ export default function SquadBuilder() {
 
   const complete = total === 15 && SLOTS.every((s) => countByPos[s.pos] === s.count)
   const valid = complete && spent <= BUDGET + 1e-9
+
+  const planner = usePlanner({ base: picked, byEl, startGw: buildGw, fixtureEase })
+  // The board's week drives what the list is for: before the fifteen exists
+  // it's an add list, after it's the transfer market for the week on screen.
+  const plannerSquad = complete && planner.week ? planner.squad : picked
+  const armedRow = armedOut != null ? byEl.get(armedOut) ?? null : null
 
   // Auto-pick a strong, valid squad within budget (greedy by rating with a
   // minimum-price reservation for the slots still to fill).
@@ -274,38 +287,49 @@ export default function SquadBuilder() {
         {complete && !valid && <span className="text-sm font-medium text-bad">Over budget by £{Math.abs(remaining).toFixed(1)}m</span>}
       </div>
 
-      {complete ? (
-        /* The fifteen exists, so the working view IS the planner: gameweek
-           scroller, chips, captain/bench/transfer on tap — no second tab, no
-           gate. The build grid below only exists while the squad is short. */
-        <>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+        {/* The board: the planner once fifteen players exist, the build grid
+            until then. Either way the list beside it stays put. */}
+        <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Your squad — week by week</div>
+            <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">
+              {complete ? 'Your squad — week by week' : `Your GW${buildGw} squad`}
+            </div>
             <div className="ml-auto"><MetricChips metric={metric} onChange={setMetric} /></div>
           </div>
-          <SeasonPlanner base={picked} byEl={byEl} pool={pool} fixtureEase={fixtureEase} startGw={buildGw} metric={metric} avail={avail} />
-        </>
-      ) : (
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
-        {/* Pitch view of the squad */}
-        <div>
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Your GW{buildGw} squad</div>
-            <div className="ml-auto"><MetricChips metric={metric} onChange={setMetric} /></div>
-          </div>
-          <SquadBoard chosen={chosen} fixtureEase={fixtureEase} pickPos={pickPos} onRemove={remove} onPick={(p) => { setPickPos(p); setNote(null) }} onOpen={setSheetFor} metric={metric} gw={buildGw} avail={avail} />
+          {complete ? (
+            <SeasonPlanner
+              planner={planner} byEl={byEl} pool={pool} fixtureEase={fixtureEase}
+              metric={metric} avail={avail}
+              armedOut={armedOut}
+              onArmTransfer={(el) => { setArmedOut(el); setPendingIn(null); setPickPos(String(byEl.get(el)?.position ?? 'MID') as Pos); setQuery('') }}
+            />
+          ) : (
+            <SquadBoard chosen={chosen} fixtureEase={fixtureEase} pickPos={pickPos} onRemove={remove} onPick={(p) => { setPickPos(p); setNote(null) }} onOpen={setSheetFor} metric={metric} gw={buildGw} avail={avail} />
+          )}
         </div>
 
-        {/* Player picker */}
-        <div className="mt-8 lg:mt-0 lg:sticky lg:top-20">
-          <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Add players</div>
+        {/* Player list — always here, whether you're building or transferring */}
+        <div className="mt-8 min-w-0 lg:mt-0 lg:sticky lg:top-20">
+          <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">
+            {complete ? `Transfer market — GW${planner.gw}` : 'Add players'}
+          </div>
+
+          {complete && armedRow && (
+            <div className="mb-2 flex items-center gap-2 rounded-lg border border-bad/40 bg-bad/10 px-3 py-2 text-sm">
+              <Icon name="users" size={14} className="text-bad" />
+              <span className="min-w-0 flex-1 truncate text-ink">Replacing <span className="font-semibold">{String(armedRow.web_name)}</span></span>
+              <button onClick={() => setArmedOut(null)} className="text-xs font-semibold text-ink-3 hover:text-ink">cancel</button>
+            </div>
+          )}
+
           <div className="mb-3"><Tabs tabs={PICK_TABS} active={pickPos} onChange={(id) => setPickPos(id as Pos)} layoutId="squad-pos" /></div>
           <div className="mb-3 flex items-center gap-2 rounded-lg border border-line-mid bg-surface-1 px-3">
             <Icon name="search" size={16} />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={`Search ${POS_LABEL[pickPos].toLowerCase()}…`}
+              placeholder="Search players…"
               className="min-h-11 w-full bg-transparent text-base text-ink outline-none placeholder:text-ink-3 md:text-sm"
             />
             {query && <button aria-label="Clear" onClick={() => setQuery('')} className="text-ink-3 hover:text-ink"><Icon name="x" size={15} /></button>}
@@ -314,7 +338,7 @@ export default function SquadBuilder() {
             <span className="text-[11px] font-semibold tracking-[0.1em] text-ink-3 uppercase">Sort</span>
             <Tabs tabs={SORT_TABS} active={sort} onChange={(id) => setSort(id as SortKey)} layoutId="squad-sort" />
             <button
-              onClick={() => setShowFilters((s) => !s)}
+              onClick={() => setShowFilters((f) => !f)}
               className={`ml-auto inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-colors ${
                 activeFilters > 0 ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
               }`}
@@ -337,17 +361,21 @@ export default function SquadBuilder() {
           )}
 
           {note && <div className="mb-2 rounded-lg bg-bad/10 px-3 py-2 text-sm font-medium text-bad">{note}</div>}
-          <div className="overflow-hidden rounded-xl border border-line lg:max-h-[calc(100vh-230px)] lg:overflow-y-auto">
+          <div className="overflow-hidden rounded-xl border border-line lg:max-h-[calc(100vh-260px)] lg:overflow-y-auto">
             {list.map((r) => {
-              const why = blockReason(r)
+              const inSquad = plannerSquad.includes(r.element)
+              const why = complete
+                ? (armedOut != null ? planner.canReplace(armedOut, r.element) : inSquad ? 'Already in your squad' : null)
+                : blockReason(r)
               const o = ovOf(r)
               return (
-                <div key={r.element} className="flex items-center gap-2.5 border-b border-line px-3 py-2 last:border-0">
+                <div key={r.element} className={`flex items-center gap-2.5 border-b border-line px-3 py-2 last:border-0 ${inSquad ? 'bg-surface-2/40' : ''}`}>
                   <TeamBadge team={String(r.team)} size={16} />
                   <div className="min-w-0 flex-1">
                     <button className="block w-full text-left" onClick={() => navigate(playerHref(String(r.web_name), num(r, 'code')))}>
                       <div className="flex items-center gap-1.5">
                         <span className="truncate text-sm font-medium text-ink hover:text-accent">{String(r.web_name)}</span>
+                        {inSquad && <span className="shrink-0 rounded bg-surface-3 px-1 py-0.5 text-[8.5px] leading-none font-bold text-ink-3">IN SQUAD</span>}
                         {(() => {
                           const f = availBadge(availFor(avail, num(r, 'element'), num(r, 'code')))
                           return f ? <span title={f.title} className={`shrink-0 rounded px-1 py-0.5 text-[8.5px] leading-none font-extrabold ${f.tone === 'bad' ? 'bg-bad text-white' : 'bg-warn text-black'}`}>{f.label}</span> : null
@@ -359,14 +387,18 @@ export default function SquadBuilder() {
                   </div>
                   <span className="w-9 shrink-0 text-right font-num text-sm font-semibold tabular-nums text-ink-2">{o ?? '—'}</span>
                   <button
-                    onClick={() => add(r)}
+                    onClick={() => {
+                      if (!complete) { add(r); return }
+                      if (armedOut != null) { planner.doTransfer(armedOut, r.element); setArmedOut(null); tapHaptic('medium'); return }
+                      setPendingIn(r)
+                    }}
                     disabled={!!why}
-                    title={why ?? 'Add to squad'}
+                    title={why ?? (complete ? 'Transfer in' : 'Add to squad')}
                     className={`grid size-8 shrink-0 place-items-center rounded-lg border transition-colors ${
                       why ? 'cursor-not-allowed border-line text-ink-3 opacity-50' : 'border-accent/50 text-accent hover:bg-accent-soft'
                     }`}
                   >
-                    <Icon name="check" size={15} />
+                    <Icon name={complete ? 'arrow-right' : 'check'} size={15} />
                   </button>
                 </div>
               )
@@ -375,7 +407,7 @@ export default function SquadBuilder() {
           </div>
         </div>
       </div>
-      )}
+
       </>
 
       {sheetFor && (
@@ -388,6 +420,16 @@ export default function SquadBuilder() {
         />
       )}
 
+      {pendingIn && complete && (
+        <ReplaceChooser
+          incoming={pendingIn}
+          squad={plannerSquad.map((el) => byEl.get(el)).filter(Boolean) as RatingRow[]}
+          canReplace={(outEl) => planner.canReplace(outEl, pendingIn.element)}
+          onPick={(outEl) => { planner.doTransfer(outEl, pendingIn.element); setPendingIn(null); setArmedOut(null); tapHaptic('medium') }}
+          onClose={() => setPendingIn(null)}
+        />
+      )}
+
       {ratingOpen && (
         <SquadRatingSheet
           chosen={chosen} pool={pool} squadScore={squadScore} bestXI={bestXI}
@@ -397,6 +439,53 @@ export default function SquadBuilder() {
 
       <SquadShare chosen={chosen} fixtureEase={fixtureEase} squadScore={squadScore} bestXI={bestXI} spent={spent} unrated={unrated} total={total} gw={buildGw} open={shareOpen} onClose={() => setShareOpen(false)} />
     </PageShell>
+  )
+}
+
+/** "Who makes way?" — the other half of a transfer when you start from the
+ *  player coming in. Only same-position squad members can answer, so those
+ *  are the only ones offered, each with the reason it can't be them if so. */
+function ReplaceChooser({ incoming, squad, canReplace, onPick, onClose }: {
+  incoming: RatingRow
+  squad: RatingRow[]
+  canReplace: (outEl: number) => string | null
+  onPick: (outEl: number) => void
+  onClose: () => void
+}) {
+  const options = squad.filter((r) => r.position === incoming.position)
+  return createPortal(
+    <div className="fixed inset-0 z-[220] flex items-end justify-center bg-black/60 p-3 backdrop-blur-sm sm:items-center" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="w-full max-w-sm rounded-2xl border border-line bg-surface-1 p-2" onClick={(e) => e.stopPropagation()}>
+        <div className="px-3 py-2">
+          <div className="text-sm font-bold text-ink">Bring in {String(incoming.web_name)}</div>
+          <div className="text-xs text-ink-3">Who makes way? Only your {String(incoming.position)}s can.</div>
+        </div>
+        <div className="max-h-[55vh] overflow-y-auto border-t border-line">
+          {options.map((r) => {
+            const why = canReplace(r.element)
+            return (
+              <button
+                key={r.element}
+                disabled={!!why}
+                onClick={() => onPick(r.element)}
+                title={why ?? undefined}
+                className="flex w-full items-center gap-2.5 border-b border-line px-3 py-2.5 text-left transition-colors last:border-0 hover:bg-surface-2/60 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent"
+              >
+                <TeamBadge team={String(r.team)} size={16} />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium text-ink">{String(r.web_name)}</div>
+                  <div className="truncate text-[11px] text-ink-3">{teamLabel(String(r.team))} · £{priceOf(r).toFixed(1)}m{why ? ` · ${why}` : ''}</div>
+                </div>
+                <span className="font-num w-9 shrink-0 text-right text-sm font-semibold tabular-nums text-ink-2">{ovOf(r) ?? '—'}</span>
+              </button>
+            )
+          })}
+          {options.length === 0 && <div className="px-3 py-6 text-center text-sm text-ink-3">No {String(incoming.position)}s in your squad.</div>}
+        </div>
+        <button className="mt-1 w-full rounded-xl px-4 py-3 text-center text-sm font-semibold text-ink-3" onClick={onClose}>Cancel</button>
+      </div>
+    </div>,
+    document.body,
   )
 }
 

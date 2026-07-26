@@ -200,6 +200,55 @@ export function xpForGw(
   return sum
 }
 
+/* ── rating a gameweek's projected haul ─────────────────────────────────────
+   A raw xP total means nothing on its own — 50 is good or bad depending on
+   what was available that week. So it's scored between two honest posts: an
+   XI of median players (what you'd get without trying) and the best legal XI
+   in the game (what was actually on the table). Your rating is how far up
+   that gap you sit. */
+
+const FORMATIONS: [number, number, number][] = []
+for (let d = 3; d <= 5; d++) for (let m = 2; m <= 5; m++) { const f = 10 - d - m; if (f >= 1 && f <= 3) FORMATIONS.push([d, m, f]) }
+
+export interface GwBenchmark { floor: number; ceiling: number }
+
+/** The median and best XI xP for one gameweek, over the whole player pool. */
+export function gwBenchmark(
+  pool: RatingRow[],
+  gw: number,
+  fixtureEase: FixtureEaseRow[],
+  avail?: Availability,
+  model?: XpModel | null,
+  market?: MarketOdds | null,
+): GwBenchmark | null {
+  const byPos: Record<string, number[]> = { GKP: [], DEF: [], MID: [], FWD: [] }
+  for (const r of pool) {
+    const v = xpForGw(r, gw, fixtureEase, avail, model, market)
+    if (v != null && byPos[String(r.position)]) byPos[String(r.position)].push(v)
+  }
+  for (const k of Object.keys(byPos)) byPos[k].sort((a, b) => b - a)
+  if (!byPos.GKP.length || byPos.DEF.length < 5 || byPos.MID.length < 5 || byPos.FWD.length < 3) return null
+
+  const topSum = (p: string, n: number) => byPos[p].slice(0, n).reduce((s, v) => s + v, 0)
+  let ceiling = 0
+  for (const [d, m, f] of FORMATIONS) {
+    const total = byPos.GKP[0] + topSum('DEF', d) + topSum('MID', m) + topSum('FWD', f)
+    if (total > ceiling) ceiling = total
+  }
+  // Captaincy: the best starter counts twice in both benchmarks.
+  ceiling += Math.max(byPos.DEF[0], byPos.MID[0], byPos.FWD[0])
+
+  const med = (p: string) => byPos[p][Math.floor(byPos[p].length / 2)] ?? 0
+  const floor = med('GKP') + 4 * med('DEF') + 4 * med('MID') + 2 * med('FWD') + Math.max(med('MID'), med('FWD'))
+  return { floor, ceiling }
+}
+
+/** Where a projected total sits between those posts, 0–100. */
+export function gwRating(xp: number, b: GwBenchmark | null): number | null {
+  if (!b || b.ceiling <= b.floor) return null
+  return Math.max(0, Math.min(100, Math.round(((xp - b.floor) / (b.ceiling - b.floor)) * 100)))
+}
+
 /** Same thing summed over the next `n` gameweeks from `fromGw`. */
 export function xpOverGws(
   r: RatingRow,
