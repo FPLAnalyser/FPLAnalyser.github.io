@@ -62,7 +62,7 @@ export function RatingBadge({ value, className }: { value: number | string | nul
   return (
     <span className={`inline-flex items-baseline gap-1 rounded-lg px-2.5 py-1 font-num font-bold tabular-nums ${TIER_CLASS[tier]} ${className ?? ''}`}>
       <span className="text-2xl">{r}</span>
-      <span className="text-[10px] font-semibold opacity-60">/100</span>
+      <span className="text-[10px] font-semibold opacity-75">/100</span>
     </span>
   )
 }

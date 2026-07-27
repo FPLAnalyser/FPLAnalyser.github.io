@@ -45,7 +45,7 @@ function BarRow({ label, width, value, tone }: { label: string; width: number; v
 function DCell({ label, word, tone, sub }: { label: string; word: ReactNode; tone?: string; sub?: string }) {
   return (
     <div className="bg-bg-1 px-4 py-3">
-      <div className="mb-1 text-[9px] font-extrabold tracking-[0.16em] text-ink-3 uppercase">{label}</div>
+      <div className="mb-1 text-[10px] font-extrabold tracking-[0.16em] text-ink-3 uppercase">{label}</div>
       <div className={`text-[16px] font-extrabold ${tone ?? 'text-ink'}`}>{word}</div>
       {sub && <div className="mt-0.5 text-[12.5px] text-ink-2">{sub}</div>}
     </div>
@@ -219,7 +219,7 @@ export function TeamStory({ team, data }: { team: string; data: CoreData }) {
         />
         {hasFix && (
           <div className="bg-bg-1 px-4 py-3">
-            <div className="mb-1 text-[9px] font-extrabold tracking-[0.16em] text-ink-3 uppercase">Next 6{ease6 != null ? ` · ease ${ease6}` : ''}</div>
+            <div className="mb-1 text-[10px] font-extrabold tracking-[0.16em] text-ink-3 uppercase">Next 6{ease6 != null ? ` · ease ${ease6}` : ''}</div>
             <div className="mt-1.5"><FixtureChips fixtureEase={data.fixtureEase} team={team} n={6} /></div>
           </div>
         )}

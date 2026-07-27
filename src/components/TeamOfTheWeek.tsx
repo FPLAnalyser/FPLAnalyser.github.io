@@ -126,18 +126,18 @@ function TotwCard({ pick, delay, onClick, projected }: { pick: Pick; delay: numb
           {pts != null && (
             <span className="rounded px-1 py-0.5 font-num text-[10px] leading-none font-extrabold tabular-nums" style={{ background: '#7fd4f5', color: '#06212e' }}>{pts}</span>
           )}
-          {projected && score != null && <span className="rounded px-1 py-0.5 font-num text-[9px] font-extrabold tabular-nums" style={{ border: '1px solid rgba(127,212,245,.5)', color: '#a9e4f8' }}>{score.toFixed(1)}</span>}
+          {projected && score != null && <span className="rounded px-1 py-0.5 font-num text-[10px] font-extrabold tabular-nums" style={{ border: '1px solid rgba(127,212,245,.5)', color: '#a9e4f8' }}>{score.toFixed(1)}</span>}
         </div>
         <span className="photo-slot relative mx-auto my-1 block w-8 sm:w-9" style={{ height: 36 }}>
           <span className="photo-mono absolute inset-0 place-items-center text-[11px] font-extrabold text-white/35">{initialsOf(String(r.web_name))}</span>
           <PlayerPhoto code={num(r, 'code')} element={num(r, 'element')} className="relative h-full w-full object-contain object-top" placeholder={<span className="grid h-full w-full place-items-center text-[11px] font-extrabold text-white/35">{initialsOf(String(r.web_name))}</span>} />
         </span>
-        <div className="capture-line truncate text-[9.5px] leading-tight font-bold text-white sm:text-[10.5px]">{String(r.web_name)}</div>
-        <div className="mt-0.5 hidden items-center justify-center gap-1 text-[8px] text-white/55 sm:flex sm:text-[9px]">
+        <div className="capture-line truncate text-[10px] leading-tight font-bold text-white sm:text-[10.5px]">{String(r.web_name)}</div>
+        <div className="mt-0.5 hidden items-center justify-center gap-1 text-[10px] text-white/55 sm:flex sm:text-[10px]">
           <TeamBadge team={String(r.team)} size={9} />{String(r.team)} · £{r.price}m
         </div>
         {gw && (
-          <div className="mt-1 border-t border-white/10 pt-1 text-[9px] leading-tight text-white/75">
+          <div className="mt-1 border-t border-white/10 pt-1 text-[10px] leading-tight text-white/75">
             {(goals ?? 0) > 0 && <span className="mr-1">{goals}G</span>}
             {(assists ?? 0) > 0 && <span className="mr-1">{assists}A</span>}
             {(cs ?? 0) > 0 && <span className="mr-1">CS</span>}
@@ -148,7 +148,7 @@ function TotwCard({ pick, delay, onClick, projected }: { pick: Pick; delay: numb
             </span>
           </div>
         )}
-        {projected && <div className="mt-1 border-t border-white/10 pt-1 text-[9px] text-white/70">{score.toFixed(1)} proj pts</div>}
+        {projected && <div className="mt-1 border-t border-white/10 pt-1 text-[10px] text-white/70">{score.toFixed(1)} proj pts</div>}
       </div>
     </button>
   )

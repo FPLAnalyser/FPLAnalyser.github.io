@@ -161,7 +161,7 @@ export function SquadMoves({ xi, pool, owned, onPlayer }: { xi: RatingRow[]; poo
               <div className="flex items-center gap-1.5 truncate text-sm font-medium text-ink">{String(r.web_name)}{i === 0 && <span className="text-accent"><Icon name="crown" size={13} /></span>}</div>
               <div className="flex items-center gap-1 text-xs text-ink-2">{r.position} · <TeamBadge team={String(r.team)} size={11} />{teamLabel(String(r.team))}</div>
             </div>
-            <div className="text-right"><div className="font-display text-lg text-accent tabular-nums">{capScore(r)}</div><div className="text-[9px] tracking-wide text-ink-3 uppercase">Form×Fix</div></div>
+            <div className="text-right"><div className="font-display text-lg text-accent tabular-nums">{capScore(r)}</div><div className="text-[10px] tracking-wide text-ink-3 uppercase">Form×Fix</div></div>
           </button>
         ))}
       </div>

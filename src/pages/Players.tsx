@@ -649,13 +649,13 @@ function FixtureOutlook({ r, data }: { r: RatingRow; data: CoreData }) {
           const first = up.findIndex((f) => f.gw === fx.gw) === i
           return (
             <div key={`${fx.gw}-${fx.opponent}-${i}`} className="min-w-0">
-              <div className="mb-0.5 text-center text-[9px] font-bold tracking-[0.08em] text-ink-3 uppercase">GW{fx.gw}</div>
+              <div className="mb-0.5 text-center text-[10px] font-bold tracking-[0.08em] text-ink-3 uppercase">GW{fx.gw}</div>
               <div
                 className="truncate rounded px-1 py-1 text-center text-[11px] font-bold"
                 style={{ background: bg, color: fg }}
                 title={`GW${fx.gw} ${fx.venue === 'H' ? 'vs' : 'at'} ${teamFullNames[fx.opponent] || fx.opponent} (difficulty ${fx.fdr})`}
               >
-                {fx.opponent} <span className="font-medium opacity-70">({fx.venue})</span>
+                {fx.opponent} <span className="font-medium">({fx.venue})</span>
               </div>
               <div className="mt-0.5 text-center text-[12px] font-extrabold tabular-nums">
                 {!first ? <span className="text-ink-3">—</span>

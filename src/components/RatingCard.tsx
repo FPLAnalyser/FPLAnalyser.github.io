@@ -97,7 +97,7 @@ function StatBar({ label, value, compact }: { label: string; value: number | nul
   return (
     <div>
       <div className="flex items-baseline justify-between gap-1">
-        <span className={`font-semibold text-ink-2 uppercase ${compact ? 'text-[9px] tracking-[0.06em]' : 'text-[11px] tracking-[0.12em]'}`}>{label}</span>
+        <span className={`font-semibold text-ink-2 uppercase ${compact ? 'text-[10px] tracking-[0.06em]' : 'text-[11px] tracking-[0.12em]'}`}>{label}</span>
         <span className={`font-display leading-none text-accent tabular-nums ${compact ? 'text-[14px]' : 'text-[17px]'}`}>{value ?? '—'}</span>
       </div>
       <div className="mt-1 h-[3px] overflow-hidden rounded-full bg-white/10">
@@ -172,7 +172,7 @@ export function RatingCard({
         </>
       )}
       {flag && (
-        <span title={flag.title} className={`absolute z-10 rounded px-1.5 py-0.5 font-extrabold tracking-wide ${compact ? 'top-2 left-2 text-[8.5px]' : 'top-3 left-3 text-[10px]'} ${flag.tone === 'bad' ? 'bg-bad text-white' : 'bg-warn text-black'}`}>{flag.label}</span>
+        <span title={flag.title} className={`absolute z-10 rounded px-1.5 py-0.5 font-extrabold tracking-wide text-[10px] ${compact ? 'top-2 left-2' : 'top-3 left-3'} ${flag.tone === 'bad' ? 'bg-bad text-white' : 'bg-warn text-black'}`}>{flag.label}</span>
       )}
       {captain && <span className={`absolute z-10 grid place-items-center rounded-full bg-accent font-bold text-accent-contrast ${compact ? 'top-2 right-2 size-5 text-[10px]' : 'top-3 right-3 size-6 text-[11px]'}`}>C</span>}
       {viceCaptain && <span className={`absolute z-10 grid place-items-center rounded-full bg-surface-3 font-bold text-ink ${compact ? 'top-2 right-2 size-5 text-[10px]' : 'top-3 right-3 size-6 text-[11px]'}`}>V</span>}
@@ -182,9 +182,9 @@ export function RatingCard({
         <div className="flex shrink-0 flex-col items-center pt-1" style={{ minWidth: compact ? 52 : 76 }}>
           <div className={`metallic-num font-display tabular-nums leading-[0.9] ${compact ? 'text-[40px]' : 'text-[58px]'}`}>{ov ?? '—'}</div>
           <div className={`font-display leading-none tracking-[0.06em] text-accent-2 ${compact ? 'text-[14px]' : 'text-[19px]'}`}>{POS_SHORT[String(r.position)] ?? r.position}</div>
-          <div className={`mt-1 font-semibold tracking-[0.2em] text-ink-3 uppercase ${compact ? 'text-[8px]' : 'text-[10px]'}`}>{window === 'gw4' ? 'Last 4' : 'Overall'}</div>
+          <div className={`mt-1 font-semibold tracking-[0.2em] text-ink-3 text-[10px] uppercase`}>{window === 'gw4' ? 'Last 4' : 'Overall'}</div>
           {carried && (
-            <span className="mt-1 rounded bg-white/10 px-1 py-0.5 text-[8px] font-bold tracking-wide text-ink-2 tabular-nums" title={`Rating carried over from ${shortSeason(info!.ratings_season)}`}>{shortSeason(info!.ratings_season)}</span>
+            <span className="mt-1 rounded bg-white/10 px-1 py-0.5 text-[10px] font-bold tracking-wide text-ink-2 tabular-nums" title={`Rating carried over from ${shortSeason(info!.ratings_season)}`}>{shortSeason(info!.ratings_season)}</span>
           )}
           {thinSample && !carried && (
             <span className="mt-1 inline-block size-[7px] rounded-full bg-warn" title={mins != null ? `Thin sample — ${Math.round(mins)} mins played` : 'Thin sample'} />
@@ -211,7 +211,7 @@ export function RatingCard({
           {streak === '🔥 Hot' && <span className="shrink-0 text-hot" title="Hot streak"><Icon name="flame" size={compact ? 13 : 16} solid /></span>}
           {streak === '🧊 Cold' && <span className="shrink-0 text-cold" title="Cold streak"><Icon name="snow" size={compact ? 13 : 16} /></span>}
           {tier === 'diff' && ownership != null && (
-            <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold tracking-[0.08em] uppercase" style={{ background: 'rgba(127,231,214,.16)', color: '#7fe7d6' }} title="Low-owned differential">Gem · {ownership.toFixed(0)}%</span>
+            <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold tracking-[0.08em] uppercase" style={{ background: 'rgba(127,231,214,.16)', color: '#7fe7d6' }} title="Low-owned differential">Gem · {ownership.toFixed(0)}%</span>
           )}
         </div>
         <div className={`mt-1.5 flex items-center gap-1.5 font-semibold text-accent-2 ${compact ? 'text-[11px]' : 'text-[14px]'}`}>
@@ -235,7 +235,7 @@ export function RatingCard({
         <>
           <div className={`relative h-px ${compact ? 'my-2.5' : 'my-4'}`} style={{ background: 'rgba(255,255,255,0.08)' }} />
           <div className="relative flex items-center justify-between gap-2">
-            <span className={`shrink-0 font-semibold tracking-[0.08em] text-ink-3 uppercase ${compact ? 'text-[8px]' : 'text-[10px]'}`}>Next 4</span>
+            <span className={`shrink-0 font-semibold tracking-[0.08em] text-ink-3 text-[10px] uppercase`}>Next 4</span>
             <span className="min-w-0">
               <FixtureChips fixtureEase={fixtureEase!} team={String(r.team)} n={4} />
             </span>

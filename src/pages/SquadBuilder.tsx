@@ -426,7 +426,7 @@ export default function SquadBuilder() {
                       <div className="flex items-center gap-1.5">
                         <span className="truncate text-sm font-medium text-ink hover:text-accent">{String(r.web_name)}</span>
                         {inSquad && (
-                          <span className={`shrink-0 rounded px-1 py-0.5 text-[8.5px] leading-none font-bold ${onMarket ? 'bg-bad/15 text-bad' : 'bg-surface-3 text-ink-3'}`}>
+                          <span className={`shrink-0 rounded px-1 py-0.5 text-[10px] leading-none font-bold ${onMarket ? 'bg-bad/15 text-bad' : 'bg-surface-3 text-ink-3'}`}>
                             {onMarket ? 'SOLD' : 'IN SQUAD'}
                           </span>
                         )}
@@ -437,7 +437,7 @@ export default function SquadBuilder() {
                           return f ? (
                             <span
                               title={f.title}
-                              className="shrink-0 rounded px-1 py-0.5 text-[8.5px] leading-none font-extrabold"
+                              className="shrink-0 rounded px-1 py-0.5 text-[10px] leading-none font-extrabold"
                               style={{ background: SEV_COLOUR[f.sev].chip, color: SEV_COLOUR[f.sev].ink }}
                             >{f.label}</span>
                           ) : null
@@ -691,7 +691,7 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, ca
     <button
       key={key}
       onClick={() => onPick?.(pos)}
-      className={`${CARD_W} grid min-h-[76px] place-items-center rounded-lg border-2 border-dashed text-[9.5px] font-medium transition-colors sm:min-h-[92px] sm:text-[10px] ${
+      className={`${CARD_W} grid min-h-[76px] place-items-center rounded-lg border-2 border-dashed text-[10px] font-medium transition-colors sm:min-h-[92px] sm:text-[10px] ${
         pickPos === pos ? 'border-accent/70 text-accent' : 'border-white/20 text-white/75 hover:border-white/45 hover:text-white'
       }`}
     >
@@ -797,7 +797,7 @@ function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, lineu
               )}
             </div>
             <div className="flex gap-4 text-center">
-              <div><div className="font-display text-2xl leading-none tabular-nums" style={{ color: '#c9a227' }}>{squadScore ?? '—'}</div><div className="text-[9px] tracking-[0.1em] whitespace-nowrap uppercase" style={{ color: '#8a8172' }}>Squad rating</div></div>
+              <div><div className="font-display text-2xl leading-none tabular-nums" style={{ color: '#c9a227' }}>{squadScore ?? '—'}</div><div className="text-[10px] tracking-[0.1em] whitespace-nowrap uppercase" style={{ color: '#8a8172' }}>Squad rating</div></div>
             </div>
           </div>
           <SquadBoard

@@ -682,8 +682,8 @@ function RotationPlanner({ ratings: _ratings, fixtureEase, seasonRating }: { rat
                       const [bg, fg] = FDR_COLORS[Math.max(1, Math.min(5, Math.round(c.diff)))] || FDR_COLORS[3]
                       return (
                         <td key={gw} className="px-1.5 py-1.5 text-center">
-                          <span className={`inline-block w-full min-w-[54px] rounded px-1 py-1 text-[11px] font-semibold whitespace-nowrap ${start ? 'ring-2 ring-accent ring-offset-1 ring-offset-surface-1' : 'opacity-55'}`} style={{ background: bg, color: fg }} title={`${c.f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(c.f.opponent)} — difficulty ${c.diff.toFixed(1)}${start ? ' · START' : ''}`}>
-                            {c.f.opponent} <span className="opacity-70">({c.f.venue})</span>
+                          <span className={`inline-block w-full min-w-[54px] rounded px-1 py-1 text-[11px] font-semibold whitespace-nowrap ${start ? 'ring-2 ring-accent ring-offset-1 ring-offset-surface-1' : 'opacity-70'}`} style={{ background: bg, color: fg }} title={`${c.f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(c.f.opponent)} — difficulty ${c.diff.toFixed(1)}${start ? ' · START' : ''}`}>
+                            {c.f.opponent} <span className="font-medium">({c.f.venue})</span>
                           </span>
                         </td>
                       )
@@ -817,6 +817,50 @@ function FixtureGrid({
     })
   }, [fixtureEase, gwSet, lens, mode, seasonRating, baselines, leagueBase, market])
 
+  /* ── Projection colour: five bands either side of a normal fixture ─────────
+     The old scale was a single gold tint over hard-coded 0.7–2.4 anchors. On
+     the real spread that pinned 6.9% of cells at the pale floor, clipped 5.0%
+     at the ceiling, and squeezed the middle half of the data (p25–p75, a range
+     of just 0.57 xG) into a third of the ramp — so the cells you actually
+     compare all looked alike.
+
+     Now the midpoint is the median fixture on screen and the spread comes from
+     the 10th and 90th percentiles, so a cell reads on its own: green means
+     better than a normal week without having to scan its neighbours. Five
+     steps rather than a smooth ramp, because the eye judges a step far better
+     than a gradient when comparing across a row — and because it matches the
+     1–5 grammar already on the difficulty tab. */
+  const scale = useMemo(() => {
+    if (mode === 'diff') return null
+    const vals: number[] = []
+    for (const f of fixtureEase) {
+      if (!gwSet.has(f.gw)) continue
+      const p = projectCell(mode, baselines.get(f.team), baselines.get(f.opponent), leagueBase, f.venue, mktOf(market, f.team, f))
+      if (p) vals.push(p.v)
+    }
+    if (vals.length < 8) return null
+    vals.sort((a, b) => a - b)
+    const q = (t: number) => vals[Math.min(vals.length - 1, Math.floor(t * vals.length))]
+    const mid = q(0.5), lo = q(0.1), hi = q(0.9)
+    return { mid, lo, hi }
+  }, [fixtureEase, gwSet, mode, baselines, leagueBase, market])
+
+  /** −1 (well under a normal fixture) … +1 (well over). */
+  const deviation = (v: number) => {
+    if (!scale) return 0
+    return v >= scale.mid
+      ? (scale.hi > scale.mid ? Math.min(1, (v - scale.mid) / (scale.hi - scale.mid)) : 0)
+      : (scale.mid > scale.lo ? Math.max(-1, (v - scale.mid) / (scale.mid - scale.lo)) : 0)
+  }
+
+  const bandFill = (v: number): string => {
+    const t = deviation(v)
+    const [hue, pct] =
+      t <= -0.6 ? ['--bad', 34] : t <= -0.2 ? ['--warn', 26] :
+      t < 0.2 ? ['--warn', 9] : t < 0.6 ? ['--good', 24] : ['--good', 42]
+    return `color-mix(in srgb, var(${hue}) ${pct}%, transparent)`
+  }
+
   // A team's value in one gameweek (blanks → null; doubles → avg diff / summed projection).
   const gwVal = (r: (typeof rows)[number], gw: number): number | null => {
     const fs = r.byGw.get(gw)
@@ -913,16 +957,12 @@ function FixtureGrid({
                                 const [bg, fg] = FDR_COLORS[Math.max(1, Math.min(5, Math.round(diff)))] || FDR_COLORS[3]
                                 return (
                                   <span key={i} className="inline-block w-full min-w-[54px] rounded px-1 py-1 text-[11px] font-semibold whitespace-nowrap" style={{ background: bg, color: fg }} title={`GW${gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(f.opponent)} — difficulty ${diff.toFixed(1)}${ours ? '' : ' (FPL FDR — opponent unrated)'}`}>
-                                    {f.opponent} <span className="opacity-70">({f.venue})</span>{!ours && <span className="opacity-70"> ·</span>}
+                                    {f.opponent} <span className="font-medium">({f.venue})</span>{!ours && <span className="font-medium"> ·</span>}
                                   </span>
                                 )
                               }
                               const p = projectCell(mode, baselines.get(r.team), baselines.get(f.opponent), leagueBase, f.venue, mktOf(market, r.team, f))
                               if (!p) return <span key={i} className="text-ink-3">—</span>
-                              const strength = mode === 'xg'
-                                ? Math.max(6, Math.min(78, ((p.v - 0.7) / 1.7) * 78))
-                                : Math.max(6, Math.min(64, p.v * 100))
-                              const hue = mode === 'xg' ? 'var(--accent)' : 'var(--good)'
                               const label = mode === 'xg' ? p.v.toFixed(2) : `${Math.round(p.v * 100)}%`
                               const tip = mode === 'xg'
                                 ? `GW${gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(f.opponent)} — projected ${p.v.toFixed(2)} xG${p.assumed ? ' (promoted opponent: league-average assumption)' : ''}`
@@ -942,10 +982,10 @@ function FixtureGrid({
                                   className={`inline-block w-full min-w-[54px] rounded px-1 py-0.5 whitespace-nowrap ${isBest ? 'shadow-[0_0_0_1px_rgba(23,19,10,.35)]' : ''}`}
                                   style={isBest
                                     ? { background: 'linear-gradient(180deg,#F7E3A6,#C9A227)' }
-                                    : { background: `color-mix(in srgb, ${hue} ${strength.toFixed(0)}%, transparent)` }}
+                                    : { background: bandFill(p.v) }}
                                   title={isBest ? `${tip} — best this gameweek` : tip}
                                 >
-                                  <span className={`block text-[9px] leading-tight font-semibold ${isBest ? 'text-[#3B2F10]' : 'text-ink-2 opacity-80'}`}>{f.opponent} ({f.venue}){p.assumed ? ' ·' : ''}</span>
+                                  <span className={`block text-[10px] leading-tight font-semibold ${isBest ? 'text-[#3B2F10]' : 'text-ink-2'}`}>{f.opponent} ({f.venue}){p.assumed ? ' ·' : ''}</span>
                                   <span className={`font-num block text-[12px] leading-tight font-bold tabular-nums ${isBest ? 'text-[#17130A]' : 'text-ink'}`}>
                                     {isBest && <Icon name="crown" size={9} className="mr-0.5 inline-block align-[-0.05em]" />}
                                     {label}
@@ -1003,11 +1043,21 @@ function FixtureGrid({
           <span>1 = easiest, 5 = hardest · “·” = FPL FDR fallback (opponent unrated)</span>
         </div>
       ) : (
-        <div className="mt-2 text-[11px] text-ink-3">
-          {mode === 'xg'
-            ? 'Deeper gold = more projected goals. The Σ column is the plain sum over the window — e.g. 1.85 + 1.70 + 1.84 + 1.71 = 7.1 xG over four gameweeks.'
-            : 'Deeper green = better shutout odds. The Σ column sums the probabilities — the number of clean sheets to expect over the window.'}
-          {' '}“·” = promoted opponent, league-average assumption. Projections use each side’s per-game xG/xGC baselines (Understat chance quality) with a ±5% venue nudge.
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] text-ink-3">
+          <span className="flex items-center gap-1.5">
+            <span className="flex overflow-hidden rounded border border-line-mid">
+              {([-1, -0.4, 0, 0.4, 1] as const).map((t) => (
+                <span key={t} className="block h-4 w-7" style={{ background: bandFill(scale ? (t >= 0 ? scale.mid + t * (scale.hi - scale.mid) : scale.mid + t * (scale.mid - scale.lo)) : 0) }} />
+              ))}
+            </span>
+            <span>Well under a normal fixture → well over{scale && (mode === 'xg' ? ` · midpoint ${scale.mid.toFixed(2)} xG` : ` · midpoint ${Math.round(scale.mid * 100)}%`)}</span>
+          </span>
+          <span>
+            {mode === 'xg'
+              ? 'The Σ column is the plain sum over the window — the goals their attack should produce across the run.'
+              : 'The Σ column sums the probabilities — the number of clean sheets to expect over the window.'}
+            {' '}“·” = promoted opponent, league-average assumption. Projections use each side’s per-game xG/xGC baselines (Understat chance quality) with a ±5% venue nudge.
+          </span>
         </div>
       )}
     </div>

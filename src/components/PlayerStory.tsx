@@ -144,7 +144,7 @@ function DCell({ label, read }: { label: string; read: Read | null }) {
   if (!read) return null
   return (
     <div className="bg-bg-1 px-4 py-3">
-      <div className="mb-1 text-[9px] font-extrabold tracking-[0.16em] text-ink-3 uppercase">{label}</div>
+      <div className="mb-1 text-[10px] font-extrabold tracking-[0.16em] text-ink-3 uppercase">{label}</div>
       <div className={`text-[16px] font-extrabold ${TONE_TEXT[read.tone]}`}>{read.word}</div>
       <div className="mt-0.5 text-[12.5px] text-ink-2">{read.sub}</div>
     </div>
@@ -159,7 +159,7 @@ export function DecisionRow({ r, fixtureEase }: { r: RatingRow; fixtureEase: Fix
       <DCell label="Minutes" read={minutesRead(r)} />
       {hasFix && (
         <div className="bg-bg-1 px-4 py-3">
-          <div className="mb-1 text-[9px] font-extrabold tracking-[0.16em] text-ink-3 uppercase">Next 4{ease != null ? ` · ease ${ease}` : ''}</div>
+          <div className="mb-1 text-[10px] font-extrabold tracking-[0.16em] text-ink-3 uppercase">Next 4{ease != null ? ` · ease ${ease}` : ''}</div>
           <div className="mt-1.5"><FixtureChips fixtureEase={fixtureEase} team={String(r.team)} n={4} /></div>
         </div>
       )}

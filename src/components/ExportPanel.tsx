@@ -226,7 +226,7 @@ export function Exportable({ title, filename, children, className, toolbar }: {
                   fmt === f.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong'
                 }`}
               >
-                {f.label} <span className="opacity-60">{f.hint}</span>
+                {f.label} <span className="font-normal">{f.hint}</span>
               </button>
             ))}
           </div>

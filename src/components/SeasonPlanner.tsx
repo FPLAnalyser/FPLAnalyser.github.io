@@ -344,7 +344,7 @@ function EmptySlot({ pos, onClick }: { pos: Pos4; onClick: () => void }) {
       style={{ height: 125 }}
     >
       <span className="grid size-6 place-items-center rounded-full border border-current text-[13px] leading-none font-bold">+</span>
-      <span className="mt-1 text-[9.5px] font-extrabold tracking-[0.12em] uppercase">{pos}</span>
+      <span className="mt-1 text-[10px] font-extrabold tracking-[0.12em] uppercase">{pos}</span>
     </button>
   )
 }
@@ -375,8 +375,8 @@ function Stat({ label, value, tone, sub, onClick }: { label: string; value: stri
   const inner = (
     <>
       <div className={`font-display text-lg leading-none tabular-nums ${c}`}>{value}</div>
-      <div className="mt-1 text-[9px] font-semibold tracking-[0.1em] text-ink-2 uppercase">{label}</div>
-      {sub && <div className="mt-0.5 truncate text-[9.5px] text-ink-3">{sub}</div>}
+      <div className="mt-1 text-[10px] font-semibold tracking-[0.1em] text-ink-2 uppercase">{label}</div>
+      {sub && <div className="mt-0.5 truncate text-[10px] text-ink-3">{sub}</div>}
     </>
   )
   const cls = 'w-full rounded-xl border border-line bg-surface-1/60 p-2.5 text-center'
@@ -424,7 +424,7 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
       {/* The just-signed tick takes the bottom-left, diagonally opposite the
           cross. One overhanging thing per corner, and the two that are used
           are never on the same edge of the gap between cards. */}
-      {transferred && <span className="absolute -bottom-1.5 -left-1.5 z-10 grid size-4 place-items-center rounded-full bg-good text-[9px] text-white"><Icon name="check" size={10} /></span>}
+      {transferred && <span className="absolute -bottom-1.5 -left-1.5 z-10 grid size-4 place-items-center rounded-full bg-good text-[10px] text-white"><Icon name="check" size={10} /></span>}
       <FoilShell
         tier={bench ? 'graphite' : tierOf(rating || null)}
         onClick={onOpen}
@@ -456,18 +456,18 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
         {/* Flex rather than a truncating text line: `truncate` clips
             anything taller than the line box, which sliced the top and
             bottom off the armband. Only the name truncates now. */}
-        <span className="capture-line mt-1 flex w-full items-center justify-center gap-1 text-[9.5px] leading-tight font-bold text-white sm:text-[11px]">
+        <span className="capture-line mt-1 flex w-full items-center justify-center gap-1 text-[10px] leading-tight font-bold text-white sm:text-[11px]">
           {(captain || vice) && (
             <span
               title={captain && tripleCap ? 'Triple captain' : captain ? 'Captain' : 'Vice-captain'}
-              className={`grid h-[14px] min-w-[14px] shrink-0 place-items-center rounded-full px-[3px] text-[8.5px] leading-none font-black sm:h-4 sm:min-w-4 sm:text-[9.5px] ${
+              className={`grid h-[14px] min-w-[14px] shrink-0 place-items-center rounded-full px-[3px] text-[10px] leading-none font-black sm:h-4 sm:min-w-4 ${
                 captain ? 'bg-accent text-accent-contrast' : 'bg-white/85 text-black'
               }`}
             >{captain ? (tripleCap ? '3×' : 'C') : 'V'}</span>
           )}
           <span className="truncate">{name}</span>
         </span>
-        <span className="mt-0.5 block w-full truncate rounded px-1 text-[8.5px] font-bold sm:text-[9px]" style={{ background: bg, color: fg }}>{next ? `${next.opponent} (${next.venue})` : 'No game'}</span>
+        <span className="mt-0.5 block w-full truncate rounded px-1 text-[10px] font-bold" style={{ background: bg, color: fg }}>{next ? `${next.opponent} (${next.venue})` : 'No game'}</span>
         {fixtures.length > 1 && (
           <span className="mt-0.5 hidden w-full gap-0.5 sm:flex">
             {fixtures.slice(1).map((f, i) => {
@@ -532,8 +532,8 @@ function XpSheet({ gw, total, hit, rows, capMult, onClose }: {
           {sorted.map((r) => (
             <div key={r.el} className="flex items-center gap-2 border-b border-line px-3 py-1.5 text-sm last:border-0">
               <span className="min-w-0 flex-1 truncate text-ink">{r.name}</span>
-              {r.captain && <span className="shrink-0 rounded bg-accent px-1 text-[9px] font-bold text-accent-contrast">{capMult === 3 ? '3×' : 'C'}</span>}
-              {r.bench && <span className="shrink-0 rounded bg-surface-3 px-1 text-[9px] font-bold text-ink-3">BENCH</span>}
+              {r.captain && <span className="shrink-0 rounded bg-accent px-1 text-[10px] font-bold text-accent-contrast">{capMult === 3 ? '3×' : 'C'}</span>}
+              {r.bench && <span className="shrink-0 rounded bg-surface-3 px-1 text-[10px] font-bold text-ink-3">BENCH</span>}
               <span className="font-num w-12 shrink-0 text-right tabular-nums text-ink-2">{r.xp == null ? '—' : (r.xp * (r.captain ? capMult : 1)).toFixed(1)}</span>
             </div>
           ))}

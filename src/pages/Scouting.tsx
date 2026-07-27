@@ -599,7 +599,7 @@ function ScoutReport({
   const RatingBadge = ({ sel }: { sel: SelPlayer }) => {
     const r = metaOf(sel)?.rating
     if (r == null) return null
-    return <span className={`ml-1 inline-block rounded-md px-1.5 py-0.5 font-num text-[11px] font-semibold tabular-nums ${ratingTier(r)}`}>{r}<span className="opacity-60">/100</span></span>
+    return <span className={`ml-1 inline-block rounded-md px-1.5 py-0.5 font-num text-[11px] font-semibold tabular-nums ${ratingTier(r)}`}>{r}<span className="opacity-75">/100</span></span>
   }
 
   // Detailed analysis block: who wins + a plain-English, FPL-points profile per

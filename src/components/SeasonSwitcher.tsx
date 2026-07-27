@@ -27,7 +27,7 @@ export function SeasonSwitcher() {
         title={multi ? 'Change season' : `Season ${label}`}
       >
         <span className="tabular-nums">{label}</span>
-        {multi && <span className="text-[9px] text-ink-3">▾</span>}
+        {multi && <span className="text-[10px] text-ink-3">▾</span>}
       </button>
       {open && multi && (
         <div className="absolute right-0 z-[120] mt-1.5 w-36 overflow-hidden rounded-lg border border-line-mid bg-surface-2 shadow-float">

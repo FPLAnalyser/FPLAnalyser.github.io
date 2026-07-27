@@ -140,7 +140,7 @@ function Tile({ label, value, sub, tone, open, onClick }: {
       }`}
     >
       <div className="flex items-center gap-1">
-        <span className="text-[9px] font-semibold tracking-[0.12em] text-ink-3 uppercase">{label}</span>
+        <span className="text-[10px] font-semibold tracking-[0.12em] text-ink-3 uppercase">{label}</span>
         <Icon
           name="chevron-right"
           size={11}
@@ -258,13 +258,13 @@ function HorizonPanel({ read }: { read: HorizonRead | null }) {
           return (
             <div key={w.gw} className="relative z-[1] flex h-full min-w-0 flex-1 flex-col items-center">
               <div className="flex h-1/2 w-full flex-col items-center justify-end">
-                {up && <span className="font-num mb-0.5 text-[9.5px] tabular-nums text-good">+{(dev[i] * 100).toFixed(0)}%</span>}
+                {up && <span className="font-num mb-0.5 text-[10px] tabular-nums text-good">+{(dev[i] * 100).toFixed(0)}%</span>}
                 {up && <span className={`w-full rounded-t-sm ${bg}`} style={{ height: `${h}px` }} />}
               </div>
               <div className="flex h-1/2 w-full flex-col items-center">
                 {!up && <span className={`w-full rounded-b-sm ${bg}`} style={{ height: `${h}px` }} />}
-                {!up && <span className="font-num mt-0.5 text-[9.5px] tabular-nums text-bad">{(dev[i] * 100).toFixed(0)}%</span>}
-                <span className={`mt-auto text-[9.5px] font-semibold ${trough ? 'text-bad' : peak ? 'text-good' : 'text-ink-3'}`}>
+                {!up && <span className="font-num mt-0.5 text-[10px] tabular-nums text-bad">{(dev[i] * 100).toFixed(0)}%</span>}
+                <span className={`mt-auto text-[10px] font-semibold ${trough ? 'text-bad' : peak ? 'text-good' : 'text-ink-3'}`}>
                   GW{w.gw}
                 </span>
               </div>
@@ -291,7 +291,7 @@ function HorizonPanel({ read }: { read: HorizonRead | null }) {
             <span className={`font-num text-[13px] leading-none tabular-nums ${
               alarming(w) ? 'text-bad' : w.hard <= 2 ? 'text-good' : 'text-ink-2'
             }`}>{w.hard}</span>
-            <span className="mt-0.5 text-[8.5px] tracking-wide text-ink-3 uppercase">hard</span>
+            <span className="mt-0.5 text-[10px] tracking-wide text-ink-3 uppercase">hard</span>
           </div>
         ))}
       </div>
@@ -441,7 +441,7 @@ function CaptainPanel({ read, gw }: { read: CaptainLadder | null; gw: number }) 
     <div>
       <Head title={`Captain ladder · GW${gw}`} note="Ranked on projected points; judged on how often each one actually tops your XI" />
 
-      <div className="mb-1 flex items-center gap-2 px-1 text-[9px] font-semibold tracking-[0.12em] text-ink-3 uppercase">
+      <div className="mb-1 flex items-center gap-2 px-1 text-[10px] font-semibold tracking-[0.12em] text-ink-3 uppercase">
         <span className="w-[18px] shrink-0" />
         <span className="w-[76px] shrink-0">Player</span>
         <span className="hidden w-[92px] shrink-0 sm:block">Fixture</span>
@@ -453,7 +453,7 @@ function CaptainPanel({ read, gw }: { read: CaptainLadder | null; gw: number }) 
       <div className="flex flex-col gap-0.5">
         {shown.map((r, i) => (
           <div key={num(r.row, 'element')} className={`flex items-center gap-2 rounded-lg px-1 py-1.5 text-xs ${i === 0 ? 'bg-accent-soft/50 ring-1 ring-accent/40' : ''}`}>
-            <span className={`grid size-[18px] shrink-0 place-items-center rounded-md text-[9px] font-bold ${
+            <span className={`grid size-[18px] shrink-0 place-items-center rounded-md text-[10px] font-bold ${
               i === 0 ? 'bg-accent text-accent-contrast' : i === 1 ? 'bg-surface-3 text-ink-2' : 'text-ink-3'
             }`}>{i === 0 ? 'C' : i === 1 ? 'V' : ''}</span>
             <span className="w-[76px] shrink-0 truncate font-semibold text-ink">{String(r.row.web_name)}</span>
@@ -470,7 +470,7 @@ function CaptainPanel({ read, gw }: { read: CaptainLadder | null; gw: number }) 
       <div className={`mt-2.5 flex items-start gap-2 rounded-xl border p-2.5 text-xs ${
         read.close ? 'border-warn/40 bg-warn/5' : 'border-good/35 bg-good/5'
       }`}>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-[0.1em] uppercase ${
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-[0.1em] uppercase ${
           read.close ? 'bg-warn/20 text-warn' : 'bg-good/20 text-good'
         }`}>{read.close ? 'Close call' : 'Clear call'}</span>
         <span className="text-ink-2">

@@ -52,7 +52,7 @@ export function Layout() {
               <span className="font-brand text-[15px] font-normal tracking-[0.045em] text-ink sm:text-[17px] md:text-xl">
                 <span className="metallic-num font-medium">FPL</span> Analyser
               </span>
-              <span className="mt-0.5 hidden text-[9px] font-semibold tracking-[0.22em] text-ink-3 uppercase md:block">
+              <span className="mt-0.5 hidden text-[10px] font-semibold tracking-[0.22em] text-ink-3 uppercase md:block">
                 Data · <span className="text-accent">Insight</span> · Points
               </span>
             </span>

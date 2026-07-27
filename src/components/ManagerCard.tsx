@@ -149,7 +149,7 @@ export function ManagerCard({ picksData, historyData, entryData, ratings, teamNa
             </div>
             <div className="shrink-0 text-right">
               <div className="metallic-num font-num text-[46px] leading-none font-extrabold tabular-nums">{rating}</div>
-              <div className="text-[9px] font-extrabold tracking-[0.16em] uppercase" style={{ color: '#8a8172' }}>Week rating</div>
+              <div className="text-[10px] font-extrabold tracking-[0.16em] uppercase" style={{ color: '#8a8172' }}>Week rating</div>
             </div>
           </div>
 
@@ -160,7 +160,7 @@ export function ManagerCard({ picksData, historyData, entryData, ratings, teamNa
               ['Overall', fmtRank(e.overall_rank)],
             ].map(([k, v]) => (
               <div key={k} className="px-3 py-2.5" style={{ background: '#191410' }}>
-                <div className="text-[9px] font-extrabold tracking-[0.16em] uppercase" style={{ color: '#8a8172' }}>{k}</div>
+                <div className="text-[10px] font-extrabold tracking-[0.16em] uppercase" style={{ color: '#8a8172' }}>{k}</div>
                 <div className="font-num mt-0.5 text-[21px] font-extrabold tabular-nums">{v}</div>
               </div>
             ))}
@@ -193,7 +193,7 @@ export function ManagerCard({ picksData, historyData, entryData, ratings, teamNa
                     <PlayerPhoto code={best.r ? num(best.r, 'code') : null} element={Number(best.g.element)} className="relative h-full w-full rounded object-cover object-top" placeholder={<span />} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="text-[9px] font-extrabold tracking-[0.16em] uppercase" style={{ color: '#8a8172' }}>Best performer</div>
+                    <div className="text-[10px] font-extrabold tracking-[0.16em] uppercase" style={{ color: '#8a8172' }}>Best performer</div>
                     <div className="truncate text-[15px] font-extrabold">{String(best.g.web_name)}</div>
                     <div className="text-[11.5px]" style={{ color: '#b3ab99' }}>
                       {String(best.g.team)}

@@ -211,7 +211,7 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap, ac
                         and on a phone that forced them onto two rows. */}
                     <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${next.length}, minmax(0, 1fr))` }}>
                       {next.map((f) => (
-                        <div key={f.gw} className="text-center text-[9.5px] font-extrabold tracking-[0.08em] text-ink-3 uppercase">GW{f.gw}</div>
+                        <div key={f.gw} className="text-center text-[10px] font-extrabold tracking-[0.08em] text-ink-3 uppercase">GW{f.gw}</div>
                       ))}
                       {next.map((f) => {
                         const [bg, fg] = FDR_COLORS[f.fdr] || FDR_COLORS[3]

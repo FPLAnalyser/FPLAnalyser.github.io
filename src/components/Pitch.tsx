@@ -75,7 +75,7 @@ export function Pitch({ children, footer, className, maxWidth, boosted }: {
             className={`mt-2 rounded-xl border px-2 py-2 backdrop-blur-[1px] sm:px-3 ${boosted ? 'border-[#c9a227]' : 'border-white/12 bg-black/35'}`}
             style={boosted ? { background: 'linear-gradient(180deg, rgba(201,162,39,.22), rgba(0,0,0,.45))', boxShadow: '0 0 0 1px rgba(247,227,166,.25)' } : undefined}
           >
-            <div className={`mb-1.5 text-[9px] font-extrabold tracking-[0.18em] uppercase ${boosted ? 'text-[#F7E3A6]' : 'text-white/55'}`}>{boosted ? 'Boost' : 'Bench'}</div>
+            <div className={`mb-1.5 text-[10px] font-extrabold tracking-[0.18em] uppercase ${boosted ? 'text-[#F7E3A6]' : 'text-white/55'}`}>{boosted ? 'Boost' : 'Bench'}</div>
             {footer}
           </div>
         )}
@@ -214,10 +214,10 @@ export function PitchCard({ rating, cornerText, name, team, price, code, element
             placeholder={<span className="grid h-full w-full place-items-center text-[11px] font-extrabold text-white/35">{initialsOf(name)}</span>}
           />
         </span>
-        <span className="capture-line flex w-full items-center justify-center gap-1 text-[9.5px] leading-tight font-bold text-white sm:text-[10.5px]">
+        <span className="capture-line flex w-full items-center justify-center gap-1 text-[10px] leading-tight font-bold text-white sm:text-[10.5px]">
           {armband && (
             <span
-              className={`grid h-[14px] min-w-[14px] shrink-0 place-items-center rounded-full px-1 text-[8.5px] leading-none font-black ${
+              className={`grid h-[14px] min-w-[14px] shrink-0 place-items-center rounded-full px-1 text-[10px] leading-none font-black ${
                 armband === 'V' ? 'bg-white/85 text-black' : 'bg-accent text-accent-contrast'
               }`}
             >{armband}</span>
@@ -259,7 +259,7 @@ export function BenchSpine({ boosted, maxWidth, children }: { boosted?: boolean;
           style={{ background: boosted ? 'linear-gradient(180deg,#F7E3A6,#B98B2C)' : 'linear-gradient(180deg,#39424E,#232B35)' }}
         >
           <span
-            className={`text-[8.5px] font-extrabold tracking-[0.24em] uppercase ${boosted ? 'text-[#17130A]' : 'text-white/55'}`}
+            className={`text-[10px] font-extrabold tracking-[0.24em] uppercase ${boosted ? 'text-[#17130A]' : 'text-white/55'}`}
             style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
           >
             {boosted ? 'Boost' : 'Subs'}

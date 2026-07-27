@@ -115,7 +115,11 @@ export const FDR_COLORS: Record<number, [string, string]> = {
   1: ['#2F5D24', '#EAF5E4'],
   2: ['#27C46B', '#06240F'],
   3: ['#39424E', '#E8EDF3'],
-  4: ['#E8434F', '#fff'],
+  // #E8434F put white text at 3.93:1 — under the bar at the 11px these chips
+  // are set in, and the only one of the five that failed. Darkened just far
+  // enough to clear it (4.75:1) so it still reads as a distinct red against
+  // chip 5's maroon rather than collapsing into it.
+  4: ['#D33844', '#fff'],
   5: ['#7A1030', '#fff'],
 }
 

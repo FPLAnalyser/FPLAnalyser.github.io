@@ -12,7 +12,7 @@ function StatBlock({ v, rank, label }: { v: number | null; rank: number | null; 
     <div className="flex-1 rounded-xl border border-white/8 py-2.5 text-center">
       <div className="font-display text-[30px] leading-none text-accent tabular-nums">{v ?? '—'}</div>
       <div className="mt-1 text-[10px] font-semibold tracking-[0.1em] text-ink-2 uppercase">{label}</div>
-      {rank != null && <div className="text-[9px] text-ink-3">{ordinal(rank)}</div>}
+      {rank != null && <div className="text-[10px] text-ink-3">{ordinal(rank)}</div>}
     </div>
   )
 }
@@ -123,11 +123,11 @@ export function TeamMatchup({
         </div>
         <div className="text-center">
           <div className="font-display text-[30px] leading-none text-accent tabular-nums">{xgFor.toFixed(1)}</div>
-          <div className="text-[9px] tracking-[0.12em] text-ink-3 uppercase">proj xG</div>
+          <div className="text-[10px] tracking-[0.12em] text-ink-3 uppercase">proj xG</div>
         </div>
         <div className="text-center text-ink-3">
           <div className="font-display text-[30px] leading-none tabular-nums text-ink-2">{xgAgainst.toFixed(1)}</div>
-          <div className="text-[9px] tracking-[0.12em] text-ink-3 uppercase">proj xG</div>
+          <div className="text-[10px] tracking-[0.12em] text-ink-3 uppercase">proj xG</div>
         </div>
         <div className="flex flex-1 flex-col items-center gap-1.5 text-center">
           <TeamBadge team={opp} size={34} />
