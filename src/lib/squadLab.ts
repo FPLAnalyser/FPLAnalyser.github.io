@@ -637,6 +637,20 @@ const CHIP_BAR: Record<ChipKey, number> = {
   wildcard: 0, // judged on moves needed, not points
 }
 
+/** What a free hit has to be worth, given how much of the half is left.
+ *
+ *  Holding out for a better week is only sensible while there are better
+ *  weeks left to come. A chip that expires unplayed is worth nothing at all,
+ *  so as GW19 closes in the question stops being "is this good?" and becomes
+ *  "is anything better coming?" — and the bar has to fall with it. */
+function freeHitBar(weeksLeft: number | null): number {
+  if (weeksLeft == null) return CHIP_BAR['free-hit']   // second half, no deadline pressure yet
+  if (weeksLeft >= 8) return CHIP_BAR['free-hit']
+  if (weeksLeft >= 4) return 8
+  if (weeksLeft >= 2) return 4
+  return 0                                             // last chance — anything beats losing it
+}
+
 const CHIP_TITLE: Record<ChipKey, string> = {
   'triple-captain': 'Triple Captain',
   'bench-boost': 'Bench Boost',
@@ -693,7 +707,10 @@ function bestAffordableXi(pool: RatingRow[], gw: number, e: Engine, budget: numb
   let hi = 4
   let out = pick(hi)
   if (pick(lo).cost <= budget) return pick(lo).total
-  for (let i = 0; i < 24; i++) {
+  // Fourteen halvings put the price penalty within a thousandth, which is
+  // far finer than the selection can even notice — the original twenty-four
+  // just re-sorted five hundred players ten more times for nothing.
+  for (let i = 0; i < 14; i++) {
     const mid = (lo + hi) / 2
     const got = pick(mid)
     if (got.cost > budget) lo = mid
@@ -773,39 +790,43 @@ export function chipPlan({ squad, pool, fromGw, gws, bank, engine, spentAt, free
     return { g, blanks, hard, hitPremiums }
   }
 
-  const shapes = window.map(weekShape)
-  // A blank is a guaranteed nought, so it outweighs a hard fixture several
-  // times over; a premium in trouble counts for more than a fifth defender.
-  const severity = (s: { blanks: number; hard: number; hitPremiums: RatingRow[] }) =>
-    s.blanks * 4 + s.hard + s.hitPremiums.length * 2
-  const worst = shapes.reduce((a, b) => (severity(b) > severity(a) ? b : a))
+  /* Which week, measured rather than guessed.
+     A wall of hard fixtures turned out to be the wrong signal entirely: over
+     a whole first half, the week with nine of fifteen in a hard game was
+     worth +3.2 while a week with only four was worth +5.1. What actually
+     moves the gap is how good the best available eleven is that week — the
+     elite having a kind week — not how bad yours is. So every week is solved
+     and the best one wins, with the shape kept only to explain it.
 
-  // Only the few worst weeks get the expensive budget solve — the rest can
-  // never be the answer, and the panel has to open instantly.
+     Blanks need no special weighting under this: a player with no game
+     contributes nothing, so a blank week produces a large gap by itself. */
+  const solved = window.map((g) => ({
+    ...weekShape(g),
+    gain: bestAffordableXi(pool, g, engine, squadValue + bank - BENCH_ALLOWANCE)
+      - bestXiXp(squad, g, engine).total,
+  }))
+  const worst = solved.reduce((a, b) => (b.gain > a.gain ? b : a))
   const fhGw = worst.g
-  let fhGain = 0
-  for (const s0 of [...shapes].sort((a, b) => severity(b) - severity(a)).slice(0, 3)) {
-    if (s0.g !== fhGw) continue
-    const mine = bestXiXp(squad, s0.g, engine).total
-    fhGain = bestAffordableXi(pool, s0.g, engine, squadValue + bank - BENCH_ALLOWANCE) - mine
-  }
+  const fhGain = worst.gain
   const fhBlanks = worst.blanks
   // The shape says which week to look at; the gain says whether it is worth a
   // chip. Both have to hold. A wall of hard fixtures reads alarming but every
   // one of those players still turns out and still collects his appearance
   // points, so the fix is usually worth two or three — nothing like a blank,
   // where your men score nothing at all.
-  const fhBroken = fhBlanks >= 3 || (worst.hard >= 9 && worst.hitPremiums.length >= 2)
-  const fhWorth = fhBroken && fhGain >= CHIP_BAR['free-hit']
+  const weeksLeft0 = fromGw < SECOND_HALF_FROM ? FIRST_HALF_LAST - fromGw : null
+  const fhBar = freeHitBar(weeksLeft0)
+  const fhWorth = fhGain >= fhBar
   const fhNames = worst.hitPremiums.map((r) => String(r.web_name)).join(' and ')
-  const fhWall = `${worst.hard} of fifteen in a hard game${fhNames ? `, ${fhNames} among them` : ''}`
-  const fhDetail = fhBlanks >= 3
-    ? fhWorth
-      ? `${fhBlanks} of your fifteen have no game in GW${fhGw} — a one-week squad is worth about +${fhGain.toFixed(0)}`
-      : `${fhBlanks} of your fifteen blank in GW${fhGw}, but a one-week squad only projects +${fhGain.toFixed(0)} — not enough for a chip`
-    : fhWorth
-      ? `GW${fhGw} is your wall: ${fhWall}, and a one-week squad projects +${fhGain.toFixed(0)}`
-      : `GW${fhGw} is your worst week — ${fhWall} — but a one-week squad only gains +${fhGain.toFixed(0)}, so it isn't worth the chip`
+  const fhWhy = fhBlanks > 0
+    ? `${fhBlanks} of your fifteen have no game`
+    : `${worst.hard} of fifteen in a hard game${fhNames ? `, ${fhNames} among them` : ''}`
+  const fhDetail = fhWorth
+    ? weeksLeft0 != null && weeksLeft0 < 8 && fhGain < CHIP_BAR['free-hit']
+      // Not a good week — the best one left, with the deadline forcing it.
+      ? `GW${fhGw} is the best week you have left (${fhWhy}) and it's worth +${fhGain.toFixed(1)}. Nothing better is coming before GW${FIRST_HALF_LAST}, and an unplayed chip is worth nothing.`
+      : `GW${fhGw} — ${fhWhy}. A one-week squad at your budget projects +${fhGain.toFixed(1)}.`
+    : `GW${fhGw} is your best week for it (${fhWhy}) but only worth +${fhGain.toFixed(1)}. Hold — with ${weeksLeft0 ?? 'plenty of'} gameweeks left there's time for a better one.`
 
   // Wildcard isn't a week, it's a verdict on the squad: how many moves the
   // Analyser wants if transfers were free.
@@ -856,7 +877,7 @@ export function chipPlan({ squad, pool, fromGw, gws, bank, engine, spentAt, free
   live.sort((a, b) => b.gain / (CHIP_BAR[b.chip] || 1) - a.gain / (CHIP_BAR[a.chip] || 1))
   const best = live[0] ?? null
 
-  const weeksLeft = fromGw < SECOND_HALF_FROM ? FIRST_HALF_LAST - fromGw : null
+  const weeksLeft = weeksLeft0
   const span = window.length
   const unspent = advice.filter((a) => a.spentAt == null).length
   const headline = best
