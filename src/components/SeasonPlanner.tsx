@@ -432,7 +432,12 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
           onClick={(ev) => { ev.stopPropagation(); onSell() }}
           aria-label={sold ? `Keep ${name}` : `Sell ${name}`}
           title={sold ? `Keep ${name}` : `Sell ${name} — his fee goes into the bank`}
-          className={`absolute -top-1.5 -right-1.5 z-20 grid size-5 place-items-center rounded-full border text-[10px] shadow-md transition-colors sm:size-[22px] ${
+          /* Inside the card, not hanging off it. Outside, this button
+             overlapped the captain badge on the next card along: each stuck
+             six pixels past its own edge and the row gap between them is
+             six. Tucked into its own corner it can't reach a neighbour at
+             any gap, and the top right is the quietest part of the card. */
+          className={`absolute top-1 right-1 z-20 grid size-[19px] place-items-center rounded-full border text-[10px] shadow-md transition-colors sm:size-[21px] ${
             sold
               ? 'border-good bg-good text-white'
               : 'border-line bg-surface-1 text-ink-2 hover:border-bad hover:bg-bad hover:text-white'
@@ -453,7 +458,8 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
           {captain ? (tripleCap ? '3×' : 'C') : 'V'}
         </span>
       )}
-      {transferred && <span className="absolute -top-1.5 right-4 z-10 grid size-4 place-items-center rounded-full bg-good text-[9px] text-white sm:right-5"><Icon name="check" size={10} /></span>}
+      {/* Sits inside too, immediately left of the cross, for the same reason. */}
+      {transferred && <span className="absolute top-1 right-[23px] z-10 grid size-4 place-items-center rounded-full bg-good text-[9px] text-white sm:right-[25px]"><Icon name="check" size={10} /></span>}
       <FoilShell
         tier={bench ? 'graphite' : tierOf(rating || null)}
         onClick={onOpen}
