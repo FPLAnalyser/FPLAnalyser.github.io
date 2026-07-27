@@ -432,12 +432,12 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
           onClick={(ev) => { ev.stopPropagation(); onSell() }}
           aria-label={sold ? `Keep ${name}` : `Sell ${name}`}
           title={sold ? `Keep ${name}` : `Sell ${name} — his fee goes into the bank`}
-          /* Inside the card, not hanging off it. Outside, this button
-             overlapped the captain badge on the next card along: each stuck
-             six pixels past its own edge and the row gap between them is
-             six. Tucked into its own corner it can't reach a neighbour at
-             any gap, and the top right is the quietest part of the card. */
-          className={`absolute top-1 right-1 z-20 grid size-[19px] place-items-center rounded-full border text-[10px] shadow-md transition-colors sm:size-[21px] ${
+          /* Bottom-right, hanging off the card. The top corners belong to
+             the armband and the availability flag, and a button hanging off
+             the top-right landed on the next card's armband — six pixels of
+             overhang each way into a six-pixel gap. Nothing lives in a
+             bottom corner, so this can't collide however tight the row. */
+          className={`absolute -right-1.5 -bottom-1.5 z-20 grid size-5 place-items-center rounded-full border text-[10px] shadow-md transition-colors sm:size-[22px] ${
             sold
               ? 'border-good bg-good text-white'
               : 'border-line bg-surface-1 text-ink-2 hover:border-bad hover:bg-bad hover:text-white'
@@ -450,16 +450,7 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
           card rather than being a filter on it, so the restore button keeps
           its colour instead of going grey along with him. */}
       {sold && <span className="pointer-events-none absolute inset-0 z-10 rounded-xl bg-surface-1/45 backdrop-grayscale" />}
-      {(captain || vice) && (
-        <span
-          title={captain && tripleCap ? 'Triple captain' : captain ? 'Captain' : 'Vice-captain'}
-          className={`absolute -top-1.5 -left-1.5 z-10 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[10px] font-bold ${captain ? (tripleCap ? 'bg-accent text-accent-contrast ring-2 ring-accent/40' : 'bg-accent text-accent-contrast') : 'bg-surface-3 text-ink'}`}
-        >
-          {captain ? (tripleCap ? '3×' : 'C') : 'V'}
-        </span>
-      )}
-      {/* Sits inside too, immediately left of the cross, for the same reason. */}
-      {transferred && <span className="absolute top-1 right-[23px] z-10 grid size-4 place-items-center rounded-full bg-good text-[9px] text-white sm:right-[25px]"><Icon name="check" size={10} /></span>}
+      {transferred && <span className="absolute -top-1.5 -right-1.5 z-10 grid size-4 place-items-center rounded-full bg-good text-[9px] text-white"><Icon name="check" size={10} /></span>}
       <FoilShell
         tier={bench ? 'graphite' : tierOf(rating || null)}
         onClick={onOpen}
@@ -473,7 +464,19 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
           <span className="photo-mono absolute inset-0 place-items-center text-[11px] font-extrabold text-white/35">{initialsOf(name)}</span>
           <PlayerPhoto code={code} element={element} className="relative h-full w-full object-contain object-top" placeholder={<span className="grid h-full w-full place-items-center text-[11px] font-extrabold text-white/35">{initialsOf(name)}</span>} />
         </span>
-        <span className="capture-line mt-1 block w-full truncate text-[9.5px] leading-tight font-bold text-white sm:text-[11px]">{name}</span>
+        {/* The armband rides with the name rather than hanging off the
+            corner, which is where the neighbouring card's controls reach. */}
+        <span className="capture-line mt-1 block w-full truncate text-[9.5px] leading-tight font-bold text-white sm:text-[11px]">
+          {(captain || vice) && (
+            <span
+              title={captain && tripleCap ? 'Triple captain' : captain ? 'Captain' : 'Vice-captain'}
+              className={`mr-1 inline-grid h-[13px] min-w-[13px] translate-y-[1px] place-items-center rounded-full px-[3px] text-[8.5px] leading-none font-black sm:h-[15px] sm:min-w-[15px] sm:text-[9.5px] ${
+                captain ? 'bg-accent text-accent-contrast' : 'bg-white/80 text-black'
+              }`}
+            >{captain ? (tripleCap ? '3×' : 'C') : 'V'}</span>
+          )}
+          {name}
+        </span>
         <span className="mt-0.5 block w-full truncate rounded px-1 text-[8.5px] font-bold sm:text-[9px]" style={{ background: bg, color: fg }}>{next ? `${next.opponent} (${next.venue})` : 'No game'}</span>
         {fixtures.length > 1 && (
           <span className="mt-0.5 hidden w-full gap-0.5 sm:flex">
