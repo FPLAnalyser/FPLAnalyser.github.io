@@ -466,36 +466,49 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
             the only free surface on the card — the border carries the rating
             tier, the pill under the name carries fixture difficulty, and a
             faded card already means sold. */}
-        {flag && (
-          <>
-            <span className="absolute inset-x-0 top-0 z-10 h-1" style={{ background: SEV_COLOUR[flag.sev].bar }} />
-            <span
-              title={flag.title}
-              className="absolute top-[5px] left-1 z-10 rounded px-1 py-0.5 text-[7.5px] leading-none font-extrabold tracking-wide"
-              style={{ background: SEV_COLOUR[flag.sev].chip, color: SEV_COLOUR[flag.sev].ink }}
-            >{flag.label}</span>
-          </>
+        {flag && <span className="absolute inset-x-0 top-0 z-10 h-1" style={{ background: SEV_COLOUR[flag.sev].bar }} />}
+        {/* Armband and reason share one row along the top, indented off the
+            left corner and wholly inside the card.
+            Inside, because the card clips its own overflow and anything
+            straddling the border loses half of itself. Indented, because the
+            corners are where the neighbouring cards' controls reach — on a
+            five-man row a card is only 76px wide and the sell cross hangs
+            over the right one. And one row rather than one mark at each end,
+            so a flagged captain can't have his two marks collide however
+            narrow the card gets.
+            The indent is a proportion rather than a fixed inset: a card is
+            118px on a row of three and 55px on a row of five at 320, so a
+            fixed one that looks right on the wide card puts a flagged
+            captain's marks under the neighbour's cross on the narrow one. */}
+        {(captain || vice || flag) && (
+          <span className="absolute top-1 left-[18%] z-10 flex items-center gap-[3px]">
+            {(captain || vice) && (
+              <span
+                title={captain && tripleCap ? 'Triple captain' : captain ? 'Captain' : 'Vice-captain'}
+                className={`grid h-[14px] min-w-[14px] shrink-0 place-items-center rounded-full px-1 text-[8.5px] leading-none font-black sm:h-4 sm:min-w-4 sm:text-[9.5px] ${
+                  captain ? 'bg-accent text-accent-contrast' : 'bg-white/85 text-black'
+                }`}
+              >{captain ? (tripleCap ? '3×' : 'C') : 'V'}</span>
+            )}
+            {flag && (
+              /* Below 380px a five-man row gives each card ~62px, and an
+                 armband plus a reason plus the cross do not fit in that.
+                 The reason is what goes: the bar of colour above still says
+                 there is a problem, and the card opens onto the detail. */
+              <span
+                title={flag.title}
+                className="hidden shrink-0 rounded px-[3px] py-0.5 text-[7.5px] leading-none font-extrabold tracking-wide min-[380px]:inline-block"
+                style={{ background: SEV_COLOUR[flag.sev].chip, color: SEV_COLOUR[flag.sev].ink }}
+              >{flag.label}</span>
+            )}
+          </span>
         )}
         <span className="photo-slot relative mx-auto block h-9 w-8 sm:h-11 sm:w-10">
           <span className="photo-mono absolute inset-0 place-items-center text-[11px] font-extrabold text-white/35">{initialsOf(name)}</span>
           <PlayerPhoto code={code} element={element} className="relative h-full w-full object-contain object-top" placeholder={<span className="grid h-full w-full place-items-center text-[11px] font-extrabold text-white/35">{initialsOf(name)}</span>} />
         </span>
-        {/* The armband rides with the name rather than hanging off the
-            corner, which is where the neighbouring card's controls reach. */}
-        {/* Flex rather than a truncating text line: `truncate` clips
-            anything taller than the line box, which sliced the top and
-            bottom off the armband. Only the name truncates now. */}
-        <span className="capture-line mt-1 flex w-full items-center justify-center gap-1 text-[9.5px] leading-tight font-bold text-white sm:text-[11px]">
-          {(captain || vice) && (
-            <span
-              title={captain && tripleCap ? 'Triple captain' : captain ? 'Captain' : 'Vice-captain'}
-              className={`grid h-[14px] min-w-[14px] shrink-0 place-items-center rounded-full px-[3px] text-[8.5px] leading-none font-black sm:h-4 sm:min-w-4 sm:text-[9.5px] ${
-                captain ? 'bg-accent text-accent-contrast' : 'bg-white/85 text-black'
-              }`}
-            >{captain ? (tripleCap ? '3×' : 'C') : 'V'}</span>
-          )}
-          <span className="truncate">{name}</span>
-        </span>
+        {/* The name gets the whole line back now the armband has moved. */}
+        <span className="capture-line mt-1 block w-full truncate text-[9.5px] leading-tight font-bold text-white sm:text-[11px]">{name}</span>
         <span className="mt-0.5 block w-full truncate rounded px-1 text-[8.5px] font-bold sm:text-[9px]" style={{ background: bg, color: fg }}>{next ? `${next.opponent} (${next.venue})` : 'No game'}</span>
         {fixtures.length > 1 && (
           <span className="mt-0.5 hidden w-full gap-0.5 sm:flex">
