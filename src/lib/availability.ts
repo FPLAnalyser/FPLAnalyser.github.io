@@ -149,6 +149,38 @@ export function availabilityFactor(p: AvailPlayer | null, gw: number, a: Availab
   return 0 // i / s / u / n with no date and no stated chance
 }
 
+/** Plain English for FPL's status letter. */
+export const STATUS_WORD: Record<string, string> = {
+  i: 'Injured', s: 'Suspended', d: 'A doubt', u: 'Unavailable', n: 'Not eligible',
+}
+
+/** The first gameweek he's expected back for, walking forward from `fromGw`.
+ *
+ *  This is the fact a manager actually wants and FPL never states: the news
+ *  says "Expected back 22 Aug", and what that means for your team is which
+ *  gameweek you get him for. It reuses the same date-against-kickoff rule the
+ *  projection uses, so the card and the points can't disagree. Null when he
+ *  isn't back inside the window, or when there's no date to go on. */
+export function returnsInGw(p: AvailPlayer | null, a: Availability, fromGw: number, within = 12): number | null {
+  if (!p || p.status === 'a') return null
+  for (let g = fromGw; g < fromGw + within; g++) {
+    if (availabilityFactor(p, g, a) > 0) return g
+  }
+  return null
+}
+
+/** "3 days ago" — how stale the news is, which is half of how much to trust it. */
+export function newsAge(iso?: string): string | null {
+  if (!iso) return null
+  const then = new Date(iso.replace(' ', 'T'))
+  if (Number.isNaN(then.getTime())) return null
+  const days = Math.floor((Date.now() - then.getTime()) / 86400000)
+  if (days <= 0) return 'today'
+  if (days === 1) return 'yesterday'
+  if (days < 14) return `${days} days ago`
+  return `${Math.floor(days / 7)} weeks ago`
+}
+
 /** How badly a flag hurts, on FPL's own three-step scale.
  *  1 yellow — 75% chance, a knock he should shake off
  *  2 amber  — 25–50%, a real doubt

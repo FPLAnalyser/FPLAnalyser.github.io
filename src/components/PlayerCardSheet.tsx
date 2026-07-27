@@ -6,6 +6,10 @@ import { ratingTo100, exactTo100 } from './StarRating'
 import { Icon } from './Icon'
 import { Exportable } from './ExportPanel'
 import { num } from '../lib/rows'
+import {
+  useAvailability, availFor, availBadge, returnsInGw, returnDateFrom, newsAge,
+  SEV_COLOUR, STATUS_WORD,
+} from '../lib/availability'
 import { FDR_COLORS } from '../lib/util'
 import { playerHref, teamLabel } from '../lib/util'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
@@ -78,6 +82,7 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap, ac
 }) {
   const navigate = useNavigate()
   const [tab, setTab] = useState<'rating' | 'compare'>('rating')
+  const avail = useAvailability()
   const [show, setShow] = useState<'rating' | 'xpts'>('rating')
   const [rivalId, setRivalId] = useState<number | null>(null)
 
@@ -156,6 +161,7 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap, ac
           </div>
           <button onClick={onClose} aria-label="Close" className="shrink-0 rounded-lg p-1.5 text-ink-3 transition-colors hover:text-ink"><Icon name="x" size={18} /></button>
         </div>
+        <AvailabilityBand player={player} fixtureEase={fixtureEase} avail={avail} />
         {actions && (
           <div className="shrink-0 border-b border-line bg-surface-2/40 px-4 py-2.5">{actions}</div>
         )}
@@ -284,5 +290,69 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap, ac
       </div>
     </div>,
     document.body,
+  )
+}
+
+/** What FPL says about a flagged player, and the one thing it doesn't: which
+ *  gameweek you actually get him back for.
+ *
+ *  The board can only afford a colour and three letters. This is where the
+ *  detail belongs — the club's own wording, how old it is, and the fixture
+ *  he is expected to return in, worked out by the same rule the projection
+ *  uses so the two can never disagree. Renders nothing for a fit player. */
+function AvailabilityBand({ player, fixtureEase, avail }: {
+  player: RatingRow
+  fixtureEase?: FixtureEaseRow[]
+  avail: ReturnType<typeof useAvailability>
+}) {
+  const live = availFor(avail, num(player, 'element'), num(player, 'code'))
+  const flag = availBadge(live)
+  if (!live || !flag) return null
+
+  const gws = [...new Set((fixtureEase ?? []).map((f) => f.gw))].sort((a, b) => a - b)
+  const fromGw = gws[0]
+  const back = fromGw != null ? returnsInGw(live, avail, fromGw) : null
+  const backFix = back != null
+    ? (fixtureEase ?? []).find((f) => f.team === player.team && f.gw === back)
+    : undefined
+  const age = newsAge(live.news_added)
+  const c = SEV_COLOUR[flag.sev]
+  const missing = back != null && fromGw != null ? back - fromGw : null
+  // FPL's chance-of-playing lags its own news line: a player whose return
+  // date is this weekend can still be carrying a stale 0%. Where a date
+  // exists the model uses it and ignores the percentage, so showing both
+  // would put a contradiction on the card. Only the one being used is shown.
+  const dated = returnDateFrom(live) != null
+
+  return (
+    <div className="shrink-0 border-b border-line" style={{ background: `color-mix(in oklab, ${c.bar} 12%, transparent)` }}>
+      <span className="block h-1 w-full" style={{ background: c.bar }} />
+      <div className="flex items-start gap-2.5 px-4 py-2.5">
+        <span className="mt-[3px] size-2.5 shrink-0 rounded-full" style={{ background: c.bar }} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span className="text-[13.5px] font-extrabold text-ink">{STATUS_WORD[live.status] ?? 'Flagged'}</span>
+            {!dated && live.chance != null && (
+              <span className="text-[12.5px] text-ink-2">{live.chance}% chance of playing</span>
+            )}
+            {age && <span className="ml-auto text-[11px] text-ink-3">reported {age}</span>}
+          </div>
+          {live.news && <div className="mt-0.5 text-[12.5px] text-ink-2">{live.news}</div>}
+          <div className="mt-1 text-[12.5px]">
+            {back == null ? (
+              <span className="text-ink-3">No return date given — treated as out until FPL says otherwise.</span>
+            ) : !dated ? (
+              <span className="text-ink-3">No return date given — the chance of playing above is all FPL has said.</span>
+            ) : (
+              <span className="text-ink">
+                Back for <span className="font-bold">GW{back}</span>
+                {backFix ? ` ${backFix.venue === 'H' ? 'vs' : 'away to'} ${teamLabel(String(backFix.opponent))}` : ''}
+                {missing ? <span className="text-ink-3"> — misses {missing} {missing === 1 ? 'gameweek' : 'gameweeks'} before that</span> : <span className="text-ink-3"> — available this week</span>}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
