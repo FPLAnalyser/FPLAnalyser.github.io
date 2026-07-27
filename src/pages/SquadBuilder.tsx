@@ -18,7 +18,7 @@ import { useCore } from '../lib/useData'
 import { tapHaptic, shareImageNative } from '../lib/native'
 import { rasterise } from '../lib/capture'
 import { num } from '../lib/rows'
-import { useAvailability, availBadge, availFor, withLivePrices, type Availability } from '../lib/availability'
+import { useAvailability, availBadge, availFor, withLivePrices, SEV_COLOUR, type Availability } from '../lib/availability'
 import { xpForGw, useXpModel, useMarketOdds } from '../lib/xp'
 import { usePlanner } from '../lib/usePlanner'
 import { teamLabel, playerHref } from '../lib/util'
@@ -433,7 +433,15 @@ export default function SquadBuilder() {
                         )}
                         {(() => {
                           const f = availBadge(availFor(avail, num(r, 'element'), num(r, 'code')))
-                          return f ? <span title={f.title} className={`shrink-0 rounded px-1 py-0.5 text-[8.5px] leading-none font-extrabold ${f.tone === 'bad' ? 'bg-bad text-white' : 'bg-warn text-black'}`}>{f.label}</span> : null
+                          // Same three colours as the pitch, so a yellow chip
+                          // means the same thing in the list as on the board.
+                          return f ? (
+                            <span
+                              title={f.title}
+                              className="shrink-0 rounded px-1 py-0.5 text-[8.5px] leading-none font-extrabold"
+                              style={{ background: SEV_COLOUR[f.sev].chip, color: SEV_COLOUR[f.sev].ink }}
+                            >{f.label}</span>
+                          ) : null
                         })()}
                       </div>
                       <div className="text-[11px] text-ink-3">{teamLabel(String(r.team))} · £{priceOf(r).toFixed(1)}m · {Math.round(num(r, 'selected_by_percent') ?? 0)}% owned</div>

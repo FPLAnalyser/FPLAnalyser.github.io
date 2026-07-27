@@ -1,5 +1,6 @@
 import { type CSSProperties, type ReactNode } from 'react'
 import { PlayerPhoto } from './PlayerPhoto'
+import { SEV_COLOUR, type AvailBadgeInfo } from '../lib/availability'
 
 /* ════════════════════════════════════════════════════════════════════════
    The pitch: mown stripes, a soft top-down light, and real markings drawn
@@ -172,15 +173,17 @@ export function PitchCard({ rating, cornerText, name, team, price, code, element
   /** Override the band derived from the rating — Team of the Week uses `ice`. */
   tier?: Tier
   /** Availability chip: INJ / SUS / chance-% — from the live layer. */
-  flag?: { label: string; tone: 'bad' | 'warn' | 'flat'; title: string } | null
+  flag?: AvailBadgeInfo | null
 }) {
   const t = tier ?? tierOf(rating)
   return (
     <FoilShell tier={t} onClick={onClick} className="w-full">
+      {flag && <span className="absolute inset-x-0 top-0 z-10 h-1" style={{ background: SEV_COLOUR[flag.sev].bar }} />}
       {flag && (
         <span
           title={flag.title}
-          className={`absolute top-1 left-1 z-10 rounded px-1 py-0.5 text-[7.5px] leading-none font-extrabold tracking-wide text-white ${flag.tone === 'bad' ? 'bg-bad' : 'bg-warn text-black'}`}
+          className="absolute top-[5px] left-1 z-10 rounded px-1 py-0.5 text-[7.5px] leading-none font-extrabold tracking-wide"
+          style={{ background: SEV_COLOUR[flag.sev].chip, color: SEV_COLOUR[flag.sev].ink }}
         >
           {flag.label}
         </span>

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { PlayerPhoto } from './PlayerPhoto'
 import { FoilShell, Pitch, CARD_W, initialsOf, tierOf } from './Pitch'
 import { PlayerCardSheet } from './PlayerCardSheet'
-import { availBadge, availFor, type Availability } from '../lib/availability'
+import { availBadge, availFor, SEV_COLOUR, type Availability } from '../lib/availability'
 import { xpForGw, useXpModel, useMarketOdds, gwBenchmark, gwRating } from '../lib/xp'
 import { Icon } from './Icon'
 import { tapHaptic } from '../lib/native'
@@ -11,6 +11,7 @@ import { num } from '../lib/rows'
 import { FDR_COLORS } from '../lib/util'
 import { CHIP_LABEL, type Chip } from '../lib/planner'
 import type { Planner } from '../lib/usePlanner'
+import type { AvailBadgeInfo } from '../lib/availability'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
 const BUDGET = 100
@@ -415,7 +416,7 @@ function Stat({ label, value, tone, sub, onClick }: { label: string; value: stri
 
 function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner, flag, name, code, element, transferred, bench, highlight, dimmed, picked, sold, onSell }: {
   onOpen: () => void; captain: boolean; vice: boolean; tripleCap?: boolean; fixtures: FixtureEaseRow[]; rating: number
-  corner: string; flag?: { label: string; tone: 'bad' | 'warn' | 'flat'; title: string } | null
+  corner: string; flag?: AvailBadgeInfo | null
   name: string; code: number | null; element: number; transferred: boolean; bench?: boolean
   highlight?: boolean; dimmed?: boolean; picked?: boolean
   /** Sold this week and not yet replaced — he stays on the pitch so the shape
@@ -457,8 +458,21 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
         className={`w-full ${highlight ? 'ring-2 ring-accent ring-offset-1 ring-offset-transparent' : ''} ${picked ? 'ring-2 ring-bad' : ''} ${sold ? 'opacity-70' : ''}`}
         innerClassName="px-1 pt-1 pb-1.5 sm:px-1.5"
       >
+        {/* A bar of severity colour along the top edge, with the reason
+            riding on it. Colour finds the problem across fifteen cards at a
+            glance; the label says whether it's a knock or a ban. The edge is
+            the only free surface on the card — the border carries the rating
+            tier, the pill under the name carries fixture difficulty, and a
+            faded card already means sold. */}
         {flag && (
-          <span title={flag.title} className={`absolute top-1 left-1 z-10 rounded px-1 py-0.5 text-[7.5px] leading-none font-extrabold tracking-wide ${flag.tone === 'bad' ? 'bg-bad text-white' : 'bg-warn text-black'}`}>{flag.label}</span>
+          <>
+            <span className="absolute inset-x-0 top-0 z-10 h-1" style={{ background: SEV_COLOUR[flag.sev].bar }} />
+            <span
+              title={flag.title}
+              className="absolute top-[5px] left-1 z-10 rounded px-1 py-0.5 text-[7.5px] leading-none font-extrabold tracking-wide"
+              style={{ background: SEV_COLOUR[flag.sev].chip, color: SEV_COLOUR[flag.sev].ink }}
+            >{flag.label}</span>
+          </>
         )}
         <span className="photo-slot relative mx-auto block h-9 w-8 sm:h-11 sm:w-10">
           <span className="photo-mono absolute inset-0 place-items-center text-[11px] font-extrabold text-white/35">{initialsOf(name)}</span>

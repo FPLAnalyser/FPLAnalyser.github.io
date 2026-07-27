@@ -17,7 +17,7 @@ import { MatchupBars, UnknownModules, minutesRead, formRead, valueRead, defConRe
 import { PlayerZoneMap } from '../components/ShotMap'
 import { useCore } from '../lib/useData'
 import { num, str, bool } from '../lib/rows'
-import { useAvailability, availFor, availBadge, type AvailBadgeInfo } from '../lib/availability'
+import { useAvailability, availFor, availBadge, SEV_COLOUR, type AvailBadgeInfo } from '../lib/availability'
 import { teamFullNames, teamColors, searchText, TOOLTIPS } from '../lib/util'
 import { buildPlayerBundle, buildPlayerVerdict } from '../lib/insights/narrative'
 import type { CoreData, RatingRow } from '../lib/types'
@@ -418,7 +418,11 @@ function IdentStrip({ r, peers, personas, flags, isPenTaker, isSpTaker, streak, 
           </div>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {availFlag && (
-              <span title={availFlag.title} className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10.5px] font-extrabold tracking-wide ${availFlag.tone === 'bad' ? 'bg-bad text-white' : 'bg-warn text-black'}`}>
+              <span
+                title={availFlag.title}
+                className="inline-flex items-center rounded-full px-2 py-0.5 text-[10.5px] font-extrabold tracking-wide"
+                style={{ background: SEV_COLOUR[availFlag.sev].chip, color: SEV_COLOUR[availFlag.sev].ink }}
+              >
                 {availFlag.label === 'INJ' ? 'Injured' : availFlag.label === 'SUS' ? 'Suspended' : availFlag.label === 'OUT' ? 'Unavailable' : `${availFlag.label} fit`}
               </span>
             )}

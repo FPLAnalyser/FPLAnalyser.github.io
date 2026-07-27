@@ -149,14 +149,43 @@ export function availabilityFactor(p: AvailPlayer | null, gw: number, a: Availab
   return 0 // i / s / u / n with no date and no stated chance
 }
 
-export interface AvailBadgeInfo { label: string; tone: 'bad' | 'warn' | 'flat'; title: string }
+/** How badly a flag hurts, on FPL's own three-step scale.
+ *  1 yellow — 75% chance, a knock he should shake off
+ *  2 amber  — 25–50%, a real doubt
+ *  3 red    — nought, suspended, or otherwise not playing            */
+export type AvailSeverity = 1 | 2 | 3
 
-/** The chip the UI shows next to a flagged player — null when fully fit. */
+/** One ramp for the whole site, so a colour means the same thing on the pitch,
+ *  in the transfer list and on a player page. Tuned for the dark player card,
+ *  which is where they mostly live. */
+export const SEV_COLOUR: Record<AvailSeverity, { bar: string; chip: string; ink: string }> = {
+  1: { bar: '#F5CE3E', chip: '#F5CE3E', ink: '#231A00' },
+  2: { bar: '#E88C21', chip: '#E88C21', ink: '#231400' },
+  3: { bar: '#D9453C', chip: '#D9453C', ink: '#FFFFFF' },
+}
+
+export interface AvailBadgeInfo {
+  label: string
+  tone: 'bad' | 'warn' | 'flat'
+  sev: AvailSeverity
+  title: string
+}
+
+/** The chip the UI shows next to a flagged player — null when fully fit.
+ *
+ *  Colour carries how likely he is to play; the label carries why. Both are
+ *  needed: a suspension and a knock are both red and are not the same
+ *  problem, and red against amber is the one pair a colour-blind reader is
+ *  most likely to lose. */
 export function availBadge(p: AvailPlayer | null): AvailBadgeInfo | null {
   if (!p || p.status === 'a') return null
   const title = p.news || 'No detail from FPL'
-  if (p.status === 'i') return { label: 'INJ', tone: 'bad', title }
-  if (p.status === 's') return { label: 'SUS', tone: 'bad', title }
-  if (p.status === 'd') return { label: `${p.chance ?? '?'}%`, tone: 'warn', title }
-  return { label: 'OUT', tone: 'bad', title } // u / n — not available to pick
+  // Suspension is certain whatever chance the feed does or doesn't state.
+  if (p.status === 's') return { label: 'SUS', tone: 'bad', sev: 3, title }
+  const chance = p.chance ?? (p.status === 'd' ? 75 : 0)
+  const sev: AvailSeverity = chance >= 75 ? 1 : chance >= 25 ? 2 : 3
+  const tone = sev === 3 ? 'bad' : 'warn'
+  if (p.status === 'i') return { label: chance > 0 ? `${chance}%` : 'INJ', tone, sev, title }
+  if (p.status === 'd') return { label: `${chance}%`, tone, sev, title }
+  return { label: 'OUT', tone: 'bad', sev: 3, title } // u / n — not available to pick
 }
