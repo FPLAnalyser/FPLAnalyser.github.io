@@ -26,8 +26,8 @@ import type { FixtureEaseRow, RatingRow } from './types'
    then zeroes or scales the lot. Blanks are 0, doubles are summed.
    ════════════════════════════════════════════════════════════════════════ */
 
-const GOAL_PTS: Record<string, number> = { GKP: 10, DEF: 6, MID: 5, FWD: 4 }
-const CS_PTS: Record<string, number> = { GKP: 4, DEF: 4, MID: 1, FWD: 0 }
+export const GOAL_PTS: Record<string, number> = { GKP: 10, DEF: 6, MID: 5, FWD: 4 }
+export const CS_PTS: Record<string, number> = { GKP: 4, DEF: 4, MID: 1, FWD: 0 }
 const MAX_G = 12
 
 // ── data hooks ──────────────────────────────────────────────────────────────
@@ -55,6 +55,43 @@ export function useXpModel(): XpModel | null {
     for (const p of d.players) byCode.set(p.code, p)
     return { league: d.league, teams: d.teams, dcCurve: d.dcCurve ?? {}, byCode }
   }, [q.data])
+}
+
+/* ── how a defence leaks, and how a player scores ────────────────────────────
+   Central-versus-wide turned out to be a dead end — every Premier League
+   defence concedes 78–85% of its expected goals from the middle of the box,
+   because that is simply where chances are worth anything. The axis that
+   genuinely separates them is dead balls: 16% of xG conceded at Brentford
+   against 31% at Bournemouth.
+
+   So each side is reduced to its shot mix and the two are matched. A player
+   whose mix is league-average comes out at exactly 1.0, so the adjustment
+   can only come from a real mismatch — never from noise in the baseline. */
+
+export interface ShotProfiles {
+  league: { conceded: { sp: number; q: number }; taken: { sp: number; q: number } }
+  teams: Record<string, { sp: number; q: number; n: number }>
+  players: Record<string, { sp: number; q: number; n: number }>
+}
+
+export function useShotProfiles(): ShotProfiles | null {
+  const q = useLazyTable<ShotProfiles>('shot_profiles')
+  const d = q.data
+  return d && d.league && d.teams && d.players ? d : null
+}
+
+/** How much more (or less) this player's goal threat is worth against this
+ *  defence, given how each of them splits between dead balls and open play.
+ *  Clamped either side so a thin sample can't run away with a fixture. */
+export function matchupMult(element: number | null, opponent: string, sp: ShotProfiles | null): number {
+  if (!sp || element == null) return 1
+  const p = sp.players[String(element)]
+  const d = sp.teams[opponent]
+  if (!p || !d) return 1
+  const lg = sp.league.conceded.sp
+  if (!(lg > 0 && lg < 1)) return 1
+  const m = p.sp * (d.sp / lg) + (1 - p.sp) * ((1 - d.sp) / (1 - lg))
+  return Math.max(0.75, Math.min(1.3, m))
 }
 
 interface OddsFile {
@@ -119,6 +156,25 @@ function expFloorDiv(lam: number, div: number): number {
   return e
 }
 
+/** Every scoring source in a fixture, kept apart rather than summed — the
+ *  captain ladder simulates from the rates, and the breakdown reads them. */
+export interface XpParts {
+  goal: number; assist: number; cs: number; conceded: number; saves: number
+  dc: number; bonus: number; appearance: number; cards: number
+  /** Rates behind the random parts, so a week can be simulated not just averaged. */
+  lamGoal: number; lamAssist: number; lamAgainst: number; p60: number
+  /** The dead-ball matchup applied to the goal threat, 1.0 when it's a wash. */
+  matchup: number
+}
+
+export const sumParts = (p: XpParts): number =>
+  p.goal + p.assist + p.cs + p.conceded + p.saves + p.dc + p.bonus + p.appearance + p.cards
+
+const ZERO_PARTS = (): XpParts => ({
+  goal: 0, assist: 0, cs: 0, conceded: 0, saves: 0, dc: 0, bonus: 0, appearance: 0, cards: 0,
+  lamGoal: 0, lamAssist: 0, lamAgainst: 0, p60: 0, matchup: 1,
+})
+
 function componentXp(
   p: XpPlayer,
   pos: string,
@@ -126,7 +182,8 @@ function componentXp(
   model: XpModel,
   mkt: { for: number; against: number } | null,
   market: MarketOdds | null,
-): number {
+  matchup = 1,
+): XpParts {
   const lg = model.league
   const t = strengthOf(fix.team, model, market)
   const o = strengthOf(fix.opponent, model, market)
@@ -146,18 +203,21 @@ function componentXp(
   const emf = p.p60 + 0.5 * Math.max(p.ppl - p.p60, 0)
   const dcMult = model.dcCurve[pos]?.[String(fix.fdr)] ?? 1
 
-  let xp = 0
-  xp += p.xg90 * attScale * (GOAL_PTS[pos] ?? 0) * emf
-  xp += p.xa90 * attScale * 3 * emf
-  xp += Math.exp(-lamCs) * (CS_PTS[pos] ?? 0) * p.p60
-  if (pos === 'GKP' || pos === 'DEF') xp -= expFloorDiv(lamCs, 2) * p.p60
-  if (pos === 'GKP') xp += expFloorDiv(p.sv90 * svScale, 3) * p.p60
-  xp += 2 * p.dc * dcMult * p.p60
+  const lamGoal = p.xg90 * attScale * matchup * emf
+  const lamAssist = p.xa90 * attScale * emf
   const bScale = pos === 'MID' || pos === 'FWD' ? Math.min(attScale, 1.3) : 1
-  xp += p.bon * bScale * p.ppl
-  xp += 2 * p.p60 + Math.max(p.ppl - p.p60, 0)
-  xp -= p.yel * p.ppl
-  return xp
+  return {
+    goal: lamGoal * (GOAL_PTS[pos] ?? 0),
+    assist: lamAssist * 3,
+    cs: Math.exp(-lamCs) * (CS_PTS[pos] ?? 0) * p.p60,
+    conceded: pos === 'GKP' || pos === 'DEF' ? -expFloorDiv(lamCs, 2) * p.p60 : 0,
+    saves: pos === 'GKP' ? expFloorDiv(p.sv90 * svScale, 3) * p.p60 : 0,
+    dc: 2 * p.dc * dcMult * p.p60,
+    bonus: p.bon * bScale * p.ppl,
+    appearance: 2 * p.p60 + Math.max(p.ppl - p.p60, 0),
+    cards: -p.yel * p.ppl,
+    lamGoal, lamAssist, lamAgainst: lamCs, p60: p.p60, matchup,
+  }
 }
 
 // Legacy fallback for players without a component baseline (no last-season
@@ -174,30 +234,55 @@ export function xpForGw(
   avail?: Availability,
   model?: XpModel | null,
   market?: MarketOdds | null,
+  profiles?: ShotProfiles | null,
 ): number | null {
+  const parts = xpPartsForGw(r, gw, fixtureEase, avail, model, market, profiles)
+  return parts && sumParts(parts)
+}
+
+/** The same projection, source by source. Null carries the same meaning as
+ *  above: no baseline at all, as opposed to a blank week (all zeroes). */
+export function xpPartsForGw(
+  r: RatingRow,
+  gw: number,
+  fixtureEase: FixtureEaseRow[],
+  avail?: Availability,
+  model?: XpModel | null,
+  market?: MarketOdds | null,
+  profiles?: ShotProfiles | null,
+): XpParts | null {
   const fixes = fixtureEase.filter((f) => f.team === r.team && f.gw === gw)
   const code = num(r, 'code')
+  const element = num(r, 'element')
   const p = model && code != null ? model.byCode.get(code) : undefined
-  let sum: number
+  const out = ZERO_PARTS()
+
   if (model && p) {
-    if (!fixes.length) return 0
-    sum = 0
     for (const f of fixes) {
       const mkt = market?.byKey.get(`${f.team}:${gw}:${f.opponent}`) ?? null
-      sum += componentXp(p, String(r.position), f, model, mkt, market ?? null)
+      const m = matchupMult(element, f.opponent, profiles ?? null)
+      const part = componentXp(p, String(r.position), f, model, mkt, market ?? null, m)
+      for (const k of Object.keys(out) as (keyof XpParts)[]) out[k] += part[k]
+      out.matchup = m
     }
   } else {
     const base = num(r, 'season_xpts_per_game')
     if (base == null) return null
-    if (!fixes.length) return 0
-    sum = 0
-    for (const f of fixes) sum += base * (FDR_MULT[f.fdr] ?? 1)
+    // No component baseline (an unrated new signing): a flat per-game figure
+    // bent by difficulty is all we honestly have, so it lands as appearance
+    // points rather than pretending to a breakdown it can't support.
+    for (const f of fixes) out.appearance += base * (FDR_MULT[f.fdr] ?? 1)
   }
+
   if (avail) {
-    const pl = availFor(avail, num(r, 'element'), code)
-    sum *= availabilityFactor(pl, gw, avail)
+    const pl = availFor(avail, element, code)
+    const factor = availabilityFactor(pl, gw, avail)
+    if (factor !== 1) {
+      for (const k of ['goal', 'assist', 'cs', 'conceded', 'saves', 'dc', 'bonus', 'appearance', 'cards',
+        'lamGoal', 'lamAssist', 'p60'] as (keyof XpParts)[]) out[k] *= factor
+    }
   }
-  return sum
+  return out
 }
 
 /* ── rating a gameweek's projected haul ─────────────────────────────────────
@@ -207,7 +292,7 @@ export function xpForGw(
    in the game (what was actually on the table). Your rating is how far up
    that gap you sit. */
 
-const FORMATIONS: [number, number, number][] = []
+export const FORMATIONS: [number, number, number][] = []
 for (let d = 3; d <= 5; d++) for (let m = 2; m <= 5; m++) { const f = 10 - d - m; if (f >= 1 && f <= 3) FORMATIONS.push([d, m, f]) }
 
 export interface GwBenchmark { floor: number; ceiling: number }
@@ -220,10 +305,11 @@ export function gwBenchmark(
   avail?: Availability,
   model?: XpModel | null,
   market?: MarketOdds | null,
+  profiles?: ShotProfiles | null,
 ): GwBenchmark | null {
   const byPos: Record<string, number[]> = { GKP: [], DEF: [], MID: [], FWD: [] }
   for (const r of pool) {
-    const v = xpForGw(r, gw, fixtureEase, avail, model, market)
+    const v = xpForGw(r, gw, fixtureEase, avail, model, market, profiles)
     if (v != null && byPos[String(r.position)]) byPos[String(r.position)].push(v)
   }
   for (const k of Object.keys(byPos)) byPos[k].sort((a, b) => b - a)
@@ -258,11 +344,12 @@ export function xpOverGws(
   avail?: Availability,
   model?: XpModel | null,
   market?: MarketOdds | null,
+  profiles?: ShotProfiles | null,
 ): number | null {
   let total = 0
   let any = false
   for (let g = fromGw; g < fromGw + n; g++) {
-    const v = xpForGw(r, g, fixtureEase, avail, model, market)
+    const v = xpForGw(r, g, fixtureEase, avail, model, market, profiles)
     if (v != null) {
       total += v
       any = true

@@ -9,6 +9,7 @@ import { TeamBadge } from '../components/badges'
 import { FixtureChips, FixtureNames } from '../components/FixtureChips'
 import { ShareFooter } from '../components/ShareFooter'
 import { SeasonPlanner } from '../components/SeasonPlanner'
+import { SquadLab } from '../components/SquadLab'
 import { Icon } from '../components/Icon'
 import { Pitch, PitchCard, CARD_W } from '../components/Pitch'
 import { PlayerCardSheet } from '../components/PlayerCardSheet'
@@ -205,6 +206,12 @@ export default function SquadBuilder() {
   const liveScore = liveRated.length ? Math.round(liveRated.reduce((a, b) => a + b, 0) / liveRated.length) : null
   const liveBestXI = useMemo(() => bestElevenScore(liveChosen), [liveChosen])
   const liveGw = complete ? planner.gw : buildGw
+  /** The eleven the lab reads for captaincy — the week's lineup once the
+   *  planner is running, and nothing before that. */
+  const liveXI = useMemo(
+    () => (planner.week?.xi ?? []).map((el) => byEl.get(el)).filter(Boolean) as RatingRow[],
+    [planner.week, byEl],
+  )
   /** What a replacement for this player may cost: the bank plus his own fee. */
   const budgetFor = (out: RatingRow) => BUDGET - plannerSquad.reduce((t, el) => t + priceOf(byEl.get(el) ?? {} as RatingRow), 0) + priceOf(out)
 
@@ -290,7 +297,23 @@ export default function SquadBuilder() {
             partialSquad={picked}
             onPickSlot={(p) => { setPickPos(p as Pos); setQuery(''); setNote(null) }}
             onAutoPick={complete ? planner.autoXI : autoPick}
-            read={<SquadRead chosen={liveChosen} fixtureEase={fixtureEase} gw={liveGw} avail={avail} onOpen={() => setRatingOpen(true)} />}
+            read={(
+              <>
+                <SquadRead chosen={liveChosen} fixtureEase={fixtureEase} gw={liveGw} avail={avail} onOpen={() => setRatingOpen(true)} />
+                {complete && (
+                  <SquadLab
+                    squad={liveChosen} xi={liveXI} pool={pool} fixtureEase={fixtureEase} avail={avail}
+                    gw={liveGw} gws={planner.gws} bank={BUDGET - planner.spend} freeTransfers={planner.banked}
+                    onArmTransfer={(el) => {
+                      setArmedOut(el)
+                      setPendingIn(null)
+                      setPickPos(String(byEl.get(el)?.position ?? 'MID') as Pos)
+                      setQuery('')
+                    }}
+                  />
+                )}
+              </>
+            )}
             footer={total > 0 ? (
               /* Under the board, not above it: you share a squad once you've
                  built one, so these were spending a whole band on nothing. */
