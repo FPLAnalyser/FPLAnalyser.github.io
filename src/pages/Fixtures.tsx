@@ -747,6 +747,24 @@ function FixtureGrid({
     return any ? sum : null
   }
 
+  /** The best projected figure in each gameweek column — the one worth
+   *  planning around. Only for the projection modes: on the difficulty grid
+   *  the colour already says which fixture is the kindest. */
+  const bestByGw = useMemo(() => {
+    const m = new Map<number, number>()
+    if (mode === 'diff') return m
+    for (const gw of gws) {
+      let best: number | null = null
+      for (const r of rows) {
+        const v = gwVal(r, gw)
+        if (v != null && (best == null || v > best)) best = v
+      }
+      if (best != null) m.set(gw, best)
+    }
+    return m
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, gws, mode, lens, seasonRating, baselines, leagueBase, market])
+
   const sorted = useMemo(() => {
     const val = (r: (typeof rows)[number]) => (sortKey === 'run' ? r.run : gwVal(r, sortKey))
     return [...rows].sort((a, b) => {
@@ -825,10 +843,18 @@ function FixtureGrid({
                               const tip = mode === 'xg'
                                 ? `GW${gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(f.opponent)} — projected ${p.v.toFixed(2)} xG${p.assumed ? ' (promoted opponent: league-average assumption)' : ''}`
                                 : `GW${gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(f.opponent)} — ${Math.round(p.v * 100)}% clean-sheet chance${p.assumed ? ' (promoted opponent: league-average assumption)' : ''}`
+                              // Best in the column, and the only fixture this
+                              // team has that week — a double's two halves are
+                              // each smaller than the total that won it.
+                              const best = bestByGw.get(gw)
+                              const isBest = best != null && fs.length === 1 && Math.abs(p.v - best) < 1e-9
                               return (
-                                <span key={i} className="inline-block w-full min-w-[54px] rounded px-1 py-0.5 whitespace-nowrap" style={{ background: `color-mix(in srgb, ${hue} ${strength.toFixed(0)}%, transparent)` }} title={tip}>
+                                <span key={i} className={`inline-block w-full min-w-[54px] rounded px-1 py-0.5 whitespace-nowrap ${isBest ? 'ring-1 ring-accent' : ''}`} style={{ background: `color-mix(in srgb, ${hue} ${strength.toFixed(0)}%, transparent)` }} title={isBest ? `${tip} — best this gameweek` : tip}>
                                   <span className="block text-[9px] leading-tight font-semibold text-ink-2 opacity-80">{f.opponent} ({f.venue}){p.assumed ? ' ·' : ''}</span>
-                                  <span className="font-num block text-[12px] leading-tight font-bold tabular-nums text-ink">{label}</span>
+                                  <span className={`font-num block text-[12px] leading-tight font-bold tabular-nums ${isBest ? 'text-accent' : 'text-ink'}`}>
+                                    {isBest && <Icon name="crown" size={9} className="mr-0.5 inline-block align-[-0.05em]" />}
+                                    {label}
+                                  </span>
                                 </span>
                               )
                             })}
