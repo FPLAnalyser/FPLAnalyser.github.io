@@ -19,41 +19,58 @@
    takes the mode back off again.
    ════════════════════════════════════════════════════════════════════════ */
 
-/** Try to load `src` through CORS so its pixels can be read back off a canvas. */
+/** Can this URL be read back off a canvas — i.e. does the host answer a CORS
+ *  request for it?
+ *
+ *  Deliberately probed on a throwaway image. Setting `crossOrigin` and
+ *  re-assigning `src` on the live element, which is what this used to do,
+ *  fires that element's `error` handler when the host has no CORS headers —
+ *  and the headshot component reads an error as "this URL is no good" and
+ *  advances to the next candidate. Share once and it would walk off the end
+ *  of the list, leaving initials where the photo had been, on the page, for
+ *  the rest of the session. html2canvas requests its own copies with
+ *  `useCORS`, so the live element never needs touching at all.
+ *
+ *  Cached per URL: fifteen cards on a pitch are fifteen requests otherwise. */
+const corsCache = new Map<string, Promise<boolean>>()
 function corsLoadable(src: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    const probe = new Image()
-    probe.crossOrigin = 'anonymous'
-    probe.onload = () => resolve(true)
-    probe.onerror = () => resolve(false)
-    probe.src = src
+  const hit = corsCache.get(src)
+  if (hit) return hit
+  const probe = new Promise<boolean>((resolve) => {
+    const img = new Image()
+    let settled = false
+    const finish = (ok: boolean) => { if (!settled) { settled = true; resolve(ok) } }
+    img.crossOrigin = 'anonymous'
+    img.onload = () => finish(img.naturalWidth > 0)
+    img.onerror = () => finish(false)
+    img.src = src
     // Don't let one slow host hold up the whole export.
-    setTimeout(() => resolve(false), 4000)
+    setTimeout(() => finish(false), 4000)
   })
+  corsCache.set(src, probe)
+  return probe
 }
 
 /** Hide any image html2canvas would draw as a hole, so the monogram beneath it
  *  shows instead. Returns the undo. */
 async function hideUnrasterisable(node: HTMLElement): Promise<() => void> {
   const imgs = [...node.querySelectorAll('img')].filter((i) => i.src && !i.src.startsWith('data:'))
-  const hidden: HTMLImageElement[] = []
+  // Hold the slot alongside the image. Resolving it with `closest` at undo
+  // time fails if the element has since been detached, which left the slot
+  // stuck in its no-photo state — initials on a page whose photo was fine.
+  const hidden: { img: HTMLImageElement; slot: Element | null }[] = []
   await Promise.all(
     imgs.map(async (img) => {
-      if (await corsLoadable(img.src)) {
-        // Re-request through CORS so the clone can read it back.
-        img.crossOrigin = 'anonymous'
-        img.src = img.src
-        return
-      }
-      // Mark the slot so its monogram shows in place of the missing photo.
+      if (await corsLoadable(img.src)) return
+      const slot = img.closest('.photo-slot')
       img.style.visibility = 'hidden'
-      img.closest('.photo-slot')?.setAttribute('data-nophoto', '')
-      hidden.push(img)
+      slot?.setAttribute('data-nophoto', '')
+      hidden.push({ img, slot })
     }),
   )
-  return () => hidden.forEach((i) => {
-    i.style.visibility = ''
-    i.closest('.photo-slot')?.removeAttribute('data-nophoto')
+  return () => hidden.forEach(({ img, slot }) => {
+    img.style.visibility = ''
+    slot?.removeAttribute('data-nophoto')
   })
 }
 

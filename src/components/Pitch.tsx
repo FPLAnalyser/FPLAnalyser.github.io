@@ -207,7 +207,7 @@ export function PitchCard({ rating, cornerText, name, team, price, code, element
         <span className="capture-line block truncate text-[9.5px] leading-tight font-bold text-white sm:text-[10.5px]">{name}</span>
         {/* Club and price step aside on a phone: the fixtures are what you're
             actually checking, and they imply the club anyway. */}
-        <span className="hidden truncate text-[8px] text-white/55 sm:block sm:text-[9px]">{team}{price != null ? ` · £${price}m` : ''}</span>
+        <span className="capture-line hidden truncate text-[8px] text-white/55 sm:block sm:text-[9px]">{team}{price != null ? ` · £${price}m` : ''}</span>
         {fixtures && <span className="mt-1 block">{fixtures}</span>}
         {footer}
       </span>

@@ -51,7 +51,7 @@ export function FixtureChips({
         return (
           <span
             key={i}
-            className="rounded px-1.5 py-0.5 text-[11px] font-medium"
+            className="capture-pill rounded px-1.5 py-0.5 text-[11px] font-medium"
             style={{ background: bg, color: fg }}
             title={`GW${f.gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamFullNames[f.opponent] || f.opponent} (FDR ${f.fdr})`}
           >
@@ -90,7 +90,7 @@ export function FixtureNames({ fixtureEase, team, n = 3, fromGw }: { fixtureEase
             // screen with room for it.
             // Explicit box height rather than a line-height: the rasteriser
             // rounds line boxes differently and the stack grew past the card.
-            className={`mt-[2px] h-[12px] truncate rounded-[3px] px-1 text-[8px] leading-[12px] font-extrabold sm:h-[13px] sm:text-[9px] sm:leading-[13px] ${i >= 2 ? 'hidden sm:block' : 'block'}`}
+            className={`capture-pill mt-[2px] h-[12px] truncate rounded-[3px] px-1 text-[8px] leading-[12px] font-extrabold sm:h-[13px] sm:text-[9px] sm:leading-[13px] ${i >= 2 ? 'hidden sm:block' : 'block'}`}
             style={{ background: bg, color: fg }}
             title={`GW${f.gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamFullNames[f.opponent] || f.opponent} (FDR ${f.fdr})`}
           >

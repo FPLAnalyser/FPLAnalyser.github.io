@@ -236,7 +236,12 @@ body {
   background-clip: border-box !important;
   color: var(--accent-2) !important;
 }
-[data-capturing] .truncate {
+/* Only the lines that were actually being sliced. Applied to every truncating
+   element, `overflow: visible` let the fixture pills — which have an explicit
+   12px box — paint their glyphs outside it, and the next pill's opaque
+   background then covered the overflow. That is why a shared squad had three
+   fixture rows sitting on top of each other. */
+[data-capturing] .capture-line {
   overflow: visible !important;
   text-overflow: clip !important;
 }
@@ -246,6 +251,37 @@ body {
 [data-capturing] .capture-line,
 [data-capturing] .metallic-num {
   line-height: 1.4 !important;
+}
+/* Fixture pills sit in an explicit 12px box so the stack can't grow past the
+   card on screen. The rasteriser draws their text lower in the box than the
+   browser does, so the glyphs came out under the next pill's background —
+   three fixture rows overlapping each other. In an export nothing has to fit
+   a fixed height, so the box gives way to the text. */
+[data-capturing] .capture-pill {
+  height: auto !important;
+  line-height: 2.1 !important;
+  padding-block: 1px !important;
+}
+/* Display numerals are set on `leading-none` so a big figure sits tight above
+   its caption. The rasteriser puts the glyph lower in that box than the
+   browser does, so 30px numbers landed on top of the label beneath them. A
+   little leading costs nothing in an image. */
+[data-capturing] .font-display {
+  line-height: 1.25 !important;
+}
+/* A sticky header or first column is pinned to the scroll position, which
+   in a full-height capture leaves it stranded — html2canvas paints it as a
+   pale slab over the rows it was meant to sit above. Nothing scrolls in an
+   export, so it can sit where it belongs in the flow. */
+[data-capturing] .sticky {
+  position: static !important;
+}
+/* Anything the page hides behind a scrollbar has to be visible to be
+   captured; otherwise the export ends at the edge of the viewport. */
+[data-capturing] .overflow-x-auto,
+[data-capturing] .overflow-y-auto,
+[data-capturing] .overflow-auto {
+  overflow: visible !important;
 }
 
 /* Icons (inline SVG sprite in index.html) */

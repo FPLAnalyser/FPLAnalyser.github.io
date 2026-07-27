@@ -32,7 +32,11 @@ function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: 
   // Auto: chrome + the panel at full width, so nothing is ever shrunk.
   const autoPad = Math.round(fmt.w * 0.045)
   const autoChrome = autoPad + 34 + Math.round(fmt.w * 0.028) + Math.round(fmt.w * 0.07) + autoPad
-  out.height = fmt.h ?? Math.round((source.height / source.width) * (fmt.w - autoPad * 2)) + autoChrome
+  // Ceil, not round. The height reserved for the panel has to be at least the
+  // height the panel will be drawn at; rounding down by half a pixel made the
+  // fit test fail and sent "fit content" into the crop-and-fade branch, which
+  // is how a fixture table lost its legend.
+  out.height = fmt.h ?? Math.ceil((source.height / source.width) * (fmt.w - autoPad * 2)) + autoChrome
   const ctx = out.getContext('2d')!
   const bg = dark ? '#0c0b09' : '#faf8f3'
   const ink = dark ? '#f4efe3' : '#1b1712'
@@ -65,7 +69,7 @@ function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: 
   const scale = availW / source.width
   const dw = availW
   const dh = source.height * scale
-  if (dh <= availH) {
+  if (dh <= availH + 1) {
     ctx.drawImage(source, pad + (availW - dw) / 2, top + (availH - dh) / 2, dw, dh)
   } else {
     const srcH = Math.round(availH / scale) // source pixels that fit the frame
@@ -119,7 +123,11 @@ export function Exportable({ title, filename, children, className, toolbar }: {
     setBusy(true)
     setMsg('')
     try {
-      const dark = !document.documentElement.classList.contains('light')
+      // The theme lives on data-mode, not a class — checking for a `.light`
+      // class that never existed meant every export was framed as dark, so a
+      // reader in light mode got their pale panel mounted on black with cream
+      // titles over it.
+      const dark = document.documentElement.dataset.mode !== 'light'
       const shot = await rasterise(ref.current, dark)
       const spec = FORMATS.find((f) => f.id === fmt)!
       const canvas = brand(shot, spec, title, spec.handle, dark)
