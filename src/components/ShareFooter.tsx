@@ -1,4 +1,5 @@
 import { BRAND, X_HANDLE, IG_HANDLE, X_MARK_PATH } from '../lib/social'
+import { BrandMark } from './BrandMark'
 
 // Brand watermark baked into every shared/downloaded image — each share is a
 // tiny bit of marketing. Update SHARE_URL to the App Store / custom domain once
@@ -31,8 +32,11 @@ function InstagramMark({ size = 15 }: { size?: number }) {
 export function ShareFooter() {
   return (
     <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 rounded-b-2xl bg-[#0c0b09] px-3 py-3">
-      <span className="capture-line font-display text-[17px] font-bold tracking-tight text-white">
-        FPL <span style={{ color: '#c9a227' }}>Analyser</span>
+      <span className="flex items-center gap-2">
+        <BrandMark size={26} />
+        <span className="capture-line font-display text-[17px] font-bold tracking-tight text-white">
+          FPL <span style={{ color: '#c9a227' }}>Analyser</span>
+        </span>
       </span>
       {/* capture-line, because the rasteriser sets text lower in a tight line
           box than the browser does — without it the handle sits below its

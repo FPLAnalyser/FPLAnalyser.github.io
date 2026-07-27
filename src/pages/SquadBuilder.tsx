@@ -7,6 +7,7 @@ import { PageSkeleton } from '../components/Skeleton'
 import { Tabs, type TabDef } from '../components/Tabs'
 import { TeamBadge } from '../components/badges'
 import { FixtureChips, FixtureNames } from '../components/FixtureChips'
+import { BrandMark } from '../components/BrandMark'
 import { ShareFooter } from '../components/ShareFooter'
 import { SeasonPlanner } from '../components/SeasonPlanner'
 import { SquadLab } from '../components/SquadLab'
@@ -754,7 +755,10 @@ function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, open,
             theme tokens, which the rasteriser resolves unreliably. */}
         <div ref={ref} className="rounded-3xl bg-[#0c0b09] p-4" style={{ color: '#f4efe3' }}>
           <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="font-display text-lg leading-none whitespace-nowrap">FPL <span style={{ color: '#c9a227' }}>Analyser</span><div className="mt-1 text-[10px] font-semibold tracking-[0.14em] uppercase" style={{ color: '#8a8172' }}>My GW{gw} Squad</div></div>
+            <div className="flex items-center gap-2.5">
+              <BrandMark size={38} />
+              <div className="font-display text-lg leading-none whitespace-nowrap">FPL <span style={{ color: '#c9a227' }}>Analyser</span><div className="mt-1 text-[10px] font-semibold tracking-[0.14em] uppercase" style={{ color: '#8a8172' }}>My GW{gw} Squad</div></div>
+            </div>
             <div className="flex gap-4 text-center">
               <div><div className="font-display text-2xl leading-none tabular-nums" style={{ color: '#c9a227' }}>{squadScore ?? '—'}</div><div className="text-[9px] tracking-[0.1em] whitespace-nowrap uppercase" style={{ color: '#8a8172' }}>Squad rating</div></div>
             </div>

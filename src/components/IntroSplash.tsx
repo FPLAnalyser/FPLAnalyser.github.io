@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { BrandMark } from './BrandMark'
 
 // One-time animated intro: a floodlit-turf lockup that reveals the wordmark
 // "FPL ANALYSER" letter-by-letter, draws the tagline, wipes out with a light
@@ -82,6 +83,7 @@ export function IntroSplash() {
       </svg>
 
       <div className="intro-lock">
+        <BrandMark className="intro-mark" />
         <div className="intro-title" aria-hidden="true">
           {[...TITLE].map((ch, i) => (
             <span
