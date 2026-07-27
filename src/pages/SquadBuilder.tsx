@@ -217,6 +217,16 @@ export default function SquadBuilder() {
     () => (planner.week?.xi ?? []).map((el) => byEl.get(el)).filter(Boolean) as RatingRow[],
     [planner.week, byEl],
   )
+  /** Places sold and not yet refilled, and which positions they are. */
+  const openPlaces = planner.pendingOut.length
+  const openBy = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const el of planner.pendingOut) {
+      const p = String(byEl.get(el)?.position ?? '')
+      m.set(p, (m.get(p) ?? 0) + 1)
+    }
+    return [...m.entries()]
+  }, [planner.pendingOut, byEl])
   /** What a replacement for this player may cost: the bank plus his own fee. */
   const budgetFor = (out: RatingRow) => BUDGET - plannerSquad.reduce((t, el) => t + priceOf(byEl.get(el) ?? {} as RatingRow), 0) + priceOf(out)
 
@@ -333,6 +343,7 @@ export default function SquadBuilder() {
               </div>
             ) : null}
             onArmTransfer={(el) => { setArmedOut(el); setPendingIn(null); setPickPos(String(byEl.get(el)?.position ?? 'MID') as Pos); setQuery('') }}
+            onSold={(el) => { setPickPos(String(byEl.get(el)?.position ?? 'MID') as Pos); setQuery(''); setArmedOut(null); setPendingIn(null) }}
           />
         </div>
 
@@ -341,6 +352,23 @@ export default function SquadBuilder() {
           <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">
             {complete ? `Transfer market — GW${planner.gw}` : 'Add players'}
           </div>
+
+          {complete && openPlaces > 0 && armedOut == null && (
+            <div className="mb-2 rounded-lg border border-accent/50 bg-accent-soft px-3 py-2">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <Icon name="coin" size={14} className="shrink-0 text-accent" />
+                <span className="font-num text-sm font-bold text-accent">£{(BUDGET - planner.spend).toFixed(1)}m</span>
+                <span className="text-sm text-ink">to spend on {openPlaces} {openPlaces === 1 ? 'place' : 'places'}</span>
+                <button
+                  onClick={() => planner.pendingOut.forEach((el) => planner.undoTransfer(el))}
+                  className="ml-auto text-xs font-semibold text-ink-3 hover:text-ink"
+                >keep them all</button>
+              </div>
+              <div className="mt-0.5 pl-6 text-[11px] text-ink-3">
+                {openBy.map(([pos, n]) => `${n} ${pos}`).join(' · ')} — sell another to pool more
+              </div>
+            </div>
+          )}
 
           {complete && armedRow && (
             <div className="mb-2 rounded-lg border border-bad/40 bg-bad/10 px-3 py-2 text-sm">
@@ -398,8 +426,15 @@ export default function SquadBuilder() {
           <div className="overflow-hidden rounded-xl border border-line lg:max-h-[calc(100vh-260px)] lg:overflow-y-auto">
             {list.map((r) => {
               const inSquad = plannerSquad.includes(r.element)
+              // With places open on the pitch, signing straight into one is
+              // the whole point — the money from every sale is already pooled.
+              const filling = complete && armedOut == null && openPlaces > 0
               const why = complete
-                ? (armedOut != null ? planner.canReplace(armedOut, r.element) : inSquad ? 'Already in your squad' : null)
+                ? (armedOut != null
+                    ? planner.canReplace(armedOut, r.element)
+                    : filling
+                      ? planner.canFill(r.element)
+                      : inSquad ? 'Already in your squad' : null)
                 : blockReason(r)
               const o = ovOf(r)
               return (
@@ -424,15 +459,16 @@ export default function SquadBuilder() {
                     onClick={() => {
                       if (!complete) { add(r); return }
                       if (armedOut != null) { planner.doTransfer(armedOut, r.element); setArmedOut(null); tapHaptic('medium'); return }
+                      if (filling) { planner.fill(r.element); tapHaptic('medium'); return }
                       setPendingIn(r)
                     }}
                     disabled={!!why}
-                    title={why ?? (complete ? 'Transfer in' : 'Add to squad')}
+                    title={why ?? (filling ? 'Sign him into the empty place' : complete ? 'Transfer in' : 'Add to squad')}
                     className={`grid size-8 shrink-0 place-items-center rounded-lg border transition-colors ${
                       why ? 'cursor-not-allowed border-line text-ink-3 opacity-50' : 'border-accent/50 text-accent hover:bg-accent-soft'
                     }`}
                   >
-                    <Icon name={complete ? 'arrow-right' : 'check'} size={15} />
+                    <Icon name={complete && !filling ? 'arrow-right' : 'check'} size={15} />
                   </button>
                 </div>
               )

@@ -18,7 +18,10 @@ export const HIT_COST = 4
 export const SQUAD_NEED: Record<Pos, number> = { GKP: 2, DEF: 5, MID: 5, FWD: 3 }
 
 export interface WeekPlan {
-  transfers: { out: number; in: number }[]
+  /** A gameweek's transfers. `in` is null while a player has been sold but
+   *  not yet replaced — the state that lets two sales pool their money before
+   *  either is spent, which one-for-one swapping can never reach. */
+  transfers: { out: number; in: number | null }[]
   xi: number[]        // 11 starters
   bench: number[]     // 4 reserves, ordered (outfield first, then the reserve GK)
   captain: number | null
@@ -39,7 +42,9 @@ export function squadAt(state: PlannerState, gw: number): number[] {
   for (const g of gws) {
     for (const t of state.weeks[g].transfers) {
       const i = squad.indexOf(t.out)
-      if (i >= 0) squad[i] = t.in
+      if (i < 0) continue
+      if (t.in == null) squad.splice(i, 1)   // sold, nobody in yet
+      else squad[i] = t.in
     }
   }
   return squad
@@ -57,7 +62,7 @@ export function bankedTransfers(state: PlannerState, gw: number): number {
   for (let g = state.startGw + 2; g <= gw; g++) {
     const prev = state.weeks[g - 1]
     if (prev && isFreeChip(prev.chip)) continue // chip week: bank untouched
-    const used = prev ? prev.transfers.length : 0
+    const used = prev ? prev.transfers.filter((t) => t.in != null).length : 0
     ft = Math.min(MAX_FT, Math.max(0, ft - used) + 1)
   }
   return ft
@@ -76,7 +81,10 @@ export function pointsHit(state: PlannerState, gw: number): number {
   const wk = state.weeks[gw]
   if (!wk || isFreeChip(wk.chip) || gw <= state.startGw) return 0
   const ft = freeTransfers(state, gw)
-  return Math.max(0, wk.transfers.length - ft) * HIT_COST
+  // A sale on its own isn't a transfer yet — FPL only charges once someone
+  // comes in, and pricing the hit before that would punish you for looking.
+  const made = wk.transfers.filter((t) => t.in != null).length
+  return Math.max(0, made - ft) * HIT_COST
 }
 
 /** Which chips are still available (each once per season). */

@@ -54,6 +54,16 @@ export interface Planner {
   canReplace: (outEl: number, inEl: number) => string | null
   doTransfer: (outEl: number, inEl: number) => void
   undoTransfer: (outEl: number) => void
+  /** Put a player on the market without naming a replacement. His fee lands
+   *  in the bank straight away, which is the whole point: two sales pool
+   *  their money and buy something neither could have afforded alone. */
+  sell: (el: number) => void
+  /** Players sold this week and not yet replaced. */
+  pendingOut: number[]
+  /** Fill an empty place with this player — why not, or null if he fits. */
+  canFill: (inEl: number) => string | null
+  /** Sign him into the empty place of his position. */
+  fill: (inEl: number) => void
 }
 
 export function usePlanner({ base, byEl, startGw, fixtureEase }: {
@@ -116,6 +126,22 @@ export function usePlanner({ base, byEl, startGw, fixtureEase }: {
     persist({ ...state, weeks: { ...state.weeks, [gw]: { ...week, ...patch } } })
   }
 
+  const pendingOut = week ? week.transfers.filter((t) => t.in == null).map((t) => t.out) : []
+
+  /** The squad as it will be once every empty place is filled — what the club
+   *  cap has to be judged against, since a sold player's slot is going to be
+   *  taken by whoever comes in. */
+  const canFill = (inEl: number): string | null => {
+    if (!week) return 'No gameweek in view'
+    if (squad.includes(inEl)) return 'Already in your squad'
+    const openHere = pendingOut.filter((e) => posOf(e) === posOf(inEl))
+    if (!openHere.length) return `No empty ${posOf(inEl)} place — sell one first`
+    const clubs = squad.filter((e) => teamOf(e) === teamOf(inEl)).length
+    if (clubs >= MAX_PER_CLUB) return `Max ${MAX_PER_CLUB} from that club`
+    if (spend + priceOf(inEl) > BUDGET + 1e-9) return `£${(BUDGET - spend).toFixed(1)}m in the bank`
+    return null
+  }
+
   const canReplace = (outEl: number, inEl: number): string | null => {
     if (squad.includes(inEl)) return 'Already in your squad'
     if (posOf(inEl) !== posOf(outEl)) return `Must be a ${posOf(outEl)}`
@@ -154,6 +180,34 @@ export function usePlanner({ base, byEl, startGw, fixtureEase }: {
       return true
     },
     canReplace,
+    pendingOut,
+    canFill,
+    sell: (el: number) => {
+      if (!week || week.transfers.some((t) => t.out === el)) return
+      // The card stays on the pitch, greyed, so the shape of the team is
+      // still readable while you decide who takes his place.
+      persist({
+        ...state,
+        weeks: {
+          ...state.weeks,
+          [gw]: {
+            ...week,
+            transfers: [...week.transfers, { out: el, in: null }],
+            captain: week.captain === el ? null : week.captain,
+            vice: week.vice === el ? null : week.vice,
+          },
+        },
+      })
+    },
+    fill: (inEl: number) => {
+      if (!week || canFill(inEl)) return
+      const outEl = pendingOut.find((e) => posOf(e) === posOf(inEl))
+      if (outEl == null) return
+      commit(gw, {
+        ...week,
+        transfers: week.transfers.map((t) => (t.out === outEl ? { ...t, in: inEl } : t)),
+      }, outEl, inEl)
+    },
     doTransfer: (outEl: number, inEl: number) => {
       if (!week || canReplace(outEl, inEl)) return
       commit(gw, {
@@ -165,6 +219,12 @@ export function usePlanner({ base, byEl, startGw, fixtureEase }: {
       if (!week) return
       const t = week.transfers.find((x) => x.out === outEl)
       if (!t) return
+      // Undoing a sale that never completed just drops it; undoing a finished
+      // swap has to put the original man back everywhere he was replaced.
+      if (t.in == null) {
+        persist({ ...state, weeks: { ...state.weeks, [gw]: { ...week, transfers: week.transfers.filter((x) => x.out !== outEl) } } })
+        return
+      }
       commit(gw, { ...week, transfers: week.transfers.filter((x) => x.out !== outEl) }, t.in, outEl)
     },
   }

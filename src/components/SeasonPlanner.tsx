@@ -21,7 +21,7 @@ const POS_ORDER = ['GKP', 'DEF', 'MID', 'FWD'] as const
  * dugout beneath it, and every action on a player one tap away. State lives in
  * usePlanner so the list beside the board can transfer into it.
  */
-export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onArmTransfer, armedOut, squadScore, onOpenSquadRating, partialSquad, onPickSlot, onAutoPick, read, footer }: {
+export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onArmTransfer, onSold, armedOut, squadScore, onOpenSquadRating, partialSquad, onPickSlot, onAutoPick, read, footer }: {
   planner: Planner
   byEl: Map<number, RatingRow>
   pool: RatingRow[]
@@ -31,6 +31,9 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
   avail?: Availability
   /** Arm a player for transfer; the list beside the board completes it. */
   onArmTransfer?: (el: number) => void
+  /** A player was just put on the market — the page swings the picker round
+   *  to his position so the empty place is one glance away. */
+  onSold?: (el: number) => void
   armedOut?: number | null
   /** The squad's own 0–100 rating, shown here so the page needn't repeat it. */
   squadScore?: number | null
@@ -126,7 +129,7 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
 
   const benchBoost = week?.chip === 'bench-boost'
   const tripleCap = week?.chip === 'triple-captain'
-  const ftLeft = ft === Infinity ? Infinity : Math.max(0, ft - (week?.transfers.length ?? 0))
+  const ftLeft = ft === Infinity ? Infinity : Math.max(0, ft - (week?.transfers.filter((t) => t.in != null).length ?? 0))
 
   const card = (el: number, onBench: boolean) => (
     <PlayerChip
@@ -143,6 +146,13 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
       code={num(rowOf(el) ?? {}, 'code')}
       element={el}
       transferred={!!week?.transfers.some((t) => t.in === el)}
+      sold={planner.pendingOut.includes(el)}
+      onSell={week ? () => {
+        const isSold = planner.pendingOut.includes(el)
+        tapHaptic(isSold ? 'light' : 'medium')
+        if (isSold) planner.undoTransfer(el)
+        else { planner.sell(el); onSold?.(el) }
+      } : undefined}
       armedOut={armedOut === el}
       bench={onBench && !benchBoost}
       highlight={subFor != null && partners.includes(el)}
@@ -200,14 +210,19 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">{week ? 'Transfers' : 'Squad'}</span>
             <span className={`font-num rounded-md px-2 py-0.5 text-sm font-bold tabular-nums ${hit > 0 ? 'bg-bad/15 text-bad' : 'bg-surface-3 text-ink'}`}>
-              {!week ? `${picked}/15` : ft === Infinity ? `${week.transfers.length} · unlimited` : `${week.transfers.length}/${banked}`}
+              {!week ? `${picked}/15` : ft === Infinity ? `${week.transfers.filter((t) => t.in != null).length} · unlimited` : `${week.transfers.filter((t) => t.in != null).length}/${banked}`}
             </span>
             {!week
               ? <span className="text-xs text-ink-3">Pick {15 - picked} more from the list{picked === 0 ? ' — or hit Auto pick' : ''}</span>
               : ft === Infinity
                 ? <span className="text-xs font-semibold text-accent">{week.chip ? CHIP_LABEL[week.chip] : 'Opening squad'} — no limit</span>
                 : <span className="text-xs text-ink-3">{ftLeft} free left{hit > 0 ? <span className="font-semibold text-bad"> · −{hit} pts</span> : ''}</span>}
-            {week && week.transfers.length === 0 && <span className="ml-auto text-xs text-ink-3">Tap a player to transfer him out</span>}
+            {week && week.transfers.length === 0 && <span className="ml-auto text-xs text-ink-3">Tap ✕ on a player to sell him</span>}
+            {week && planner.pendingOut.length > 0 && (
+              <span className="ml-auto text-xs font-semibold text-accent">
+                £{(BUDGET - spend).toFixed(1)}m to spend on {planner.pendingOut.length} {planner.pendingOut.length === 1 ? 'place' : 'places'}
+              </span>
+            )}
           </div>
           {week && week.transfers.length > 0 && (
             <div className="mt-2 flex flex-col gap-1 border-t border-line pt-2">
@@ -215,8 +230,12 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
                 <div key={t.out} className="flex items-center gap-2 text-sm">
                   <span className="truncate text-bad">{nameOf(t.out)}</span>
                   <Icon name="arrow-right" size={13} className="shrink-0 text-ink-3" />
-                  <span className="truncate text-good">{nameOf(t.in)}</span>
-                  <button onClick={() => planner.undoTransfer(t.out)} className="ml-auto shrink-0 text-xs text-ink-3 hover:text-ink">undo</button>
+                  {t.in == null
+                    ? <span className="truncate text-ink-3 italic">pick a {planner.posOf(t.out)} from the list</span>
+                    : <span className="truncate text-good">{nameOf(t.in)}</span>}
+                  <button onClick={() => planner.undoTransfer(t.out)} className="ml-auto shrink-0 text-xs text-ink-3 hover:text-ink">
+                    {t.in == null ? 'keep him' : 'undo'}
+                  </button>
                 </div>
               ))}
             </div>
@@ -391,16 +410,46 @@ function Stat({ label, value, tone, sub, onClick }: { label: string; value: stri
     : <div className={cls}>{inner}</div>
 }
 
-function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner, flag, name, code, element, transferred, bench, highlight, dimmed, picked, armedOut }: {
+function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner, flag, name, code, element, transferred, bench, highlight, dimmed, picked, armedOut, sold, onSell }: {
   onOpen: () => void; captain: boolean; vice: boolean; tripleCap?: boolean; fixtures: FixtureEaseRow[]; rating: number
   corner: string; flag?: { label: string; tone: 'bad' | 'warn' | 'flat'; title: string } | null
   name: string; code: number | null; element: number; transferred: boolean; bench?: boolean
   highlight?: boolean; dimmed?: boolean; picked?: boolean; armedOut?: boolean
+  /** Sold this week and not yet replaced — he stays on the pitch so the shape
+   *  of the team is still readable while you decide who takes his place. */
+  sold?: boolean
+  onSell?: () => void
 }) {
   const next = fixtures[0]
   const [bg, fg] = next ? (FDR_COLORS[next.fdr] || FDR_COLORS[3]) : ['#39424E', '#E8EDF3']
   return (
     <span className={`${CARD_W} relative transition-opacity ${dimmed ? 'opacity-30' : ''}`}>
+      {onSell && (
+        <button
+          onClick={(ev) => { ev.stopPropagation(); onSell() }}
+          aria-label={sold ? `Keep ${name}` : `Sell ${name}`}
+          title={sold ? `Keep ${name}` : `Sell ${name} — his fee goes into the bank`}
+          className={`absolute -top-1.5 -right-1.5 z-20 grid size-5 place-items-center rounded-full border text-[10px] shadow-md transition-colors sm:size-[22px] ${
+            sold
+              ? 'border-good bg-good text-white'
+              : 'border-line bg-surface-1 text-ink-2 hover:border-bad hover:bg-bad hover:text-white'
+          }`}
+        >
+          <Icon name={sold ? 'arrow-right' : 'x'} size={sold ? 11 : 12} className={sold ? 'rotate-180' : ''} />
+        </button>
+      )}
+      {/* The sold veil sits over the card rather than on it, so the undo
+          button keeps its colour instead of being greyed out with him. */}
+      {sold && (
+        <span className="pointer-events-none absolute inset-0 z-10 rounded-xl bg-bad/45 backdrop-grayscale">
+          {/* Over the crest, not the name — you still want to read who it is. */}
+          <span className="absolute inset-x-0 top-[26%] text-center">
+            <span className="rounded bg-bad px-1.5 py-0.5 text-[8px] leading-none font-bold tracking-[0.12em] text-white uppercase shadow">
+              Sold
+            </span>
+          </span>
+        </span>
+      )}
       {(captain || vice) && (
         <span
           title={captain && tripleCap ? 'Triple captain' : captain ? 'Captain' : 'Vice-captain'}
@@ -409,12 +458,12 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
           {captain ? (tripleCap ? '3×' : 'C') : 'V'}
         </span>
       )}
-      {transferred && <span className="absolute -top-1.5 -right-1.5 z-10 grid size-4 place-items-center rounded-full bg-good text-[9px] text-white"><Icon name="check" size={10} /></span>}
+      {transferred && <span className="absolute -top-1.5 right-4 z-10 grid size-4 place-items-center rounded-full bg-good text-[9px] text-white sm:right-5"><Icon name="check" size={10} /></span>}
       {armedOut && <span className="absolute -top-1.5 -right-1.5 z-10 rounded-full bg-bad px-1.5 py-0.5 text-[8px] font-bold text-white">OUT</span>}
       <FoilShell
         tier={bench ? 'graphite' : tierOf(rating || null)}
         onClick={onOpen}
-        className={`w-full ${highlight ? 'ring-2 ring-accent ring-offset-1 ring-offset-transparent' : ''} ${picked ? 'ring-2 ring-bad' : ''}`}
+        className={`w-full ${highlight ? 'ring-2 ring-accent ring-offset-1 ring-offset-transparent' : ''} ${picked ? 'ring-2 ring-bad' : ''} ${sold ? 'opacity-70' : ''}`}
         innerClassName="px-1 pt-1 pb-1.5 sm:px-1.5"
       >
         {flag && (
