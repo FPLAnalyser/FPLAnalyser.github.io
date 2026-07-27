@@ -276,6 +276,7 @@ export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
   // Reference line: least-squares fit for value; the y=x diagonal for
   // momentum; none for roles (the quadrants are the reference).
   let ref: { x1: number; y1: number; x2: number; y2: number } | null = null
+  let valueBands: { fy: (x: number) => number; margin: number } | null = null
   if (lens === 'value') {
     const n = pts.length
     const mx = xs.reduce((s, v) => s + v, 0) / n
@@ -283,6 +284,12 @@ export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
     const slope = pts.reduce((s, d) => s + (d.x - mx) * (d.y - my), 0) / (pts.reduce((s, d) => s + (d.x - mx) ** 2, 0) || 1)
     const fy = (x: number) => my + slope * (x - mx)
     ref = { x1: X(xMin), y1: Y(Math.max(yMin - yPadU, Math.min(yMax + yPadU, fy(xMin)))), x2: X(xMax), y2: Y(Math.max(yMin - yPadU, Math.min(yMax + yPadU, fy(xMax)))) }
+    // How far off the line counts as a bargain is set by the data, not by a
+    // ratio someone picked: two thirds of the league sits inside 0.6 of a
+    // standard deviation of the fit, so outside that is genuinely unusual.
+    const resid = pts.map((d) => d.y - fy(d.x))
+    const sd = Math.sqrt(resid.reduce((s, v) => s + v * v, 0) / (resid.length || 1))
+    valueBands = { fy, margin: 0.6 * sd }
   } else if (lens === 'momentum') {
     const lo = Math.max(xMin, yMin), hi = Math.min(xMax, yMax)
     if (hi > lo) ref = { x1: X(lo), y1: Y(lo), x2: X(hi), y2: Y(hi) }
@@ -368,6 +375,43 @@ export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
       </div>
       <ScrollTo frac={(X(gold.x) - PAD.l) / (W - PAD.l - PAD.r)}>
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[560px]" role="img" aria-label="Player comparison scatter">
+          {/* Value bands: the region a point sits in IS the read, so nobody
+              has to measure a dot against an axis. Only on the lens where the
+              two axes trade off through a price — where they are independent,
+              the quadrants below do the same job. */}
+          {valueBands && (() => {
+            const clampY = (v: number) => Math.max(PAD.t, Math.min(H - PAD.b, Y(v)))
+            const strip = (loOff: number, hiOff: number) => {
+              const top: string[] = []
+              const bot: string[] = []
+              const STEPS = 24
+              for (let i = 0; i <= STEPS; i++) {
+                const x = xMin + ((xMax - xMin) * i) / STEPS
+                top.push(`${X(x)},${clampY(valueBands!.fy(x) + hiOff)}`)
+                bot.push(`${X(x)},${clampY(valueBands!.fy(x) + loOff)}`)
+              }
+              return `M${top.join('L')}L${bot.reverse().join('L')}Z`
+            }
+            const big = (yMax - yMin) * 4
+            return (
+              <g>
+                <path d={strip(valueBands.margin, big)} fill="var(--good)" opacity="0.07" />
+                <path d={strip(-valueBands.margin, valueBands.margin)} fill="var(--accent)" opacity="0.14" />
+                <path d={strip(-big, -valueBands.margin)} fill="var(--bad)" opacity="0.06" />
+                <text x={PAD.l + 10} y={PAD.t + 14} fontSize="10.5" fontWeight="800" fill="var(--good)" opacity="0.9" style={{ letterSpacing: '.12em' }}>BARGAIN</text>
+                {/* the middle band's caption rides the band itself, up in the
+                    expensive end where the field thins out — anchored to the
+                    right edge it fell outside the plot and under the gold
+                    player's own label; at the cheap end it sat on the densest
+                    column of dots. */}
+                {(() => {
+                  const lx = xMin + (xMax - xMin) * 0.72
+                  return <text x={X(lx)} y={Math.max(PAD.t + 24, Math.min(H - PAD.b - 8, clampY(valueBands!.fy(lx)) + 15))} textAnchor="middle" fontSize="10.5" fontWeight="800" fill="var(--accent)" opacity="0.9" style={{ letterSpacing: '.12em' }}>FAIR PRICE</text>
+                })()}
+                <text x={W - PAD.r - 10} y={H - PAD.b - 10} textAnchor="end" fontSize="10.5" fontWeight="800" fill="var(--bad)" opacity="0.9" style={{ letterSpacing: '.12em' }}>PAYING UP</text>
+              </g>
+            )
+          })()}
           {/* quadrants: a green wash on the corner you want to be in, a red
               wash on the one you don't, both faint enough to stay behind. */}
           {quads && (() => {
@@ -403,18 +447,18 @@ export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
           {/* gridlines — recessive, behind everything */}
           {yTicks.map((t) => (
             <g key={`y${t}`}>
-              <line x1={PAD.l} x2={W - PAD.r} y1={Y(t)} y2={Y(t)} stroke="var(--line)" strokeWidth="1" />
-              <text x={PAD.l - 7} y={Y(t) + 3.5} textAnchor="end" fontSize="9.5" fill="var(--ink-3)">{yTickLabel(t)}</text>
+              <line x1={PAD.l} x2={W - PAD.r} y1={Y(t)} y2={Y(t)} stroke="var(--line-mid)" strokeWidth="1" />
+              <text x={PAD.l - 8} y={Y(t) + 4} textAnchor="end" fontSize="11.5" fontWeight="600" fill="var(--ink-2)">{yTickLabel(t)}</text>
             </g>
           ))}
           {xTicks.map((t) => (
             <g key={`x${t}`}>
-              <line x1={X(t)} x2={X(t)} y1={PAD.t} y2={H - PAD.b} stroke="var(--line)" strokeWidth="1" />
-              <text x={X(t)} y={H - PAD.b + 15} textAnchor="middle" fontSize="9.5" fill="var(--ink-3)">{xTickLabel(t)}</text>
+              <line x1={X(t)} x2={X(t)} y1={PAD.t} y2={H - PAD.b} stroke="var(--line-mid)" strokeWidth="1" />
+              <text x={X(t)} y={H - PAD.b + 17} textAnchor="middle" fontSize="11.5" fontWeight="600" fill="var(--ink-2)">{xTickLabel(t)}</text>
             </g>
           ))}
-          <line x1={PAD.l} y1={H - PAD.b} x2={W - PAD.r} y2={H - PAD.b} stroke="var(--line-mid)" />
-          <line x1={PAD.l} y1={PAD.t} x2={PAD.l} y2={H - PAD.b} stroke="var(--line-mid)" />
+          <line x1={PAD.l} y1={H - PAD.b} x2={W - PAD.r} y2={H - PAD.b} stroke="var(--line-strong)" strokeWidth="1.5" />
+          <line x1={PAD.l} y1={PAD.t} x2={PAD.l} y2={H - PAD.b} stroke="var(--line-strong)" strokeWidth="1.5" />
           {ref && <line {...{ x1: ref.x1, y1: ref.y1, x2: ref.x2, y2: ref.y2 }} stroke="var(--ink-3)" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.5" />}
           {/* biggest bubbles first, so the small ones stay hoverable on top */}
           {pts.filter((d) => d !== gold).sort((a, b) => rOf(b, false) - rOf(a, false)).map((d) => (
@@ -422,10 +466,10 @@ export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
               key={String(d.r.element)}
               cx={X(d.x)} cy={Y(d.y)}
               r={rOf(d, hovered === d.r.element)}
-              fill={hovered === d.r.element ? 'var(--ink-2)' : 'var(--ink-3)'}
-              stroke={spec ? 'var(--surface-1)' : undefined}
+              fill={hovered === d.r.element ? 'var(--ink)' : 'var(--ink-2)'}
+              stroke="var(--surface-1)" 
               strokeWidth={spec ? 1 : undefined}
-              opacity={hovered === d.r.element ? 0.9 : spec ? 0.42 : 0.35}
+              opacity={hovered === d.r.element ? 1 : spec ? 0.8 : 0.72}
               className="cursor-pointer"
               onClick={() => onPlayer(String(d.r.web_name), num(d.r, 'code'))}
               onMouseEnter={() => setHovered(d.r.element)}
