@@ -23,7 +23,7 @@ import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
 type Key = 'template' | 'horizon' | 'advice' | 'captain'
 
-export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, freeTransfers, onArmTransfer }: {
+export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, freeTransfers, onApplyMove }: {
   squad: RatingRow[]
   xi: RatingRow[]
   pool: RatingRow[]
@@ -33,7 +33,9 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
   gws: number[]
   bank: number
   freeTransfers: number
-  onArmTransfer?: (el: number) => void
+  /** Apply a recommended swap outright — the advice is specific, so making it
+   *  should be one tap rather than arming a search you then repeat by hand. */
+  onApplyMove?: (outEl: number, inEl: number) => void
 }) {
   const model = useXpModel()
   const market = useMarketOdds()
@@ -94,7 +96,7 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
         <div className="mt-3 border-t border-line pt-3">
           {open === 'template' && <TemplatePanel read={template} />}
           {open === 'horizon' && <HorizonPanel read={horizon} />}
-          {open === 'advice' && <AdvicePanel read={advice} onArm={onArmTransfer} />}
+          {open === 'advice' && <AdvicePanel read={advice} onApply={onApplyMove} />}
           {open === 'captain' && <CaptainPanel read={captain} gw={gw} />}
         </div>
       )}
@@ -162,6 +164,7 @@ function TemplatePanel({ read }: { read: TemplateRead }) {
               {BAND_STYLE[b].label}
               {b === 'template' ? ` (${BAND_AT.template}%+)` : b === 'punt' ? ` (<${BAND_AT.balanced}%)` : ''}
             </span>
+            <span className="text-ink-3/70">· typically {read.typical[b].toFixed(0)}</span>
           </span>
         ))}
       </div>
@@ -212,6 +215,11 @@ function HorizonPanel({ read }: { read: HorizonRead | null }) {
   // axis says so, so a 4% week still reads as a 4% week.
   const dev = read.weeks.map((w) => (read.mean > 0 ? (w.xp - read.mean) / read.mean : 0))
   const span = Math.max(...dev.map(Math.abs), 0.02)
+  // Only mark a peak and a trough when there genuinely is one. Colouring the
+  // biggest and smallest bar regardless said "these weeks matter" while the
+  // sentence underneath said the run was level — the chart contradicting the
+  // copy is worse than a chart with nothing to point at.
+  const notable = read.swing >= 10
   return (
     <div>
       <Head title="Horizon scanning" note={`What your fifteen face over the next ${read.weeks.length} gameweeks`} />
@@ -219,8 +227,8 @@ function HorizonPanel({ read }: { read: HorizonRead | null }) {
       <div className="relative flex h-[96px] items-center gap-1.5">
         <span className="absolute inset-x-0 top-1/2 h-px bg-line-strong" />
         {read.weeks.map((w, i) => {
-          const peak = w.gw === read.best.gw
-          const trough = w.gw === read.worst.gw
+          const peak = notable && w.gw === read.best.gw
+          const trough = notable && w.gw === read.worst.gw
           const up = dev[i] >= 0
           const h = Math.max(3, (Math.abs(dev[i]) / span) * 34)
           const bg = trough ? 'bg-bad' : peak ? 'bg-good' : 'bg-ink-3/50'
@@ -245,7 +253,7 @@ function HorizonPanel({ read }: { read: HorizonRead | null }) {
         against your average week of {read.mean.toFixed(0)} projected points
       </div>
 
-      {read.hardest.length > 0 && (
+      {notable && read.hardest.length > 0 && (
         <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
           <span className="font-semibold text-ink-3">GW{read.worst.gw} is hardest for</span>
           {read.hardest.map((h) => (
@@ -271,8 +279,8 @@ function HorizonPanel({ read }: { read: HorizonRead | null }) {
       {read.clashes.length > 0 && <ClashList clashes={read.clashes.slice(0, 3)} />}
 
       <Readout>
-        {read.headline}. A projected week is worth more than a colour chart: it already knows who you own, who's
-        fit and what the market makes of the fixture.
+        {read.headline}. Each bar is your best eleven's projected points for that week — not a difficulty colour —
+        so it already accounts for who you actually own, who's fit, and what the bookmakers make of each fixture.
       </Readout>
     </div>
   )
@@ -311,7 +319,7 @@ function ClashList({ clashes }: { clashes: Clash[] }) {
 
 /* ── 3 · the Analyser's recommendation ───────────────────────────────────── */
 
-function AdvicePanel({ read, onArm }: { read: Recommendation | null; onArm?: (el: number) => void }) {
+function AdvicePanel({ read, onApply }: { read: Recommendation | null; onApply?: (outEl: number, inEl: number) => void }) {
   if (!read) return <div className="py-4 text-center text-xs text-ink-3">Complete your fifteen for a recommendation.</div>
   const hold = read.verdict === 'hold'
   return (
@@ -328,7 +336,7 @@ function AdvicePanel({ read, onArm }: { read: Recommendation | null; onArm?: (el
 
       {read.moves.length > 0 && (
         <div className="mt-2.5 flex flex-col gap-2">
-          {read.moves.map((m, i) => <MoveRow key={i} move={m} step={i + 1} free={i < read.moves.length - read.hits} onArm={onArm} />)}
+          {read.moves.map((m, i) => <MoveRow key={i} move={m} step={i + 1} free={i < read.moves.length - read.hits} onApply={onApply} />)}
         </div>
       )}
 
@@ -341,7 +349,7 @@ function AdvicePanel({ read, onArm }: { read: Recommendation | null; onArm?: (el
   )
 }
 
-function MoveRow({ move, step, free, onArm }: { move: Move; step: number; free: boolean; onArm?: (el: number) => void }) {
+function MoveRow({ move, step, free, onApply }: { move: Move; step: number; free: boolean; onApply?: (outEl: number, inEl: number) => void }) {
   return (
     <div className="rounded-xl border border-line bg-surface-1/60 p-2.5">
       <div className="flex items-center gap-2 text-xs">
@@ -361,9 +369,12 @@ function MoveRow({ move, step, free, onArm }: { move: Move; step: number; free: 
           {move.spend >= 0 ? '−' : '+'}£{Math.abs(move.spend).toFixed(1)}m
         </span>
         {!free && <><span>·</span><span className="text-bad">costs a hit</span></>}
-        {onArm && (
+        {onApply && (
           <button
-            onClick={() => { tapHaptic('medium'); onArm(num(move.out, 'element') as number) }}
+            onClick={() => {
+              tapHaptic('medium')
+              onApply(num(move.out, 'element') as number, num(move.in, 'element') as number)
+            }}
             className="ml-auto font-semibold text-accent hover:underline"
           >
             Make this move
@@ -436,8 +447,8 @@ function CaptainPanel({ read, gw }: { read: CaptainLadder | null; gw: number }) 
 
       <Readout>
         A gameweek is simulated four thousand times from the same rates the projection uses, so "tops your XI" is a
-        real race rather than eleven numbers compared after the fact. Dead-ball notes come from where each defence
-        actually leaks.
+        real race rather than eleven numbers compared after the fact. Dead-ball notes match how a player scores against
+        how his opponent concedes.
       </Readout>
     </div>
   )

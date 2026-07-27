@@ -18,7 +18,7 @@ import { useCore } from '../lib/useData'
 import { tapHaptic, shareImageNative } from '../lib/native'
 import { rasterise } from '../lib/capture'
 import { num } from '../lib/rows'
-import { useAvailability, availBadge, availFor, type Availability } from '../lib/availability'
+import { useAvailability, availBadge, availFor, withLivePrices, type Availability } from '../lib/availability'
 import { xpForGw, useXpModel, useMarketOdds } from '../lib/xp'
 import { usePlanner } from '../lib/usePlanner'
 import { teamLabel, playerHref } from '../lib/util'
@@ -129,11 +129,16 @@ export default function SquadBuilder() {
   // forward from it. Everything on this page is anchored to that number.
   const buildGw = fixtureEase.length ? Math.min(...fixtureEase.map((f) => f.gw)) : (data?.meta?.next_gw ?? 1)
 
+  // Prices and ownership come from this morning's FPL feed rather than the
+  // season build, so the budget and the template read are never stale.
   const pool = useMemo(
-    () => ((data?.ratings ?? []) as RatingRow[]).filter(
-      (r) => r.element != null && r.price != null && ['GKP', 'DEF', 'MID', 'FWD'].includes(String(r.position)),
+    () => withLivePrices(
+      ((data?.ratings ?? []) as RatingRow[]).filter(
+        (r) => r.element != null && r.price != null && ['GKP', 'DEF', 'MID', 'FWD'].includes(String(r.position)),
+      ),
+      avail,
     ),
-    [data],
+    [data, avail],
   )
   const byEl = useMemo(() => {
     const m = new Map<number, RatingRow>()
@@ -304,11 +309,10 @@ export default function SquadBuilder() {
                   <SquadLab
                     squad={liveChosen} xi={liveXI} pool={pool} fixtureEase={fixtureEase} avail={avail}
                     gw={liveGw} gws={planner.gws} bank={BUDGET - planner.spend} freeTransfers={planner.banked}
-                    onArmTransfer={(el) => {
-                      setArmedOut(el)
+                    onApplyMove={(outEl, inEl) => {
+                      planner.doTransfer(outEl, inEl)
+                      setArmedOut(null)
                       setPendingIn(null)
-                      setPickPos(String(byEl.get(el)?.position ?? 'MID') as Pos)
-                      setQuery('')
                     }}
                   />
                 )}
@@ -412,7 +416,7 @@ export default function SquadBuilder() {
                       </div>
                       <div className="text-[11px] text-ink-3">{teamLabel(String(r.team))} · £{priceOf(r).toFixed(1)}m · {Math.round(num(r, 'selected_by_percent') ?? 0)}% owned</div>
                     </button>
-                    <div className="mt-1"><FixtureChips fixtureEase={fixtureEase} team={String(r.team)} n={4} /></div>
+                    <div className="mt-1"><FixtureChips fixtureEase={fixtureEase} team={String(r.team)} n={4} fromGw={liveGw} /></div>
                   </div>
                   <span className="w-9 shrink-0 text-right font-num text-sm font-semibold tabular-nums text-ink-2">{o ?? '—'}</span>
                   <button
@@ -620,7 +624,7 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, ca
         code={num(r, 'code')}
         element={num(r, 'element')}
         flag={avail ? availBadge(availFor(avail, num(r, 'element'), num(r, 'code'))) : null}
-        fixtures={<FixtureNames fixtureEase={fixtureEase} team={String(r.team)} n={3} />}
+        fixtures={<FixtureNames fixtureEase={fixtureEase} team={String(r.team)} n={3} fromGw={gw} />}
         onClick={capture ? undefined : () => onOpen?.(r)}
       />
       {onRemove && !capture && (

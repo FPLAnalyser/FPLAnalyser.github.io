@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""How a defence leaks, and how an attacker scores.
+"""How a defence concedes, and how an attacker scores.
 
 Two shot maps already ship — every shot each club conceded, every shot each
 player took — but only as raw event lists far too big to load in the app.
@@ -116,8 +116,8 @@ def main() -> None:
 
     print(f"league: {lg_t['sp']:.1%} of xG conceded from dead balls, {lg_t['q']:.3f} xG per shot")
     order = sorted(teams.items(), key=lambda kv: -kv[1]["sp"])
-    print("leakiest at set pieces:", ", ".join(f"{t} {p['sp']:.0%}" for t, p in order[:4]))
-    print("tightest at set pieces:", ", ".join(f"{t} {p['sp']:.0%}" for t, p in order[-4:]))
+    print("weakest at set pieces:", ", ".join(f"{t} {p['sp']:.0%}" for t, p in order[:4]))
+    print("strongest at set pieces:", ", ".join(f"{t} {p['sp']:.0%}" for t, p in order[-4:]))
 
     # A worked example of the swing the multiplier can produce.
     best, worst = order[0], order[-1]

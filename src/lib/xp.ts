@@ -57,7 +57,7 @@ export function useXpModel(): XpModel | null {
   }, [q.data])
 }
 
-/* ── how a defence leaks, and how a player scores ────────────────────────────
+/* ── how a defence concedes, and how a player scores ─────────────────────────
    Central-versus-wide turned out to be a dead end — every Premier League
    defence concedes 78–85% of its expected goals from the middle of the box,
    because that is simply where chances are worth anything. The axis that

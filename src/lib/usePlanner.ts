@@ -148,27 +148,53 @@ export function usePlanner({ base, byEl, startGw, fixtureEase }: {
     canReplace,
     doTransfer: (outEl: number, inEl: number) => {
       if (!week || canReplace(outEl, inEl)) return
-      setWeek({
+      commit(gw, {
+        ...week,
         transfers: [...week.transfers.filter((t) => t.out !== outEl), { out: outEl, in: inEl }],
-        xi: week.xi.map((e) => (e === outEl ? inEl : e)),
-        bench: week.bench.map((e) => (e === outEl ? inEl : e)),
-        captain: week.captain === outEl ? inEl : week.captain,
-        vice: week.vice === outEl ? inEl : week.vice,
-      })
+      }, outEl, inEl)
     },
     undoTransfer: (outEl: number) => {
       if (!week) return
       const t = week.transfers.find((x) => x.out === outEl)
       if (!t) return
-      setWeek({
-        transfers: week.transfers.filter((x) => x.out !== outEl),
-        xi: week.xi.map((e) => (e === t.in ? outEl : e)),
-        bench: week.bench.map((e) => (e === t.in ? outEl : e)),
-        captain: week.captain === t.in ? outEl : week.captain,
-        vice: week.vice === t.in ? outEl : week.vice,
-      })
+      commit(gw, { ...week, transfers: week.transfers.filter((x) => x.out !== outEl) }, t.in, outEl)
     },
   }
+
+  /** Write a transfer into `gw` **and every week after it**.
+   *
+   *  A transfer isn't a one-week substitution — the player stays until you
+   *  sell him. Weeks after this one may already have been materialised (you
+   *  looked ahead, then came back to make the move), and those lineups still
+   *  name the player who just left. Patching only the current week left him
+   *  on the pitch in GW4 after being sold in GW3, which is what this fixes. */
+  function commit(from: number, current: WeekPlan, outEl: number, inEl: number) {
+    const swap = (e: number) => (e === outEl ? inEl : e)
+    const weeks: Record<number, WeekPlan> = { ...state.weeks, [from]: replaceIn(current, swap) }
+    for (const key of Object.keys(state.weeks)) {
+      const g = Number(key)
+      if (g <= from) continue
+      const w = state.weeks[g]
+      weeks[g] = {
+        ...replaceIn(w, swap),
+        // A later week that sold the departing player now sells his
+        // replacement instead, and one that had already bought him is
+        // dropped as a duplicate.
+        transfers: w.transfers
+          .filter((t) => t.in !== inEl)
+          .map((t) => (t.out === outEl ? { ...t, out: inEl } : t)),
+      }
+    }
+    persist({ ...state, weeks })
+  }
 }
+
+const replaceIn = (w: WeekPlan, swap: (e: number) => number): WeekPlan => ({
+  ...w,
+  xi: w.xi.map(swap),
+  bench: w.bench.map(swap),
+  captain: w.captain == null ? null : swap(w.captain),
+  vice: w.vice == null ? null : swap(w.vice),
+})
 
 export { isFreeChip }

@@ -88,8 +88,13 @@ export function bestXiXp(squad: RatingRow[], gw: number, e: Engine): { total: nu
    big names you've left out are bets whether you meant them or not.
    ───────────────────────────────────────────────────────────────────────── */
 
+/* Where the bands sit matters more than it looks. At 30% only five players
+   in the whole game qualify and a typical squad holds two of them, so the
+   number never moved and never meant anything. At 15% there are twenty-six,
+   and the average manager carries six — which is what "the template" actually
+   describes. The bands now split a typical fifteen roughly 6 / 5 / 4. */
 export type OwnBand = 'template' | 'balanced' | 'punt'
-export const BAND_AT = { template: 30, balanced: 10 }
+export const BAND_AT = { template: 15, balanced: 5 }
 
 export const bandOf = (o: number): OwnBand =>
   o >= BAND_AT.template ? 'template' : o >= BAND_AT.balanced ? 'balanced' : 'punt'
@@ -99,6 +104,10 @@ export interface TemplateRead {
   counts: Record<OwnBand, number>
   /** Ownership-weighted, so it reads as "the average player in my squad". */
   avgOwn: number
+  /** What a typical squad carries in each band, from live ownership: the sum
+   *  of ownership across the band is exactly the expected count in any
+   *  fifteen, so the comparison is measured rather than asserted. */
+  typical: Record<OwnBand, number>
   /** Heavily-owned players you don't have — the bets you're making by omission. */
   missing: { row: RatingRow; own: number }[]
   headline: string
@@ -114,6 +123,11 @@ export function templateRead(squad: RatingRow[], pool: RatingRow[]): TemplateRea
   for (const r of rows) counts[r.band]++
   const avgOwn = rows.reduce((s, r) => s + r.own, 0) / rows.length
 
+  // Ownership summed over a band is exactly the number of players from it
+  // the average squad holds, so this benchmark is measured, not asserted.
+  const typical: Record<OwnBand, number> = { template: 0, balanced: 0, punt: 0 }
+  for (const r of pool) typical[bandOf(own(r))] += own(r) / 100
+
   const have = new Set(squad.map(el))
   const missing = pool
     .filter((r) => !have.has(el(r)) && own(r) >= BAND_AT.template)
@@ -121,15 +135,18 @@ export function templateRead(squad: RatingRow[], pool: RatingRow[]): TemplateRea
     .slice(0, 4)
     .map((row) => ({ row, own: own(row) }))
 
-  // Two ways to be exposed, and they pull in opposite directions.
-  const tone: TemplateRead['tone'] = counts.template >= 7 ? 'warn' : counts.punt >= 9 ? 'warn' : 'good'
-  const headline = counts.template >= 7
-    ? `You'll move with the crowd — ${counts.template} of your ${rows.length} are in the template`
-    : counts.punt >= 9
-      ? `A bold squad — ${counts.punt} of your ${rows.length} are owned by under ${BAND_AT.balanced}%`
-      : `A balanced spread — ${counts.template} template, ${counts.punt} punts`
+  // Two ways to be exposed, and they pull in opposite directions — both
+  // judged against what a typical squad carries rather than a round number.
+  const heavy = counts.template >= typical.template + 3
+  const bold = counts.punt >= typical.punt + 3
+  const tone: TemplateRead['tone'] = heavy || bold ? 'warn' : 'good'
+  const headline = heavy
+    ? `You'll move with the crowd — ${counts.template} of your ${rows.length} are template picks, against ${typical.template.toFixed(0)} for a typical squad`
+    : bold
+      ? `A bold squad — ${counts.punt} of your ${rows.length} are owned by under ${BAND_AT.balanced}%, against ${typical.punt.toFixed(0)} typically`
+      : `A normal spread — ${counts.template} template and ${counts.punt} punts, where a typical squad has ${typical.template.toFixed(0)} and ${typical.punt.toFixed(0)}`
 
-  return { rows, counts, avgOwn, missing, headline, tone }
+  return { rows, counts, avgOwn, typical, missing, headline, tone }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -528,7 +545,7 @@ function matchupNote(row: RatingRow, fixes: FixtureEaseRow[], mult: number, sp: 
   const deadBall = p.sp > sp.league.taken.sp
   const sign = mult > 1 ? '+' : '−'
   const how = deadBall
-    ? (mult > 1 ? `his threat is dead balls, and ${opp} leak from them` : `his threat is dead balls, and ${opp} defend them well`)
-    : (mult > 1 ? `he works in open play, which is where ${opp} give most up` : `he works in open play, but ${opp} mostly leak from set pieces`)
+    ? (mult > 1 ? `his threat is dead balls, and ${opp} concede heavily from them` : `his threat is dead balls, and ${opp} defend them well`)
+    : (mult > 1 ? `he works in open play, which is where ${opp} give most away` : `he works in open play, but ${opp} mostly concede from set pieces`)
   return `${how} — ${sign}${pct}% on his goal threat`
 }

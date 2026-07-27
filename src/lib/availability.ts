@@ -20,6 +20,9 @@ export interface AvailPlayer {
   news?: string
   news_added?: string
   chance?: number
+  /** Today's price in millions, and today's ownership percentage. */
+  price?: number
+  own?: number
   pen_order?: number
   corner_order?: number
   fk_order?: number
@@ -77,6 +80,29 @@ export function availFor(a: Availability, element?: number | null, code?: number
     if (hit) return hit
   }
   return null
+}
+
+/** Overlay this morning's price and ownership onto the season build.
+ *
+ *  The ratings table is a season-history job; price settles nightly around
+ *  01:30 UTC and ownership drifts all week. Left alone, a squad could be
+ *  costed at last month's prices and the template read judged on last
+ *  month's crowd. Where the live feed has a player, it wins; where it
+ *  doesn't, nothing changes. */
+export function withLivePrices<T extends { element?: unknown; code?: unknown }>(rows: T[], a: Availability): T[] {
+  if (!a.byElement.size) return rows
+  let changed = false
+  const out = rows.map((r) => {
+    const live = availFor(a, Number(r.element), Number(r.code))
+    if (!live || (live.price == null && live.own == null)) return r
+    const next = { ...r } as T & { price?: number; selected_by_percent?: number }
+    if (live.price != null) next.price = live.price
+    if (live.own != null) next.selected_by_percent = live.own
+    changed = changed || next.price !== (r as { price?: number }).price
+      || next.selected_by_percent !== (r as { selected_by_percent?: number }).selected_by_percent
+    return next as T
+  })
+  return changed ? out : rows
 }
 
 const MONTHS: Record<string, number> = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 }

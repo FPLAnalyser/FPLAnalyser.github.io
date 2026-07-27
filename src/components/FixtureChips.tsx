@@ -10,15 +10,20 @@ export function FixtureChips({
   team,
   n = 3,
   compact = false,
+  fromGw,
 }: {
   fixtureEase: FixtureEaseRow[]
   team: string
   n?: number
   /** Tiny colour ticks instead of labelled chips — for pitch cards. */
   compact?: boolean
+  /** Start from this gameweek rather than the first in the table — the
+   *  planner steps through the season, and a list still showing GW1 while
+   *  the board is on GW5 is worse than showing nothing. */
+  fromGw?: number
 }) {
   const upcoming = (fixtureEase || [])
-    .filter((f) => f.team === team)
+    .filter((f) => f.team === team && (fromGw == null || f.gw >= fromGw))
     .sort((a, b) => a.gw - b.gw)
     .slice(0, n)
   if (!upcoming.length) return null
@@ -64,9 +69,9 @@ export function FixtureChips({
  * don't tell you against whom, which is the thing you're actually checking on
  * a phone. Two on a small screen, three once there's room.
  */
-export function FixtureNames({ fixtureEase, team, n = 3 }: { fixtureEase: FixtureEaseRow[]; team: string; n?: number }) {
+export function FixtureNames({ fixtureEase, team, n = 3, fromGw }: { fixtureEase: FixtureEaseRow[]; team: string; n?: number; fromGw?: number }) {
   const upcoming = (fixtureEase || [])
-    .filter((f) => f.team === team)
+    .filter((f) => f.team === team && (fromGw == null || f.gw >= fromGw))
     .sort((a, b) => a.gw - b.gw)
     .slice(0, n)
   if (!upcoming.length) return null

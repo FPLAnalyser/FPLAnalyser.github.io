@@ -6,6 +6,9 @@ site_data/<current season>/availability.json.
 The rest of the pipeline is a season-history build; this file is the news:
   · per-player availability — status (a/d/i/s/u/n), the news line FPL attaches
     ("Knee injury - Expected back 22 Aug"), and chance of playing next round
+  · price and ownership as they stand this morning — both move daily, while
+    the ratings build behind them is a season-history job; the site overlays
+    these so budgets and the template read are never a week out of date
   · set-piece duty as it stands TODAY — penalties_order etc. change with
     transfers and manager whim, and a snapshot from last season goes stale
     (Thiago moved from Brentford's #2 to #1 between seasons)
@@ -61,6 +64,13 @@ for el in boot["elements"]:
         "code": el["code"],
         "team": el["team"],
         "status": el.get("status", "a"),
+        # Price and ownership move every single day — prices settle around
+        # 01:30 UTC and ownership drifts all week — while the ratings build
+        # is a season-history job that runs far less often. Carrying them
+        # here keeps the budget maths and the template read honest without
+        # rebuilding the whole pipeline each morning.
+        "price": round(el["now_cost"] / 10, 1),
+        "own": float(el.get("selected_by_percent") or 0),
     }
     # Only ship the noisy fields when they carry information — keeps the file
     # small enough to fetch on a phone without thinking about it.
@@ -90,6 +100,9 @@ with open(out_path, "w", encoding="utf-8") as f:
 
 flagged = sum(1 for p in players if p["status"] != "a")
 pens = sum(1 for p in players if p.get("pen_order") == 1)
+owned = sum(p["own"] for p in players) / 100
 print(f"{out_path}: {len(players)} players ({flagged} flagged unavailable/doubtful, "
       f"{pens} first-choice penalty takers), {len(events)} gameweek deadlines, "
       f"{len(fixtures)} fixtures")
+print(f"  prices £{min(p['price'] for p in players):.1f}m–£{max(p['price'] for p in players):.1f}m; "
+      f"ownership sums to {owned:.1f} players, which is the squad size when the feed is sane")
