@@ -217,6 +217,14 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
               : ft === Infinity
                 ? <span className="text-xs font-semibold text-accent">{week.chip ? CHIP_LABEL[week.chip] : 'Opening squad'} — no limit</span>
                 : <span className="text-xs text-ink-3">{ftLeft} free left{hit > 0 ? <span className="font-semibold text-bad"> · −{hit} pts</span> : ''}</span>}
+            {/* A minus-eight looks alarming if you think it has been applied
+                to your real side. It hasn't — this board is a sketch pad, and
+                the number is what the plan would cost if you played it. */}
+            {hit > 0 && (
+              <span className="w-full text-[11px] text-ink-3">
+                What this plan would cost in the real game — take as many transfers as you like here, nothing is sent to FPL.
+              </span>
+            )}
             {week && week.transfers.length === 0 && <span className="ml-auto text-xs text-ink-3">Tap ✕ on a player to sell him</span>}
             {week && planner.pendingOut.length > 0 && (
               <span className="ml-auto text-xs font-semibold text-accent">

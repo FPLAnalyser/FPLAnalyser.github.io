@@ -284,7 +284,7 @@ export default function SquadBuilder() {
   if (!data) {
     return (
       <PageShell>
-        <SectionBanner imgKey="squad" title="Squad Builder" subtitle="Build a 15-man squad within £100m and rate it" />
+        <SectionBanner imgKey="squad" title="Squad Builder" subtitle="Plan a 15-man squad within £100m and rate it — a sandbox, separate from your real FPL team" />
         <PageSkeleton error={error} />
       </PageShell>
     )
@@ -292,7 +292,7 @@ export default function SquadBuilder() {
 
   return (
     <PageShell>
-      <SectionBanner imgKey="squad" title="Squad Builder" subtitle={`Pick your Gameweek ${buildGw} fifteen within £100m, then step forward week by week — transfers, captain and chips`} />
+      <SectionBanner imgKey="squad" title="Squad Builder" subtitle={`Plan a Gameweek ${buildGw} fifteen within £100m, then step forward week by week — transfers, captain and chips. A sandbox: nothing here touches your real FPL team`} />
 
       <>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
