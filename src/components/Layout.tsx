@@ -47,9 +47,9 @@ export function Layout() {
       >
         <div className="mx-auto flex h-14 max-w-[1760px] items-center gap-2 px-3 md:h-[70px] md:px-6">
           <NavLink to="/" end className="flex shrink-0 items-center gap-2 leading-none md:gap-2.5" aria-label="FPL Analyser — home">
-            <BrandMark className="h-8 w-8 md:h-10 md:w-10" />
+            <BrandMark className="h-9 w-9 md:h-11 md:w-11" />
             <span className="flex flex-col justify-center">
-              <span className="text-[15px] font-extrabold tracking-tight text-ink sm:text-[17px] md:text-xl">
+              <span className="font-brand text-[15px] font-semibold tracking-[0.02em] text-ink sm:text-[17px] md:text-xl">
                 <span className="metallic-num">FPL</span> Analyser
               </span>
               <span className="mt-0.5 hidden text-[9px] font-semibold tracking-[0.22em] text-ink-3 uppercase md:block">

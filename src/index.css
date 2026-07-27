@@ -496,7 +496,7 @@ body {
 .intro-lock { position: relative; z-index: 5; text-align: center; padding: 0 16px; }
 /* The monogram leads the reveal, fading up just ahead of the wordmark. */
 .intro-mark {
-  display: block; margin: 0 auto 18px; width: clamp(56px, 13vw, 104px); height: auto;
+  display: block; margin: 0 auto 20px; width: clamp(76px, 17vw, 148px); height: auto;
   filter: drop-shadow(0 4px 26px rgba(0,0,0,.6));
   animation: intro-mark-in .75s cubic-bezier(.2,.7,.3,1) both;
 }

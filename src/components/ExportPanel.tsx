@@ -55,7 +55,7 @@ function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: 
   ctx.textBaseline = 'alphabetic'
   ctx.fillText(title, pad, headY)
   ctx.fillStyle = '#c9a227'
-  ctx.font = `800 ${Math.round(out.width * 0.022)}px ui-sans-serif, system-ui, sans-serif`
+  ctx.font = `600 ${Math.round(out.width * 0.023)}px Montserrat, ui-sans-serif, system-ui, sans-serif`
   ctx.textAlign = 'right'
   ctx.fillText(SITE_NAME, out.width - pad, headY)
   ctx.textAlign = 'left'
@@ -104,7 +104,7 @@ function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: 
   const gap = Math.round(out.width * 0.009)   // icon to its handle
   const between = Math.round(out.width * 0.028) // one account to the next
 
-  ctx.font = `800 ${Math.round(out.width * 0.026)}px ui-sans-serif, system-ui, sans-serif`
+  ctx.font = `600 ${Math.round(out.width * 0.027)}px Montserrat, ui-sans-serif, system-ui, sans-serif`
   ctx.fillStyle = '#c9a227'
   ctx.textBaseline = 'middle'
   ctx.textAlign = 'left'
