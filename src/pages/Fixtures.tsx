@@ -99,12 +99,14 @@ function analyserDiff(opp: TeamRatingRow | undefined, lens: Lens, venue: 'H' | '
   // expects this team to score set how kind it is for their attack, and the
   // goals it expects them to concede set how kind it is for their defence.
   if (mkt) {
-    const scale = (lam: number, harderWhenHigher: boolean) => {
-      const t = (lam - MKT_EASY) / (MKT_HARD - MKT_EASY)
-      return Math.max(1, Math.min(5, harderWhenHigher ? 1 + 4 * t : 5 - 4 * t))
-    }
-    const atk = scale(mkt.for, false)      // expected to score more → easier
-    const def = scale(mkt.against, true)   // expected to concede more → harder
+    // 0 at MKT_HARD goals, 1 at MKT_EASY. Both anchors are named from an
+    // attack's point of view — 2.5 goals is a kind evening — and the two reads
+    // then pull in opposite directions from that one ratio. Getting those
+    // directions the wrong way round inverted every priced fixture on the
+    // grid: Coventry away at Arsenal came out the easiest game of the week.
+    const ease = (lam: number) => Math.max(0, Math.min(1, (lam - MKT_HARD) / (MKT_EASY - MKT_HARD)))
+    const atk = 5 - 4 * ease(mkt.for)       // expected to score more → easier
+    const def = 1 + 4 * ease(mkt.against)   // expected to concede more → harder
     return { diff: lens === 'attack' ? atk : lens === 'defence' ? def : (atk + def) / 2, ours: true, market: true }
   }
   if (!opp) return { diff: fdr, ours: false }
