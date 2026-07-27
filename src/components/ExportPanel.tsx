@@ -152,14 +152,18 @@ export function Exportable({ title, filename, children, className, toolbar }: {
 
   return (
     <div className={`relative ${className ?? ''}`}>
-      <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+      {/* No wrapping: the point of the toolbar is to save a row, and a row
+          that wraps costs the one it was meant to save. On a phone the word
+          "Share" drops and the icon carries it. */}
+      <div className="mb-1.5 flex items-center gap-1.5">
         {toolbar}
         <button
           onClick={() => setOpen((o) => !o)}
           className="ml-auto inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg border border-line-mid px-2.5 text-[12px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
           aria-expanded={open}
+          aria-label="Share"
         >
-          <Icon name="users" size={13} /> Share
+          <Icon name="users" size={13} /> <span className="hidden min-[360px]:inline">Share</span>
         </button>
       </div>
 

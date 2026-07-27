@@ -516,13 +516,16 @@ function SquadActions({ isStarter, isCaptain, isVice, canSwap, onCaptain, onVice
   isStarter: boolean; isCaptain: boolean; isVice: boolean; canSwap: boolean
   onCaptain: () => void; onVice: () => void; onSwap: () => void; onTransfer: () => void
 }) {
-  const btn = 'inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors disabled:opacity-40'
+  // One row, always. Four equal cells that shrink together beat a wrapping
+  // set that costs a whole second line on a phone; the labels are short
+  // enough that nothing truncates even at 320px.
+  const btn = 'inline-flex min-h-9 min-w-0 flex-1 items-center justify-center gap-1 rounded-lg border px-1.5 text-[11px] font-semibold transition-colors disabled:opacity-40 sm:px-2.5 sm:text-xs'
   return (
-    <div className="flex flex-wrap gap-1.5">
-      <button onClick={onCaptain} className={`${btn} ${isCaptain ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}><Icon name="crown" size={13} /> {isCaptain ? 'Captain' : 'Make captain'}</button>
-      <button onClick={onVice} className={`${btn} ${isVice ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}><Icon name="shield" size={13} /> {isVice ? 'Vice' : 'Make vice'}</button>
-      <button onClick={onSwap} disabled={!canSwap} className={`${btn} border-line-mid text-ink-2 hover:border-line-strong hover:text-ink`}><Icon name="pitch" size={13} /> {isStarter ? 'Bench him' : 'Bring on'}</button>
-      <button onClick={onTransfer} className={`${btn} border-bad/45 text-bad hover:bg-bad/10`}><Icon name="users" size={13} /> Transfer out</button>
+    <div className="flex gap-1 sm:gap-1.5">
+      <button onClick={onCaptain} title={isCaptain ? 'Already captain' : 'Make him captain'} className={`${btn} ${isCaptain ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}><Icon name="crown" size={13} className="hidden shrink-0 min-[360px]:block" /> Captain</button>
+      <button onClick={onVice} title={isVice ? 'Already vice' : 'Make him vice-captain'} className={`${btn} ${isVice ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}><Icon name="shield" size={13} className="hidden shrink-0 min-[360px]:block" /> Vice</button>
+      <button onClick={onSwap} disabled={!canSwap} className={`${btn} border-line-mid text-ink-2 hover:border-line-strong hover:text-ink`}><Icon name="pitch" size={13} className="hidden shrink-0 min-[360px]:block" /> {isStarter ? 'Bench' : 'Start'}</button>
+      <button onClick={onTransfer} className={`${btn} border-bad/45 text-bad hover:bg-bad/10`}><Icon name="users" size={13} className="hidden shrink-0 min-[360px]:block" /> Transfer</button>
     </div>
   )
 }

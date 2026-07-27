@@ -91,7 +91,7 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap, ac
         <button
           key={id}
           onClick={() => setTab(id)}
-          className={`min-h-8 rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${
+          className={`min-h-8 shrink-0 rounded-full border px-3 text-[13px] font-semibold transition-colors ${
             tab === id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
           }`}
         >
@@ -100,7 +100,7 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap, ac
       ))}
       <button
         onClick={() => navigate(playerHref(String(player.web_name), num(player, 'code')))}
-        className="min-h-8 rounded-full border border-line-mid px-3.5 text-[13px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+        className="min-h-8 shrink-0 rounded-full border border-line-mid px-3 text-[13px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
       >
         Profile ↗
       </button>
@@ -143,11 +143,6 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap, ac
   const dims = dimsFor(pos)
   // Exact, not star-quantised: the norm column has the value to the number.
   const dimVal = (r: RatingRow, col: string) => exactTo100(r, col)
-  const weakest = dims.reduce<{ label: string; v: number } | null>((acc, [label, col]) => {
-    const v = dimVal(player, col)
-    return v != null && (acc == null || v < acc.v) ? { label, v } : acc
-  }, null)
-
   const rivalRating = rival ? ratingTo100(num(rival, 'season_overall_score')) : null
   const rivalPrice = rival ? num(rival, 'price') : null
   const priceGap = price != null && rivalPrice != null ? price - rivalPrice : null
@@ -210,23 +205,24 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap, ac
                 {next.length > 0 && (
                   <div className="mt-3.5 rounded-lg border border-line bg-surface-2/60 px-3 py-2.5">
                     <div className="mb-1.5 text-[10px] font-extrabold tracking-[0.16em] text-ink-3 uppercase">Next {next.length}</div>
-                    <div className="flex flex-wrap gap-1.5">
+                    {/* The gameweek is a column heading rather than a suffix on
+                        every chip: repeated four times inside the pills it
+                        doubled the width of each one for no extra meaning,
+                        and on a phone that forced them onto two rows. */}
+                    <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${next.length}, minmax(0, 1fr))` }}>
+                      {next.map((f) => (
+                        <div key={f.gw} className="text-center text-[9.5px] font-extrabold tracking-[0.08em] text-ink-3 uppercase">GW{f.gw}</div>
+                      ))}
                       {next.map((f) => {
                         const [bg, fg] = FDR_COLORS[f.fdr] || FDR_COLORS[3]
                         return (
-                          <span key={f.gw} className="rounded px-2 py-1 text-[12px] font-bold" style={{ background: bg, color: fg }}>
-                            {f.opponent} ({f.venue})<span className="ml-1 opacity-70">GW{f.gw}</span>
+                          <span key={f.gw} className="truncate rounded px-1.5 py-1 text-center text-[12px] font-bold" style={{ background: bg, color: fg }}>
+                            {f.opponent} ({f.venue})
                           </span>
                         )
                       })}
                     </div>
                   </div>
-                )}
-                {weakest && (
-                  <p className="mt-3 border-t border-line pt-2.5 text-[13.5px] text-ink-2">
-                    Weakest link: <b className="text-ink">{weakest.label} at {weakest.v}</b>
-                    {weakest.label === 'Value' ? ' — the premium you accept for the rest.' : ' — the part of his game to cover elsewhere.'}
-                  </p>
                 )}
               </div>
             </Exportable>
@@ -347,7 +343,7 @@ function AvailabilityBand({ player, fixtureEase, avail }: {
             {back == null ? (
               <span className="text-ink-3">No return date given — treated as out until FPL says otherwise.</span>
             ) : !dated ? (
-              <span className="text-ink-3">No return date given — the chance of playing above is all FPL has said.</span>
+              <span className="text-ink-3">No return date given.</span>
             ) : (
               <span className="text-ink">
                 Back for <span className="font-bold">GW{back}</span>
