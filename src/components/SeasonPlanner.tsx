@@ -166,7 +166,7 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
         {/* One row of numbers for the whole page */}
         <div className="mb-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Stat label="Projected points" value={teamXp == null ? '—' : teamXp.toFixed(1)} tone="accent" sub={week ? 'what this XI should score' : `${picked}/15 picked`} onClick={teamXp == null || !week ? undefined : () => setDetail('xp')} />
-          <Stat label="GW rating" value={rating == null ? '—' : String(rating)} tone={rating != null && rating >= 70 ? 'good' : 'ink'} sub={rating == null ? 'complete your squad' : ratingWord(rating)} onClick={rating == null ? undefined : () => setDetail('rating')} />
+          <Stat label="GW rating" value={rating == null ? '—' : String(rating)} tone={ratingTone(rating)} sub={rating == null ? 'complete your squad' : ratingWord(rating)} onClick={rating == null ? undefined : () => setDetail('rating')} />
           <Stat label="Squad rating" value={squadScore == null ? '—' : String(squadScore)} tone="accent" sub="what you've built" onClick={squadScore == null ? undefined : onOpenSquadRating} />
           <Stat label="In the bank" value={`£${(BUDGET - spend).toFixed(1)}m`} tone={spend > BUDGET ? 'bad' : 'ink'} sub={`£${spend.toFixed(1)}m squad`} />
         </div>
@@ -318,6 +318,12 @@ function EmptySlot({ pos, onClick }: { pos: Pos4; onClick: () => void }) {
 
 const ratingWord = (r: number) => (r >= 85 ? 'elite week' : r >= 70 ? 'strong' : r >= 50 ? 'about par' : r >= 30 ? 'below par' : 'poor week')
 
+/** The rating reads as a colour before it reads as a number, on the same
+ *  bands as the word beneath it — gold for an elite week, green for strong,
+ *  neutral at par, then amber and red as it falls away. */
+const ratingTone = (r: number | null): 'accent' | 'good' | 'ink' | 'warn' | 'bad' =>
+  r == null ? 'ink' : r >= 85 ? 'accent' : r >= 70 ? 'good' : r >= 50 ? 'ink' : r >= 30 ? 'warn' : 'bad'
+
 /** The bench as a spine: the label turned on its side into a coloured edge,
  *  so it costs width rather than height — the bench adds no vertical chrome
  *  to the board at all. The edge fills solid gold under Bench Boost, which
@@ -363,8 +369,8 @@ function StepButton({ dir, disabled, onClick }: { dir: 'prev' | 'next'; disabled
   )
 }
 
-function Stat({ label, value, tone, sub, onClick }: { label: string; value: string; tone?: 'ink' | 'bad' | 'good' | 'accent'; sub?: string; onClick?: () => void }) {
-  const c = tone === 'bad' ? 'text-bad' : tone === 'good' ? 'text-good' : tone === 'accent' ? 'text-accent' : 'text-ink'
+function Stat({ label, value, tone, sub, onClick }: { label: string; value: string; tone?: 'ink' | 'bad' | 'good' | 'accent' | 'warn'; sub?: string; onClick?: () => void }) {
+  const c = tone === 'bad' ? 'text-bad' : tone === 'warn' ? 'text-warn' : tone === 'good' ? 'text-good' : tone === 'accent' ? 'text-accent' : 'text-ink'
   const inner = (
     <>
       <div className={`font-display text-lg leading-none tabular-nums ${c}`}>{value}</div>

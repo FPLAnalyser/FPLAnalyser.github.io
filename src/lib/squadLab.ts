@@ -178,6 +178,16 @@ export interface HorizonWeek {
   xp: number
   blanks: number
   doubles: number
+  /** How many of your fifteen face a hard fixture, and how many an easy one.
+   *
+   *  Projected points are the honest measure of what a week is worth, but a
+   *  fifteen spread over ten clubs averages out: the difference between the
+   *  best and worst week is a few percent, which is true and useless for
+   *  spotting trouble. Counting the players walking into a hard game is what
+   *  actually says "this is the week to prepare for" — over the same run it
+   *  swings from one player to eight. */
+  hard: number
+  easy: number
   clashes: Clash[]
 }
 
@@ -189,10 +199,18 @@ export interface HorizonRead {
   clashes: Clash[]
   /** Best week against worst, as a percentage of an average week. */
   swing: number
-  /** Who makes the worst week the worst. */
+  /** The week most of your squad faces a hard game — the one to plan around. */
+  toughest: HorizonWeek
+  /** Who makes that week hard. */
   hardest: { team: string; opponent: string; fdr: number }[]
   headline: string
 }
+
+/** FDR 4 and 5 are the two bands FPL itself calls difficult; 1 and 2 the two
+ *  it calls easy. Using its own scale keeps this readable against every other
+ *  fixture chart on the site. */
+const HARD_FDR = 4
+const EASY_FDR = 2
 
 const ATTACKING = new Set(['MID', 'FWD'])
 const SHUTOUT = new Set(['GKP', 'DEF'])
@@ -206,12 +224,18 @@ export function horizonRead(squad: RatingRow[], fromGw: number, e: Engine, gws: 
     const { total } = bestXiXp(squad, gw, e)
     let blanks = 0
     let doubles = 0
+    let hard = 0
+    let easy = 0
     for (const r of squad) {
-      const n = fixturesFor(String(r.team), e.fixtureEase).filter((f) => f.gw === gw).length
-      if (n === 0) blanks++
-      else if (n > 1) doubles++
+      const fs = fixturesFor(String(r.team), e.fixtureEase).filter((f) => f.gw === gw)
+      if (fs.length === 0) blanks++
+      else if (fs.length > 1) doubles++
+      // On a double the friendlier game is what counts, since he plays both.
+      const fdr = Math.min(...fs.map((f) => f.fdr))
+      if (fs.length && fdr >= HARD_FDR) hard++
+      if (fs.length && fdr <= EASY_FDR) easy++
     }
-    return { gw, xp: total, blanks, doubles, clashes: clashesIn(squad, gw, e) }
+    return { gw, xp: total, blanks, doubles, hard, easy, clashes: clashesIn(squad, gw, e) }
   })
 
   const mean = weeks.reduce((s, w) => s + w.xp, 0) / weeks.length
@@ -220,11 +244,17 @@ export function horizonRead(squad: RatingRow[], fromGw: number, e: Engine, gws: 
   const clashes = weeks.flatMap((w) => w.clashes).sort((a, b) => b.cost - a.cost)
 
   const swing = mean > 0 ? Math.round(((best.xp - worst.xp) / mean) * 100) : 0
-  const headline = swing >= 10
-    ? `A real swing ahead — GW${best.gw} is your best week, GW${worst.gw} your worst, ${swing}% apart`
-    : `A level run — spread across ${new Set(squad.map((r) => String(r.team))).size} clubs, no single week stands out`
+  // Ties on hard fixtures go to the week that projects worse.
+  const toughest = weeks.reduce((a, b) => (b.hard > a.hard || (b.hard === a.hard && b.xp < a.xp) ? b : a))
+  const kindest = weeks.reduce((a, b) => (b.hard < a.hard || (b.hard === a.hard && b.xp > a.xp) ? b : a))
 
-  return { weeks, mean, best, worst, clashes, swing, hardest: hardestIn(squad, worst.gw, e), headline }
+  const headline = toughest.hard >= 5
+    ? `GW${toughest.gw} is the week to plan for — ${toughest.hard} of your ${squad.length} walk into a hard game, against ${kindest.hard} in GW${kindest.gw}`
+    : toughest.hard >= 3
+      ? `Nothing severe ahead — GW${toughest.gw} is the busiest for hard fixtures with ${toughest.hard} of your ${squad.length}`
+      : `A kind run — no week in the next ${weeks.length} has more than ${toughest.hard} of your fifteen in a hard game`
+
+  return { weeks, mean, best, worst, clashes, swing, toughest, hardest: hardestIn(squad, toughest.gw, e), headline }
 }
 
 /** The clubs dragging a week down — a swing is only actionable once you know
@@ -237,7 +267,7 @@ function hardestIn(squad: RatingRow[], gw: number, e: Engine): { team: string; o
     const f = fixturesFor(team, e.fixtureEase).find((x) => x.gw === gw)
     if (f) seen.set(team, { team, opponent: `${f.opponent} (${f.venue})`, fdr: f.fdr })
   }
-  return [...seen.values()].sort((a, b) => b.fdr - a.fdr).slice(0, 3)
+  return [...seen.values()].filter((x) => x.fdr >= HARD_FDR).sort((a, b) => b.fdr - a.fdr).slice(0, 4)
 }
 
 /** Your own attackers playing your own defenders, in one gameweek. */

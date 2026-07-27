@@ -82,7 +82,26 @@ agg = played.groupby("element").agg(
     saves=("saves", "sum"), bonus=("bonus", "sum"), yellows=("yellow_cards", "sum"))
 st = starters.copy()
 st["dc_hit"] = (st["defensive_contribution"] >= st["position"].map(DC_THR).fillna(99)).astype(int)
-agg = agg.join(st.groupby("element")["dc_hit"].mean().rename("dc")).fillna({"dc": 0})
+dc_by_el = st.groupby("element")["dc_hit"].agg(["mean", "count"])
+agg = agg.join(dc_by_el["mean"].rename("dc_raw")).join(dc_by_el["count"].rename("dc_n"))
+agg["dc_raw"] = agg["dc_raw"].fillna(0.0)
+agg["dc_n"] = agg["dc_n"].fillna(0.0)
+
+# Shrink the def-con rate the way every other rate here is shrunk. It was the
+# one raw number in the model, which mattered because it is worth about 0.45
+# points an appearance to a defender — enough that a player with four starts
+# and a lucky 100% hit rate carried it forward at full weight, and a quiet
+# three-game spell read as a permanent zero.
+#
+# K comes from the data rather than taste: splitting last season in half, a
+# defender's hit rate in the first half correlates 0.67 with the second over
+# a median fifteen starts, which by the usual n/(n+K) reliability form implies
+# K of roughly seven starts. So a full season barely moves, and a handful of
+# games is pulled most of the way back to his position's mean.
+DC_SHRINK = 7.0
+dc_pos_mean = (agg["dc_raw"] * agg["dc_n"]).groupby(agg["pos"]).sum() / agg.groupby("pos")["dc_n"].sum()
+dc_prior = agg["pos"].map(dc_pos_mean).fillna(0.0)
+agg["dc"] = (agg["dc_raw"] * agg["dc_n"] + dc_prior * DC_SHRINK) / (agg["dc_n"] + DC_SHRINK)
 n_gws = gw["round"].nunique()
 agg["p60"] = starters.groupby("element")["round"].nunique().reindex(agg.index).fillna(0) / n_gws
 agg["ppl"] = played.groupby("element")["round"].nunique().reindex(agg.index).fillna(0) / n_gws

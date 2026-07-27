@@ -74,9 +74,11 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
         />
         <Tile
           label="Horizon" open={open === 'horizon'} onClick={() => toggle('horizon')}
-          value={horizon ? `GW${horizon.worst.gw}` : '—'}
-          sub={horizon ? `your hardest of the next ${horizon.weeks.length}` : 'needs a full squad'}
-          tone={horizon && horizon.clashes.length ? 'warn' : 'ink'}
+          value={horizon ? `GW${horizon.toughest.gw}` : '—'}
+          sub={horizon
+            ? `${horizon.toughest.hard} of 15 in a hard game — your toughest of the next ${horizon.weeks.length}`
+            : 'needs a full squad'}
+          tone={horizon && horizon.toughest.hard >= 5 ? 'warn' : 'ink'}
         />
         <Tile
           label="Analyser" open={open === 'advice'} onClick={() => toggle('advice')}
@@ -215,11 +217,11 @@ function HorizonPanel({ read }: { read: HorizonRead | null }) {
   // axis says so, so a 4% week still reads as a 4% week.
   const dev = read.weeks.map((w) => (read.mean > 0 ? (w.xp - read.mean) / read.mean : 0))
   const span = Math.max(...dev.map(Math.abs), 0.02)
-  // Only mark a peak and a trough when there genuinely is one. Colouring the
-  // biggest and smallest bar regardless said "these weeks matter" while the
-  // sentence underneath said the run was level — the chart contradicting the
-  // copy is worse than a chart with nothing to point at.
-  const notable = read.swing >= 10
+  // The bars carry value; the row of counts underneath carries trouble. A
+  // week is worth flagging when a real share of the squad walks into a hard
+  // game, which moves far more than projected points do.
+  const alarming = (w: { hard: number }) => w.hard >= 5
+  const notable = read.toughest.hard >= 3
   return (
     <div>
       <Head title="Horizon scanning" note={`What your fifteen face over the next ${read.weeks.length} gameweeks`} />
@@ -227,8 +229,8 @@ function HorizonPanel({ read }: { read: HorizonRead | null }) {
       <div className="relative flex h-[96px] items-center gap-1.5">
         <span className="absolute inset-x-0 top-1/2 h-px bg-line-strong" />
         {read.weeks.map((w, i) => {
-          const peak = notable && w.gw === read.best.gw
-          const trough = notable && w.gw === read.worst.gw
+          const peak = w.gw === read.best.gw && read.swing >= 5
+          const trough = w.gw === read.toughest.gw && notable
           const up = dev[i] >= 0
           const h = Math.max(3, (Math.abs(dev[i]) / span) * 34)
           const bg = trough ? 'bg-bad' : peak ? 'bg-good' : 'bg-ink-3/50'
@@ -253,9 +255,32 @@ function HorizonPanel({ read }: { read: HorizonRead | null }) {
         against your average week of {read.mean.toFixed(0)} projected points
       </div>
 
-      {notable && read.hardest.length > 0 && (
+      {/* What the bars can't show: a fifteen across ten clubs barely moves in
+          projected points, but the number of players walking into a hard game
+          swings from one to eight over the same run. */}
+      <div className="mt-2.5 flex items-stretch gap-1.5">
+        {read.weeks.map((w) => (
+          <div
+            key={w.gw}
+            title={`GW${w.gw}: ${w.hard} hard, ${w.easy} easy`}
+            className={`flex min-w-0 flex-1 flex-col items-center rounded-md border py-1 ${
+              alarming(w) ? 'border-bad/50 bg-bad/10' : w.hard <= 2 ? 'border-good/40 bg-good/5' : 'border-line'
+            }`}
+          >
+            <span className={`font-num text-[13px] leading-none tabular-nums ${
+              alarming(w) ? 'text-bad' : w.hard <= 2 ? 'text-good' : 'text-ink-2'
+            }`}>{w.hard}</span>
+            <span className="mt-0.5 text-[8.5px] tracking-wide text-ink-3 uppercase">hard</span>
+          </div>
+        ))}
+      </div>
+      <div className="mt-0.5 text-center text-[10px] text-ink-3">
+        of your fifteen facing a fixture rated 4 or 5 for difficulty
+      </div>
+
+      {read.hardest.length > 0 && (
         <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
-          <span className="font-semibold text-ink-3">GW{read.worst.gw} is hardest for</span>
+          <span className="font-semibold text-ink-3">GW{read.toughest.gw} is hardest for</span>
           {read.hardest.map((h) => (
             <span key={h.team} className="inline-flex items-center gap-1 rounded-md border border-line-mid px-1.5 py-0.5">
               <TeamBadge team={h.team} size={11} />
