@@ -205,6 +205,8 @@ export default function SquadBuilder() {
   const liveScore = liveRated.length ? Math.round(liveRated.reduce((a, b) => a + b, 0) / liveRated.length) : null
   const liveBestXI = useMemo(() => bestElevenScore(liveChosen), [liveChosen])
   const liveGw = complete ? planner.gw : buildGw
+  /** What a replacement for this player may cost: the bank plus his own fee. */
+  const budgetFor = (out: RatingRow) => BUDGET - plannerSquad.reduce((t, el) => t + priceOf(byEl.get(el) ?? {} as RatingRow), 0) + priceOf(out)
 
   // Auto-pick a strong, valid squad within budget (greedy by rating with a
   // minimum-price reservation for the slots still to fill).
@@ -242,8 +244,17 @@ export default function SquadBuilder() {
       if (sort === 'value') { const o = ovOf(r); return o == null ? -1 : o / Math.max(priceOf(r), 0.1) }
       return ovOf(r) ?? -1
     }
-    return [...rows].sort((a, b) => key(b) - key(a)).slice(0, 60)
-  }, [pool, pickPos, query, sort, maxPrice, minRating, minDim, dims])
+    const sorted = [...rows].sort((a, b) => key(b) - key(a))
+    // With a player armed, anyone you can't actually sign is noise — keep them
+    // in the list (so the reason stays visible) but let the affordable ones
+    // rise to the top rather than sitting 40 rows down.
+    if (armedOut != null) {
+      const legal = (r: RatingRow) => (planner.canReplace(armedOut, r.element) == null ? 0 : 1)
+      sorted.sort((a, b) => legal(a) - legal(b))
+    }
+    return sorted.slice(0, 60)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pool, pickPos, query, sort, maxPrice, minRating, minDim, dims, armedOut, plannerSquad])
 
   const activeFilters = (maxPrice < PRICE_MAX ? 1 : 0) + (minRating > 0 ? 1 : 0) + dims.filter((d) => (minDim[d.key] ?? 0) > 0).length
   const resetFilters = () => { setMaxPrice(PRICE_MAX); setMinRating(0); setMinDim({}) }
@@ -305,10 +316,17 @@ export default function SquadBuilder() {
           </div>
 
           {complete && armedRow && (
-            <div className="mb-2 flex items-center gap-2 rounded-lg border border-bad/40 bg-bad/10 px-3 py-2 text-sm">
-              <Icon name="users" size={14} className="text-bad" />
-              <span className="min-w-0 flex-1 truncate text-ink">Replacing <span className="font-semibold">{String(armedRow.web_name)}</span></span>
-              <button onClick={() => setArmedOut(null)} className="text-xs font-semibold text-ink-3 hover:text-ink">cancel</button>
+            <div className="mb-2 rounded-lg border border-bad/40 bg-bad/10 px-3 py-2 text-sm">
+              <div className="flex items-center gap-2">
+                <Icon name="users" size={14} className="text-bad" />
+                <span className="min-w-0 flex-1 truncate text-ink">Replacing <span className="font-semibold">{String(armedRow.web_name)}</span></span>
+                <button onClick={() => setArmedOut(null)} className="text-xs font-semibold text-ink-3 hover:text-ink">cancel</button>
+              </div>
+              {/* Without this the list can look broken: a squad with nothing in
+                  the bank disables every expensive name and never says why. */}
+              <div className="mt-0.5 pl-6 text-[11px] text-ink-3">
+                £{budgetFor(armedRow).toFixed(1)}m to spend on his replacement
+              </div>
             </div>
           )}
 

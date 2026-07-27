@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { PlayerPhoto } from './PlayerPhoto'
 import { ratingTo100, exactTo100 } from './StarRating'
@@ -123,11 +124,15 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap, ac
   const rivalPrice = rival ? num(rival, 'price') : null
   const priceGap = price != null && rivalPrice != null ? price - rivalPrice : null
 
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-3 backdrop-blur-sm" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="max-h-[90vh] w-full max-w-[600px] overflow-y-auto rounded-2xl border border-line-mid bg-surface-1 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+  return createPortal(
+    // Same trap as the squad breakdown had: 90vh ignores a phone's browser
+    // chrome, so the panel outgrew the visible area and centring pushed the
+    // header — and the close button with it — off the top. Cap in dvh, make
+    // the header a fixed row and let only the body scroll.
+    <div className="fixed inset-0 z-[210] grid place-items-center bg-black/70 p-3 backdrop-blur-sm" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="flex max-h-[88dvh] w-full max-w-[600px] flex-col overflow-hidden rounded-2xl border border-line-mid bg-surface-1 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         {/* header */}
-        <div className="flex items-center gap-3 border-b border-line px-4 py-3">
+        <div className="flex shrink-0 items-center gap-3 border-b border-line px-4 py-3">
           <PlayerPhoto
             code={num(player, 'code')} element={num(player, 'element')}
             className="w-11 shrink-0 rounded-lg object-cover object-top" style={{ height: 54 }}
@@ -152,8 +157,9 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap, ac
           <button onClick={onClose} aria-label="Close" className="shrink-0 rounded-lg p-1.5 text-ink-3 transition-colors hover:text-ink"><Icon name="x" size={18} /></button>
         </div>
         {actions && (
-          <div className="border-b border-line bg-surface-2/40 px-4 py-2.5">{actions}</div>
+          <div className="shrink-0 border-b border-line bg-surface-2/40 px-4 py-2.5">{actions}</div>
         )}
+        <div className="min-h-0 flex-1 overflow-y-auto">
 
         {/* tabs */}
         <div className="flex flex-wrap gap-1.5 border-b border-line px-4 py-2.5">
@@ -274,7 +280,9 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap, ac
             <p className="py-6 text-center text-sm text-ink-3">No rated alternatives in this position yet.</p>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
