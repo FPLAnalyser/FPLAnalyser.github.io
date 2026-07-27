@@ -244,7 +244,7 @@ function BubbleKey({ label, min, max, fmt }: { label: string; min: number; max: 
           return (
             <g key={i}>
               <circle cx={cx} cy={15} r={r} fill="var(--ink-3)" opacity="0.42" stroke="var(--surface-1)" strokeWidth="1" />
-              <text x={cx} y={30} textAnchor="middle" fontSize="8.5" fill="var(--ink-3)">{fmt(z)}</text>
+              <text x={cx} y={30} textAnchor="middle" fontSize="10" fontWeight="600" fill="var(--ink-2)">{fmt(z)}</text>
             </g>
           )
         })}
@@ -412,8 +412,12 @@ export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
               </g>
             )
           })()}
-          {/* quadrants: a green wash on the corner you want to be in, a red
-              wash on the one you don't, both faint enough to stay behind. */}
+          {/* Quadrants carry the same green / amber / red language as the value
+              bands: the corner you want, the two that are good at one thing
+              only, and the one you don't. Every chart on the page therefore
+              answers "is where I'm standing good or bad" the same way, whether
+              its axes trade off through a price (bands) or are independent
+              (quadrants). */}
           {quads && (() => {
             const box = (q: 'tr' | 'tl' | 'br' | 'bl') => ({
               x: q === 'tl' || q === 'bl' ? PAD.l : midX,
@@ -421,8 +425,10 @@ export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
               width: (q === 'tl' || q === 'bl' ? midX - PAD.l : W - PAD.r - midX),
               height: (q === 'tl' || q === 'tr' ? midY - PAD.t : H - PAD.b - midY),
             })
-            const b = box(quads.best), w = box(quads.worst)
-            const anchor = (q: 'tr' | 'tl' | 'br' | 'bl') => {
+            const CORNERS = ['tr', 'tl', 'br', 'bl'] as const
+            const toneOf = (q: (typeof CORNERS)[number]) =>
+              q === quads.best ? 'var(--good)' : q === quads.worst ? 'var(--bad)' : 'var(--warn)'
+            const anchor = (q: (typeof CORNERS)[number]) => {
               const r = box(q)
               const right = q === 'tr' || q === 'br'
               const bottom = q === 'bl' || q === 'br'
@@ -430,13 +436,17 @@ export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
             }
             return (
               <g>
-                <rect {...b} fill="var(--good)" opacity="0.07" />
-                <rect {...w} fill="var(--bad)" opacity="0.06" />
-                {(Object.keys(quads.labels) as ('tr' | 'tl' | 'br' | 'bl')[]).filter((q) => !clashes(q)).map((q) => {
+                {CORNERS.map((q) => (
+                  <rect key={q} {...box(q)} fill={toneOf(q)} opacity={q === quads.best ? 0.085 : q === quads.worst ? 0.07 : 0.05} />
+                ))}
+                {/* the median split, drawn so the four regions read as a
+                    deliberate division rather than four coincidental washes */}
+                <line x1={midX} y1={PAD.t} x2={midX} y2={H - PAD.b} stroke="var(--line-strong)" strokeWidth="1" strokeDasharray="3 4" />
+                <line x1={PAD.l} y1={midY} x2={W - PAD.r} y2={midY} stroke="var(--line-strong)" strokeWidth="1" strokeDasharray="3 4" />
+                {CORNERS.filter((q) => quads.labels[q] && !clashes(q)).map((q) => {
                   const a = anchor(q)
-                  const tone = q === quads.best ? 'var(--good)' : q === quads.worst ? 'var(--bad)' : 'var(--ink-3)'
                   return (
-                    <text key={q} x={a.x} y={a.y} textAnchor={a.anchor} fontSize="9" fontWeight="800" fill={tone} opacity="0.85" style={{ textTransform: 'uppercase', letterSpacing: '.1em' }}>
+                    <text key={q} x={a.x} y={a.y} textAnchor={a.anchor} fontSize="10" fontWeight="800" fill={toneOf(q)} opacity="0.95" style={{ textTransform: 'uppercase', letterSpacing: '.1em' }}>
                       {quads.labels[q]}
                     </text>
                   )
@@ -511,8 +521,10 @@ export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
               {labelFor(hoveredPt)}
             </text>
           )}
-          <text x={PAD.l} y={PAD.t - 4} fontSize="9.5" fill="var(--ink-3)" style={{ textTransform: 'uppercase', letterSpacing: '.12em' }}>{axis[0]}</text>
-          <text x={W - PAD.r} y={H - 4} textAnchor="end" fontSize="9.5" fill="var(--ink-3)" style={{ textTransform: 'uppercase', letterSpacing: '.12em' }}>{axis[1]}</text>
+          {/* Axis titles: these name what the chart is about, so they were the
+              worst thing on it to have set in the faintest ink at 9.5px. */}
+          <text x={PAD.l} y={PAD.t - 5} fontSize="11" fontWeight="700" fill="var(--ink-2)" style={{ textTransform: 'uppercase', letterSpacing: '.1em' }}>{axis[0]}</text>
+          <text x={W - PAD.r} y={H - 4} textAnchor="end" fontSize="11" fontWeight="700" fill="var(--ink-2)" style={{ textTransform: 'uppercase', letterSpacing: '.1em' }}>{axis[1]}</text>
         </svg>
       </ScrollTo>
       <div className="mt-2 text-xs text-ink-3">
@@ -554,18 +566,21 @@ export function TeamMap({ ratingByTeam, onTeam }: { ratingByTeam: Map<string, Te
     <div className="rounded-xl border border-line bg-surface-1 p-4">
       <div className="overflow-x-auto">
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[560px]" role="img" aria-label="League map: attack rank versus defence rank">
-          <rect x={PAD.l} y={PAD.t} width={midX - PAD.l} height={midY - PAD.t} fill="var(--good)" opacity="0.05" />
-          <rect x={midX} y={PAD.t} width={W - PAD.r - midX} height={midY - PAD.t} fill="var(--info)" opacity="0.05" />
+          {/* Same green / amber / red as every other chart on the site — the
+              two "good at one end only" corners share the amber, since the
+              captions already say which end that is. */}
+          <rect x={PAD.l} y={PAD.t} width={midX - PAD.l} height={midY - PAD.t} fill="var(--good)" opacity="0.085" />
+          <rect x={midX} y={PAD.t} width={W - PAD.r - midX} height={midY - PAD.t} fill="var(--warn)" opacity="0.05" />
           <rect x={PAD.l} y={midY} width={midX - PAD.l} height={H - PAD.b - midY} fill="var(--warn)" opacity="0.05" />
-          <rect x={midX} y={midY} width={W - PAD.r - midX} height={H - PAD.b - midY} fill="var(--bad)" opacity="0.05" />
-          <line x1={midX} y1={PAD.t} x2={midX} y2={H - PAD.b} stroke="var(--line-mid)" />
-          <line x1={PAD.l} y1={midY} x2={W - PAD.r} y2={midY} stroke="var(--line-mid)" />
-          <text x={PAD.l + 8} y={PAD.t + 16} fontSize="9" fontWeight="800" fill="var(--good)" letterSpacing="1">BUY BOTH ENDS</text>
-          <text x={W - PAD.r - 8} y={PAD.t + 16} textAnchor="end" fontSize="9" fontWeight="800" fill="var(--info)" letterSpacing="1">CLEAN SHEETS ONLY</text>
-          <text x={PAD.l + 8} y={H - PAD.b - 8} fontSize="9" fontWeight="800" fill="var(--warn)" letterSpacing="1">ATTACK ONLY</text>
-          <text x={W - PAD.r - 8} y={H - PAD.b - 8} textAnchor="end" fontSize="9" fontWeight="800" fill="var(--bad)" letterSpacing="1">INDIVIDUALS ONLY</text>
-          <text x={PAD.l} y={H - 6} fontSize="9.5" fill="var(--ink-3)" style={{ textTransform: 'uppercase', letterSpacing: '.12em' }}>← Good attack</text>
-          <text x={14} y={H - PAD.b} fontSize="9.5" fill="var(--ink-3)" style={{ textTransform: 'uppercase', letterSpacing: '.12em' }} transform={`rotate(-90 14 ${H - PAD.b})`}>← Good defence</text>
+          <rect x={midX} y={midY} width={W - PAD.r - midX} height={H - PAD.b - midY} fill="var(--bad)" opacity="0.07" />
+          <line x1={midX} y1={PAD.t} x2={midX} y2={H - PAD.b} stroke="var(--line-strong)" strokeDasharray="3 4" />
+          <line x1={PAD.l} y1={midY} x2={W - PAD.r} y2={midY} stroke="var(--line-strong)" strokeDasharray="3 4" />
+          <text x={PAD.l + 8} y={PAD.t + 16} fontSize="10" fontWeight="800" fill="var(--good)" letterSpacing="1">BUY BOTH ENDS</text>
+          <text x={W - PAD.r - 8} y={PAD.t + 16} textAnchor="end" fontSize="10" fontWeight="800" fill="var(--warn)" letterSpacing="1">CLEAN SHEETS ONLY</text>
+          <text x={PAD.l + 8} y={H - PAD.b - 8} fontSize="10" fontWeight="800" fill="var(--warn)" letterSpacing="1">ATTACK ONLY</text>
+          <text x={W - PAD.r - 8} y={H - PAD.b - 8} textAnchor="end" fontSize="10" fontWeight="800" fill="var(--bad)" letterSpacing="1">INDIVIDUALS ONLY</text>
+          <text x={PAD.l} y={H - 6} fontSize="11" fontWeight="700" fill="var(--ink-2)" style={{ textTransform: 'uppercase', letterSpacing: '.1em' }}>← Good attack</text>
+          <text x={14} y={H - PAD.b} fontSize="11" fontWeight="700" fill="var(--ink-2)" style={{ textTransform: 'uppercase', letterSpacing: '.1em' }} transform={`rotate(-90 14 ${H - PAD.b})`}>← Good defence</text>
           {teams.map((t) => (
             <g key={t.team} className="cursor-pointer" onClick={() => onTeam(t.team)}>
               <circle cx={X(t.att)} cy={Y(t.def)} r="12" fill="transparent" />
