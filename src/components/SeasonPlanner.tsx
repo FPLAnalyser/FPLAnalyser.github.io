@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { PlayerPhoto } from './PlayerPhoto'
-import { FoilShell, Pitch, CARD_W, initialsOf, tierOf } from './Pitch'
+import { FoilShell, Pitch, BenchSpine, CARD_W, initialsOf, tierOf } from './Pitch'
 import { PlayerCardSheet } from './PlayerCardSheet'
 import { availBadge, availFor, SEV_COLOUR, type Availability } from '../lib/availability'
 import { xpForGw, useXpModel, useMarketOdds, gwBenchmark, gwRating } from '../lib/xp'
@@ -264,7 +264,7 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
         ))}
       </Pitch>
 
-      <BenchSpine boosted={benchBoost}>
+      <BenchSpine boosted={benchBoost} maxWidth={BOARD_W}>
         {week
           ? benchOrder.map((el) => card(el, true))
           : partial!.bench.map((slot, j) => (slot.el != null
@@ -356,38 +356,6 @@ const ratingWord = (r: number) => (r >= 85 ? 'elite week' : r >= 70 ? 'strong' :
  *  neutral at par, then amber and red as it falls away. */
 const ratingTone = (r: number | null): 'accent' | 'good' | 'ink' | 'warn' | 'bad' =>
   r == null ? 'ink' : r >= 85 ? 'accent' : r >= 70 ? 'good' : r >= 50 ? 'ink' : r >= 30 ? 'warn' : 'bad'
-
-/** The bench as a spine: the label turned on its side into a coloured edge,
- *  so it costs width rather than height — the bench adds no vertical chrome
- *  to the board at all. The edge fills solid gold under Bench Boost, which
- *  is a loud signal for very little ink. */
-function BenchSpine({ boosted, children }: { boosted: boolean; children: React.ReactNode }) {
-  return (
-    <div className="mx-auto mt-2.5" style={{ maxWidth: BOARD_W }}>
-      <div
-        className={`flex items-stretch gap-2.5 overflow-hidden rounded-xl border py-2 pr-2.5 transition-colors ${boosted ? 'border-accent' : 'border-line-strong'}`}
-        style={{
-          background: boosted
-            ? 'linear-gradient(180deg, color-mix(in oklab, var(--accent) 18%, #14161a), #0f1319)'
-            : 'linear-gradient(180deg,#151b23,#10151b)',
-        }}
-      >
-        <span
-          className="-my-2 grid w-[26px] shrink-0 place-items-center"
-          style={{ background: boosted ? 'linear-gradient(180deg,#F7E3A6,#B98B2C)' : 'linear-gradient(180deg,#39424E,#232B35)' }}
-        >
-          <span
-            className={`text-[8.5px] font-extrabold tracking-[0.24em] uppercase ${boosted ? 'text-[#17130A]' : 'text-white/55'}`}
-            style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
-          >
-            {boosted ? 'Boost' : 'Subs'}
-          </span>
-        </span>
-        <div className="flex min-w-0 flex-1 justify-center gap-1.5 sm:gap-2.5">{children}</div>
-      </div>
-    </div>
-  )
-}
 
 function StepButton({ dir, disabled, onClick }: { dir: 'prev' | 'next'; disabled: boolean; onClick: () => void }) {
   return (

@@ -238,3 +238,35 @@ export function PitchCard({ rating, cornerText, name, team, price, code, element
     </FoilShell>
   )
 }
+
+/** The bench as a spine: the label turned on its side into a coloured edge,
+ *  so it costs width rather than height — the bench adds no vertical chrome
+ *  to the board at all. The edge fills solid gold under Bench Boost, which
+ *  is a loud signal for very little ink. */
+export function BenchSpine({ boosted, maxWidth, children }: { boosted?: boolean; maxWidth?: number; children: ReactNode }) {
+  return (
+    <div className="mx-auto mt-2.5" style={{ maxWidth }}>
+      <div
+        className={`flex items-stretch gap-2.5 overflow-hidden rounded-xl border py-2 pr-2.5 transition-colors ${boosted ? 'border-accent' : 'border-line-strong'}`}
+        style={{
+          background: boosted
+            ? 'linear-gradient(180deg, color-mix(in oklab, var(--accent) 18%, #14161a), #0f1319)'
+            : 'linear-gradient(180deg,#151b23,#10151b)',
+        }}
+      >
+        <span
+          className="-my-2 grid w-[26px] shrink-0 place-items-center"
+          style={{ background: boosted ? 'linear-gradient(180deg,#F7E3A6,#B98B2C)' : 'linear-gradient(180deg,#39424E,#232B35)' }}
+        >
+          <span
+            className={`text-[8.5px] font-extrabold tracking-[0.24em] uppercase ${boosted ? 'text-[#17130A]' : 'text-white/55'}`}
+            style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+          >
+            {boosted ? 'Boost' : 'Subs'}
+          </span>
+        </span>
+        <div className="flex min-w-0 flex-1 justify-center gap-1.5 sm:gap-2.5">{children}</div>
+      </div>
+    </div>
+  )
+}

@@ -12,7 +12,7 @@ import { ShareFooter } from '../components/ShareFooter'
 import { SeasonPlanner } from '../components/SeasonPlanner'
 import { SquadLab } from '../components/SquadLab'
 import { Icon } from '../components/Icon'
-import { Pitch, PitchCard, CARD_W } from '../components/Pitch'
+import { Pitch, PitchCard, BenchSpine, CARD_W } from '../components/Pitch'
 import { PlayerCardSheet } from '../components/PlayerCardSheet'
 import { SquadRatingSheet, squadNarrative } from '../components/SquadRatingSheet'
 import { useCore } from '../lib/useData'
@@ -706,33 +706,33 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, ca
     for (let i = 0; i < short; i++) benchNeed.push(pos)
   }
 
+  const benchRow = capture && !bench.length ? null : (
+    <>
+      {bench.map(card)}
+      {!capture && benchNeed.map((pos, i) => slot(pos, `b${pos}${i}`))}
+    </>
+  )
   return (
-    <Pitch
-      maxWidth={capture ? undefined : 860}
-      boosted={benchBoost}
-      footer={
-        capture && !bench.length ? undefined : (
-          <div className="flex justify-center gap-1 sm:gap-2">
-            {bench.map(card)}
-            {!capture && benchNeed.map((pos, i) => slot(pos, `b${pos}${i}`))}
-          </div>
-        )
-      }
-    >
-      <div className="relative flex flex-col gap-2 sm:gap-3 md:gap-4">
-        {SLOTS.map(({ pos }) => {
-          const players = xi.filter((r) => r.position === pos)
-          if (capture && !players.length) return null
-          const empties = capture ? 0 : Math.max(0, form[pos] - players.length)
-          return (
-            <div key={pos} className="flex justify-center gap-1 sm:gap-2">
-              {players.map(card)}
-              {Array.from({ length: empties }).map((_, i) => slot(pos, `${pos}${i}`))}
-            </div>
-          )
-        })}
-      </div>
-    </Pitch>
+    <>
+      <Pitch maxWidth={capture ? undefined : 860}>
+        <div className="relative flex flex-col gap-2 sm:gap-3 md:gap-4">
+          {SLOTS.map(({ pos }) => {
+            const players = xi.filter((r) => r.position === pos)
+            if (capture && !players.length) return null
+            const empties = capture ? 0 : Math.max(0, form[pos] - players.length)
+            return (
+              <div key={pos} className="flex justify-center gap-1 sm:gap-2">
+                {players.map(card)}
+                {Array.from({ length: empties }).map((_, i) => slot(pos, `${pos}${i}`))}
+              </div>
+            )
+          })}
+        </div>
+      </Pitch>
+      {/* The same spine the board uses, so a shared boost looks like the one
+          you were just looking at rather than a second design for it. */}
+      {benchRow && <BenchSpine boosted={benchBoost} maxWidth={capture ? undefined : 860}>{benchRow}</BenchSpine>}
+    </>
   )
 }
 
