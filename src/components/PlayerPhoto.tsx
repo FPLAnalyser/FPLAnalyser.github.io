@@ -49,11 +49,26 @@ export function PlayerPhoto({
   const resolved = liveCodeFor(element, code)
 
   const [idx, setIdx] = useState(0)
+  // Whether this URL has fallen back to a plain, non-CORS request.
+  //
+  // Headshots are asked for through CORS the first time, because that is the
+  // only way their pixels can be read back off a canvas — and an export that
+  // cannot read them draws a hole. Requesting them plainly for the page and
+  // then again with CORS at export time does not work: the browser hands the
+  // second request the first one's cached response, which carries no CORS
+  // headers, so the check fails even where the host would have allowed it.
+  // That is why the photos kept disappearing from saved images.
+  //
+  // If the host turns out not to send the headers at all, the CORS request
+  // errors and we re-request plainly so the photo still shows on the page;
+  // it is marked so the export can put the monogram there instead.
+  const [plain, setPlain] = useState(false)
   const prev = useRef(resolved)
   useEffect(() => {
     if (prev.current !== resolved) {
       prev.current = resolved
       setIdx(0) // new code → start the size chain again
+      setPlain(false)
     }
   }, [resolved])
 
@@ -65,13 +80,20 @@ export function PlayerPhoto({
   if (!resolved || idx >= urls.length) return <>{placeholder}</>
   return (
     <img
-      key={`${resolved}-${idx}`}
+      key={`${resolved}-${idx}-${plain ? 'plain' : 'cors'}`}
       loading="lazy"
       src={urls[idx]}
       alt=""
+      crossOrigin={plain ? undefined : 'anonymous'}
+      data-nocors={plain ? '' : undefined}
       className={className}
       style={style}
-      onError={() => setIdx((i) => i + 1)}
+      onError={() => {
+        // A CORS failure says nothing about whether the image exists, so try
+        // the same URL plainly before giving up on it and moving down the list.
+        if (!plain) setPlain(true)
+        else { setPlain(false); setIdx((i) => i + 1) }
+      }}
     />
   )
 }

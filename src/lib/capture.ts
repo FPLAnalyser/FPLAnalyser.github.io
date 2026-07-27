@@ -19,55 +19,50 @@
    takes the mode back off again.
    ════════════════════════════════════════════════════════════════════════ */
 
-/** Can this URL be read back off a canvas — i.e. does the host answer a CORS
- *  request for it?
- *
- *  Deliberately probed on a throwaway image. Setting `crossOrigin` and
- *  re-assigning `src` on the live element, which is what this used to do,
- *  fires that element's `error` handler when the host has no CORS headers —
- *  and the headshot component reads an error as "this URL is no good" and
- *  advances to the next candidate. Share once and it would walk off the end
- *  of the list, leaving initials where the photo had been, on the page, for
- *  the rest of the session. html2canvas requests its own copies with
- *  `useCORS`, so the live element never needs touching at all.
- *
- *  Cached per URL: fifteen cards on a pitch are fifteen requests otherwise. */
-const corsCache = new Map<string, Promise<boolean>>()
-function corsLoadable(src: string): Promise<boolean> {
-  const hit = corsCache.get(src)
-  if (hit) return hit
-  const probe = new Promise<boolean>((resolve) => {
-    const img = new Image()
-    let settled = false
-    const finish = (ok: boolean) => { if (!settled) { settled = true; resolve(ok) } }
-    img.crossOrigin = 'anonymous'
-    img.onload = () => finish(img.naturalWidth > 0)
-    img.onerror = () => finish(false)
-    img.src = src
-    // Don't let one slow host hold up the whole export.
-    setTimeout(() => finish(false), 4000)
-  })
-  corsCache.set(src, probe)
-  return probe
+/** Wait for every image in the panel to finish, and stop deferring the ones
+ *  below the fold. `loading="lazy"` is right for a long page and wrong for a
+ *  capture: an image that has not been scrolled to has not been fetched, and
+ *  the export gets whatever was there — nothing. */
+async function settleImages(node: HTMLElement): Promise<void> {
+  const imgs = [...node.querySelectorAll('img')]
+  for (const img of imgs) if (img.loading === 'lazy') img.loading = 'eager'
+  await Promise.all(
+    imgs.map((img) =>
+      img.complete
+        ? Promise.resolve()
+        : new Promise<void>((res) => {
+            const done = () => res()
+            img.addEventListener('load', done, { once: true })
+            img.addEventListener('error', done, { once: true })
+            setTimeout(done, 4000)
+          }),
+    ),
+  )
 }
 
 /** Hide any image html2canvas would draw as a hole, so the monogram beneath it
- *  shows instead. Returns the undo. */
-async function hideUnrasterisable(node: HTMLElement): Promise<() => void> {
-  const imgs = [...node.querySelectorAll('img')].filter((i) => i.src && !i.src.startsWith('data:'))
+ *  shows instead. Returns the undo.
+ *
+ *  No network probing here any more. The page already loads its headshots
+ *  through CORS, and marks the ones that had to fall back to a plain request,
+ *  so which images can be rasterised is simply known — asking again was both
+ *  slow and wrong, because the browser answered the second request out of the
+ *  cache with the first one's headerless response. */
+function hideUnrasterisable(node: HTMLElement): () => void {
   // Hold the slot alongside the image. Resolving it with `closest` at undo
   // time fails if the element has since been detached, which left the slot
   // stuck in its no-photo state — initials on a page whose photo was fine.
   const hidden: { img: HTMLImageElement; slot: Element | null }[] = []
-  await Promise.all(
-    imgs.map(async (img) => {
-      if (await corsLoadable(img.src)) return
-      const slot = img.closest('.photo-slot')
-      img.style.visibility = 'hidden'
-      slot?.setAttribute('data-nophoto', '')
-      hidden.push({ img, slot })
-    }),
-  )
+  for (const img of node.querySelectorAll('img')) {
+    if (!img.src || img.src.startsWith('data:')) continue
+    const sameOrigin = new URL(img.src, location.href).origin === location.origin
+    const readable = sameOrigin || (!!img.crossOrigin && img.naturalWidth > 0)
+    if (readable) continue
+    const slot = img.closest('.photo-slot')
+    img.style.visibility = 'hidden'
+    slot?.setAttribute('data-nophoto', '')
+    hidden.push({ img, slot })
+  }
   return () => hidden.forEach(({ img, slot }) => {
     img.style.visibility = ''
     slot?.removeAttribute('data-nophoto')
@@ -85,7 +80,8 @@ export async function rasterise(node: HTMLElement, dark: boolean): Promise<HTMLC
     // Webfonts have to be resolved before html2canvas measures text, or the
     // fallback's metrics decide the line boxes.
     await document.fonts?.ready
-    restoreImages = await hideUnrasterisable(node)
+    await settleImages(node)
+    restoreImages = hideUnrasterisable(node)
     await twoFrames()
     const { default: html2canvas } = await import('html2canvas-pro')
     return await html2canvas(node, {
