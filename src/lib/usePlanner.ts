@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { num } from './rows'
 import {
   type PlannerState, type WeekPlan, type Pos, type Chip,
-  squadAt, freeTransfers, bankedTransfers, pointsHit, chipsUsed, autoLineup,
-  subPartners, swapPlayers, isFreeChip, MAX_FT,
+  squadAt, freeTransfers, bankedTransfers, pointsHit, autoLineup,
+  subPartners, swapPlayers, isFreeChip, chipAvailable, chipSpentIn, halfOf, MAX_FT,
 } from './planner'
 import type { FixtureEaseRow, RatingRow } from './types'
 
@@ -33,7 +33,13 @@ export interface Planner {
   /** What the bank holds entering the week, ignoring any chip. */
   banked: number
   hit: number
-  usedChips: Set<Chip>
+  /** Whether each chip is still playable in the week on screen — a chip is
+   *  only spent for the half it was played in. */
+  chipOpen: (c: Chip) => boolean
+  /** Which gameweek this chip was already spent in, this half. */
+  chipSpent: (c: Chip) => number | null
+  /** 1 before GW20, 2 after — the two chip sets. */
+  half: 1 | 2
   spend: number
   posOf: (el: number) => Pos
   setWeek: (patch: Partial<WeekPlan>) => void
@@ -124,7 +130,9 @@ export function usePlanner({ base, byEl, startGw, fixtureEase }: {
     ft: freeTransfers(state, gw),
     banked: Math.min(MAX_FT, bankedTransfers(state, gw)),
     hit: pointsHit(state, gw),
-    usedChips: chipsUsed(state),
+    chipOpen: (c: Chip) => chipAvailable(state, c, gw),
+    chipSpent: (c: Chip) => chipSpentIn(state, c, gw),
+    half: halfOf(gw),
     setWeek,
     setChip: (c: Chip) => setWeek({ chip: week?.chip === c ? null : c }),
     makeCaptain: (el: number) => setWeek({ captain: el, vice: week?.vice === el ? week?.captain ?? null : week?.vice ?? null }),

@@ -309,6 +309,7 @@ export default function SquadBuilder() {
                   <SquadLab
                     squad={liveChosen} xi={liveXI} pool={pool} fixtureEase={fixtureEase} avail={avail}
                     gw={liveGw} gws={planner.gws} bank={BUDGET - planner.spend} freeTransfers={planner.banked}
+                    chipSpentAt={planner.chipSpent}
                     onApplyMove={(outEl, inEl) => {
                       planner.doTransfer(outEl, inEl)
                       setArmedOut(null)

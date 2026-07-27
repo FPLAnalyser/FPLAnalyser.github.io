@@ -6,10 +6,11 @@ import { num } from '../lib/rows'
 import { teamLabel } from '../lib/util'
 import { useXpModel, useMarketOdds, useShotProfiles } from '../lib/xp'
 import {
-  type CaptainLadder, type Clash, type Engine, type HorizonRead,
-  type Move, type Recommendation, type TemplateRead,
-  BAND_AT, captainLadder, horizonRead, recommend, templateRead,
+  type CaptainLadder, type ChipAdvice, type ChipKey, type ChipPlan, type Clash,
+  type Engine, type HorizonRead, type Move, type Recommendation, type TemplateRead,
+  BAND_AT, captainLadder, chipPlan, horizonRead, recommend, templateRead,
 } from '../lib/squadLab'
+import { FIRST_HALF_LAST } from '../lib/planner'
 import type { Availability } from '../lib/availability'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
@@ -21,9 +22,9 @@ import type { FixtureEaseRow, RatingRow } from '../lib/types'
    seventy, and every headline stays on screen whichever one you open.
    ════════════════════════════════════════════════════════════════════════ */
 
-type Key = 'template' | 'horizon' | 'advice' | 'captain'
+type Key = 'template' | 'horizon' | 'advice' | 'captain' | 'chips'
 
-export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, freeTransfers, onApplyMove }: {
+export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, freeTransfers, onApplyMove, chipSpentAt }: {
   squad: RatingRow[]
   xi: RatingRow[]
   pool: RatingRow[]
@@ -36,6 +37,8 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
   /** Apply a recommended swap outright — the advice is specific, so making it
    *  should be one tap rather than arming a search you then repeat by hand. */
   onApplyMove?: (outEl: number, inEl: number) => void
+  /** Where each chip has already gone in this half of the season. */
+  chipSpentAt?: (c: ChipKey) => number | null
 }) {
   const model = useXpModel()
   const market = useMarketOdds()
@@ -54,6 +57,10 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
     () => recommend({ squad, pool, fromGw: gw, gws, bank, freeTransfers, engine }),
     [squad, pool, gw, gws, bank, freeTransfers, engine],
   )
+  const chips = useMemo(
+    () => chipPlan({ squad, pool, fromGw: gw, gws, bank, engine, freeTransfers, spentAt: chipSpentAt ?? (() => null) }),
+    [squad, pool, gw, gws, bank, engine, freeTransfers, chipSpentAt],
+  )
 
   if (!template) return null
   const toggle = (k: Key) => { tapHaptic('select'); setOpen((o) => (o === k ? null : k)) }
@@ -65,7 +72,7 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
         <span className="text-[11px] text-ink-3">Tap a tile</span>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
         <Tile
           label="Template" open={open === 'template'} onClick={() => toggle('template')}
           value={`${template.counts.template} of ${template.rows.length}`}
@@ -92,6 +99,16 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
           sub={captain ? (captain.close ? `only ${captain.gap.toFixed(1)} clear` : `${captain.gap.toFixed(1)} clear`) : 'needs an XI'}
           tone={captain?.close ? 'warn' : 'accent'}
         />
+        <Tile
+          label="Chips" open={open === 'chips'} onClick={() => toggle('chips')}
+          value={chips ? (chips.best ? (chips.best.chip === 'wildcard' ? 'Wildcard' : `GW${chips.best.gw}`) : 'Hold') : '—'}
+          sub={chips
+            ? (chips.best
+                ? `${chips.best.label}${chips.best.chip === 'wildcard' ? '' : ` · +${chips.best.gain.toFixed(0)}`}`
+                : chips.weeksLeft != null && chips.weeksLeft <= 4 ? `${chips.weeksLeft} weeks to use your first-half set` : 'none worth playing yet')
+            : 'needs 15 players'}
+          tone={chips?.best ? 'accent' : chips && chips.weeksLeft != null && chips.weeksLeft <= 4 ? 'warn' : 'good'}
+        />
       </div>
 
       {open && (
@@ -100,6 +117,7 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
           {open === 'horizon' && <HorizonPanel read={horizon} />}
           {open === 'advice' && <AdvicePanel read={advice} onApply={onApplyMove} />}
           {open === 'captain' && <CaptainPanel read={captain} gw={gw} />}
+          {open === 'chips' && <ChipsPanel read={chips} />}
         </div>
       )}
     </div>
@@ -475,6 +493,76 @@ function CaptainPanel({ read, gw }: { read: CaptainLadder | null; gw: number }) 
         real race rather than eleven numbers compared after the fact. Dead-ball notes match how a player scores against
         how his opponent concedes.
       </Readout>
+    </div>
+  )
+}
+
+/* ── 5 · chips ───────────────────────────────────────────────────────────── */
+
+const CHIP_NOTE: Record<ChipKey, string> = {
+  'triple-captain': 'A third helping of your best player',
+  'bench-boost': 'Your four substitutes score too',
+  'free-hit': 'One week as any squad you like',
+  wildcard: 'Rebuild the fifteen, no hits',
+}
+
+function ChipsPanel({ read }: { read: ChipPlan | null }) {
+  if (!read) return <div className="py-4 text-center text-xs text-ink-3">Complete your fifteen to plan your chips.</div>
+  return (
+    <div>
+      <Head
+        title="Chip planning"
+        note={read.weeksLeft != null
+          ? `Best week in the next six, valued against playing normally — ${read.weeksLeft} gameweeks until your first-half set expires`
+          : 'Best week in the next six, valued against playing that week normally'}
+      />
+
+      <div className="flex flex-col gap-2">
+        {read.advice.map((a) => <ChipRow key={a.chip} a={a} best={read.best?.chip === a.chip} />)}
+      </div>
+
+      {read.weeksLeft != null && read.weeksLeft <= 6 && read.advice.some((a) => a.spentAt == null) && (
+        <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-warn/40 bg-warn/5 p-2.5 text-xs">
+          <Icon name="clock" size={13} className="shrink-0 text-warn" />
+          <span className="text-ink-2">
+            Your first-half chips have to be played by <span className="font-semibold text-ink">GW{FIRST_HALF_LAST}</span> — a
+            second full set unlocks at GW20, so an unused one now is simply lost.
+          </span>
+        </div>
+      )}
+
+      <Readout>
+        {read.headline}. Most managers lose more to chips held too long than to chips played too early — a
+        Bench Boost that expires unused is worth nothing at all.
+      </Readout>
+    </div>
+  )
+}
+
+function ChipRow({ a, best }: { a: ChipAdvice; best: boolean }) {
+  const spent = a.spentAt != null
+  return (
+    <div className={`rounded-xl border p-2.5 ${
+      spent ? 'border-line bg-surface-2/30 opacity-60'
+        : best ? 'border-accent bg-accent-soft/40'
+          : a.worthIt ? 'border-line-strong' : 'border-line'
+    }`}>
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <span className={`text-xs font-bold ${best ? 'text-accent' : 'text-ink'}`}>{a.label}</span>
+        {spent
+          ? <span className="text-[11px] text-ink-3">played in GW{a.spentAt}</span>
+          : a.worthIt && a.gw != null
+            ? <span className="rounded-md bg-accent/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-accent uppercase">GW{a.gw}</span>
+            : <span className="text-[11px] text-ink-3">hold</span>}
+        {!spent && a.chip !== 'wildcard' && (
+          <span className={`font-num ml-auto text-sm tabular-nums ${a.worthIt ? 'text-good' : 'text-ink-3'}`}>
+            +{a.gain.toFixed(1)}
+          </span>
+        )}
+      </div>
+      <div className="mt-0.5 text-[11px] leading-tight text-ink-3">
+        {spent ? CHIP_NOTE[a.chip] : a.detail}
+      </div>
     </div>
   )
 }

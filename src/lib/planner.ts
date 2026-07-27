@@ -86,6 +86,36 @@ export function chipsUsed(state: PlannerState): Set<Chip> {
   return used
 }
 
+/* ── chip halves ─────────────────────────────────────────────────────────────
+   You get a full set of chips in each half of the season. The first set has
+   to be played by the GW19 deadline or it's gone; the second unlocks at GW20
+   and runs to the end. So a wildcard in GW8 doesn't stop you wildcarding
+   again in GW28, and the planner has to know that or it greys out half a
+   season's worth of chips. */
+export const SECOND_HALF_FROM = 20
+export type Half = 1 | 2
+export const halfOf = (gw: number): Half => (gw >= SECOND_HALF_FROM ? 2 : 1)
+export const HALF_LABEL: Record<Half, string> = { 1: 'first half', 2: 'second half' }
+/** The last gameweek a first-half chip can be played. */
+export const FIRST_HALF_LAST = SECOND_HALF_FROM - 1
+
+/** Which gameweek a chip was spent in, within the same half as `gw`. */
+export function chipSpentIn(state: PlannerState, chip: Chip, gw: number): number | null {
+  const half = halfOf(gw)
+  for (const key of Object.keys(state.weeks)) {
+    const g = Number(key)
+    if (halfOf(g) === half && state.weeks[g].chip === chip) return g
+  }
+  return null
+}
+
+/** Can this chip still be played in this gameweek? Only blocked by having
+ *  already spent it in the same half — the other half's copy is untouched. */
+export function chipAvailable(state: PlannerState, chip: Chip, gw: number): boolean {
+  const spent = chipSpentIn(state, chip, gw)
+  return spent == null || spent === gw
+}
+
 // ── Lineups ──────────────────────────────────────────────────────────────────
 
 const FORMATIONS: [number, number, number][] = [] // [DEF, MID, FWD] with GK=1, sum=10

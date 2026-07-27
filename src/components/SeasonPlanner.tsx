@@ -51,7 +51,7 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
 }) {
   const xpModel = useXpModel()
   const market = useMarketOdds()
-  const { gw, gws, setGw, week, ft, banked, hit, usedChips, spend } = planner
+  const { gw, gws, setGw, week, ft, banked, hit, spend } = planner
 
   const [sheet, setSheet] = useState<number | null>(null)
   const [subFor, setSubFor] = useState<number | null>(null)
@@ -178,9 +178,16 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
         <div className="mt-2.5 mb-2.5 flex flex-wrap items-center gap-1.5">
           <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Chip</span>
           {(Object.keys(CHIP_LABEL) as Chip[]).map((c) => {
-            const usedElsewhere = usedChips.has(c) && week?.chip !== c
+            const spentAt = planner.chipSpent(c)
+            const usedElsewhere = spentAt != null && spentAt !== gw
             return (
-              <button key={c} disabled={!week || usedElsewhere} onClick={() => planner.setChip(c)} className={`min-h-8 rounded-full border px-2.5 text-xs font-medium transition-colors ${week?.chip === c ? 'border-accent bg-accent-soft text-accent' : usedElsewhere || !week ? 'border-line text-ink-3 opacity-40' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}>{CHIP_LABEL[c]}</button>
+              <button
+                key={c}
+                disabled={!week || usedElsewhere}
+                onClick={() => planner.setChip(c)}
+                title={usedElsewhere ? `Played in GW${spentAt} — your ${planner.half === 1 ? 'first' : 'second'}-half ${CHIP_LABEL[c]}` : undefined}
+                className={`min-h-8 rounded-full border px-2.5 text-xs font-medium transition-colors ${week?.chip === c ? 'border-accent bg-accent-soft text-accent' : usedElsewhere || !week ? 'border-line text-ink-3 opacity-40' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}
+              >{CHIP_LABEL[c]}</button>
             )
           })}
           <button onClick={() => { tapHaptic('medium'); (onAutoPick ?? planner.autoXI)() }} className="ml-auto inline-flex min-h-8 items-center gap-1.5 rounded-full bg-accent px-3 text-xs font-bold text-accent-contrast transition-colors hover:bg-accent-strong">

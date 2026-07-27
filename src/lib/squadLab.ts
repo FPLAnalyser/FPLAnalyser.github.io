@@ -7,6 +7,7 @@ import {
   CS_PTS, FORMATIONS, GOAL_PTS,
   sumParts, xpPartsForGw, xpForGw,
 } from './xp'
+import { FIRST_HALF_LAST, SECOND_HALF_FROM } from './planner'
 import type { FixtureEaseRow, RatingRow } from './types'
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -578,4 +579,229 @@ function matchupNote(row: RatingRow, fixes: FixtureEaseRow[], mult: number, sp: 
     ? (mult > 1 ? `his threat is dead balls, and ${opp} concede heavily from them` : `his threat is dead balls, and ${opp} defend them well`)
     : (mult > 1 ? `he works in open play, which is where ${opp} give most away` : `he works in open play, but ${opp} mostly concede from set pieces`)
   return `${how} — ${sign}${pct}% on his goal threat`
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   5 · Chip planning
+
+   You get a full set of chips in each half of the season — wildcard, free
+   hit, bench boost, triple captain — and the first set expires at the GW19
+   deadline whether you use it or not. Most managers lose points to chips
+   they held too long rather than to chips they played too early.
+
+   Each one is valued in the only currency that matters: the points it adds
+   over playing that week normally.
+
+     triple captain  a third helping of your best player that week
+     bench boost     whatever your four substitutes would have scored
+     free hit        the gap between your eleven and the best eleven money
+                     could field that week, which is enormous in a blank
+     wildcard        not a one-week gain at all — a signal, raised when your
+                     squad needs more moves than free transfers can deliver
+   ───────────────────────────────────────────────────────────────────────── */
+
+export type ChipKey = 'triple-captain' | 'bench-boost' | 'free-hit' | 'wildcard'
+
+export interface ChipAdvice {
+  chip: ChipKey
+  label: string
+  /** The gameweek to play it in, or null when nothing in range is worth it. */
+  gw: number | null
+  /** Points it would add over playing that week normally. */
+  gain: number
+  /** Whether that gain clears the bar for spending a chip on it. */
+  worthIt: boolean
+  detail: string
+  /** Already spent in this half, and where. */
+  spentAt: number | null
+}
+
+export interface ChipPlan {
+  advice: ChipAdvice[]
+  /** The single best chip to play in range, if any is worth playing. */
+  best: ChipAdvice | null
+  /** Gameweeks left before this half's chips expire, null in the second half. */
+  weeksLeft: number | null
+  headline: string
+}
+
+/** A chip is a once-a-half asset, so it shouldn't be spent on a rounding
+ *  error. These are the gains below which holding is simply better. */
+const CHIP_BAR: Record<ChipKey, number> = {
+  'triple-captain': 6,
+  'bench-boost': 12,
+  'free-hit': 15,
+  wildcard: 0, // judged on moves needed, not points
+}
+
+const CHIP_TITLE: Record<ChipKey, string> = {
+  'triple-captain': 'Triple Captain',
+  'bench-boost': 'Bench Boost',
+  'free-hit': 'Free Hit',
+  wildcard: 'Wildcard',
+}
+
+/** The strongest legal eleven the whole market could field this week for a
+ *  given budget — what a free hit is actually worth against.
+ *
+ *  Picking the best eleven and hoping it fits the budget doesn't work, so
+ *  each player is scored on points minus a price penalty and the penalty is
+ *  raised until the bill fits. That is the standard way to hang a budget on
+ *  a selection problem, and it lands within a rounding error of the true
+ *  optimum here. */
+function bestAffordableXi(pool: RatingRow[], gw: number, e: Engine, budget: number): number {
+  const cands = pool
+    .map((r) => ({ r, v: xp(r, gw, e) ?? 0, p: price(r), pos: String(r.position), team: String(r.team) }))
+    .filter((c) => c.v > 0)
+  if (cands.length < 11) return 0
+
+  const pick = (lambda: number) => {
+    const scored = cands
+      .map((c) => ({ ...c, s: c.v - lambda * c.p }))
+      .sort((a, b) => b.s - a.s)
+    let best = { total: 0, cost: 0 }
+    for (const [d, m, f] of FORMATIONS) {
+      const need: Record<string, number> = { GKP: 1, DEF: d, MID: m, FWD: f }
+      const clubs = new Map<string, number>()
+      let total = 0
+      let cost = 0
+      let taken = 0
+      for (const c of scored) {
+        if (!need[c.pos]) continue
+        if ((clubs.get(c.team) ?? 0) >= 3) continue
+        need[c.pos]--
+        clubs.set(c.team, (clubs.get(c.team) ?? 0) + 1)
+        total += c.v
+        cost += c.p
+        if (++taken === 11) break
+      }
+      if (taken === 11 && total > best.total) best = { total, cost }
+    }
+    return best
+  }
+
+  let lo = 0
+  let hi = 4
+  let out = pick(hi)
+  if (pick(lo).cost <= budget) return pick(lo).total
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2
+    const got = pick(mid)
+    if (got.cost > budget) lo = mid
+    else { hi = mid; out = got }
+  }
+  return out.total
+}
+
+export function chipPlan({ squad, pool, fromGw, gws, bank, engine, spentAt, freeTransfers: ft }: {
+  squad: RatingRow[]
+  pool: RatingRow[]
+  fromGw: number
+  gws: number[]
+  bank: number
+  engine: Engine
+  /** Where each chip has already gone in this half. */
+  spentAt: (c: ChipKey) => number | null
+  freeTransfers: number
+}): ChipPlan | null {
+  if (squad.length !== 15) return null
+  const window = gws.filter((g) => g >= fromGw).slice(0, HORIZON)
+  if (!window.length) return null
+  const squadValue = squad.reduce((s, r) => s + price(r), 0)
+
+  // Triple captain: the extra helping of your best player, week by week.
+  let tcGw: number | null = null
+  let tcGain = 0
+  let tcName = ''
+  for (const g of window) {
+    const best = squad.reduce((a, r) => Math.max(a, xp(r, g, engine) ?? 0), 0)
+    if (best > tcGain) {
+      tcGain = best
+      tcGw = g
+      tcName = String(squad.reduce((a, r) => ((xp(r, g, engine) ?? 0) > (xp(a, g, engine) ?? 0) ? r : a)).web_name)
+    }
+  }
+
+  // Bench boost: what the four substitutes would add. The bench you'd field
+  // that week, not today's — so it uses the squad minus its best eleven.
+  let bbGw: number | null = null
+  let bbGain = 0
+  for (const g of window) {
+    const { xi: starters } = bestXiXp(squad, g, engine)
+    const ids = new Set(starters.map(el))
+    const subs = squad.filter((r) => !ids.has(el(r)))
+    const total = subs.reduce((s, r) => s + (xp(r, g, engine) ?? 0), 0)
+    if (total > bbGain) { bbGain = total; bbGw = g }
+  }
+
+  // Free hit: your eleven against the best eleven the market could field.
+  let fhGw: number | null = null
+  let fhGain = 0
+  let fhBlanks = 0
+  for (const g of window) {
+    const mine = bestXiXp(squad, g, engine).total
+    const theirs = bestAffordableXi(pool, g, engine, squadValue + bank)
+    const gain = theirs - mine
+    if (gain > fhGain) {
+      fhGain = gain
+      fhGw = g
+      fhBlanks = squad.filter((r) => !fixturesFor(String(r.team), engine.fixtureEase).some((f) => f.gw === g)).length
+    }
+  }
+
+  // Wildcard isn't a week, it's a verdict on the squad: how many moves the
+  // Analyser wants if transfers were free.
+  const free = recommend({ squad, pool, fromGw, gws, bank, freeTransfers: 99, engine, maxMoves: 6 })
+  const wcMoves = free?.moves.length ?? 0
+  const wcGain = free?.moves.reduce((s, m) => s + m.gain, 0) ?? 0
+
+  const advice: ChipAdvice[] = [
+    {
+      chip: 'triple-captain', label: CHIP_TITLE['triple-captain'], gw: tcGw, gain: tcGain,
+      worthIt: tcGain >= CHIP_BAR['triple-captain'], spentAt: spentAt('triple-captain'),
+      detail: tcGw
+        ? `${tcName} projects ${tcGain.toFixed(1)} in GW${tcGw} — the third helping is worth that again`
+        : 'No week in range stands out',
+    },
+    {
+      chip: 'bench-boost', label: CHIP_TITLE['bench-boost'], gw: bbGw, gain: bbGain,
+      worthIt: bbGain >= CHIP_BAR['bench-boost'], spentAt: spentAt('bench-boost'),
+      detail: bbGw
+        ? `Your four substitutes project ${bbGain.toFixed(1)} between them in GW${bbGw}`
+        : 'No week in range stands out',
+    },
+    {
+      chip: 'free-hit', label: CHIP_TITLE['free-hit'], gw: fhGw, gain: fhGain,
+      worthIt: fhGain >= CHIP_BAR['free-hit'], spentAt: spentAt('free-hit'),
+      detail: fhGw
+        ? `${fhBlanks > 0 ? `${fhBlanks} of your fifteen blank in GW${fhGw}. ` : ''}A one-week squad at your budget projects ${fhGain.toFixed(1)} more than yours`
+        : 'No week in range stands out',
+    },
+    {
+      chip: 'wildcard', label: CHIP_TITLE.wildcard, gw: wcMoves >= 4 ? fromGw : null, gain: wcGain,
+      // Four moves is the point at which free transfers can't keep up without
+      // paying for it — which is exactly what a wildcard is for.
+      worthIt: wcMoves >= 4, spentAt: spentAt('wildcard'),
+      detail: wcMoves >= 4
+        ? `${wcMoves} changes would each gain points, and you have ${ft === Infinity ? 'unlimited' : ft} free — a wildcard makes them all at once for +${wcGain.toFixed(1)}`
+        : `Only ${wcMoves} ${wcMoves === 1 ? 'change is' : 'changes are'} worth making — free transfers can handle that`,
+    },
+  ]
+
+  const live = advice.filter((a) => a.spentAt == null && a.worthIt)
+  // Rank on how far each clears its own bar, since the bars differ.
+  live.sort((a, b) => b.gain / (CHIP_BAR[b.chip] || 1) - a.gain / (CHIP_BAR[a.chip] || 1))
+  const best = live[0] ?? null
+
+  const weeksLeft = fromGw < SECOND_HALF_FROM ? FIRST_HALF_LAST - fromGw : null
+  const unspent = advice.filter((a) => a.spentAt == null).length
+  const headline = best
+    ? best.chip === 'wildcard'
+      ? `Wildcard — your squad needs more moves than your transfers can pay for`
+      : `${best.label} in GW${best.gw}, worth about +${best.gain.toFixed(0)} points`
+    : weeksLeft != null && weeksLeft <= 4 && unspent > 0
+      ? `Hold — but ${unspent} ${unspent === 1 ? 'chip expires' : 'chips expire'} after GW${FIRST_HALF_LAST}`
+      : 'Hold — no chip is worth playing in the next six weeks'
+
+  return { advice, best, weeksLeft, headline }
 }
