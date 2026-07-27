@@ -49,8 +49,8 @@ export function Layout() {
           <NavLink to="/" end className="flex shrink-0 items-center gap-2 leading-none md:gap-2.5" aria-label="FPL Analyser — home">
             <BrandMark className="h-9 w-9 md:h-11 md:w-11" />
             <span className="flex flex-col justify-center">
-              <span className="font-brand text-[15px] font-semibold tracking-[0.02em] text-ink sm:text-[17px] md:text-xl">
-                <span className="metallic-num">FPL</span> Analyser
+              <span className="font-brand text-[15px] font-normal tracking-[0.045em] text-ink sm:text-[17px] md:text-xl">
+                <span className="metallic-num font-medium">FPL</span> Analyser
               </span>
               <span className="mt-0.5 hidden text-[9px] font-semibold tracking-[0.22em] text-ink-3 uppercase md:block">
                 Data · <span className="text-accent">Insight</span> · Points

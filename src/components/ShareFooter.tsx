@@ -34,7 +34,7 @@ export function ShareFooter() {
     <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 rounded-b-2xl bg-[#0c0b09] px-3 py-3">
       <span className="flex items-center gap-2">
         <BrandMark size={26} />
-        <span className="capture-line font-brand text-[17px] font-semibold tracking-[0.06em] text-white">
+        <span className="capture-line font-brand text-[17px] font-normal tracking-[0.08em] text-white">
           FPL <span style={{ color: '#c9a227' }}>Analyser</span>
         </span>
       </span>

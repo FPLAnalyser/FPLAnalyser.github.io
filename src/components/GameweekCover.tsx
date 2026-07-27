@@ -92,7 +92,7 @@ export function GameweekCover({ data }: { data: CoreData }) {
       <div className="relative z-10 flex items-center justify-between border-b border-white/10 px-5 py-4 md:px-8">
         <span className="flex items-center gap-2.5">
           <BrandMark className="h-9 w-9 md:h-11 md:w-11" />
-          <span className="font-brand text-sm font-semibold tracking-[0.12em] md:text-base"><span className="metallic-num">FPL</span> <span className="text-ink">ANALYSER</span></span>
+          <span className="font-brand text-sm font-normal tracking-[0.14em] md:text-base"><span className="metallic-num">FPL</span> <span className="text-ink">ANALYSER</span></span>
         </span>
         <span className="text-[10px] font-bold tracking-[0.22em] text-accent-2 uppercase">The Gameweek · GW{nextGw}</span>
       </div>

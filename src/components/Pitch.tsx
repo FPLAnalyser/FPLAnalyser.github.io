@@ -157,7 +157,7 @@ export function FoilShell({ tier, className, style, onClick, children, innerClas
 
 /** Compact pitch card — rating, photo, name and the next fixtures. Sized so a
  * full XI fits the pitch without scrolling. */
-export function PitchCard({ rating, cornerText, name, team, price, code, element, fixtures, onClick, footer, tier, flag }: {
+export function PitchCard({ rating, cornerText, name, team, price, code, element, fixtures, onClick, footer, tier, flag, armband }: {
   rating: number | null
   /** Override for the corner figure (price, projected points…) — the TIER
    *  still comes from the rating, so the card's metal keeps meaning quality. */
@@ -174,6 +174,8 @@ export function PitchCard({ rating, cornerText, name, team, price, code, element
   tier?: Tier
   /** Availability chip: INJ / SUS / chance-% — from the live layer. */
   flag?: AvailBadgeInfo | null
+  /** Armband, when the card is showing a picked lineup: C, V or 3× . */
+  armband?: 'C' | 'V' | '3×' | null
 }) {
   const t = tier ?? tierOf(rating)
   return (
@@ -204,7 +206,21 @@ export function PitchCard({ rating, cornerText, name, team, price, code, element
             placeholder={<span className="grid h-full w-full place-items-center text-[11px] font-extrabold text-white/35">{initialsOf(name)}</span>}
           />
         </span>
-        <span className="capture-line block truncate text-[9.5px] leading-tight font-bold text-white sm:text-[10.5px]">{name}</span>
+        <span className="capture-line flex w-full items-center justify-center gap-1 text-[9.5px] leading-tight font-bold text-white sm:text-[10.5px]">
+          {armband && (
+            <span
+              className={`grid h-[14px] min-w-[14px] shrink-0 place-items-center rounded-full px-1 text-[8.5px] leading-none font-black ${
+                armband === 'V' ? 'bg-white/85 text-black' : 'bg-accent text-accent-contrast'
+              }`}
+            >{armband}</span>
+          )}
+          {/* capture-line on the truncating span itself, not just its row:
+              the export draws glyphs lower in the box than the browser does,
+              and `truncate`'s overflow:hidden was shaving the bottom off every
+              name. The rule that lets them show has to sit on the element
+              doing the clipping. */}
+          <span className="capture-line truncate">{name}</span>
+        </span>
         {/* Club and price step aside on a phone: the fixtures are what you're
             actually checking, and they imply the club anyway. */}
         <span className="capture-line hidden truncate text-[8px] text-white/55 sm:block sm:text-[9px]">{team}{price != null ? ` · £${price}m` : ''}</span>

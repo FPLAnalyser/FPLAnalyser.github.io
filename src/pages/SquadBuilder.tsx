@@ -22,6 +22,7 @@ import { num } from '../lib/rows'
 import { useAvailability, availBadge, availFor, withLivePrices, SEV_COLOUR, type Availability } from '../lib/availability'
 import { xpForGw, useXpModel, useMarketOdds } from '../lib/xp'
 import { usePlanner } from '../lib/usePlanner'
+import { CHIP_LABEL, type Chip } from '../lib/planner'
 import { teamLabel, playerHref } from '../lib/util'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
@@ -189,9 +190,6 @@ export default function SquadBuilder() {
   // Squad rating: average of rated players (unrated shown separately).
   // NOTE: `live` below re-points this at the planner's squad for the week on
   // screen, so selling a player drops him out of the narrative immediately.
-  const rated = chosen.map(ovOf).filter((v): v is number => v != null)
-  const squadScore = rated.length ? Math.round(rated.reduce((a, b) => a + b, 0) / rated.length) : null
-  const unrated = chosen.length - rated.length
 
   const complete = total === 15 && SLOTS.every((s) => countByPos[s.pos] === s.count)
   const valid = complete && spent <= BUDGET + 1e-9
@@ -209,6 +207,7 @@ export default function SquadBuilder() {
   const liveScore = liveRated.length ? Math.round(liveRated.reduce((a, b) => a + b, 0) / liveRated.length) : null
   const liveBestXI = useMemo(() => bestElevenScore(liveChosen), [liveChosen])
   const liveGw = complete ? planner.gw : buildGw
+  const unrated = liveChosen.length - liveRated.length
   /** The eleven the lab reads for captaincy — the week's lineup once the
    *  planner is running, and nothing before that. */
   const liveXI = useMemo(
@@ -500,7 +499,12 @@ export default function SquadBuilder() {
         />
       )}
 
-      <SquadShare chosen={chosen} fixtureEase={fixtureEase} squadScore={squadScore} unrated={unrated} total={total} gw={buildGw} open={shareOpen} onClose={() => setShareOpen(false)} />
+      <SquadShare
+        chosen={liveChosen} fixtureEase={fixtureEase} squadScore={liveScore} unrated={unrated} total={total} gw={liveGw}
+        lineup={planner.week ? { xi: planner.week.xi, bench: planner.week.bench } : null}
+        captain={planner.week?.captain ?? null} vice={planner.week?.vice ?? null} chip={planner.week?.chip ?? null}
+        open={shareOpen} onClose={() => setShareOpen(false)}
+      />
     </PageShell>
   )
 }
@@ -624,11 +628,27 @@ function pickEleven(squad: RatingRow[]): { form: Record<Pos, number>; xi: Rating
  *  band across the foot of the pitch. Interactive by default (remove ✕ + empty
  *  slots that jump the picker to that position); `capture` mode drops those for
  *  a clean shareable image. */
-function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, capture, metric = 'rating', gw, avail }: {
+function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, capture, metric = 'rating', gw, avail, lineup, captain, vice, tripleCap }: {
   chosen: RatingRow[]; fixtureEase: FixtureEaseRow[]; pickPos?: Pos; onRemove?: (el: number) => void; onPick?: (p: Pos) => void; onOpen?: (r: RatingRow) => void; capture?: boolean
   metric?: Metric; gw?: number; avail?: Availability
+  /** The lineup as actually picked — who starts and who sits. Without it the
+   *  board re-derives a best XI, which is right while the squad is being
+   *  built and wrong once you have made a substitution: the shared picture
+   *  showed the computer's eleven rather than yours. */
+  lineup?: { xi: number[]; bench: number[] } | null
+  captain?: number | null
+  vice?: number | null
+  tripleCap?: boolean
 }) {
-  const { form, xi, bench } = pickEleven(chosen)
+  const derived = pickEleven(chosen)
+  const byEl = useMemo(() => new Map(chosen.map((r) => [r.element as number, r])), [chosen])
+  const pick = (els: number[]) => els.map((e) => byEl.get(e)).filter(Boolean) as RatingRow[]
+  const useGiven = !!lineup && lineup.xi.length === 11
+  const xi = useGiven ? pick(lineup!.xi) : derived.xi
+  const bench = useGiven ? pick(lineup!.bench) : derived.bench
+  const form = useGiven
+    ? { GKP: 1, DEF: xi.filter((r) => r.position === 'DEF').length, MID: xi.filter((r) => r.position === 'MID').length, FWD: xi.filter((r) => r.position === 'FWD').length }
+    : derived.form
   const xpModel = useXpModel()
   const market = useMarketOdds()
 
@@ -654,6 +674,7 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, ca
         code={num(r, 'code')}
         element={num(r, 'element')}
         flag={avail ? availBadge(availFor(avail, num(r, 'element'), num(r, 'code'))) : null}
+        armband={r.element === captain ? (tripleCap ? '3×' : 'C') : r.element === vice ? 'V' : null}
         fixtures={<FixtureNames fixtureEase={fixtureEase} team={String(r.team)} n={capture ? 1 : 3} fromGw={gw} />}
         onClick={capture ? undefined : () => onOpen?.(r)}
       />
@@ -714,8 +735,16 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, ca
 }
 
 /** Share / download the squad as a branded PNG (rasterised client-side). */
-function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, open, onClose }: {
-  chosen: RatingRow[]; fixtureEase: FixtureEaseRow[]; squadScore: number | null; unrated: number; total: number; gw: number; open: boolean; onClose: () => void
+function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, lineup, captain, vice, chip, open, onClose }: {
+  chosen: RatingRow[]; fixtureEase: FixtureEaseRow[]; squadScore: number | null; unrated: number; total: number; gw: number
+  /** The week as planned — lineup, armbands and chip. All of it comes from the
+   *  planner rather than the squad you first built, so a transfer, a
+   *  substitution or a chip shows up in the picture. */
+  lineup?: { xi: number[]; bench: number[] } | null
+  captain?: number | null
+  vice?: number | null
+  chip?: Chip | null
+  open: boolean; onClose: () => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [busy, setBusy] = useState(false)
@@ -757,13 +786,22 @@ function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, open,
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <BrandMark size={38} />
-              <div className="font-brand text-lg leading-none font-semibold tracking-[0.06em] whitespace-nowrap">FPL <span style={{ color: '#c9a227' }}>Analyser</span><div className="mt-1 text-[10px] font-semibold tracking-[0.14em] uppercase" style={{ color: '#8a8172' }}>My GW{gw} Squad</div></div>
+              <div className="font-brand text-lg leading-none font-normal tracking-[0.08em] whitespace-nowrap">FPL <span style={{ color: '#c9a227' }}>Analyser</span></div>
+              {/* Gameweek and chip ride beside the wordmark rather than under
+                  it — one line of brand, one row of what this picture is. */}
+              <span className="rounded-md px-2 py-1 text-[11px] font-extrabold tracking-[0.12em] whitespace-nowrap" style={{ background: 'rgba(201,162,39,.16)', color: '#ead188' }}>GW{gw}</span>
+              {chip && (
+                <span className="rounded-md px-2 py-1 text-[11px] font-extrabold tracking-[0.08em] whitespace-nowrap" style={{ background: '#c9a227', color: '#14100a' }}>{CHIP_LABEL[chip]}</span>
+              )}
             </div>
             <div className="flex gap-4 text-center">
               <div><div className="font-display text-2xl leading-none tabular-nums" style={{ color: '#c9a227' }}>{squadScore ?? '—'}</div><div className="text-[9px] tracking-[0.1em] whitespace-nowrap uppercase" style={{ color: '#8a8172' }}>Squad rating</div></div>
             </div>
           </div>
-          <SquadBoard chosen={chosen} fixtureEase={fixtureEase} capture />
+          <SquadBoard
+            chosen={chosen} fixtureEase={fixtureEase} capture gw={gw}
+            lineup={lineup} captain={captain} vice={vice} tripleCap={chip === 'triple-captain'}
+          />
           {unrated > 0 && <div className="mt-2 text-center text-[10px]" style={{ color: '#8a8172' }}>{unrated} player{unrated > 1 ? 's' : ''} new to the league (unrated)</div>}
           <ShareFooter />
         </div>
