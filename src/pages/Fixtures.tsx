@@ -55,24 +55,49 @@ const MODE_TIP: Record<GridMode, string> = {
  * the league means — the inputs to the fixture projections. */
 interface TeamBase { xg: number; xgc: number }
 
-function projectCell(mode: 'xg' | 'cs', teamBase: TeamBase | undefined, oppBase: TeamBase | undefined, league: TeamBase, venue: 'H' | 'A', mkt?: { for: number; against: number } | null): { v: number; assumed: boolean; market?: boolean } | null {
+/** The two goal expectancies for one side of one fixture — how many they
+ *  should score, how many they should concede. Every grid and every sentence
+ *  on this page is derived from this one pair, so the difficulty colour, the
+ *  projected xG, the clean-sheet odds and the written read can never disagree
+ *  about which week is the good one. */
+interface Lambdas { for: number; against: number; assumed: boolean; market: boolean }
+
+function lambdasFor(teamBase: TeamBase | undefined, oppBase: TeamBase | undefined, league: TeamBase, venue: 'H' | 'A', mkt?: { for: number; against: number } | null): Lambdas | null {
   // Bookmaker-implied goal expectancies outrank the stats baselines for any
   // fixture the market has priced — they already carry team news, transfers
   // and promoted-club strength the season history can't know.
-  if (mkt) {
-    return mode === 'xg' ? { v: mkt.for, assumed: false, market: true } : { v: Math.exp(-mkt.against), assumed: false, market: true }
-  }
+  if (mkt) return { for: mkt.for, against: mkt.against, assumed: false, market: true }
   if (!teamBase || league.xgc <= 0 || league.xg <= 0) return null
-  const assumed = !oppBase
-  const opp = oppBase ?? league // promoted club: league-average assumption, flagged
-  if (mode === 'xg') return { v: teamBase.xg * (opp.xgc / league.xgc) * (venue === 'H' ? 1.05 : 0.95), assumed }
-  const lambda = opp.xg * (teamBase.xgc / league.xgc) * (venue === 'H' ? 0.95 : 1.05)
-  return { v: Math.exp(-lambda), assumed }
+  const opp = oppBase ?? league // promoted club with no solved strength either
+  return {
+    for: teamBase.xg * (opp.xgc / league.xgc) * (venue === 'H' ? 1.05 : 0.95),
+    against: opp.xg * (teamBase.xgc / league.xgc) * (venue === 'H' ? 0.95 : 1.05),
+    assumed: !oppBase,
+    market: false,
+  }
 }
 
-// Expected-goals anchors for reading a market line as 1–5 difficulty.
+function projectCell(mode: 'xg' | 'cs', teamBase: TeamBase | undefined, oppBase: TeamBase | undefined, league: TeamBase, venue: 'H' | 'A', mkt?: { for: number; against: number } | null): { v: number; assumed: boolean; market?: boolean } | null {
+  const l = lambdasFor(teamBase, oppBase, league, venue, mkt)
+  if (!l) return null
+  return { v: mode === 'xg' ? l.for : Math.exp(-l.against), assumed: l.assumed, market: l.market }
+}
+
+// Expected-goals anchors for reading a goal expectancy as 1–5 difficulty.
 const MKT_EASY = 2.5
 const MKT_HARD = 0.6
+
+/** Difficulty from a pair of goal expectancies. Both anchors are named from an
+ *  attack's point of view — 2.5 goals is a kind evening — and the two reads
+ *  then pull in opposite directions from that one ratio. Getting those
+ *  directions the wrong way round inverted every priced fixture on the grid:
+ *  Coventry away at Arsenal came out the easiest game of the week. */
+function diffFromLambdas(lamFor: number, lamAgainst: number, lens: Lens): { diff: number } {
+  const ease = (lam: number) => Math.max(0, Math.min(1, (lam - MKT_HARD) / (MKT_EASY - MKT_HARD)))
+  const atk = 5 - 4 * ease(lamFor)        // expected to score more → easier
+  const def = 1 + 4 * ease(lamAgainst)    // expected to concede more → harder
+  return { diff: lens === 'attack' ? atk : lens === 'defence' ? def : (atk + def) / 2 }
+}
 
 const mktOf = (market: MarketOdds | null, team: string, f: { gw: number; opponent: string }) =>
   market?.byKey.get(`${team}:${f.gw}:${f.opponent}`) ?? null
@@ -94,22 +119,20 @@ const LENS_TIP: Record<Lens, string> = {
 
 /** Our own 1 (easy) … 5 (hard) fixture difficulty from the opponent's team
  *  rating, per lens. Falls back to FPL's FDR when the opponent has no rating. */
-function analyserDiff(opp: TeamRatingRow | undefined, lens: Lens, venue: 'H' | 'A', fdr: number, mkt?: { for: number; against: number } | null, rank?: (o: TeamRatingRow, l: Lens) => number): { diff: number; ours: boolean; market?: boolean } {
+function analyserDiff(opp: TeamRatingRow | undefined, lens: Lens, venue: 'H' | 'A', fdr: number, mkt?: { for: number; against: number } | null, rank?: (o: TeamRatingRow, l: Lens) => number, lam?: Lambdas | null): { diff: number; ours: boolean; market?: boolean } {
   // A priced fixture states the difficulty outright: the goals the market
   // expects this team to score set how kind it is for their attack, and the
   // goals it expects them to concede set how kind it is for their defence.
-  if (mkt) {
-    // 0 at MKT_HARD goals, 1 at MKT_EASY. Both anchors are named from an
-    // attack's point of view — 2.5 goals is a kind evening — and the two reads
-    // then pull in opposite directions from that one ratio. Getting those
-    // directions the wrong way round inverted every priced fixture on the
-    // grid: Coventry away at Arsenal came out the easiest game of the week.
-    const ease = (lam: number) => Math.max(0, Math.min(1, (lam - MKT_HARD) / (MKT_EASY - MKT_HARD)))
-    const atk = 5 - 4 * ease(mkt.for)       // expected to score more → easier
-    const def = 1 + 4 * ease(mkt.against)   // expected to concede more → harder
-    return { diff: lens === 'attack' ? atk : lens === 'defence' ? def : (atk + def) / 2, ours: true, market: true }
+  if (mkt) return { ...diffFromLambdas(mkt.for, mkt.against, lens), ours: true, market: true }
+  // No rating for this opponent — but a promoted club we have solved out of
+  // the odds is not an unknown. Falling straight through to FPL's FDR threw
+  // that away and made the difficulty grid contradict the projections beside
+  // it: Man City at home to Coventry showed as a hard week on one tab and the
+  // best week of the run on the other two.
+  if (!opp) {
+    if (lam && !lam.assumed) return { ...diffFromLambdas(lam.for, lam.against, lens), ours: true }
+    return { diff: fdr, ours: false }
   }
-  if (!opp) return { diff: fdr, ours: false }
   // Where the opponent sits in the league, not their absolute score. Team
   // ratings cluster — mean 56 with a spread of 16 — so mapping 0–100 straight
   // onto 1–5 put three fifths of every run on 3 and nobody at all on 1. A
@@ -161,8 +184,10 @@ export function buildRanker(rows: Iterable<TeamRatingRow>) {
  *  many are at home. Each clause below is emitted only when it is actually
  *  true of this run, so a flat run says less rather than saying nothing in
  *  more words. */
+interface ReadFixture { gw: number; opponent: string; venue: 'H' | 'A'; diff: number; xg?: number | null; cs?: number | null }
+
 function fixtureRead(
-  fixtures: { gw: number; opponent: string; venue: 'H' | 'A'; diff: number }[],
+  fixtures: ReadFixture[],
   profiles: Map<string, Profile>,
   league: Profile,
 ): string | null {
@@ -170,6 +195,7 @@ function fixtureRead(
   const bits: string[] = []
   const n = fixtures.length
   const avg = fixtures.reduce((s, f) => s + f.diff, 0) / n
+  const when = (f: ReadFixture) => `GW${f.gw} ${f.venue === 'H' ? 'at home to' : 'away to'} ${teamLabel(f.opponent)}`
 
   // 1. How the run rates, and where the weight sits.
   const home = fixtures.filter((f) => f.venue === 'H').length
@@ -178,14 +204,35 @@ function fixtureRead(
     : 'A middling run'
   bits.push(`${shape} — ${avg.toFixed(1)} average difficulty over ${n}, ${home} at home.`)
 
-  // 2. The weeks that decide it. Only worth naming when they stand apart.
-  const sorted = [...fixtures].sort((a, b) => a.diff - b.diff)
-  const easiest = sorted[0]
-  const hardest = sorted[sorted.length - 1]
-  if (hardest.diff - easiest.diff >= 1.2) {
-    bits.push(`GW${easiest.gw} ${easiest.venue === 'H' ? 'at home to' : 'away to'} ${teamLabel(easiest.opponent)} is the one to target; GW${hardest.gw} ${hardest.venue === 'H' ? 'at home to' : 'away to'} ${teamLabel(hardest.opponent)} is the week to plan around.`)
+  // 2. The weeks that decide it, named by the projections on the grid rather
+  // than by the difficulty score. Those two used to be separate models, so
+  // the sentence could recommend a week the numbers beside it rated fourth
+  // best. Attack and defence get their own answer, because they often differ:
+  // the week your forwards want is not always the week your defenders do.
+  const rated = fixtures.filter((f) => f.xg != null && f.cs != null)
+  if (rated.length === n && n > 1) {
+    const byXg = [...rated].sort((a, b) => b.xg! - a.xg!)
+    const byCs = [...rated].sort((a, b) => b.cs! - a.cs!)
+    const bestXg = byXg[0]
+    const bestCs = byCs[0]
+    const worst = [...rated].sort((a, b) => (a.xg! + 3 * a.cs!) - (b.xg! + 3 * b.cs!))[0]
+    const spread = byXg[0].xg! - byXg[byXg.length - 1].xg!
+    if (bestXg.gw === bestCs.gw) {
+      bits.push(`${when(bestXg)} is the one to target — ${bestXg.xg!.toFixed(2)} projected xG and a ${Math.round(bestCs.cs! * 100)}% clean-sheet chance, the best of the run on both counts.`)
+    } else {
+      bits.push(`${when(bestXg)} is the week for the attack (${bestXg.xg!.toFixed(2)} projected xG); ${when(bestCs)} is the best clean-sheet shout (${Math.round(bestCs.cs! * 100)}%).`)
+    }
+    if (spread >= 0.4 && worst.gw !== bestXg.gw && worst.gw !== bestCs.gw) {
+      bits.push(`${when(worst)} is the week to plan around — ${worst.xg!.toFixed(2)} xG and a ${Math.round(worst.cs! * 100)}% shutout chance.`)
+    }
   } else {
-    bits.push('No single week stands out — the run is even, so there is nothing to route transfers around.')
+    // No projections for this run (pre-season, or a window with no baselines):
+    // fall back to the difficulty spread, and only when it says something.
+    const sorted = [...fixtures].sort((a, b) => a.diff - b.diff)
+    const easiest = sorted[0]
+    const hardest = sorted[sorted.length - 1]
+    if (hardest.diff - easiest.diff >= 1.2) bits.push(`${when(easiest)} is the one to target; ${when(hardest)} is the week to plan around.`)
+    else bits.push('No single week stands out — the run is even, so there is nothing to route transfers around.')
   }
 
   // 3. Set pieces: the one concession pattern that genuinely varies.
@@ -730,6 +777,13 @@ function FixtureGrid({
   )
   const gwSet = useMemo(() => new Set(gws), [gws])
 
+  // One place where a fixture becomes numbers, so the difficulty grid, the two
+  // projection grids and the written read are all quoting the same model.
+  const lamOf = (team: string, f: { gw: number; opponent: string; venue: 'H' | 'A' }) =>
+    lambdasFor(baselines.get(team), baselines.get(f.opponent), leagueBase, f.venue, mktOf(market, team, f))
+  const diffOf = (team: string, f: FixtureEaseRow) =>
+    analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr, mktOf(market, team, f), rank, lamOf(team, f))
+
   const rows = useMemo(() => {
     const teams = [...new Set(fixtureEase.map((f) => f.team))]
     return teams.map((team) => {
@@ -744,7 +798,7 @@ function FixtureGrid({
         byGw.get(f.gw)!.push(f)
         opponents.push(f.opponent)
         if (mode === 'diff') {
-          const { diff, ours } = analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr, mktOf(market, team, f), rank)
+          const { diff, ours } = diffOf(team, f)
           if (!ours) usedFdr = true
           sum += diff
           count++
@@ -767,7 +821,7 @@ function FixtureGrid({
   const gwVal = (r: (typeof rows)[number], gw: number): number | null => {
     const fs = r.byGw.get(gw)
     if (!fs || !fs.length) return null
-    if (mode === 'diff') return fs.reduce((s, f) => s + analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr, mktOf(market, r.team, f), rank).diff, 0) / fs.length
+    if (mode === 'diff') return fs.reduce((s, f) => s + diffOf(r.team, f).diff, 0) / fs.length
     let sum = 0
     let any = false
     for (const f of fs) {
@@ -855,7 +909,7 @@ function FixtureGrid({
                           <span className="flex flex-col items-center gap-1">
                             {fs.map((f, i) => {
                               if (mode === 'diff') {
-                                const { diff, ours } = analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr, mktOf(market, r.team, f), rank)
+                                const { diff, ours } = diffOf(r.team, f)
                                 const [bg, fg] = FDR_COLORS[Math.max(1, Math.min(5, Math.round(diff)))] || FDR_COLORS[3]
                                 return (
                                   <span key={i} className="inline-block w-full min-w-[54px] rounded px-1 py-1 text-[11px] font-semibold whitespace-nowrap" style={{ background: bg, color: fg }} title={`GW${gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(f.opponent)} — difficulty ${diff.toFixed(1)}${ours ? '' : ' (FPL FDR — opponent unrated)'}`}>
@@ -919,10 +973,15 @@ function FixtureGrid({
                     <td colSpan={colSpan} className="px-3 py-3">
                       <RunRead
                         team={r.team}
-                        fixtures={gws.flatMap((gw) => (r.byGw.get(gw) ?? []).map((f) => ({
-                          gw, opponent: f.opponent, venue: f.venue,
-                          diff: analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr, mktOf(market, r.team, f), rank).diff,
-                        })))}
+                        fixtures={gws.flatMap((gw) => (r.byGw.get(gw) ?? []).map((f) => {
+                          const l = lamOf(r.team, f)
+                          return {
+                            gw, opponent: f.opponent, venue: f.venue,
+                            diff: diffOf(r.team, f).diff,
+                            xg: l ? l.for : null,
+                            cs: l ? Math.exp(-l.against) : null,
+                          }
+                        }))}
                         profiles={profiles} league={league} usedFdr={r.usedFdr} n={gws.length}
                       />
                     </td>
@@ -958,7 +1017,7 @@ function FixtureGrid({
 /** The expandable per-team scouting read of an upcoming run. */
 function RunRead({ team, fixtures, profiles, league, usedFdr, n }: {
   team: string
-  fixtures: { gw: number; opponent: string; venue: 'H' | 'A'; diff: number }[]
+  fixtures: ReadFixture[]
   profiles: Map<string, Profile>; league: Profile; usedFdr: boolean; n: number
 }) {
   const read = fixtureRead(fixtures, profiles, league)
