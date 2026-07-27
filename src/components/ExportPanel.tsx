@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Icon } from './Icon'
 import { shareImageNative } from '../lib/native'
 import { rasterise } from '../lib/capture'
+import { BRAND, X_HANDLE, IG_HANDLE, drawXMark, drawInstagramMark } from '../lib/social'
 
 /* ════════════════════════════════════════════════════════════════════════
    Share anything: wrap a table or chart in <Exportable> and it gains a
@@ -10,28 +11,29 @@ import { rasterise } from '../lib/capture'
    burned in, so a screenshot that travels always carries its source.
    ════════════════════════════════════════════════════════════════════════ */
 
-/** Fixed branding. Every export carries the site name and the account for
- * the chosen platform — a visitor sharing our analysis cannot rewrite the
- * credit, by design. */
-const SITE_NAME = 'FPL Analyser'
+/** Fixed branding. Every export carries the site name and BOTH accounts,
+ * whatever shape it was exported at — the exporter cannot know which network
+ * a picture ends up on, and a repost should still say where to find more.
+ * A visitor sharing our analysis cannot rewrite the credit, by design. */
+const SITE_NAME = BRAND
 
 type Format = 'auto' | 'wide' | 'square' | 'story'
-const FORMATS: { id: Format; label: string; hint: string; w: number; h: number | null; handle: string }[] = [
+const FORMATS: { id: Format; label: string; hint: string; w: number; h: number | null }[] = [
   // Auto shapes the image to the content — the right default, because a tall
   // table forced into 16:9 renders as an unreadable stamp in a sea of black.
-  { id: 'auto', label: 'Fit content', hint: 'auto', w: 1600, h: null, handle: '@FPLAnalyser' },
-  { id: 'wide', label: 'Twitter / X', hint: '16:9', w: 1600, h: 900, handle: '@FPLAnalyser' },
-  { id: 'square', label: 'Instagram', hint: '1:1', w: 1080, h: 1080, handle: '@fpl_analyser' },
-  { id: 'story', label: 'Story', hint: '9:16', w: 1080, h: 1920, handle: '@fpl_analyser' },
+  { id: 'auto', label: 'Fit content', hint: 'auto', w: 1600, h: null },
+  { id: 'wide', label: 'Twitter / X', hint: '16:9', w: 1600, h: 900 },
+  { id: 'square', label: 'Instagram', hint: '1:1', w: 1080, h: 1080 },
+  { id: 'story', label: 'Story', hint: '9:16', w: 1080, h: 1920 },
 ]
 
 /** Draw the captured panel onto a branded canvas of the chosen aspect. */
-function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: string, handle: string, dark: boolean): HTMLCanvasElement {
+function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: string, dark: boolean): HTMLCanvasElement {
   const out = document.createElement('canvas')
   out.width = fmt.w
   // Auto: chrome + the panel at full width, so nothing is ever shrunk.
   const autoPad = Math.round(fmt.w * 0.045)
-  const autoChrome = autoPad + 34 + Math.round(fmt.w * 0.028) + Math.round(fmt.w * 0.07) + autoPad
+  const autoChrome = autoPad + 34 + Math.round(fmt.w * 0.028) + Math.round(fmt.w * 0.095) + autoPad
   // Ceil, not round. The height reserved for the panel has to be at least the
   // height the panel will be drawn at; rounding down by half a pixel made the
   // fit test fail and sent "fit content" into the crop-and-fade branch, which
@@ -40,7 +42,6 @@ function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: 
   const ctx = out.getContext('2d')!
   const bg = dark ? '#0c0b09' : '#faf8f3'
   const ink = dark ? '#f4efe3' : '#1b1712'
-  const dim = dark ? '#8d8577' : '#6f6759'
 
   ctx.fillStyle = bg
   ctx.fillRect(0, 0, out.width, out.height)
@@ -60,7 +61,7 @@ function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: 
 
   // Panel, centred and scaled to fit between header and footer.
   const top = headY + Math.round(out.width * 0.028)
-  const footH = Math.round(out.width * 0.07)
+  const footH = Math.round(out.width * 0.095)
   const availW = out.width - pad * 2
   const availH = out.height - top - footH - pad
   // Fill the frame's width so the content stays legible. If that makes it
@@ -82,19 +83,44 @@ function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: 
     ctx.fillRect(pad, top + availH - 90, dw, 90)
   }
 
-  // Footer: handle + hairline.
+  // Footer: brand on the left, both accounts on the right, over a hairline.
   ctx.strokeStyle = dark ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.12)'
   ctx.lineWidth = 2
   ctx.beginPath()
   ctx.moveTo(pad, out.height - footH)
   ctx.lineTo(out.width - pad, out.height - footH)
   ctx.stroke()
-  ctx.fillStyle = dim
-  ctx.font = `600 ${Math.round(out.width * 0.018)}px ui-sans-serif, system-ui, sans-serif`
-  if (handle) ctx.fillText(handle.startsWith('@') ? handle : `@${handle}`, pad, out.height - footH / 2 + 8)
-  ctx.textAlign = 'right'
-  ctx.fillText('Data · Insight · Points', out.width - pad, out.height - footH / 2 + 8)
+
+  const mid = out.height - footH / 2
+  const handleSize = Math.round(out.width * 0.023)
+  const iconSize = Math.round(out.width * 0.027)
+  const gap = Math.round(out.width * 0.009)   // icon to its handle
+  const between = Math.round(out.width * 0.028) // one account to the next
+
+  ctx.font = `800 ${Math.round(out.width * 0.026)}px ui-sans-serif, system-ui, sans-serif`
+  ctx.fillStyle = '#c9a227'
+  ctx.textBaseline = 'middle'
   ctx.textAlign = 'left'
+  ctx.fillText(SITE_NAME, pad, mid)
+
+  // Measured, then laid out right-to-left, so both accounts sit against the
+  // right margin however wide the frame is.
+  ctx.font = `700 ${handleSize}px ui-sans-serif, system-ui, sans-serif`
+  const xW = ctx.measureText(X_HANDLE).width
+  const igW = ctx.measureText(IG_HANDLE).width
+  const total = iconSize + gap + xW + between + iconSize + gap + igW
+  let cursor = out.width - pad - total
+
+  drawXMark(ctx, cursor, mid - iconSize / 2, iconSize, ink)
+  cursor += iconSize + gap
+  ctx.fillStyle = ink
+  ctx.fillText(X_HANDLE, cursor, mid)
+  cursor += xW + between
+  drawInstagramMark(ctx, cursor, mid - iconSize / 2, iconSize, ink)
+  cursor += iconSize + gap
+  ctx.fillText(IG_HANDLE, cursor, mid)
+
+  ctx.textBaseline = 'alphabetic'
   return out
 }
 
@@ -130,7 +156,7 @@ export function Exportable({ title, filename, children, className, toolbar }: {
       const dark = document.documentElement.dataset.mode !== 'light'
       const shot = await rasterise(ref.current, dark)
       const spec = FORMATS.find((f) => f.id === fmt)!
-      const canvas = brand(shot, spec, title, spec.handle, dark)
+      const canvas = brand(shot, spec, title, dark)
       const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, 'image/png'))
       if (!blob) throw new Error('render failed')
       const name = `${filename ?? title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${fmt}.png`
