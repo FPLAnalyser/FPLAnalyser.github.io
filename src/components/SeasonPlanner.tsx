@@ -15,6 +15,9 @@ import type { AvailBadgeInfo } from '../lib/availability'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
 const BUDGET = 100
+/** How wide the board runs. The pitch and everything stacked above and
+ *  below it share this, so they line up as one column. */
+const BOARD_W = 860
 const POS_ORDER = ['GKP', 'DEF', 'MID', 'FWD'] as const
 
 /**
@@ -162,7 +165,7 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
     <div>
       {/* Everything above the pitch is held to the pitch's own width, so the
           page reads as one column instead of a wide band of boxes. */}
-      <div className="mx-auto" style={{ maxWidth: 660 }}>
+      <div className="mx-auto" style={{ maxWidth: BOARD_W }}>
         {/* Gameweek nav */}
         <div className="mb-3 flex items-center justify-between gap-3">
           <StepButton dir="prev" disabled={gwIdx <= 0} onClick={() => { setGw(gws[gwIdx - 1]); tapHaptic('select') }} />
@@ -251,7 +254,7 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
         )}
       </div>
 
-      <Pitch maxWidth={660}>
+      <Pitch maxWidth={BOARD_W}>
         {(week ? rowsByPos(week.xi).map((row) => row.map((el) => ({ el }))) : partial!.xi).map((row, i) => row.length > 0 && (
           <div key={i} className="flex justify-center gap-1.5 sm:gap-2.5">
             {row.map((slot, j) => (slot.el != null
@@ -269,7 +272,7 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
               : <EmptySlot key={`be${j}`} pos={slot.pos} onClick={() => onPickSlot?.(slot.pos)} />))}
       </BenchSpine>
 
-      {footer && <div className="mx-auto mt-3" style={{ maxWidth: 660 }}>{footer}</div>}
+      {footer && <div className="mx-auto mt-3" style={{ maxWidth: BOARD_W }}>{footer}</div>}
 
       {sheet != null && rowOf(sheet) && week && (
         <PlayerCardSheet
@@ -360,7 +363,7 @@ const ratingTone = (r: number | null): 'accent' | 'good' | 'ink' | 'warn' | 'bad
  *  is a loud signal for very little ink. */
 function BenchSpine({ boosted, children }: { boosted: boolean; children: React.ReactNode }) {
   return (
-    <div className="mx-auto mt-2.5" style={{ maxWidth: 660 }}>
+    <div className="mx-auto mt-2.5" style={{ maxWidth: BOARD_W }}>
       <div
         className={`flex items-stretch gap-2.5 overflow-hidden rounded-xl border py-2 pr-2.5 transition-colors ${boosted ? 'border-accent' : 'border-line-strong'}`}
         style={{

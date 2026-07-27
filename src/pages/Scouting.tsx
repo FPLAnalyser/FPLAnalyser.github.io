@@ -667,13 +667,18 @@ function ScoutReport({
   const winGames = win === 'season' ? 38 : win === 'l6' ? 6 : 4
 
   // A value + percentile bar cell.
-  const BarCell = ({ i, value, pct }: { i: number; value: string; pct: number | null }) => {
+  const BarCell = ({ i, value, pct, win }: { i: number; value: string; pct: number | null; win?: boolean }) => {
     const color = multi ? SCOUT_COLORS[i] : pctColor(pct)
     return (
-      <div className="min-w-0">
-        <div className="flex items-baseline justify-between text-xs">
-          <span className="font-num font-medium tabular-nums text-ink">{value}</span>
-          <span className="font-num tabular-nums text-ink-2">{pct ?? '—'}</span>
+      <div className={`-mx-1.5 min-w-0 rounded-md px-1.5 py-1 ${win ? 'bg-accent-soft ring-1 ring-accent/35' : ''}`}>
+        <div className="flex items-baseline justify-between gap-1 text-xs">
+          <span className={`font-num tabular-nums ${win ? 'font-bold text-accent' : 'font-medium text-ink'}`}>
+            {/* A crown as well as the colour: which cell won shouldn't rest on
+                being able to tell two tints apart. */}
+            {win && <Icon name="crown" size={10} className="mr-1 inline-block align-[-0.1em]" />}
+            {value}
+          </span>
+          <span className={`font-num tabular-nums ${win ? 'text-accent' : 'text-ink-2'}`}>{pct ?? '—'}</span>
         </div>
         <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-3">
           <div className="h-full rounded-full" style={{ width: `${pct ?? 0}%`, background: `linear-gradient(90deg, color-mix(in srgb, ${color} 72%, transparent), ${color})` }} />
@@ -681,6 +686,19 @@ function ScoutReport({
       </div>
     )
   }
+  /** Which cell wins this row, or -1 if nobody does outright. Percentiles are
+   *  already direction-corrected — fewer shots conceded scores high — so the
+   *  best cell is simply the highest one. A tie has no winner; two players at
+   *  the same club share every team metric, and crowning both says nothing. */
+  const winnerOf = (pcts: (number | null)[]): number => {
+    if (!multi) return -1
+    const valid = pcts.filter((v): v is number => v != null)
+    if (valid.length < 2) return -1
+    const max = Math.max(...valid)
+    const at = pcts.map((v, i) => (v === max ? i : -1)).filter((i) => i >= 0)
+    return at.length === 1 ? at[0] : -1
+  }
+
   const NaCell = () => (
     <div className="min-w-0">
       <div className="flex items-baseline justify-between text-xs"><span className="text-ink-3">—</span><span className="text-ink-3">n/a</span></div>
@@ -752,6 +770,8 @@ function ScoutReport({
           <div className="flex flex-col">
             {grp.metrics.map((m) => {
               const key = str(m, 'key')!
+              const pcts = shown.map((s) => (s.row ? scoutPct(s.row, key) : null))
+              const winner = winnerOf(pcts)
               return (
                 <div key={key} className="flex items-center gap-3 border-b border-line py-2 last:border-0">
                   <LabelCell tip={SCOUT_TIPS[key]}>{labelOf(m)}</LabelCell>
@@ -761,7 +781,7 @@ function ScoutReport({
                       if (raw === '' || raw == null) return <NaCell key={i} />
                       const isWhole = WHOLE_NUMBER_KEYS.has(key) && s.row![`${key}_total`] != null
                       const display = isWhole ? String(Math.round(Number(s.row![`${key}_total`]))) : Number(raw).toFixed(2)
-                      return <BarCell key={i} i={i} value={display} pct={scoutPct(s.row!, key)} />
+                      return <BarCell key={i} i={i} value={display} pct={pcts[i]} win={i === winner} />
                     })}
                   </div>
                 </div>
@@ -778,10 +798,14 @@ function ScoutReport({
             <div className="flex items-center gap-3 border-b border-line py-2">
               <LabelCell tip="Share of the team's league games kept as a clean sheet this season — the direct route to a defender's or keeper's clean-sheet points. Higher is better. Percentile vs all 20 teams.">Team Clean Sheets</LabelCell>
               <div className="grid flex-1 gap-3" style={{ gridTemplateColumns: gridCols }}>
-                {shown.map((s, i) => {
-                  const cs = teamCS.get(s.sel.team)
-                  return cs == null ? <NaCell key={i} /> : <BarCell key={i} i={i} value={`${Math.round(cs.rate * 100)}%`} pct={cs.pct} />
-                })}
+                {(() => {
+                  const pcts = shown.map((s) => teamCS.get(s.sel.team)?.pct ?? null)
+                  const winner = winnerOf(pcts)
+                  return shown.map((s, i) => {
+                    const cs = teamCS.get(s.sel.team)
+                    return cs == null ? <NaCell key={i} /> : <BarCell key={i} i={i} value={`${Math.round(cs.rate * 100)}%`} pct={cs.pct} win={i === winner} />
+                  })
+                })()}
               </div>
             </div>
             {([
@@ -792,11 +816,15 @@ function ScoutReport({
               <div key={label} className="flex items-center gap-3 border-b border-line py-2 last:border-0">
                 <LabelCell tip={tip}>{label}</LabelCell>
                 <div className="grid flex-1 gap-3" style={{ gridTemplateColumns: gridCols }}>
-                  {shown.map((s, i) => {
-                    const d = teamDef.get(s.sel.team)
-                    if (!d) return <NaCell key={i} />
-                    return <BarCell key={i} i={i} value={`${valOf(d).toFixed(1)}${unit ? ' ' + unit : ''}`} pct={pctOf(d)} />
-                  })}
+                  {(() => {
+                    const pcts = shown.map((s) => { const d = teamDef.get(s.sel.team); return d ? pctOf(d) : null })
+                    const winner = winnerOf(pcts)
+                    return shown.map((s, i) => {
+                      const d = teamDef.get(s.sel.team)
+                      if (!d) return <NaCell key={i} />
+                      return <BarCell key={i} i={i} value={`${valOf(d).toFixed(1)}${unit ? ' ' + unit : ''}`} pct={pctOf(d)} win={i === winner} />
+                    })
+                  })()}
                 </div>
               </div>
             ))}

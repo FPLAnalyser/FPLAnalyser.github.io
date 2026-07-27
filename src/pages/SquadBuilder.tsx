@@ -296,11 +296,11 @@ export default function SquadBuilder() {
       <SectionBanner imgKey="squad" title="Squad Builder" subtitle={`Pick your Gameweek ${buildGw} fifteen within £100m, then step forward week by week — transfers, captain and chips`} />
 
       <>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_440px] lg:items-start">
         {/* The board — the same object from an empty squad to a full one:
             unfilled places are just empty slots you tap to fill. */}
         <div className="min-w-0">
-          <div className="mx-auto mb-2 flex max-w-[660px] flex-wrap items-center gap-2">
+          <div className="mx-auto mb-2 flex max-w-[860px] flex-wrap items-center gap-2">
             <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Your squad — week by week</div>
             <div className="ml-auto"><MetricChips metric={metric} onChange={setMetric} /></div>
           </div>
@@ -707,7 +707,7 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, ca
 
   return (
     <Pitch
-      maxWidth={capture ? undefined : 760}
+      maxWidth={capture ? undefined : 860}
       footer={
         capture && !bench.length ? undefined : (
           <div className="flex justify-center gap-1 sm:gap-2">

@@ -90,7 +90,7 @@ export function initialsOf(name: string): string {
  *  320px phone simply cannot be 84px each, and a fixed width there wraps the
  *  row and pushes the forwards out of the frame. `flex-1 basis-0` divides what
  *  there is; `max-w` stops them ballooning on a desktop. */
-export const CARD_W = 'min-w-0 flex-1 basis-0 max-w-[108px] sm:max-w-[118px]'
+export const CARD_W = 'min-w-0 flex-1 basis-0 max-w-[108px] sm:max-w-[118px] lg:max-w-[136px]'
 
 /** Rating tiers. The band a player falls in is what the card's material says,
  *  so a shelf of them sorts itself before you read a single name. `ice` is not
