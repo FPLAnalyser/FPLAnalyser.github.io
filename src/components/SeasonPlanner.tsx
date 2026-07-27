@@ -21,7 +21,7 @@ const POS_ORDER = ['GKP', 'DEF', 'MID', 'FWD'] as const
  * dugout beneath it, and every action on a player one tap away. State lives in
  * usePlanner so the list beside the board can transfer into it.
  */
-export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onArmTransfer, onSold, armedOut, squadScore, onOpenSquadRating, partialSquad, onPickSlot, onAutoPick, read, footer }: {
+export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onSold, squadScore, onOpenSquadRating, partialSquad, onPickSlot, onAutoPick, read, footer }: {
   planner: Planner
   byEl: Map<number, RatingRow>
   pool: RatingRow[]
@@ -29,12 +29,9 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
   /** What the card corner shows — rating, price or that week's xP. */
   metric?: 'rating' | 'price' | 'xp'
   avail?: Availability
-  /** Arm a player for transfer; the list beside the board completes it. */
-  onArmTransfer?: (el: number) => void
   /** A player was just put on the market — the page swings the picker round
    *  to his position so the empty place is one glance away. */
   onSold?: (el: number) => void
-  armedOut?: number | null
   /** The squad's own 0–100 rating, shown here so the page needn't repeat it. */
   squadScore?: number | null
   onOpenSquadRating?: () => void
@@ -153,7 +150,6 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
         if (isSold) planner.undoTransfer(el)
         else { planner.sell(el); onSold?.(el) }
       } : undefined}
-      armedOut={armedOut === el}
       bench={onBench && !benchBoost}
       highlight={subFor != null && partners.includes(el)}
       dimmed={subFor != null && !partners.includes(el) && el !== subFor}
@@ -289,7 +285,14 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
               onCaptain={() => { tapHaptic('light'); planner.makeCaptain(sheet); setSheet(null) }}
               onVice={() => { tapHaptic('light'); planner.makeVice(sheet); setSheet(null) }}
               onSwap={() => beginSub(sheet)}
-              onTransfer={() => { onArmTransfer?.(sheet); setSheet(null) }}
+              onTransfer={() => {
+                // Same action as the cross on the card. It used to only arm a
+                // search, which left the player sitting on the pitch wearing
+                // an OUT badge while the money never arrived.
+                planner.sell(sheet)
+                onSold?.(sheet)
+                setSheet(null)
+              }}
             />
           }
         />
@@ -410,11 +413,11 @@ function Stat({ label, value, tone, sub, onClick }: { label: string; value: stri
     : <div className={cls}>{inner}</div>
 }
 
-function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner, flag, name, code, element, transferred, bench, highlight, dimmed, picked, armedOut, sold, onSell }: {
+function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner, flag, name, code, element, transferred, bench, highlight, dimmed, picked, sold, onSell }: {
   onOpen: () => void; captain: boolean; vice: boolean; tripleCap?: boolean; fixtures: FixtureEaseRow[]; rating: number
   corner: string; flag?: { label: string; tone: 'bad' | 'warn' | 'flat'; title: string } | null
   name: string; code: number | null; element: number; transferred: boolean; bench?: boolean
-  highlight?: boolean; dimmed?: boolean; picked?: boolean; armedOut?: boolean
+  highlight?: boolean; dimmed?: boolean; picked?: boolean
   /** Sold this week and not yet replaced — he stays on the pitch so the shape
    *  of the team is still readable while you decide who takes his place. */
   sold?: boolean
@@ -438,18 +441,10 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
           <Icon name={sold ? 'arrow-right' : 'x'} size={sold ? 11 : 12} className={sold ? 'rotate-180' : ''} />
         </button>
       )}
-      {/* The sold veil sits over the card rather than on it, so the undo
-          button keeps its colour instead of being greyed out with him. */}
-      {sold && (
-        <span className="pointer-events-none absolute inset-0 z-10 rounded-xl bg-bad/45 backdrop-grayscale">
-          {/* Over the crest, not the name — you still want to read who it is. */}
-          <span className="absolute inset-x-0 top-[26%] text-center">
-            <span className="rounded bg-bad px-1.5 py-0.5 text-[8px] leading-none font-bold tracking-[0.12em] text-white uppercase shadow">
-              Sold
-            </span>
-          </span>
-        </span>
-      )}
+      {/* Sold reads as greyed out and nothing more. The veil sits over the
+          card rather than being a filter on it, so the restore button keeps
+          its colour instead of going grey along with him. */}
+      {sold && <span className="pointer-events-none absolute inset-0 z-10 rounded-xl bg-surface-1/45 backdrop-grayscale" />}
       {(captain || vice) && (
         <span
           title={captain && tripleCap ? 'Triple captain' : captain ? 'Captain' : 'Vice-captain'}
@@ -459,7 +454,6 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
         </span>
       )}
       {transferred && <span className="absolute -top-1.5 right-4 z-10 grid size-4 place-items-center rounded-full bg-good text-[9px] text-white sm:right-5"><Icon name="check" size={10} /></span>}
-      {armedOut && <span className="absolute -top-1.5 -right-1.5 z-10 rounded-full bg-bad px-1.5 py-0.5 text-[8px] font-bold text-white">OUT</span>}
       <FoilShell
         tier={bench ? 'graphite' : tierOf(rating || null)}
         onClick={onOpen}

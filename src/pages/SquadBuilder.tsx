@@ -117,10 +117,9 @@ export default function SquadBuilder() {
   const [showFilters, setShowFilters] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [ratingOpen, setRatingOpen] = useState(false)
-  // Transfers run through the list beside the board: either arm the player
-  // leaving (tap him on the pitch) or pick the player coming in and choose
-  // who he replaces.
-  const [armedOut, setArmedOut] = useState<number | null>(null)
+  // Transfers run through the list beside the board: sell from the pitch and
+  // the empty place waits to be filled, or pick the player coming in first
+  // and choose who makes way for him.
   const [pendingIn, setPendingIn] = useState<RatingRow | null>(null)
 
   const avail = useAvailability()
@@ -201,7 +200,6 @@ export default function SquadBuilder() {
   // The board's week drives what the list is for: before the fifteen exists
   // it's an add list, after it's the transfer market for the week on screen.
   const plannerSquad = complete && planner.week ? planner.squad : picked
-  const armedRow = armedOut != null ? byEl.get(armedOut) ?? null : null
   // Everything that describes "your squad" reads from the week on screen.
   const liveChosen = useMemo(
     () => plannerSquad.map((el) => byEl.get(el)).filter(Boolean) as RatingRow[],
@@ -227,8 +225,6 @@ export default function SquadBuilder() {
     }
     return [...m.entries()]
   }, [planner.pendingOut, byEl])
-  /** What a replacement for this player may cost: the bank plus his own fee. */
-  const budgetFor = (out: RatingRow) => BUDGET - plannerSquad.reduce((t, el) => t + priceOf(byEl.get(el) ?? {} as RatingRow), 0) + priceOf(out)
 
   // Auto-pick a strong, valid squad within budget (greedy by rating with a
   // minimum-price reservation for the slots still to fill).
@@ -270,13 +266,13 @@ export default function SquadBuilder() {
     // With a player armed, anyone you can't actually sign is noise — keep them
     // in the list (so the reason stays visible) but let the affordable ones
     // rise to the top rather than sitting 40 rows down.
-    if (armedOut != null) {
-      const legal = (r: RatingRow) => (planner.canReplace(armedOut, r.element) == null ? 0 : 1)
+    if (openPlaces > 0) {
+      const legal = (r: RatingRow) => (planner.canFill(r.element) == null ? 0 : 1)
       sorted.sort((a, b) => legal(a) - legal(b))
     }
     return sorted.slice(0, 60)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pool, pickPos, query, sort, maxPrice, minRating, minDim, dims, armedOut, plannerSquad])
+  }, [pool, pickPos, query, sort, maxPrice, minRating, minDim, dims, openPlaces, plannerSquad])
 
   const activeFilters = (maxPrice < PRICE_MAX ? 1 : 0) + (minRating > 0 ? 1 : 0) + dims.filter((d) => (minDim[d.key] ?? 0) > 0).length
   const resetFilters = () => { setMaxPrice(PRICE_MAX); setMinRating(0); setMinDim({}) }
@@ -306,7 +302,6 @@ export default function SquadBuilder() {
           <SeasonPlanner
             planner={planner} byEl={byEl} pool={pool} fixtureEase={fixtureEase}
             metric={metric} avail={avail}
-            armedOut={armedOut}
             squadScore={liveScore}
             onOpenSquadRating={() => setRatingOpen(true)}
             partialSquad={picked}
@@ -319,12 +314,9 @@ export default function SquadBuilder() {
                   <SquadLab
                     squad={liveChosen} xi={liveXI} pool={pool} fixtureEase={fixtureEase} avail={avail}
                     gw={liveGw} gws={planner.gws} bank={BUDGET - planner.spend} freeTransfers={planner.banked}
+                    unlimitedTransfers={planner.ft === Infinity}
                     chipSpentAt={planner.chipSpent}
-                    onApplyMove={(outEl, inEl) => {
-                      planner.doTransfer(outEl, inEl)
-                      setArmedOut(null)
-                      setPendingIn(null)
-                    }}
+                    onApplyMove={(outEl, inEl) => { planner.doTransfer(outEl, inEl); setPendingIn(null) }}
                   />
                 )}
               </>
@@ -342,8 +334,7 @@ export default function SquadBuilder() {
                 {complete && !valid && <span className="text-sm font-medium text-bad">Over budget by £{Math.abs(remaining).toFixed(1)}m</span>}
               </div>
             ) : null}
-            onArmTransfer={(el) => { setArmedOut(el); setPendingIn(null); setPickPos(String(byEl.get(el)?.position ?? 'MID') as Pos); setQuery('') }}
-            onSold={(el) => { setPickPos(String(byEl.get(el)?.position ?? 'MID') as Pos); setQuery(''); setArmedOut(null); setPendingIn(null) }}
+            onSold={(el: number) => { setPickPos(String(byEl.get(el)?.position ?? 'MID') as Pos); setQuery(''); setPendingIn(null) }}
           />
         </div>
 
@@ -353,7 +344,7 @@ export default function SquadBuilder() {
             {complete ? `Transfer market — GW${planner.gw}` : 'Add players'}
           </div>
 
-          {complete && openPlaces > 0 && armedOut == null && (
+          {complete && openPlaces > 0 && (
             <div className="mb-2 rounded-lg border border-accent/50 bg-accent-soft px-3 py-2">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                 <Icon name="coin" size={14} className="shrink-0 text-accent" />
@@ -366,21 +357,6 @@ export default function SquadBuilder() {
               </div>
               <div className="mt-0.5 pl-6 text-[11px] text-ink-3">
                 {openBy.map(([pos, n]) => `${n} ${pos}`).join(' · ')} — sell another to pool more
-              </div>
-            </div>
-          )}
-
-          {complete && armedRow && (
-            <div className="mb-2 rounded-lg border border-bad/40 bg-bad/10 px-3 py-2 text-sm">
-              <div className="flex items-center gap-2">
-                <Icon name="users" size={14} className="text-bad" />
-                <span className="min-w-0 flex-1 truncate text-ink">Replacing <span className="font-semibold">{String(armedRow.web_name)}</span></span>
-                <button onClick={() => setArmedOut(null)} className="text-xs font-semibold text-ink-3 hover:text-ink">cancel</button>
-              </div>
-              {/* Without this the list can look broken: a squad with nothing in
-                  the bank disables every expensive name and never says why. */}
-              <div className="mt-0.5 pl-6 text-[11px] text-ink-3">
-                £{budgetFor(armedRow).toFixed(1)}m to spend on his replacement
               </div>
             </div>
           )}
@@ -428,13 +404,9 @@ export default function SquadBuilder() {
               const inSquad = plannerSquad.includes(r.element)
               // With places open on the pitch, signing straight into one is
               // the whole point — the money from every sale is already pooled.
-              const filling = complete && armedOut == null && openPlaces > 0
+              const filling = complete && openPlaces > 0
               const why = complete
-                ? (armedOut != null
-                    ? planner.canReplace(armedOut, r.element)
-                    : filling
-                      ? planner.canFill(r.element)
-                      : inSquad ? 'Already in your squad' : null)
+                ? (filling ? planner.canFill(r.element) : inSquad ? 'Already in your squad' : null)
                 : blockReason(r)
               const o = ovOf(r)
               return (
@@ -458,7 +430,6 @@ export default function SquadBuilder() {
                   <button
                     onClick={() => {
                       if (!complete) { add(r); return }
-                      if (armedOut != null) { planner.doTransfer(armedOut, r.element); setArmedOut(null); tapHaptic('medium'); return }
                       if (filling) { planner.fill(r.element); tapHaptic('medium'); return }
                       setPendingIn(r)
                     }}
@@ -495,7 +466,7 @@ export default function SquadBuilder() {
           incoming={pendingIn}
           squad={plannerSquad.map((el) => byEl.get(el)).filter(Boolean) as RatingRow[]}
           canReplace={(outEl) => planner.canReplace(outEl, pendingIn.element)}
-          onPick={(outEl) => { planner.doTransfer(outEl, pendingIn.element); setPendingIn(null); setArmedOut(null); tapHaptic('medium') }}
+          onPick={(outEl) => { planner.doTransfer(outEl, pendingIn.element); setPendingIn(null); tapHaptic('medium') }}
           onClose={() => setPendingIn(null)}
         />
       )}

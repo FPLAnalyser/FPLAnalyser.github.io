@@ -3,7 +3,9 @@ import type { ReactNode } from 'react'
 export function PageShell({ children }: { children: ReactNode }) {
   // Content caps well short of the nav's full width: past ~1500px the
   // components inside stop growing and the page just gains empty margins.
-  return <div className="mx-auto w-full max-w-[1500px] px-4 py-6 md:px-6 md:py-8">{children}</div>
+  // The phone gutter is deliberately tight — the pitch is the widest thing
+  // on the site and every pixel of it is a legible player card.
+  return <div className="mx-auto w-full max-w-[1500px] px-2.5 py-6 sm:px-4 md:px-6 md:py-8">{children}</div>
 }
 
 export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {

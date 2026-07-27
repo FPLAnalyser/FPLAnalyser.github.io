@@ -622,6 +622,8 @@ export interface ChipPlan {
   best: ChipAdvice | null
   /** Gameweeks left before this half's chips expire, null in the second half. */
   weeksLeft: number | null
+  /** How many gameweeks the search covered. */
+  span: number
   headline: string
 }
 
@@ -693,7 +695,7 @@ function bestAffordableXi(pool: RatingRow[], gw: number, e: Engine, budget: numb
   return out.total
 }
 
-export function chipPlan({ squad, pool, fromGw, gws, bank, engine, spentAt, freeTransfers: ft }: {
+export function chipPlan({ squad, pool, fromGw, gws, bank, engine, spentAt, freeTransfers: ft, unlimitedTransfers }: {
   squad: RatingRow[]
   pool: RatingRow[]
   fromGw: number
@@ -703,9 +705,16 @@ export function chipPlan({ squad, pool, fromGw, gws, bank, engine, spentAt, free
   /** Where each chip has already gone in this half. */
   spentAt: (c: ChipKey) => number | null
   freeTransfers: number
+  /** True on the opening week and on any wildcard or free-hit week, where
+   *  transfers cost nothing already. */
+  unlimitedTransfers?: boolean
 }): ChipPlan | null {
   if (squad.length !== 15) return null
-  const window = gws.filter((g) => g >= fromGw).slice(0, HORIZON)
+  // A chip is a half-season asset, so the search has to cover the half. Six
+  // weeks was the transfer horizon borrowed by mistake: it would happily
+  // recommend a Bench Boost for next month while the real one sat in GW17.
+  const lastInHalf = fromGw < SECOND_HALF_FROM ? FIRST_HALF_LAST : Infinity
+  const window = gws.filter((g) => g >= fromGw && g <= lastInHalf)
   if (!window.length) return null
   const squadValue = squad.reduce((s, r) => s + price(r), 0)
 
@@ -735,23 +744,36 @@ export function chipPlan({ squad, pool, fromGw, gws, bank, engine, spentAt, free
   }
 
   // Free hit: your eleven against the best eleven the market could field.
+  //
+  // Solving that for every week of a half is far too much work for a panel
+  // that has to open instantly, and it isn't needed: a free hit pays when
+  // your own side can't field a team. So the weeks are ranked by how weak
+  // your eleven is — blanks first — and only the worst handful are solved.
+  const blanksIn = (g: number) =>
+    squad.filter((r) => !fixturesFor(String(r.team), engine.fixtureEase).some((f) => f.gw === g)).length
+  const ranked = window
+    .map((g) => ({ g, mine: bestXiXp(squad, g, engine).total, blanks: blanksIn(g) }))
+    .sort((a, b) => (b.blanks - a.blanks) || (a.mine - b.mine))
+    .slice(0, 5)
+
   let fhGw: number | null = null
   let fhGain = 0
   let fhBlanks = 0
-  for (const g of window) {
-    const mine = bestXiXp(squad, g, engine).total
+  for (const { g, mine, blanks } of ranked) {
     const theirs = bestAffordableXi(pool, g, engine, squadValue + bank)
     const gain = theirs - mine
-    if (gain > fhGain) {
-      fhGain = gain
-      fhGw = g
-      fhBlanks = squad.filter((r) => !fixturesFor(String(r.team), engine.fixtureEase).some((f) => f.gw === g)).length
-    }
+    if (gain > fhGain) { fhGain = gain; fhGw = g; fhBlanks = blanks }
   }
 
   // Wildcard isn't a week, it's a verdict on the squad: how many moves the
   // Analyser wants if transfers were free.
-  const free = recommend({ squad, pool, fromGw, gws, bank, freeTransfers: 99, engine, maxMoves: 6 })
+  // A wildcard is only ever worth something when transfers are scarce. In the
+  // opening week — and on any free-hit or wildcard week — they are unlimited
+  // already, so recommending one there is recommending nothing.
+  const transfersAreFree = unlimitedTransfers || ft === Infinity
+  const free = transfersAreFree
+    ? null
+    : recommend({ squad, pool, fromGw, gws, bank, freeTransfers: 99, engine, maxMoves: 6 })
   const wcMoves = free?.moves.length ?? 0
   const wcGain = free?.moves.reduce((s, m) => s + m.gain, 0) ?? 0
 
@@ -782,9 +804,11 @@ export function chipPlan({ squad, pool, fromGw, gws, bank, engine, spentAt, free
       // Four moves is the point at which free transfers can't keep up without
       // paying for it — which is exactly what a wildcard is for.
       worthIt: wcMoves >= 4, spentAt: spentAt('wildcard'),
-      detail: wcMoves >= 4
-        ? `${wcMoves} changes would each gain points, and you have ${ft === Infinity ? 'unlimited' : ft} free — a wildcard makes them all at once for +${wcGain.toFixed(1)}`
-        : `Only ${wcMoves} ${wcMoves === 1 ? 'change is' : 'changes are'} worth making — free transfers can handle that`,
+      detail: transfersAreFree
+        ? 'Your transfers are already unlimited this week — a wildcard would buy you nothing'
+        : wcMoves >= 4
+          ? `${wcMoves} changes would each gain points, and you have ${ft} free — a wildcard makes them all at once for +${wcGain.toFixed(1)}`
+          : `Only ${wcMoves} ${wcMoves === 1 ? 'change is' : 'changes are'} worth making — free transfers can handle that`,
     },
   ]
 
@@ -794,6 +818,7 @@ export function chipPlan({ squad, pool, fromGw, gws, bank, engine, spentAt, free
   const best = live[0] ?? null
 
   const weeksLeft = fromGw < SECOND_HALF_FROM ? FIRST_HALF_LAST - fromGw : null
+  const span = window.length
   const unspent = advice.filter((a) => a.spentAt == null).length
   const headline = best
     ? best.chip === 'wildcard'
@@ -801,7 +826,7 @@ export function chipPlan({ squad, pool, fromGw, gws, bank, engine, spentAt, free
       : `${best.label} in GW${best.gw}, worth about +${best.gain.toFixed(0)} points`
     : weeksLeft != null && weeksLeft <= 4 && unspent > 0
       ? `Hold — but ${unspent} ${unspent === 1 ? 'chip expires' : 'chips expire'} after GW${FIRST_HALF_LAST}`
-      : 'Hold — no chip is worth playing in the next six weeks'
+      : `Hold — no chip is worth playing in the ${span} ${span === 1 ? 'gameweek' : 'gameweeks'} left in this half`
 
-  return { advice, best, weeksLeft, headline }
+  return { advice, best, weeksLeft, span, headline }
 }

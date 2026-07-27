@@ -24,7 +24,7 @@ import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
 type Key = 'template' | 'horizon' | 'advice' | 'captain' | 'chips'
 
-export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, freeTransfers, onApplyMove, chipSpentAt }: {
+export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, freeTransfers, unlimitedTransfers, onApplyMove, chipSpentAt }: {
   squad: RatingRow[]
   xi: RatingRow[]
   pool: RatingRow[]
@@ -34,6 +34,9 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
   gws: number[]
   bank: number
   freeTransfers: number
+  /** Transfers are already free this week — the opening squad, or a wildcard
+   *  or free hit is on. A wildcard on top of that buys nothing. */
+  unlimitedTransfers?: boolean
   /** Apply a recommended swap outright — the advice is specific, so making it
    *  should be one tap rather than arming a search you then repeat by hand. */
   onApplyMove?: (outEl: number, inEl: number) => void
@@ -58,8 +61,8 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
     [squad, pool, gw, gws, bank, freeTransfers, engine],
   )
   const chips = useMemo(
-    () => chipPlan({ squad, pool, fromGw: gw, gws, bank, engine, freeTransfers, spentAt: chipSpentAt ?? (() => null) }),
-    [squad, pool, gw, gws, bank, engine, freeTransfers, chipSpentAt],
+    () => chipPlan({ squad, pool, fromGw: gw, gws, bank, engine, freeTransfers, unlimitedTransfers, spentAt: chipSpentAt ?? (() => null) }),
+    [squad, pool, gw, gws, bank, engine, freeTransfers, unlimitedTransfers, chipSpentAt],
   )
 
   if (!template) return null
@@ -513,8 +516,8 @@ function ChipsPanel({ read }: { read: ChipPlan | null }) {
       <Head
         title="Chip planning"
         note={read.weeksLeft != null
-          ? `Best week in the next six, valued against playing normally — ${read.weeksLeft} gameweeks until your first-half set expires`
-          : 'Best week in the next six, valued against playing that week normally'}
+          ? `Best week in the ${read.span} left this half, valued against playing normally — your first-half set expires after GW${FIRST_HALF_LAST}`
+          : `Best week in the ${read.span} left this season, valued against playing that week normally`}
       />
 
       <div className="flex flex-col gap-2">
