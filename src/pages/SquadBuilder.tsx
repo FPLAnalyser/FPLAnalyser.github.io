@@ -191,7 +191,6 @@ export default function SquadBuilder() {
   const rated = chosen.map(ovOf).filter((v): v is number => v != null)
   const squadScore = rated.length ? Math.round(rated.reduce((a, b) => a + b, 0) / rated.length) : null
   const unrated = chosen.length - rated.length
-  const bestXI = useMemo(() => bestElevenScore(chosen), [chosen])
 
   const complete = total === 15 && SLOTS.every((s) => countByPos[s.pos] === s.count)
   const valid = complete && spent <= BUDGET + 1e-9
@@ -500,7 +499,7 @@ export default function SquadBuilder() {
         />
       )}
 
-      <SquadShare chosen={chosen} fixtureEase={fixtureEase} squadScore={squadScore} bestXI={bestXI} spent={spent} unrated={unrated} total={total} gw={buildGw} open={shareOpen} onClose={() => setShareOpen(false)} />
+      <SquadShare chosen={chosen} fixtureEase={fixtureEase} squadScore={squadScore} unrated={unrated} total={total} gw={buildGw} open={shareOpen} onClose={() => setShareOpen(false)} />
     </PageShell>
   )
 }
@@ -714,8 +713,8 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, ca
 }
 
 /** Share / download the squad as a branded PNG (rasterised client-side). */
-function SquadShare({ chosen, fixtureEase, squadScore, bestXI, spent, unrated, total, gw, open, onClose }: {
-  chosen: RatingRow[]; fixtureEase: FixtureEaseRow[]; squadScore: number | null; bestXI: number | null; spent: number; unrated: number; total: number; gw: number; open: boolean; onClose: () => void
+function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, open, onClose }: {
+  chosen: RatingRow[]; fixtureEase: FixtureEaseRow[]; squadScore: number | null; unrated: number; total: number; gw: number; open: boolean; onClose: () => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [busy, setBusy] = useState(false)
@@ -758,8 +757,6 @@ function SquadShare({ chosen, fixtureEase, squadScore, bestXI, spent, unrated, t
             <div className="font-display text-lg leading-none whitespace-nowrap">FPL <span style={{ color: '#c9a227' }}>Analyser</span><div className="mt-1 text-[10px] font-semibold tracking-[0.14em] uppercase" style={{ color: '#8a8172' }}>My GW{gw} Squad</div></div>
             <div className="flex gap-4 text-center">
               <div><div className="font-display text-2xl leading-none tabular-nums" style={{ color: '#c9a227' }}>{squadScore ?? '—'}</div><div className="text-[9px] tracking-[0.1em] whitespace-nowrap uppercase" style={{ color: '#8a8172' }}>Squad</div></div>
-              <div><div className="font-display text-2xl leading-none tabular-nums" style={{ color: '#c9a227' }}>{bestXI ?? '—'}</div><div className="text-[9px] tracking-[0.1em] whitespace-nowrap uppercase" style={{ color: '#8a8172' }}>Best XI</div></div>
-              <div><div className="font-display text-2xl leading-none tabular-nums">£{spent.toFixed(1)}</div><div className="text-[9px] tracking-[0.1em] whitespace-nowrap uppercase" style={{ color: '#8a8172' }}>Spend</div></div>
             </div>
           </div>
           <SquadBoard chosen={chosen} fixtureEase={fixtureEase} capture />
