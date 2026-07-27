@@ -433,12 +433,11 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
           onClick={(ev) => { ev.stopPropagation(); onSell() }}
           aria-label={sold ? `Keep ${name}` : `Sell ${name}`}
           title={sold ? `Keep ${name}` : `Sell ${name} — his fee goes into the bank`}
-          /* Bottom-right, hanging off the card. The top corners belong to
-             the armband and the availability flag, and a button hanging off
-             the top-right landed on the next card's armband — six pixels of
-             overhang each way into a six-pixel gap. Nothing lives in a
-             bottom corner, so this can't collide however tight the row. */
-          className={`absolute -right-1.5 -bottom-1.5 z-20 grid size-5 place-items-center rounded-full border text-[10px] shadow-md transition-colors sm:size-[22px] ${
+          /* Top-right, hanging off the card. This is only safe because the
+             armband moved inside: it was the one thing overhanging a card's
+             left edge, and two six-pixel overhangs don't fit a six-pixel gap.
+             With it gone, the corner opposite is empty. */
+          className={`absolute -top-1.5 -right-1.5 z-20 grid size-5 place-items-center rounded-full border text-[10px] shadow-md transition-colors sm:size-[22px] ${
             sold
               ? 'border-good bg-good text-white'
               : 'border-line bg-surface-1 text-ink-2 hover:border-bad hover:bg-bad hover:text-white'
@@ -451,7 +450,10 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
           card rather than being a filter on it, so the restore button keeps
           its colour instead of going grey along with him. */}
       {sold && <span className="pointer-events-none absolute inset-0 z-10 rounded-xl bg-surface-1/45 backdrop-grayscale" />}
-      {transferred && <span className="absolute -top-1.5 -right-1.5 z-10 grid size-4 place-items-center rounded-full bg-good text-[9px] text-white"><Icon name="check" size={10} /></span>}
+      {/* The just-signed tick takes the bottom-left, diagonally opposite the
+          cross. One overhanging thing per corner, and the two that are used
+          are never on the same edge of the gap between cards. */}
+      {transferred && <span className="absolute -bottom-1.5 -left-1.5 z-10 grid size-4 place-items-center rounded-full bg-good text-[9px] text-white"><Icon name="check" size={10} /></span>}
       <FoilShell
         tier={bench ? 'graphite' : tierOf(rating || null)}
         onClick={onOpen}
