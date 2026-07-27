@@ -18,7 +18,8 @@ import { PlayerZoneMap } from '../components/ShotMap'
 import { useCore } from '../lib/useData'
 import { num, str, bool } from '../lib/rows'
 import { useAvailability, availFor, availBadge, SEV_COLOUR, type AvailBadgeInfo } from '../lib/availability'
-import { teamFullNames, teamColors, searchText, TOOLTIPS } from '../lib/util'
+import { xpForGw, useXpModel, useMarketOdds, useShotProfiles } from '../lib/xp'
+import { teamFullNames, teamColors, searchText, TOOLTIPS, FDR_COLORS } from '../lib/util'
 import { buildPlayerBundle, buildPlayerVerdict } from '../lib/insights/narrative'
 import type { CoreData, RatingRow } from '../lib/types'
 
@@ -243,14 +244,18 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
           </>
         ) : (
           <>
-            {/* Wide screens: the brief reads left, the evidence charts sit in
-                a right rail so the short sentences don't leave a dead half. */}
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-start">
+            {/* Wide screens: the brief and the market chart read down the
+                left, while the evidence and the receipts stack into a right
+                rail — the rail spans both rows, so a short brief leaves a gap
+                in one column rather than a dead half across the page. */}
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-start">
               <Exportable title={`${r.web_name} — the brief`}><TheBrief r={r} data={data} verdict={verdict} /></Exportable>
-              <Exportable title={`${r.web_name} — promise vs delivery`}><EvidenceBand r={r} peers={peers} /></Exportable>
+              <div className="min-w-0 lg:row-span-2">
+                <Exportable title={`${r.web_name} — promise vs delivery`}><EvidenceBand r={r} peers={peers} /></Exportable>
+                <Receipts r={r} data={data} name={name} />
+              </div>
+              <div className="min-w-0"><Exportable title={`${r.web_name} — the market`}><MarketScatter r={r} peers={peers} /></Exportable></div>
             </div>
-            <div className="mt-6"><Exportable title={`${r.web_name} — the market`}><MarketScatter r={r} peers={peers} /></Exportable></div>
-            <Receipts r={r} data={data} name={name} />
           </>
         )}
 
@@ -564,31 +569,110 @@ function TheBrief({ r, data, verdict }: { r: RatingRow; data: CoreData; verdict:
           </p>
         ))}
       </div>
-      {hasFix && (() => {
-        // The run needs a verdict, not just chips: average our own difficulty
-        // over the next four and say whether that helps or hurts.
-        const up = data.fixtureEase.filter((fx) => fx.team === String(r.team)).sort((a, b) => a.gw - b.gw).slice(0, 4)
-        const avg = up.length ? up.reduce((s, fx) => s + (fx.fdr || 3), 0) / up.length : null
-        const kind = up.filter((fx) => (fx.fdr ?? 3) <= 2)
-        const hard = up.filter((fx) => (fx.fdr ?? 3) >= 4)
-        const read =
-          avg == null ? null
-          : avg <= 2.4 ? { tone: 'text-good', word: 'A kind run.', sub: `${kind.length} of the next ${up.length} rate 2 or easier — the window to own him.` }
-          : avg >= 3.6 ? { tone: 'text-bad', word: 'A tough run.', sub: `${hard.length} of the next ${up.length} rate 4 or harder — expect the ceiling to dip.` }
-          : { tone: 'text-warn', word: 'A mixed run.', sub: `Averages ${avg.toFixed(1)} difficulty over the next ${up.length}${kind.length ? ` — ${kind.length} kind, ${hard.length} awkward` : ''}.` }
-        return (
-          <div className="border-t border-line pt-2.5">
-            <div className="mb-1.5 text-[10px] font-bold tracking-[0.14em] text-ink-3 uppercase">Next fixtures</div>
-            <FixtureChips fixtureEase={data.fixtureEase} team={String(r.team)} n={4} />
-            {read && (
-              <p className="mt-2 text-[13.5px] leading-snug font-semibold text-ink">
-                <span className={read.tone}>{read.word}</span>
-                <span className="mt-0.5 block text-[13px] font-normal text-ink-3">{read.sub}</span>
-              </p>
-            )}
-          </div>
-        )
-      })()}
+      {hasFix && <FixtureOutlook r={r} data={data} />}
+    </div>
+  )
+}
+
+/* ── The run ahead ──────────────────────────────────────────────────────────
+   Four fixtures is what fits on a phone; a desktop has room for eight, and
+   with room for eight there is room to say what each one is worth. Every
+   gameweek carries its own projection from the same xP model the planner
+   uses, so the run reads as points rather than as a colour. */
+
+const FIX_MOBILE = 4
+const FIX_DESKTOP = 8
+
+/** True at the lg breakpoint. The run's verdict and its best-week marker have
+ *  to describe exactly the fixtures on screen, so the count is decided here
+ *  rather than by hiding cells in CSS. */
+function useWide(): boolean {
+  const [wide, setWide] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(min-width: 1024px)').matches)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)')
+    const on = () => setWide(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return !!wide
+}
+
+function FixtureOutlook({ r, data }: { r: RatingRow; data: CoreData }) {
+  const avail = useAvailability()
+  const xpModel = useXpModel()
+  const market = useMarketOdds()
+  const profiles = useShotProfiles()
+  const wide = useWide()
+  const n = wide ? FIX_DESKTOP : FIX_MOBILE
+
+  const up = useMemo(
+    () => data.fixtureEase.filter((fx) => fx.team === String(r.team)).sort((a, b) => a.gw - b.gw).slice(0, n),
+    [data.fixtureEase, r.team, n],
+  )
+  // One projection per gameweek, not per fixture: a double counts once, as
+  // the week's total, which is what a manager actually banks.
+  const xpByGw = useMemo(() => {
+    const gws = [...new Set(up.map((fx) => fx.gw))]
+    const m = new Map<number, number | null>()
+    for (const gw of gws) m.set(gw, xpForGw(r, gw, data.fixtureEase, avail, xpModel, market, profiles))
+    return m
+  }, [up, r, data.fixtureEase, avail, xpModel, market, profiles])
+
+  if (!up.length) return null
+
+  const avg = up.reduce((s, fx) => s + (fx.fdr || 3), 0) / up.length
+  const kind = up.filter((fx) => (fx.fdr ?? 3) <= 2).length
+  const hard = up.filter((fx) => (fx.fdr ?? 3) >= 4).length
+  const read =
+    avg <= 2.4 ? { tone: 'text-good', word: 'A kind run.', sub: `${kind} of the next ${up.length} rate 2 or easier — the window to own him.` }
+    : avg >= 3.6 ? { tone: 'text-bad', word: 'A tough run.', sub: `${hard} of the next ${up.length} rate 4 or harder — expect the ceiling to dip.` }
+    : { tone: 'text-warn', word: 'A mixed run.', sub: `Averages ${avg.toFixed(1)} difficulty over the next ${up.length}${kind ? ` — ${kind} kind, ${hard} awkward` : ''}.` }
+
+  // Every projection we have, so the desktop total never quietly counts a
+  // week the model couldn't price.
+  const priced = [...xpByGw.values()].filter((v): v is number => v != null)
+  const total = priced.length === xpByGw.size && priced.length ? priced.reduce((s, v) => s + v, 0) : null
+  const best = priced.length ? Math.max(...priced) : null
+
+  return (
+    <div className="border-t border-line pt-2.5">
+      <div className="mb-2 flex items-baseline justify-between gap-3">
+        <span className="text-[10px] font-bold tracking-[0.14em] text-ink-3 uppercase">Next fixtures</span>
+        <span className="text-[10px] font-bold tracking-[0.14em] text-ink-3 uppercase">Projected points</span>
+      </div>
+      <div className={`grid gap-1.5 ${wide ? 'grid-cols-8' : 'grid-cols-4'}`}>
+        {up.map((fx, i) => {
+          const [bg, fg] = FDR_COLORS[fx.fdr] || FDR_COLORS[3]
+          const xp = xpByGw.get(fx.gw) ?? null
+          // A double gameweek prices once, on its first fixture — repeating
+          // the week's total against both games would double-count it by eye.
+          const first = up.findIndex((f) => f.gw === fx.gw) === i
+          return (
+            <div key={`${fx.gw}-${fx.opponent}-${i}`} className="min-w-0">
+              <div className="mb-0.5 text-center text-[9px] font-bold tracking-[0.08em] text-ink-3 uppercase">GW{fx.gw}</div>
+              <div
+                className="truncate rounded px-1 py-1 text-center text-[11px] font-bold"
+                style={{ background: bg, color: fg }}
+                title={`GW${fx.gw} ${fx.venue === 'H' ? 'vs' : 'at'} ${teamFullNames[fx.opponent] || fx.opponent} (difficulty ${fx.fdr})`}
+              >
+                {fx.opponent} <span className="font-medium opacity-70">({fx.venue})</span>
+              </div>
+              <div className="mt-0.5 text-center text-[12px] font-extrabold tabular-nums">
+                {!first ? <span className="text-ink-3">—</span>
+                  : xp == null ? <span className="text-ink-3">—</span>
+                  : <span className={best != null && xp === best ? 'metallic-num' : 'text-ink-2'}>{xp.toFixed(1)}</span>}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      <p className="mt-2 text-[13.5px] leading-snug font-semibold text-ink">
+        <span className={read.tone}>{read.word}</span>
+        <span className="mt-0.5 block text-[13px] font-normal text-ink-3">
+          {read.sub}
+          {total != null && <> Projected <b className="metallic-num">{total.toFixed(1)}</b> points across the {xpByGw.size} gameweeks shown.</>}
+        </span>
+      </p>
     </div>
   )
 }
