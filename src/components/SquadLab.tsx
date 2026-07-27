@@ -557,7 +557,10 @@ function ChipRow({ a, best }: { a: ChipAdvice; best: boolean }) {
           : a.worthIt && a.gw != null
             ? <span className="rounded-md bg-accent/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-accent uppercase">GW{a.gw}</span>
             : <span className="text-[11px] text-ink-3">hold</span>}
-        {!spent && a.chip !== 'wildcard' && (
+        {/* The wildcard is never a points figure, and a free hit is decided
+            on the shape of the week rather than the gap — so its number is
+            the size of the prize, shown only once the week justifies one. */}
+        {!spent && a.chip !== 'wildcard' && (a.chip !== 'free-hit' || a.worthIt) && (
           <span className={`font-num ml-auto text-sm tabular-nums ${a.worthIt ? 'text-good' : 'text-ink-3'}`}>
             +{a.gain.toFixed(1)}
           </span>

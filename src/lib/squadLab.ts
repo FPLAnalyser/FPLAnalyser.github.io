@@ -605,7 +605,8 @@ export type ChipKey = 'triple-captain' | 'bench-boost' | 'free-hit' | 'wildcard'
 export interface ChipAdvice {
   chip: ChipKey
   label: string
-  /** The gameweek to play it in, or null when nothing in range is worth it. */
+  /** The gameweek to play it in. Named even when holding — knowing which
+   *  week is your worst is useful whether or not you spend a chip on it. */
   gw: number | null
   /** Points it would add over playing that week normally. */
   gain: number
@@ -651,6 +652,12 @@ const CHIP_TITLE: Record<ChipKey, string> = {
  *  raised until the bill fits. That is the standard way to hang a budget on
  *  a selection problem, and it lands within a rounding error of the true
  *  optimum here. */
+/** A free hit squad still has to be a legal fifteen, so four bench places
+ *  have to be paid for out of the same hundred million. Reserving this for
+ *  them keeps the comparison fair; without it the chip is valued as though
+ *  you could put the whole budget on the pitch. */
+const BENCH_ALLOWANCE = 17
+
 function bestAffordableXi(pool: RatingRow[], gw: number, e: Engine, budget: number): number {
   const cands = pool
     .map((r) => ({ r, v: xp(r, gw, e) ?? 0, p: price(r), pos: String(r.position), team: String(r.team) }))
@@ -743,27 +750,62 @@ export function chipPlan({ squad, pool, fromGw, gws, bank, engine, spentAt, free
     if (total > bbGain) { bbGain = total; bbGw = g }
   }
 
-  // Free hit: your eleven against the best eleven the market could field.
-  //
-  // Solving that for every week of a half is far too much work for a panel
-  // that has to open instantly, and it isn't needed: a free hit pays when
-  // your own side can't field a team. So the weeks are ranked by how weak
-  // your eleven is — blanks first — and only the worst handful are solved.
-  const blanksIn = (g: number) =>
-    squad.filter((r) => !fixturesFor(String(r.team), engine.fixtureEase).some((f) => f.gw === g)).length
-  const ranked = window
-    .map((g) => ({ g, mine: bestXiXp(squad, g, engine).total, blanks: blanksIn(g) }))
-    .sort((a, b) => (b.blanks - a.blanks) || (a.mine - b.mine))
-    .slice(0, 5)
-
-  let fhGw: number | null = null
-  let fhGain = 0
-  let fhBlanks = 0
-  for (const { g, mine, blanks } of ranked) {
-    const theirs = bestAffordableXi(pool, g, engine, squadValue + bank)
-    const gain = theirs - mine
-    if (gain > fhGain) { fhGain = gain; fhGw = g; fhBlanks = blanks }
+  /* Free hit — the week's shape, not the points gap.
+     A points gap alone is useless here: the strongest eleven in the game
+     beats a decent squad's eleven by four or five in an ordinary week,
+     because appearance points are most of a score and everybody collects
+     them. So each week is diagnosed instead — who has no game, how much of
+     the squad walks into a hard one, and whether the players you actually
+     rely on are among them. */
+  const premiums = [...squad].sort((a, b) => price(b) - price(a)).slice(0, 3)
+  const weekShape = (g: number) => {
+    let blanks = 0
+    let hard = 0
+    for (const r of squad) {
+      const fs = fixturesFor(String(r.team), engine.fixtureEase).filter((f) => f.gw === g)
+      if (!fs.length) { blanks++; continue }
+      if (Math.min(...fs.map((f) => f.fdr)) >= HARD_FDR) hard++
+    }
+    const hitPremiums = premiums.filter((r) => {
+      const fs = fixturesFor(String(r.team), engine.fixtureEase).filter((f) => f.gw === g)
+      return !fs.length || Math.min(...fs.map((f) => f.fdr)) >= HARD_FDR
+    })
+    return { g, blanks, hard, hitPremiums }
   }
+
+  const shapes = window.map(weekShape)
+  // A blank is a guaranteed nought, so it outweighs a hard fixture several
+  // times over; a premium in trouble counts for more than a fifth defender.
+  const severity = (s: { blanks: number; hard: number; hitPremiums: RatingRow[] }) =>
+    s.blanks * 4 + s.hard + s.hitPremiums.length * 2
+  const worst = shapes.reduce((a, b) => (severity(b) > severity(a) ? b : a))
+
+  // Only the few worst weeks get the expensive budget solve — the rest can
+  // never be the answer, and the panel has to open instantly.
+  const fhGw = worst.g
+  let fhGain = 0
+  for (const s0 of [...shapes].sort((a, b) => severity(b) - severity(a)).slice(0, 3)) {
+    if (s0.g !== fhGw) continue
+    const mine = bestXiXp(squad, s0.g, engine).total
+    fhGain = bestAffordableXi(pool, s0.g, engine, squadValue + bank - BENCH_ALLOWANCE) - mine
+  }
+  const fhBlanks = worst.blanks
+  // The shape says which week to look at; the gain says whether it is worth a
+  // chip. Both have to hold. A wall of hard fixtures reads alarming but every
+  // one of those players still turns out and still collects his appearance
+  // points, so the fix is usually worth two or three — nothing like a blank,
+  // where your men score nothing at all.
+  const fhBroken = fhBlanks >= 3 || (worst.hard >= 9 && worst.hitPremiums.length >= 2)
+  const fhWorth = fhBroken && fhGain >= CHIP_BAR['free-hit']
+  const fhNames = worst.hitPremiums.map((r) => String(r.web_name)).join(' and ')
+  const fhWall = `${worst.hard} of fifteen in a hard game${fhNames ? `, ${fhNames} among them` : ''}`
+  const fhDetail = fhBlanks >= 3
+    ? fhWorth
+      ? `${fhBlanks} of your fifteen have no game in GW${fhGw} — a one-week squad is worth about +${fhGain.toFixed(0)}`
+      : `${fhBlanks} of your fifteen blank in GW${fhGw}, but a one-week squad only projects +${fhGain.toFixed(0)} — not enough for a chip`
+    : fhWorth
+      ? `GW${fhGw} is your wall: ${fhWall}, and a one-week squad projects +${fhGain.toFixed(0)}`
+      : `GW${fhGw} is your worst week — ${fhWall} — but a one-week squad only gains +${fhGain.toFixed(0)}, so it isn't worth the chip`
 
   // Wildcard isn't a week, it's a verdict on the squad: how many moves the
   // Analyser wants if transfers were free.
@@ -789,15 +831,12 @@ export function chipPlan({ squad, pool, fromGw, gws, bank, engine, spentAt, free
       chip: 'bench-boost', label: CHIP_TITLE['bench-boost'], gw: bbGw, gain: bbGain,
       worthIt: bbGain >= CHIP_BAR['bench-boost'], spentAt: spentAt('bench-boost'),
       detail: bbGw
-        ? `Your four substitutes project ${bbGain.toFixed(1)} between them in GW${bbGw}`
+        ? `The four you'd leave out in GW${bbGw} project ${bbGain.toFixed(1)} between them — your bench is worked out fresh for each week, not carried over from this one`
         : 'No week in range stands out',
     },
     {
       chip: 'free-hit', label: CHIP_TITLE['free-hit'], gw: fhGw, gain: fhGain,
-      worthIt: fhGain >= CHIP_BAR['free-hit'], spentAt: spentAt('free-hit'),
-      detail: fhGw
-        ? `${fhBlanks > 0 ? `${fhBlanks} of your fifteen blank in GW${fhGw}. ` : ''}A one-week squad at your budget projects ${fhGain.toFixed(1)} more than yours`
-        : 'No week in range stands out',
+      worthIt: fhWorth, spentAt: spentAt('free-hit'), detail: fhDetail,
     },
     {
       chip: 'wildcard', label: CHIP_TITLE.wildcard, gw: wcMoves >= 4 ? fromGw : null, gain: wcGain,
@@ -813,7 +852,7 @@ export function chipPlan({ squad, pool, fromGw, gws, bank, engine, spentAt, free
   ]
 
   const live = advice.filter((a) => a.spentAt == null && a.worthIt)
-  // Rank on how far each clears its own bar, since the bars differ.
+  // Ranked on how far each clears its own bar, since the bars differ.
   live.sort((a, b) => b.gain / (CHIP_BAR[b.chip] || 1) - a.gain / (CHIP_BAR[a.chip] || 1))
   const best = live[0] ?? null
 
