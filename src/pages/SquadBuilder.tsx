@@ -628,7 +628,7 @@ function pickEleven(squad: RatingRow[]): { form: Record<Pos, number>; xi: Rating
  *  band across the foot of the pitch. Interactive by default (remove ✕ + empty
  *  slots that jump the picker to that position); `capture` mode drops those for
  *  a clean shareable image. */
-function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, capture, metric = 'rating', gw, avail, lineup, captain, vice, tripleCap }: {
+function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, capture, metric = 'rating', gw, avail, lineup, captain, vice, tripleCap, benchBoost }: {
   chosen: RatingRow[]; fixtureEase: FixtureEaseRow[]; pickPos?: Pos; onRemove?: (el: number) => void; onPick?: (p: Pos) => void; onOpen?: (r: RatingRow) => void; capture?: boolean
   metric?: Metric; gw?: number; avail?: Availability
   /** The lineup as actually picked — who starts and who sits. Without it the
@@ -639,6 +639,7 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, ca
   captain?: number | null
   vice?: number | null
   tripleCap?: boolean
+  benchBoost?: boolean
 }) {
   const derived = pickEleven(chosen)
   const byEl = useMemo(() => new Map(chosen.map((r) => [r.element as number, r])), [chosen])
@@ -708,6 +709,7 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, ca
   return (
     <Pitch
       maxWidth={capture ? undefined : 860}
+      boosted={benchBoost}
       footer={
         capture && !bench.length ? undefined : (
           <div className="flex justify-center gap-1 sm:gap-2">
@@ -800,7 +802,7 @@ function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, lineu
           </div>
           <SquadBoard
             chosen={chosen} fixtureEase={fixtureEase} capture gw={gw}
-            lineup={lineup} captain={captain} vice={vice} tripleCap={chip === 'triple-captain'}
+            lineup={lineup} captain={captain} vice={vice} tripleCap={chip === 'triple-captain'} benchBoost={chip === 'bench-boost'}
           />
           {unrated > 0 && <div className="mt-2 text-center text-[10px]" style={{ color: '#8a8172' }}>{unrated} player{unrated > 1 ? 's' : ''} new to the league (unrated)</div>}
           <ShareFooter />

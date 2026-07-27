@@ -9,7 +9,12 @@ import { SEV_COLOUR, type AvailBadgeInfo } from '../lib/availability'
    in a shared PNG.
    ════════════════════════════════════════════════════════════════════════ */
 
-export function Pitch({ children, footer, className, maxWidth }: { children: ReactNode; footer?: ReactNode; className?: string; maxWidth?: number }) {
+export function Pitch({ children, footer, className, maxWidth, boosted }: {
+  children: ReactNode; footer?: ReactNode; className?: string; maxWidth?: number
+  /** Bench Boost is on, so the bench is scoring — it gets the gold edge and
+   *  says BOOST, the same signal the live board gives it. */
+  boosted?: boolean
+}) {
   return (
     <div
       data-pitch=""
@@ -66,8 +71,11 @@ export function Pitch({ children, footer, className, maxWidth }: { children: Rea
         {footer && (
           // The bench: a band across the foot of the pitch, the way it sits on
           // a teamsheet — still inside the frame, clearly not on the field.
-          <div className="mt-2 rounded-xl border border-white/12 bg-black/35 px-2 py-2 backdrop-blur-[1px] sm:px-3">
-            <div className="mb-1.5 text-[9px] font-extrabold tracking-[0.18em] text-white/55 uppercase">Bench</div>
+          <div
+            className={`mt-2 rounded-xl border px-2 py-2 backdrop-blur-[1px] sm:px-3 ${boosted ? 'border-[#c9a227]' : 'border-white/12 bg-black/35'}`}
+            style={boosted ? { background: 'linear-gradient(180deg, rgba(201,162,39,.22), rgba(0,0,0,.45))', boxShadow: '0 0 0 1px rgba(247,227,166,.25)' } : undefined}
+          >
+            <div className={`mb-1.5 text-[9px] font-extrabold tracking-[0.18em] uppercase ${boosted ? 'text-[#F7E3A6]' : 'text-white/55'}`}>{boosted ? 'Boost' : 'Bench'}</div>
             {footer}
           </div>
         )}
