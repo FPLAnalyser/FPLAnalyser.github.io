@@ -146,37 +146,67 @@ export function buildRanker(rows: Iterable<TeamRatingRow>) {
   }
 }
 
-// Which attackers a channel weakness suits — used in the per-team fixture read.
-const CHANNEL_HINT: Record<Cat, string> = {
-  left: 'left-sided attackers (and inverted right wingers)',
-  centre: 'central strikers and runners',
-  right: 'right-sided attackers (and inverted left wingers)',
-  setpiece: 'set-piece and aerial threats',
-}
+/** The scouting read on a team's upcoming run.
+ *
+ *  This used to average the opponents' conceded-xG channel shares and name
+ *  the strongest one. It read as boilerplate because the metric underneath
+ *  it barely moves: across the league, conceded xG splits 9% left, 82%
+ *  central, 9% right. A "+16% down the left" is 10.4% against a 9.0%
+ *  baseline — noise, dressed up. Half of all teams fell through to a generic
+ *  fallback line for want of anything above the threshold.
+ *
+ *  What does separate teams is how much they concede from set pieces (18% to
+ *  34% of their xG, so nearly two-fold), the quality of the opponents
+ *  themselves, and the shape of the run — where the hard weeks fall and how
+ *  many are at home. Each clause below is emitted only when it is actually
+ *  true of this run, so a flat run says less rather than saying nothing in
+ *  more words. */
+function fixtureRead(
+  fixtures: { gw: number; opponent: string; venue: 'H' | 'A'; diff: number }[],
+  profiles: Map<string, Profile>,
+  league: Profile,
+): string | null {
+  if (!fixtures.length) return null
+  const bits: string[] = []
+  const n = fixtures.length
+  const avg = fixtures.reduce((s, f) => s + f.diff, 0) / n
 
-/** One-line scouting read of a team's upcoming run from where its opponents
- *  concede their xG (channels + set pieces) vs the league. */
-function fixtureRead(opponents: string[], profiles: Map<string, Profile>, league: Profile): string | null {
-  if (league.totalXg <= 0) return null
-  const cats: Cat[] = ['left', 'centre', 'right', 'setpiece']
-  const acc: Record<Cat, number> = { left: 0, centre: 0, right: 0, setpiece: 0 }
-  let rated = 0
-  for (const opp of opponents) {
-    const p = profiles.get(opp)
-    if (!p || p.totalXg <= 0) continue
-    rated++
-    for (const c of cats) acc[c] += p.shares[c]
+  // 1. How the run rates, and where the weight sits.
+  const home = fixtures.filter((f) => f.venue === 'H').length
+  const shape = avg <= 2.3 ? 'One of the kinder runs in the league'
+    : avg >= 3.5 ? 'A hard run'
+    : 'A middling run'
+  bits.push(`${shape} — ${avg.toFixed(1)} average difficulty over ${n}, ${home} at home.`)
+
+  // 2. The weeks that decide it. Only worth naming when they stand apart.
+  const sorted = [...fixtures].sort((a, b) => a.diff - b.diff)
+  const easiest = sorted[0]
+  const hardest = sorted[sorted.length - 1]
+  if (hardest.diff - easiest.diff >= 1.2) {
+    bits.push(`GW${easiest.gw} ${easiest.venue === 'H' ? 'at home to' : 'away to'} ${teamLabel(easiest.opponent)} is the one to target; GW${hardest.gw} ${hardest.venue === 'H' ? 'at home to' : 'away to'} ${teamLabel(hardest.opponent)} is the week to plan around.`)
+  } else {
+    bits.push('No single week stands out — the run is even, so there is nothing to route transfers around.')
   }
-  if (!rated) return null
-  const rel = cats.map((c) => {
-    const share = acc[c] / rated
-    const lg = league.shares[c]
-    return { c, share, lg, delta: lg > 0 ? (share - lg) / lg : 0 }
-  }).sort((a, b) => b.delta - a.delta)
-  const top = rel.filter((r) => r.delta >= 0.1).slice(0, 2)
-  if (!top.length) return `These opponents give little away by area — no obvious channel to target; lean on team quality and set pieces.`
-  const bits = top.map((t) => `${CAT_LABEL[t.c]} (${Math.round(t.share * 100)}% of their conceded xG vs ${Math.round(t.lg * 100)}% league)`)
-  return `Opponents concede most from ${bits.join(' and ')} — best suited to ${CHANNEL_HINT[top[0].c]}.`
+
+  // 3. Set pieces: the one concession pattern that genuinely varies.
+  if (league.shares.setpiece > 0) {
+    let acc = 0
+    let rated = 0
+    for (const f of fixtures) {
+      const p = profiles.get(f.opponent)
+      if (!p || p.totalXg <= 0) continue
+      rated++
+      acc += p.shares.setpiece
+    }
+    if (rated >= Math.ceil(n / 2)) {
+      const share = acc / rated
+      const rel = (share - league.shares.setpiece) / league.shares.setpiece
+      if (rel >= 0.12) bits.push(`These opponents give away ${Math.round(share * 100)}% of their chances from set pieces against a league average of ${Math.round(league.shares.setpiece * 100)}% — a run that rewards aerial and set-piece threats.`)
+      else if (rel <= -0.12) bits.push(`They defend set pieces well (${Math.round(share * 100)}% of chances conceded against ${Math.round(league.shares.setpiece * 100)}% league), so dead balls are a thin route to points here.`)
+    }
+  }
+
+  return bits.join(' ')
 }
 
 /* Shot-profile categories used to match player strengths to opponent
@@ -848,10 +878,21 @@ function FixtureGrid({
                               // each smaller than the total that won it.
                               const best = bestByGw.get(gw)
                               const isBest = best != null && fs.length === 1 && Math.abs(p.v - best) < 1e-9
+                              // Best of the week is gold outright, not a
+                              // stronger tint of the column's own colour —
+                              // literal metal, so it reads as the winner in
+                              // any theme rather than "more of the same".
                               return (
-                                <span key={i} className={`inline-block w-full min-w-[54px] rounded px-1 py-0.5 whitespace-nowrap ${isBest ? 'ring-1 ring-accent' : ''}`} style={{ background: `color-mix(in srgb, ${hue} ${strength.toFixed(0)}%, transparent)` }} title={isBest ? `${tip} — best this gameweek` : tip}>
-                                  <span className="block text-[9px] leading-tight font-semibold text-ink-2 opacity-80">{f.opponent} ({f.venue}){p.assumed ? ' ·' : ''}</span>
-                                  <span className={`font-num block text-[12px] leading-tight font-bold tabular-nums ${isBest ? 'text-accent' : 'text-ink'}`}>
+                                <span
+                                  key={i}
+                                  className={`inline-block w-full min-w-[54px] rounded px-1 py-0.5 whitespace-nowrap ${isBest ? 'shadow-[0_0_0_1px_rgba(23,19,10,.35)]' : ''}`}
+                                  style={isBest
+                                    ? { background: 'linear-gradient(180deg,#F7E3A6,#C9A227)' }
+                                    : { background: `color-mix(in srgb, ${hue} ${strength.toFixed(0)}%, transparent)` }}
+                                  title={isBest ? `${tip} — best this gameweek` : tip}
+                                >
+                                  <span className={`block text-[9px] leading-tight font-semibold ${isBest ? 'text-[#3B2F10]' : 'text-ink-2 opacity-80'}`}>{f.opponent} ({f.venue}){p.assumed ? ' ·' : ''}</span>
+                                  <span className={`font-num block text-[12px] leading-tight font-bold tabular-nums ${isBest ? 'text-[#17130A]' : 'text-ink'}`}>
                                     {isBest && <Icon name="crown" size={9} className="mr-0.5 inline-block align-[-0.05em]" />}
                                     {label}
                                   </span>
@@ -876,7 +917,14 @@ function FixtureGrid({
                 {open === r.team && (
                   <tr className="border-b border-line bg-surface-1/40">
                     <td colSpan={colSpan} className="px-3 py-3">
-                      <RunRead team={r.team} opponents={r.opponents} profiles={profiles} league={league} usedFdr={r.usedFdr} n={gws.length} />
+                      <RunRead
+                        team={r.team}
+                        fixtures={gws.flatMap((gw) => (r.byGw.get(gw) ?? []).map((f) => ({
+                          gw, opponent: f.opponent, venue: f.venue,
+                          diff: analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr, mktOf(market, r.team, f), rank).diff,
+                        })))}
+                        profiles={profiles} league={league} usedFdr={r.usedFdr} n={gws.length}
+                      />
                     </td>
                   </tr>
                 )}
@@ -908,12 +956,16 @@ function FixtureGrid({
 }
 
 /** The expandable per-team scouting read of an upcoming run. */
-function RunRead({ team, opponents, profiles, league, usedFdr, n }: { team: string; opponents: string[]; profiles: Map<string, Profile>; league: Profile; usedFdr: boolean; n: number }) {
-  const read = fixtureRead(opponents, profiles, league)
+function RunRead({ team, fixtures, profiles, league, usedFdr, n }: {
+  team: string
+  fixtures: { gw: number; opponent: string; venue: 'H' | 'A'; diff: number }[]
+  profiles: Map<string, Profile>; league: Profile; usedFdr: boolean; n: number
+}) {
+  const read = fixtureRead(fixtures, profiles, league)
   return (
     <div className="text-sm text-ink-2">
       <div className="mb-1 flex items-center gap-2 font-semibold text-ink"><TeamBadge team={team} size={15} />Next {n}: {teamLabel(team)}</div>
-      {read ? <p>{read}</p> : <p className="text-ink-3">No shot-concession data for these opponents yet — difficulty is from team strength only.</p>}
+      {read ? <p>{read}</p> : <p className="text-ink-3">No fixtures in this window.</p>}
       {usedFdr && <p className="mt-1 text-xs text-ink-3">Some opponents have no rating yet (promoted / pre-season); those fixtures use FPL’s FDR.</p>}
     </div>
   )
