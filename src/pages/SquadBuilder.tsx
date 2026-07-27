@@ -267,12 +267,18 @@ export default function SquadBuilder() {
     // in the list (so the reason stays visible) but let the affordable ones
     // rise to the top rather than sitting 40 rows down.
     if (openPlaces > 0) {
-      const legal = (r: RatingRow) => (planner.canFill(r.element) == null ? 0 : 1)
-      sorted.sort((a, b) => legal(a) - legal(b))
+      // Whoever you just sold goes to the top, not the bottom. He can't be
+      // signed back, so the affordability sort was burying him past the
+      // sixty-row cut and he vanished from the list entirely — along with any
+      // sign that he'd gone anywhere. Everyone you can actually sign comes
+      // next, and the rest after.
+      const bucket = (r: RatingRow) =>
+        planner.pendingOut.includes(r.element) ? 0 : planner.canFill(r.element) == null ? 1 : 2
+      sorted.sort((a, b) => bucket(a) - bucket(b))
     }
     return sorted.slice(0, 60)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pool, pickPos, query, sort, maxPrice, minRating, minDim, dims, openPlaces, plannerSquad])
+  }, [pool, pickPos, query, sort, maxPrice, minRating, minDim, dims, openPlaces, planner.pendingOut, plannerSquad])
 
   const activeFilters = (maxPrice < PRICE_MAX ? 1 : 0) + (minRating > 0 ? 1 : 0) + dims.filter((d) => (minDim[d.key] ?? 0) > 0).length
   const resetFilters = () => { setMaxPrice(PRICE_MAX); setMinRating(0); setMinDim({}) }
@@ -401,7 +407,11 @@ export default function SquadBuilder() {
           {note && <div className="mb-2 rounded-lg bg-bad/10 px-3 py-2 text-sm font-medium text-bad">{note}</div>}
           <div className="overflow-hidden rounded-xl border border-line lg:max-h-[calc(100vh-260px)] lg:overflow-y-auto">
             {list.map((r) => {
-              const inSquad = plannerSquad.includes(r.element)
+              // A player on the market is still yours until someone replaces
+              // him, so the list has to say so rather than showing him as a
+              // free agent.
+              const onMarket = complete && planner.pendingOut.includes(r.element)
+              const inSquad = plannerSquad.includes(r.element) || onMarket
               // With places open on the pitch, signing straight into one is
               // the whole point — the money from every sale is already pooled.
               const filling = complete && openPlaces > 0
@@ -416,7 +426,11 @@ export default function SquadBuilder() {
                     <button className="block w-full text-left" onClick={() => navigate(playerHref(String(r.web_name), num(r, 'code')))}>
                       <div className="flex items-center gap-1.5">
                         <span className="truncate text-sm font-medium text-ink hover:text-accent">{String(r.web_name)}</span>
-                        {inSquad && <span className="shrink-0 rounded bg-surface-3 px-1 py-0.5 text-[8.5px] leading-none font-bold text-ink-3">IN SQUAD</span>}
+                        {inSquad && (
+                          <span className={`shrink-0 rounded px-1 py-0.5 text-[8.5px] leading-none font-bold ${onMarket ? 'bg-bad/15 text-bad' : 'bg-surface-3 text-ink-3'}`}>
+                            {onMarket ? 'SOLD' : 'IN SQUAD'}
+                          </span>
+                        )}
                         {(() => {
                           const f = availBadge(availFor(avail, num(r, 'element'), num(r, 'code')))
                           return f ? <span title={f.title} className={`shrink-0 rounded px-1 py-0.5 text-[8.5px] leading-none font-extrabold ${f.tone === 'bad' ? 'bg-bad text-white' : 'bg-warn text-black'}`}>{f.label}</span> : null

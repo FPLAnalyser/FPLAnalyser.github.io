@@ -134,6 +134,11 @@ export function usePlanner({ base, byEl, startGw, fixtureEase }: {
   const canFill = (inEl: number): string | null => {
     if (!week) return 'No gameweek in view'
     if (squad.includes(inEl)) return 'Already in your squad'
+    // Selling a player takes him out of the squad, which briefly made him
+    // look like a signing — the list offered him for his own empty place and
+    // the transfer resolved to out === in, costing a move and changing
+    // nothing. Keeping him is what that action is called.
+    if (pendingOut.includes(inEl)) return 'You just sold him — keep him instead'
     const openHere = pendingOut.filter((e) => posOf(e) === posOf(inEl))
     if (!openHere.length) return `No empty ${posOf(inEl)} place — sell one first`
     const clubs = squad.filter((e) => teamOf(e) === teamOf(inEl)).length
@@ -144,6 +149,7 @@ export function usePlanner({ base, byEl, startGw, fixtureEase }: {
 
   const canReplace = (outEl: number, inEl: number): string | null => {
     if (squad.includes(inEl)) return 'Already in your squad'
+    if (pendingOut.includes(inEl)) return 'You just sold him — keep him instead'
     if (posOf(inEl) !== posOf(outEl)) return `Must be a ${posOf(outEl)}`
     const clubs = squad.filter((e) => teamOf(e) === teamOf(inEl) && e !== outEl).length
     if (clubs >= MAX_PER_CLUB) return `Max ${MAX_PER_CLUB} from that club`
