@@ -21,7 +21,7 @@ const POS_ORDER = ['GKP', 'DEF', 'MID', 'FWD'] as const
  * dugout beneath it, and every action on a player one tap away. State lives in
  * usePlanner so the list beside the board can transfer into it.
  */
-export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onArmTransfer, armedOut, squadScore, onOpenSquadRating, partialSquad, onPickSlot, onAutoPick, read }: {
+export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onArmTransfer, armedOut, squadScore, onOpenSquadRating, partialSquad, onPickSlot, onAutoPick, read, footer }: {
   planner: Planner
   byEl: Map<number, RatingRow>
   pool: RatingRow[]
@@ -44,6 +44,10 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
   onAutoPick?: () => void
   /** The read on the squad, rendered high on the page where it's seen. */
   read?: React.ReactNode
+  /** Squad-level actions (share, clear) — under the bench rather than in a
+   *  band of their own above the board, which spent a whole section on two
+   *  buttons you only reach for once the fifteen is built. */
+  footer?: React.ReactNode
 }) {
   const xpModel = useXpModel()
   const market = useMarketOdds()
@@ -241,6 +245,8 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
               ? card(slot.el, true)
               : <EmptySlot key={`be${j}`} pos={slot.pos} onClick={() => onPickSlot?.(slot.pos)} />))}
       </BenchSpine>
+
+      {footer && <div className="mx-auto mt-3" style={{ maxWidth: 660 }}>{footer}</div>}
 
       {sheet != null && rowOf(sheet) && week && (
         <PlayerCardSheet

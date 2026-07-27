@@ -273,20 +273,6 @@ export default function SquadBuilder() {
       <SectionBanner imgKey="squad" title="Squad Builder" subtitle={`Pick your Gameweek ${buildGw} fifteen within £100m, then step forward week by week — transfers, captain and chips`} />
 
       <>
-      {/* Share and clear sit beside the board; auto pick lives on the board
-          itself, and a "valid squad" badge only repeated what 15/15 says. */}
-      {total > 0 && (
-        <div className="mx-auto mb-3 flex max-w-[660px] flex-wrap items-center gap-2">
-          <button onClick={() => setShareOpen(true)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-line-mid px-3.5 text-sm font-medium text-ink transition-colors hover:border-line-strong">
-            <Icon name="trend-up" size={14} /> Share / download
-          </button>
-          <button onClick={clear} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-line-mid px-3.5 text-sm font-medium text-ink-2 transition-colors hover:border-line-strong hover:text-ink">
-            <Icon name="x" size={14} /> Clear
-          </button>
-          {complete && !valid && <span className="text-sm font-medium text-bad">Over budget by £{Math.abs(remaining).toFixed(1)}m</span>}
-        </div>
-      )}
-
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
         {/* The board — the same object from an empty squad to a full one:
             unfilled places are just empty slots you tap to fill. */}
@@ -305,6 +291,19 @@ export default function SquadBuilder() {
             onPickSlot={(p) => { setPickPos(p as Pos); setQuery(''); setNote(null) }}
             onAutoPick={complete ? planner.autoXI : autoPick}
             read={<SquadRead chosen={liveChosen} fixtureEase={fixtureEase} gw={liveGw} avail={avail} onOpen={() => setRatingOpen(true)} />}
+            footer={total > 0 ? (
+              /* Under the board, not above it: you share a squad once you've
+                 built one, so these were spending a whole band on nothing. */
+              <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3">
+                <button onClick={() => setShareOpen(true)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-line-mid px-3.5 text-sm font-medium text-ink transition-colors hover:border-line-strong">
+                  <Icon name="trend-up" size={14} /> Share / download
+                </button>
+                <button onClick={clear} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-line-mid px-3.5 text-sm font-medium text-ink-2 transition-colors hover:border-line-strong hover:text-ink">
+                  <Icon name="x" size={14} /> Clear
+                </button>
+                {complete && !valid && <span className="text-sm font-medium text-bad">Over budget by £{Math.abs(remaining).toFixed(1)}m</span>}
+              </div>
+            ) : null}
             onArmTransfer={(el) => { setArmedOut(el); setPendingIn(null); setPickPos(String(byEl.get(el)?.position ?? 'MID') as Pos); setQuery('') }}
           />
         </div>
