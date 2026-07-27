@@ -482,16 +482,19 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
         </span>
         {/* The armband rides with the name rather than hanging off the
             corner, which is where the neighbouring card's controls reach. */}
-        <span className="capture-line mt-1 block w-full truncate text-[9.5px] leading-tight font-bold text-white sm:text-[11px]">
+        {/* Flex rather than a truncating text line: `truncate` clips
+            anything taller than the line box, which sliced the top and
+            bottom off the armband. Only the name truncates now. */}
+        <span className="capture-line mt-1 flex w-full items-center justify-center gap-1 text-[9.5px] leading-tight font-bold text-white sm:text-[11px]">
           {(captain || vice) && (
             <span
               title={captain && tripleCap ? 'Triple captain' : captain ? 'Captain' : 'Vice-captain'}
-              className={`mr-1 inline-grid h-[13px] min-w-[13px] translate-y-[1px] place-items-center rounded-full px-[3px] text-[8.5px] leading-none font-black sm:h-[15px] sm:min-w-[15px] sm:text-[9.5px] ${
-                captain ? 'bg-accent text-accent-contrast' : 'bg-white/80 text-black'
+              className={`grid h-[14px] min-w-[14px] shrink-0 place-items-center rounded-full px-[3px] text-[8.5px] leading-none font-black sm:h-4 sm:min-w-4 sm:text-[9.5px] ${
+                captain ? 'bg-accent text-accent-contrast' : 'bg-white/85 text-black'
               }`}
             >{captain ? (tripleCap ? '3×' : 'C') : 'V'}</span>
           )}
-          {name}
+          <span className="truncate">{name}</span>
         </span>
         <span className="mt-0.5 block w-full truncate rounded px-1 text-[8.5px] font-bold sm:text-[9px]" style={{ background: bg, color: fg }}>{next ? `${next.opponent} (${next.venue})` : 'No game'}</span>
         {fixtures.length > 1 && (

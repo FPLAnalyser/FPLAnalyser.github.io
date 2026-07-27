@@ -94,11 +94,15 @@ function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: 
   return out
 }
 
-export function Exportable({ title, filename, children, className }: {
+export function Exportable({ title, filename, children, className, toolbar }: {
   title: string
   filename?: string
   children: ReactNode
   className?: string
+  /** Controls to sit on the same line as the Share button. Without this the
+   *  button gets a row of its own, which on a crowded panel is a whole line
+   *  of height spent on one small control. */
+  toolbar?: ReactNode
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
@@ -148,10 +152,11 @@ export function Exportable({ title, filename, children, className }: {
 
   return (
     <div className={`relative ${className ?? ''}`}>
-      <div className="mb-1.5 flex justify-end">
+      <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+        {toolbar}
         <button
           onClick={() => setOpen((o) => !o)}
-          className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-line-mid px-2.5 text-[12px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+          className="ml-auto inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg border border-line-mid px-2.5 text-[12px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
           aria-expanded={open}
         >
           <Icon name="users" size={13} /> Share

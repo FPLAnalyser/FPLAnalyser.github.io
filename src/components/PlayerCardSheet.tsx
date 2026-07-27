@@ -83,6 +83,29 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap, ac
   const navigate = useNavigate()
   const [tab, setTab] = useState<'rating' | 'compare'>('rating')
   const avail = useAvailability()
+
+  /** Rendered inside the export toolbar so the tabs and Share share a line. */
+  const tabs = (
+    <>
+      {([['rating', 'Rating'], ['compare', 'Compare']] as const).map(([id, label]) => (
+        <button
+          key={id}
+          onClick={() => setTab(id)}
+          className={`min-h-8 rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${
+            tab === id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+      <button
+        onClick={() => navigate(playerHref(String(player.web_name), num(player, 'code')))}
+        className="min-h-8 rounded-full border border-line-mid px-3.5 text-[13px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+      >
+        Profile ↗
+      </button>
+    </>
+  )
   const [show, setShow] = useState<'rating' | 'xpts'>('rating')
   const [rivalId, setRivalId] = useState<number | null>(null)
 
@@ -167,30 +190,12 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap, ac
         )}
         <div className="min-h-0 flex-1 overflow-y-auto">
 
-        {/* tabs */}
-        <div className="flex flex-wrap gap-1.5 border-b border-line px-4 py-2.5">
-          {([['rating', 'Rating'], ['compare', 'Compare']] as const).map(([id, label]) => (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              className={`min-h-8 rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${
-                tab === id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-          <button
-            onClick={() => navigate(playerHref(String(player.web_name), num(player, 'code')))}
-            className="min-h-8 rounded-full border border-line-mid px-3.5 text-[13px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
-          >
-            Full profile ↗
-          </button>
-        </div>
-
-        <div className="px-4 py-4">
+        {/* The tabs ride on the same line as the Share button rather than
+            taking one of their own — three rows of controls above a panel
+            was more furniture than content. */}
+        <div className="px-4 pt-3 pb-4">
           {tab === 'rating' ? (
-            <Exportable title={`${player.web_name} — rating breakdown`}>
+            <Exportable title={`${player.web_name} — rating breakdown`} toolbar={tabs}>
               <div className="rounded-xl border border-line bg-surface-1 p-3.5">
                 <div className="mb-2.5 text-[11px] font-extrabold tracking-[0.2em] text-accent uppercase">What the {rating ?? '—'} is made of</div>
                 <div className="grid gap-2">
@@ -226,7 +231,7 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap, ac
               </div>
             </Exportable>
           ) : rival ? (
-            <Exportable title={`${player.web_name} vs ${rival.web_name}`}>
+            <Exportable title={`${player.web_name} vs ${rival.web_name}`} toolbar={tabs}>
               <div className="rounded-xl border border-line bg-surface-1 p-3.5">
                 <div className="mb-3 grid grid-cols-[1fr_44px_1fr] items-center gap-2">
                   <div className="text-center">
