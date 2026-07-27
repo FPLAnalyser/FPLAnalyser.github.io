@@ -653,7 +653,7 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, ca
         code={num(r, 'code')}
         element={num(r, 'element')}
         flag={avail ? availBadge(availFor(avail, num(r, 'element'), num(r, 'code'))) : null}
-        fixtures={<FixtureNames fixtureEase={fixtureEase} team={String(r.team)} n={3} fromGw={gw} />}
+        fixtures={<FixtureNames fixtureEase={fixtureEase} team={String(r.team)} n={capture ? 1 : 3} fromGw={gw} />}
         onClick={capture ? undefined : () => onOpen?.(r)}
       />
       {onRemove && !capture && (
@@ -756,7 +756,7 @@ function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, open,
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="font-display text-lg leading-none whitespace-nowrap">FPL <span style={{ color: '#c9a227' }}>Analyser</span><div className="mt-1 text-[10px] font-semibold tracking-[0.14em] uppercase" style={{ color: '#8a8172' }}>My GW{gw} Squad</div></div>
             <div className="flex gap-4 text-center">
-              <div><div className="font-display text-2xl leading-none tabular-nums" style={{ color: '#c9a227' }}>{squadScore ?? '—'}</div><div className="text-[9px] tracking-[0.1em] whitespace-nowrap uppercase" style={{ color: '#8a8172' }}>Squad</div></div>
+              <div><div className="font-display text-2xl leading-none tabular-nums" style={{ color: '#c9a227' }}>{squadScore ?? '—'}</div><div className="text-[9px] tracking-[0.1em] whitespace-nowrap uppercase" style={{ color: '#8a8172' }}>Squad rating</div></div>
             </div>
           </div>
           <SquadBoard chosen={chosen} fixtureEase={fixtureEase} capture />
