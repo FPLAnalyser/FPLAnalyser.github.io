@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { FixtureChips } from './FixtureChips'
 import { PlayerPhoto } from './PlayerPhoto'
 import { num, str } from '../lib/rows'
+import { windowGames } from '../lib/fixtureRuns'
 import { playerHref } from '../lib/util'
 import type { CoreData, FixtureEaseRow, RatingRow, Row, TeamRatingRow } from '../lib/types'
 
@@ -84,16 +85,6 @@ function BuyRow({ p, why, onOpen }: { p: RatingRow; why: string; onOpen: () => v
 /** Games in a team-metrics window, so totals can normalise to per-game. The
  * season window carries season totals; 4gw/6gw windows carry 4/6-game
  * totals. Never show a window total as a rate — that's the 48.8-xG/game bug. */
-export function windowGames(metrics: Row | null, data: CoreData): number {
-  if (!metrics) return 1
-  const g = num(metrics, 'games')
-  if (g != null && g > 0) return g
-  const w = str(metrics, 'window')
-  if (w === '4gw') return 4
-  if (w === '6gw') return 6
-  const nextGw = data.meta?.next_gw != null ? Number(data.meta.next_gw) : null
-  return nextGw != null && !isNaN(nextGw) && nextGw > 1 ? Math.min(38, nextGw - 1) : 38
-}
 
 /** Rank → verdict tier. The single source of truth for "good": the verdict
  * sentence, the decision cells and the route-in all read from here. */

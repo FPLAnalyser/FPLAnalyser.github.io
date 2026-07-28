@@ -18,7 +18,9 @@ import { FixtureChips } from '../components/FixtureChips'
 import { TeamShotMap } from '../components/ShotMap'
 import { PageSkeleton } from '../components/Skeleton'
 import { Icon } from '../components/Icon'
+import { BestRuns } from '../components/BestRuns'
 import { useCore } from '../lib/useData'
+import { bestRuns, useDiffScale } from '../lib/fixtureRuns'
 import { num, str, bool } from '../lib/rows'
 import { teamFullNames, teamLabel, TOOLTIPS } from '../lib/util'
 import type { CoreData, FixtureEaseRow, RatingRow, Row, TeamRatingRow } from '../lib/types'
@@ -236,6 +238,9 @@ function TeamReceipts({ team, data, season, gw4, ratingByTeam, metricRows, ratin
           <ClubCard team={team} season={season} gw4={gw4} fixtureEase={fixtureEase} />
           <div className="flex flex-col gap-3">
             <TeamMatchup team={team} ratingByTeam={ratingByTeam} fixtureEase={fixtureEase} />
+            {/* When this club's good weeks actually fall — the half of the
+                fixture question a next-six ticker structurally cannot answer. */}
+            <SeasonRuns team={team} data={data} fixtureEase={fixtureEase} />
             <PointsMix team={team} data={data} />
           </div>
         </div>
@@ -244,6 +249,22 @@ function TeamReceipts({ team, data, season, gw4, ratingByTeam, metricRows, ratin
       )}
       </Exportable>
     </div>
+  )
+}
+
+/* A club's two purple patches — the kindest 3–6 gameweek stretch either side
+   of the turn of the year. Overall lens: the team page speaks for the whole
+   club rather than for its attackers or its defence, and a manager reading it
+   wants to know when the good weeks are, not which end of the pitch they
+   favour. */
+function SeasonRuns({ team, data, fixtureEase }: { team: string; data: CoreData; fixtureEase: FixtureEaseRow[] }) {
+  const scale = useDiffScale(data)
+  const runs = useMemo(() => bestRuns(fixtureEase, team, 'overall', scale), [fixtureEase, team, scale])
+  if (!runs.length) return null
+  return (
+    <Section title="Best Runs of the Season" hint={runs.length > 1 ? 'One each half' : 'Rest of season'}>
+      <BestRuns runs={runs} />
+    </Section>
   )
 }
 

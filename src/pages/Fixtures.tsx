@@ -9,11 +9,12 @@ import { Icon } from '../components/Icon'
 import { PageSkeleton } from '../components/Skeleton'
 import { useCore, useLazyTable } from '../lib/useData'
 import { classifyZone, toPitch } from '../lib/shotzones'
-import { windowGames } from '../components/TeamStory'
 import { Exportable } from '../components/ExportPanel'
 import { num, str } from '../lib/rows'
 import { useMarketOdds, type MarketOdds } from '../lib/xp'
 import { teamLabel, playerHref } from '../lib/util'
+import { analyserDiff, bandOf, bestRuns, buildDiffScale, diffFill, windowGames, type Lens, type TeamBase } from '../lib/fixtureRuns'
+import { BestRuns } from '../components/BestRuns'
 import type { FixtureEaseRow, RatingRow, Row } from '../lib/types'
 
 /* ── Difficulty model ────────────────────────────────────────────────────────
@@ -51,10 +52,6 @@ const MODE_TIP: Record<GridMode, string> = {
   cs: 'The chance of a clean sheet in each fixture: projected goals conceded (opponent xG/game × our concession rate vs the league × venue) turned into a shutout probability (Poisson, e^−λ). The Σ column sums the probabilities — the number of clean sheets to expect over the window.',
 }
 
-/** Per-game attacking/defensive baselines (Understat chance quality), plus
- * the league means — the inputs to the fixture projections. */
-interface TeamBase { xg: number; xgc: number }
-
 /** The two goal expectancies for one side of one fixture — how many they
  *  should score, how many they should concede. Every grid and every sentence
  *  on this page is derived from this one pair, so the difficulty colour, the
@@ -89,7 +86,6 @@ const mktOf = (market: MarketOdds | null, team: string, f: { gw: number; opponen
 /* Our own fixture difficulty is driven by opponent strength from our team
    ratings, split into three lenses. It falls back to FPL's FDR only when the
    opponent has no rating yet (e.g. a newly promoted club, pre-season). */
-type Lens = 'overall' | 'attack' | 'defence'
 const LENS_TABS: TabDef[] = [
   { id: 'overall', label: 'Overall' },
   { id: 'attack', label: 'Attack' },
@@ -99,75 +95,6 @@ const LENS_TIP: Record<Lens, string> = {
   overall: 'Our own difficulty (1 = easy … 5 = hard): the average of the Attack and Defence reads — a single score for the run.',
   attack: "How kind the fixture is for this team's ATTACKERS — set by the goals they're expected to score in it. Expected to score more than most fixtures in the table → easier.",
   defence: "How kind the fixture is for this team's DEFENCE and keeper (clean-sheet odds) — set by the goals they're expected to concede in it. Expected to concede fewer than most fixtures in the table → easier.",
-}
-
-/** Our own 1 (easy) … 5 (hard) fixture difficulty: how strong the opponent is
- *  at the end of the pitch this lens cares about, plus a venue nudge. Falls
- *  back to FPL's FDR only when we have no baseline for the opponent at all. */
-function analyserDiff(opp: string, lens: Lens, venue: 'H' | 'A', fdr: number, scale: DiffScale | null): { diff: number; ours: boolean } {
-  const a = scale?.attackDiff(opp)
-  const d = scale?.defenceDiff(opp)
-  if (a == null || d == null) return { diff: fdr, ours: false }
-  const base = lens === 'attack' ? a : lens === 'defence' ? d : (a + d) / 2
-  return { diff: Math.max(1, Math.min(5, base + (venue === 'H' ? -0.25 : 0.25))), ours: true }
-}
-
-/** −1 (well under a normal fixture) … +1 (well over) → one of five washes.
- *  Every grid on this page shares it, so a green cell means the same thing
- *  whichever tab you're on. */
-export function bandOf(t: number): string {
-  const [hue, pct] =
-    t <= -0.6 ? ['--bad', 34] : t <= -0.2 ? ['--warn', 26] :
-    t < 0.2 ? ['--warn', 9] : t < 0.6 ? ['--good', 24] : ['--good', 42]
-  return `color-mix(in srgb, var(${hue}) ${pct}%, transparent)`
-}
-
-/** Difficulty already runs on a fixed 1–5 with 3 as the average fixture, so it
- *  needs no percentile step — it just points the other way, 1 being the good
- *  end. */
-export const diffFill = (d: number): string => bandOf(Math.max(-1, Math.min(1, (3 - d) / 2)))
-
-/* ── The difficulty scale ────────────────────────────────────────────────────
-   Two goes at this were wrong in opposite directions, and both showed up as a
-   grid you couldn't read.
-
-   It first ranked the opponent on our 0–100 team ratings — but only over the
-   clubs that HAVE a season rating, and the three promoted sides don't.
-   Whichever rated club sat bottom was pinned to the floor of the scale. That
-   was Fulham, so everyone who played them got a 1.0, promoted clubs included.
-
-   Rating the whole matchup instead fixed Fulham but swapped one flattening for
-   another: difficulty then tracked how good YOU are as much as who you play,
-   so Arsenal's next eight ran 1.1 to 1.9 and Hull's 4.2 to 4.9 — a club's
-   entire run in one colour, and Arsenal at Villa indistinguishable from
-   Arsenal against Chelsea.
-
-   So: the opponent's strength, which is what a fixture ticker means, ranked
-   over a population that finally holds all twenty clubs. The goal baselines
-   cover the promoted sides through the odds layer, which is exactly what the
-   team ratings could not. Against the real fixture list that lifts the average
-   club's run from a 2.2 spread to 3.3, and the most compressed club in the
-   league from 0.7 to 2.3. */
-export interface DiffScale { attackDiff: (opp: string) => number | null; defenceDiff: (opp: string) => number | null }
-
-export function buildDiffScale(baselines: Map<string, TeamBase>): DiffScale | null {
-  const clubs = [...baselines.values()]
-  if (clubs.length < 8) return null
-  const xg = clubs.map((c) => c.xg).sort((a, b) => a - b)
-  const xgc = clubs.map((c) => c.xgc).sort((a, b) => a - b)
-  const pctIn = (arr: number[]) => (v: number) => {
-    let lo = 0, hi = arr.length
-    while (lo < hi) { const mid = (lo + hi) >> 1; if (arr[mid] < v) lo = mid + 1; else hi = mid }
-    return lo / (arr.length - 1)
-  }
-  const pXg = pctIn(xg)
-  const pXgc = pctIn(xgc)
-  return {
-    // Our attack is judged on how freely they concede; our defence on how much
-    // they score. Both read off the same twenty-club distribution.
-    attackDiff: (opp) => { const o = baselines.get(opp); return o ? 5 - 4 * pXgc(o.xgc) : null },
-    defenceDiff: (opp) => { const o = baselines.get(opp); return o ? 1 + 4 * pXg(o.xg) : null },
-  }
 }
 
 /** The scouting read on a team's upcoming run.
@@ -461,6 +388,7 @@ export default function Fixtures() {
             <FixtureGrid key={mode} fixtureEase={fixtureEase} windowN={windowN} lens={lens} mode={mode} baselines={baselines} leagueBase={leagueBase} profiles={profiles} league={league} />
             </Exportable>
             <ChipPlanner fixtureEase={fixtureEase} ratings={data.ratings as RatingRow[]} />
+            <SeasonRunsBoard fixtureEase={fixtureEase} lens={lens} baselines={baselines} />
           </>
         ) : (
           <EmptyState icon={<Icon name="calendar" size={44} />}>
@@ -478,6 +406,54 @@ export default function Fixtures() {
         <MatchupExplorer ratings={data.ratings as RatingRow[]} />
       )}
     </PageShell>
+  )
+}
+
+/* ── Best runs of the season, every club ─────────────────────────────────
+   The grid above answers "who has the kindest next six". This answers the
+   other half of the question — when each club's good weeks actually fall —
+   which is what you plan a wildcard or a bench slot around. Sorted by club
+   name so you can find one, rather than by quality, which would make it a
+   second leaderboard of the same twenty teams. */
+function SeasonRunsBoard({ fixtureEase, lens, baselines }: {
+  fixtureEase: FixtureEaseRow[]
+  lens: Lens
+  baselines: Map<string, TeamBase>
+}) {
+  const scale = useMemo(() => buildDiffScale(baselines), [baselines])
+  const rows = useMemo(() => {
+    const teams = [...new Set(fixtureEase.map((f) => String(f.team)))].sort()
+    return teams
+      .map((team) => ({ team, runs: bestRuns(fixtureEase, team, lens, scale) }))
+      .filter((r) => r.runs.length > 0)
+  }, [fixtureEase, lens, scale])
+
+  if (!rows.length) return null
+  const spansSeason = rows.some((r) => r.runs.length > 1)
+
+  return (
+    <div className="mt-8">
+      <div className="mb-1 flex items-center gap-2">
+        <h3 className="text-sm font-semibold tracking-wide text-ink uppercase">Best Runs of the Season</h3>
+        <InfoTip text="Each club's kindest stretch of 3–6 consecutive gameweeks, one before the turn of the year and one after. Runs are picked on total advantage over an average fixture across the whole stretch, not on average difficulty — otherwise a single home banker would beat any four games ever assembled. A gameweek with no fixture ends a run." />
+      </div>
+      <p className="mb-4 text-xs text-ink-2">
+        {spansSeason
+          ? 'The kindest 3–6 gameweek stretch in each half of the season.'
+          : 'The kindest 3–6 gameweek stretch left in the season.'}
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {rows.map(({ team, runs }) => (
+          <div key={team} className="rounded-xl border border-line bg-surface-1/50 p-3">
+            <div className="mb-2 flex items-center gap-1.5">
+              <TeamBadge team={team} size={16} />
+              <span className="text-[13px] font-extrabold text-ink">{teamLabel(team)}</span>
+            </div>
+            <BestRuns runs={runs} />
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
