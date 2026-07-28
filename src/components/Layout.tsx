@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { BrandMark } from './BrandMark'
 import { Icon } from './Icon'
 import { OnboardingModal } from './OnboardingModal'
 import { ThemeSwitcher } from './ThemeSwitcher'
@@ -47,7 +46,6 @@ export function Layout() {
       >
         <div className="mx-auto flex h-14 max-w-[1760px] items-center gap-2 px-3 md:h-[70px] md:px-6">
           <NavLink to="/" end className="flex shrink-0 items-center gap-2 leading-none md:gap-2.5" aria-label="FPL Analyser — home">
-            <BrandMark className="h-9 w-9 md:h-11 md:w-11" />
             <span className="flex flex-col justify-center">
               <span className="font-brand text-[15px] font-normal tracking-[0.045em] text-ink sm:text-[17px] md:text-xl">
                 <span className="metallic-num font-medium">FPL</span> Analyser

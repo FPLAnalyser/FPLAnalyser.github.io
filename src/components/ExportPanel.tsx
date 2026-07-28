@@ -2,8 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Icon } from './Icon'
 import { shareImageNative } from '../lib/native'
 import { rasterise } from '../lib/capture'
-import { BRAND, X_HANDLE, IG_HANDLE, drawXMark, drawInstagramMark, loadBrandMark } from '../lib/social'
-import { MARK_SRC } from './BrandMark'
+import { BRAND, X_HANDLE, IG_HANDLE, drawXMark, drawInstagramMark } from '../lib/social'
 
 /* ════════════════════════════════════════════════════════════════════════
    Share anything: wrap a table or chart in <Exportable> and it gains a
@@ -29,7 +28,7 @@ const FORMATS: { id: Format; label: string; hint: string; w: number; h: number |
 ]
 
 /** Draw the captured panel onto a branded canvas of the chosen aspect. */
-function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: string, dark: boolean, mark: HTMLImageElement | null): HTMLCanvasElement {
+function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: string, dark: boolean): HTMLCanvasElement {
   const out = document.createElement('canvas')
   out.width = fmt.w
   // Auto: chrome + the panel at full width, so nothing is ever shrunk.
@@ -59,12 +58,6 @@ function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: 
   ctx.textAlign = 'right'
   ctx.fillText(SITE_NAME, out.width - pad, headY)
   ctx.textAlign = 'left'
-  if (mark) {
-    const ms = Math.round(out.width * 0.046)
-    const gap = Math.round(out.width * 0.011)
-    const w = ctx.measureText(SITE_NAME).width
-    ctx.drawImage(mark, out.width - pad - w - gap - ms, headY - ms * 0.78, ms, ms)
-  }
 
   // Panel, centred and scaled to fit between header and footer.
   const top = headY + Math.round(out.width * 0.028)
@@ -108,13 +101,7 @@ function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: 
   ctx.fillStyle = '#c9a227'
   ctx.textBaseline = 'middle'
   ctx.textAlign = 'left'
-  let brandX = pad
-  if (mark) {
-    const ms = Math.round(out.width * 0.052)
-    ctx.drawImage(mark, brandX, mid - ms / 2, ms, ms)
-    brandX += ms + Math.round(out.width * 0.011)
-  }
-  ctx.fillText(SITE_NAME, brandX, mid)
+  ctx.fillText(SITE_NAME, pad, mid)
 
   // Measured, then laid out right-to-left, so both accounts sit against the
   // right margin however wide the frame is.
@@ -169,8 +156,7 @@ export function Exportable({ title, filename, children, className, toolbar }: {
       const dark = document.documentElement.dataset.mode !== 'light'
       const shot = await rasterise(ref.current, dark)
       const spec = FORMATS.find((f) => f.id === fmt)!
-      const mark = await loadBrandMark(MARK_SRC)
-      const canvas = brand(shot, spec, title, dark, mark)
+      const canvas = brand(shot, spec, title, dark)
       const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, 'image/png'))
       if (!blob) throw new Error('render failed')
       const name = `${filename ?? title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${fmt}.png`

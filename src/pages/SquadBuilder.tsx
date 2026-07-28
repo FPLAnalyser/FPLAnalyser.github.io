@@ -7,7 +7,6 @@ import { PageSkeleton } from '../components/Skeleton'
 import { Tabs, type TabDef } from '../components/Tabs'
 import { TeamBadge } from '../components/badges'
 import { FixtureChips, FixtureNames } from '../components/FixtureChips'
-import { BrandMark } from '../components/BrandMark'
 import { ShareFooter } from '../components/ShareFooter'
 import { SeasonPlanner } from '../components/SeasonPlanner'
 import { SquadLab } from '../components/SquadLab'
@@ -890,7 +889,6 @@ function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, lineu
         <div ref={ref} className="rounded-3xl bg-[#0c0b09] p-4" style={{ color: '#f4efe3' }}>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <BrandMark size={38} />
               <div className="font-brand text-lg leading-none font-normal tracking-[0.08em] whitespace-nowrap">FPL <span style={{ color: '#c9a227' }}>Analyser</span></div>
               {/* Gameweek and chip ride beside the wordmark rather than under
                   it — one line of brand, one row of what this picture is. */}

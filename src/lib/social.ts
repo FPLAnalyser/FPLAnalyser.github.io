@@ -10,27 +10,6 @@ export const BRAND = 'FPL Analyser'
 export const X_HANDLE = '@FPLAnalyser'
 export const IG_HANDLE = 'fpl_analyser'
 
-/** The FA monogram, loaded once and reused.
- *
- *  Same-origin, so the canvas it is drawn onto stays readable — a mark
- *  pulled from anywhere else would taint it and the export would fail at
- *  `toBlob`. Resolves to null rather than rejecting: a missing logo should
- *  cost the image its badge, not the whole share. */
-let markLoad: Promise<HTMLImageElement | null> | null = null
-export function loadBrandMark(src: string): Promise<HTMLImageElement | null> {
-  if (!markLoad) {
-    markLoad = new Promise((resolve) => {
-      const img = new Image()
-      let settled = false
-      const finish = (v: HTMLImageElement | null) => { if (!settled) { settled = true; resolve(v) } }
-      img.onload = () => finish(img.naturalWidth > 0 ? img : null)
-      img.onerror = () => finish(null)
-      img.src = src
-      setTimeout(() => finish(null), 4000)
-    })
-  }
-  return markLoad
-}
 
 /** The X mark, on a 24×24 grid. */
 export const X_MARK_PATH =
