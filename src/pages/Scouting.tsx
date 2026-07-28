@@ -94,7 +94,24 @@ function pctColor(p: number | null): string {
   return `rgb(${c[0]},${c[1]},${c[2]})`
 }
 
-interface SelPlayer { element: number; web_name: string; team: string; position: string; minutes: number; code: number | null }
+/** "New club" marker: the numbers on this page predate the move, and that is
+ *  worth one chip rather than a footnote nobody reads. */
+function MovedChip({ from }: { from: string | null }) {
+  if (!from) return null
+  return (
+    <span
+      className="shrink-0 rounded bg-info/26 px-1 py-0.5 text-[10px] leading-none font-extrabold text-ink"
+      title={`New club — the stats here were earned at ${teamFullNames[from] || from}`}
+    >NEW</span>
+  )
+}
+
+interface SelPlayer {
+  element: number; web_name: string; team: string; position: string; minutes: number; code: number | null
+  /** The club these numbers were earned at, when he has since moved. Null for
+   *  everyone who stayed put. */
+  movedFrom: string | null
+}
 
 export default function Scouting() {
   const scoutQ = useLazyTable<Row[]>('scouting')
@@ -208,7 +225,23 @@ export default function Scouting() {
     setSelected((s) => (s.length >= SCOUT_MAX || s.some((x) => x.element === p.element) ? s : [...s, p]))
   }
 
-  // Unique season-window players for the picker.
+  /* Unique season-window players for the picker.
+   *
+   *  The scouting table is built from last season, so it carries last season's
+   *  club — Dubravka still reads Burnley. The ratings table is rebuilt against
+   *  the current squad list, so it knows he's at Spurs. The club shown is
+   *  always the current one; where the two disagree we keep the old name as
+   *  `movedFrom`, because it's the honest caption for every number on the page
+   *  and the trigger for withholding the ones that don't travel. */
+  const teamNow = useMemo(() => {
+    const m = new Map<number, string>()
+    for (const r of (core?.ratings ?? [])) {
+      const el = num(r, 'element')
+      if (el != null && r.team) m.set(el, String(r.team))
+    }
+    return m
+  }, [core])
+
   const pool = useMemo(() => {
     const seen = new Set<number>()
     const out: SelPlayer[] = []
@@ -217,10 +250,16 @@ export default function Scouting() {
       const el = num(r, 'element')
       if (el == null || seen.has(el)) continue
       seen.add(el)
-      out.push({ element: el, web_name: String(r.web_name), team: String(r.team), position: String(r.position), minutes: num(r, 'minutes') ?? 0, code: num(r, 'code') })
+      const was = String(r.team)
+      const now = teamNow.get(el) ?? was
+      out.push({
+        element: el, web_name: String(r.web_name), team: now, position: String(r.position),
+        minutes: num(r, 'minutes') ?? 0, code: num(r, 'code'),
+        movedFrom: now !== was ? was : null,
+      })
     }
     return out
-  }, [scout])
+  }, [scout, teamNow])
 
   const scoutRow = (element: number) => scout.find((p) => num(p, 'element') === element && (str(p, 'window') || 'season') === win) ?? null
   const scoutPct = (row: Row, key: string): number | null => {
@@ -276,7 +315,7 @@ export default function Scouting() {
           renderItem={(p) => (
             <span className="flex w-full items-center justify-between gap-2">
               <span>{p.web_name}</span>
-              <span className="flex items-center gap-1.5 text-xs text-ink-3"><TeamBadge team={p.team} size={12} />{p.team} · {p.position}</span>
+              <span className="flex items-center gap-1.5 text-xs text-ink-3"><TeamBadge team={p.team} size={12} />{p.team}<MovedChip from={p.movedFrom} /> · {p.position}</span>
             </span>
           )}
           onSelect={(p) => setSelected((s) => (s.length >= SCOUT_MAX ? s : [...s, p]))}
@@ -292,7 +331,7 @@ export default function Scouting() {
               <span className="size-2.5 rounded-full" style={{ background: SCOUT_COLORS[i] }} />
               <div className="text-sm">
                 <div className="font-medium text-ink">{p.web_name}</div>
-                <div className="flex items-center gap-1 text-[11px] text-ink-2"><TeamBadge team={p.team} size={10} />{teamFullNames[p.team] || p.team} · {p.position} · {p.minutes} mins</div>
+                <div className="flex items-center gap-1 text-[11px] text-ink-2"><TeamBadge team={p.team} size={10} />{teamFullNames[p.team] || p.team}<MovedChip from={p.movedFrom} /> · {p.position} · {p.minutes} mins</div>
               </div>
               <button aria-label={`Remove ${p.web_name}`} className="ml-1 text-ink-3 hover:text-ink" onClick={() => setSelected((s) => s.filter((x) => x.element !== p.element))}>
                 <Icon name="x" size={14} />
@@ -456,7 +495,7 @@ function Discover({
                 <span className="w-6 shrink-0 text-center font-num text-xs tabular-nums text-ink-3">{idx + 1}</span>
                 <button className="min-w-0 flex-1 text-left" onClick={() => navigate(playerHref(p.web_name, p.code))}>
                   <div className="truncate font-medium text-ink hover:text-accent">{p.web_name}</div>
-                  <div className="flex items-center gap-1.5 truncate text-[11px] text-ink-3"><TeamBadge team={p.team} size={11} />{p.team} · {p.position} · {price != null ? `£${price.toFixed(1)}m` : '—'} · {mins} mins</div>
+                  <div className="flex items-center gap-1.5 truncate text-[11px] text-ink-3"><TeamBadge team={p.team} size={11} />{p.team}<MovedChip from={p.movedFrom} /> · {p.position} · {price != null ? `£${price.toFixed(1)}m` : '—'} · {mins} mins</div>
                 </button>
                 {activeCriteria.length > 0 && (
                   <span className="shrink-0 text-right">
@@ -539,9 +578,16 @@ function ScoutReport({
     const starts = metaOf(sel)?.starts ?? null
     const share = starts == null ? null : starts / 38
 
-    // Availability — the first thing that matters for points.
+    /* Availability — the first thing that matters for points, and the first
+       thing a transfer invalidates. Dubravka started 92% of games at Burnley;
+       at Spurs he is behind two other keepers. Reporting that 92% as "nailed
+       on for Spurs" would be the most damaging sentence on the page, so a
+       mover gets no role claim at all until he has played. We have nothing
+       better to offer either: FPL prices Spurs' three keepers at 4.5, 4.5 and
+       4.0, which says nothing about who starts. */
     let avail: string
-    if (share == null) avail = 'plays for'
+    if (sel.movedFrom) avail = 'has moved to'
+    else if (share == null) avail = 'plays for'
     else if (share >= 0.85) avail = 'is nailed on for'
     else if (share >= 0.6) avail = 'is a regular for'
     else if (share >= 0.35) avail = 'is in and out of'
@@ -549,6 +595,10 @@ function ScoutReport({
 
     const sentences: string[] = []
     const csOdds = td ? (td.shotsPct >= 66 ? 'strong' : td.shotsPct <= 34 ? 'poor' : 'average') : null
+    // Said once, up front: every percentile below was earned somewhere else.
+    const moved = sel.movedFrom
+      ? ` Every number below was earned at ${teamFullNames[sel.movedFrom] || sel.movedFrom} — the shot-level quality travels with him, the minutes and the clean sheets belong to that side, and his role here is unknown until he plays.`
+      : ''
 
     if (sel.position === 'GKP') {
       const busy = (td && td.shotsPct <= 45) || hi('saves', 66)
@@ -587,7 +637,7 @@ function ScoutReport({
       else if (hi('xg_delta', 78)) sentences.push('And has been clinical, converting above his xG.')
       if (sel.position === 'MID' && dc) sentences.push('Chips in defensive-contribution points too — a handy floor for a midfielder.')
     }
-    return sentences.join(' ')
+    return sentences.join(' ') + moved
   }
 
   // Who-wins tally across contested categories.
@@ -731,7 +781,7 @@ function ScoutReport({
             <span key={i} className="flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap text-ink">
               <span className="size-2.5 shrink-0 rounded-full" style={{ background: SCOUT_COLORS[i] }} />
               {s.sel.web_name}
-              <span className="flex items-center gap-1 font-normal text-ink-3"><TeamBadge team={s.sel.team} size={10} />{s.sel.team}</span>
+              <span className="flex items-center gap-1 font-normal text-ink-3"><TeamBadge team={s.sel.team} size={10} />{s.sel.team}<MovedChip from={s.sel.movedFrom} /></span>
             </span>
           ))}
         </div>

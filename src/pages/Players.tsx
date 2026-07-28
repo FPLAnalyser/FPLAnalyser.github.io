@@ -21,6 +21,7 @@ import { useAvailability, availFor, availBadge, SEV_COLOUR, type AvailBadgeInfo 
 import { xpForGw, useXpModel, useMarketOdds, useShotProfiles } from '../lib/xp'
 import { teamFullNames, teamColors, searchText, TOOLTIPS, FDR_COLORS } from '../lib/util'
 import { buildPlayerBundle, buildPlayerVerdict } from '../lib/insights/narrative'
+import { buildMovedFrom } from '../lib/moved'
 import type { CoreData, RatingRow } from '../lib/types'
 
 const personaTip = (name: string): string | undefined => (TOOLTIPS.personas as Record<string, string>)[name]
@@ -464,14 +465,32 @@ function briefLines(r: RatingRow, data: CoreData): BriefLine[] {
   const teamRating = (data.teamRatings ?? []).find((t) => t.team === String(r.team) && str(t, 'window') === 'season')
   const defRank = teamRating ? num(teamRating, 'defence_rank') : null
 
-  // 1 · minutes — the corrected availability-vs-selection read
-  const mr = minutesRead(r)
-  lines.push({ key: 'mins', lead: `${mr.word}.`, tone: mr.tone, receipt: mr.sub })
+  /* 1 · minutes — unless he has just moved, in which case last season's start
+     rate describes a job at a club he has left. Dubravka started 92% of games
+     at Burnley and this line read "Nailed" under a Spurs badge, where he is
+     third choice. There is no honest replacement figure, so the line says what
+     we actually know. */
+  const movedFrom = buildMovedFrom(data).get(Number(r.element)) ?? null
+  if (movedFrom) {
+    lines.push({
+      key: 'mins',
+      lead: `New at ${teamFullNames[String(r.team)] || r.team}.`,
+      tone: 'warn',
+      receipt: `Last season's minutes were at ${teamFullNames[movedFrom] || movedFrom} — his role here is unknown until he plays`,
+    })
+  } else {
+    const mr = minutesRead(r)
+    lines.push({ key: 'mins', lead: `${mr.word}.`, tone: mr.tone, receipt: mr.sub })
+  }
 
   // 2 · position core
   if (pos === 'DEF' || pos === 'GKP') {
     const cs = num(r, 'season_m_cs_rate')
-    if (cs != null) {
+    // A clean-sheet rate is his old defence's record, not his new one. The
+    // rank still belongs here, because that IS the side he plays for now.
+    if (cs != null && movedFrom) {
+      lines.push({ key: 'cs', lead: defRank != null && defRank <= 6 ? 'He joins a strong defence —' : defRank != null && defRank >= 15 ? 'He joins a leaky defence —' : 'A mid-pack defence —', tone: defRank != null && defRank <= 6 ? 'good' : defRank != null && defRank >= 15 ? 'warn' : 'info', rest: defRank != null ? `the league's #${defRank}.` : '', receipt: `His ${Math.round(cs * 100)}% clean-sheet rate was earned at ${teamFullNames[movedFrom] || movedFrom}` })
+    } else if (cs != null) {
       const who = pos === 'GKP' ? 'in front of him' : 'behind him'
       if (defRank != null && defRank <= 6) lines.push({ key: 'cs', lead: `A real clean-sheet floor —`, tone: 'good', rest: `the league's #${defRank} defence plays ${who}.`, receipt: `Clean sheets in ${Math.round(cs * 100)}% of starts` })
       else if (defRank != null && defRank >= 15) lines.push({ key: 'cs', lead: `The clean-sheet case is thin —`, tone: 'warn', rest: `a #${defRank}-ranked defence ${who}.`, receipt: `Clean sheets in just ${Math.round(cs * 100)}% of starts` })
