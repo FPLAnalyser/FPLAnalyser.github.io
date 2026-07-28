@@ -9,12 +9,13 @@ import { InfoTip } from '../components/InfoTip'
 import { Icon } from '../components/Icon'
 import { PageSkeleton } from '../components/Skeleton'
 import { useCore, useLazyTable } from '../lib/useData'
+import { useAvailability } from '../lib/availability'
 import { classifyZone, toPitch } from '../lib/shotzones'
 import { Exportable } from '../components/ExportPanel'
 import { num, str } from '../lib/rows'
 import { useMarketOdds, type MarketOdds } from '../lib/xp'
 import { teamLabel, playerHref } from '../lib/util'
-import { analyserDiff, bandOf, bestRuns, buildDiffScale, diffFill, windowGames, type DiffScale, type Lens, type SeasonRun, type TeamBase } from '../lib/fixtureRuns'
+import { analyserDiff, bandOf, bestRuns, buildDiffScale, diffFill, diffTick, windowGames, type DiffScale, type Lens, type SeasonRun, type TeamBase } from '../lib/fixtureRuns'
 import { useWide } from '../lib/useWide'
 import type { FixtureEaseRow, RatingRow, Row } from '../lib/types'
 
@@ -450,6 +451,8 @@ function RunsTimeline({ fixtureEase, runs, gws, lens, scale }: {
   lens: Lens
   scale: DiffScale | null
 }) {
+  const avail = useAvailability()
+
   const byTeam = useMemo(() => {
     const m = new Map<string, Map<number, { opp: string; venue: 'H' | 'A'; diff: number }>>()
     for (const f of fixtureEase) {
@@ -462,7 +465,21 @@ function RunsTimeline({ fixtureEase, runs, gws, lens, scale }: {
     return m
   }, [fixtureEase, lens, scale])
 
-  // One row per club, carrying every run of its that falls in view.
+  // Month bands, read off the real deadlines rather than assumed — the run
+  // then has a name you would say out loud ("kind through September") instead
+  // of a number you have to count columns to find.
+  const months = useMemo(() => {
+    const out: { label: string; span: number }[] = []
+    for (const gw of gws) {
+      const d = avail.deadlines.get(gw)
+      const label = d ? d.toLocaleString('en-GB', { month: 'short' }).toUpperCase() : ''
+      const last = out[out.length - 1]
+      if (last && last.label === label) last.span += 1
+      else out.push({ label, span: 1 })
+    }
+    return out.some((m) => m.label) ? out : null
+  }, [gws, avail.deadlines])
+
   const rows = useMemo(() => {
     const m = new Map<string, (SeasonRun & { team: string })[]>()
     for (const r of runs) {
@@ -478,44 +495,84 @@ function RunsTimeline({ fixtureEase, runs, gws, lens, scale }: {
 
   return (
     <div className="overflow-x-auto rounded-xl border border-line">
-      <table className="w-full border-collapse text-[11px]">
+      <table className="w-full border-separate border-spacing-0 text-[10px]">
         <thead>
-          <tr className="bg-surface-2">
-            <th className="sticky left-0 z-10 bg-surface-2 px-2 py-2 text-left text-[10px] font-semibold tracking-wide text-ink-3 uppercase">Club</th>
-            {gws.map((gw) => (
-              <th key={gw} className="px-1 py-2 text-center text-[10px] font-semibold text-ink-3">{gw}</th>
-            ))}
+          {months && (
+            <tr>
+              <th className="sticky left-0 z-10 bg-surface-2" />
+              {months.map((m, i) => (
+                <th
+                  key={`${m.label}-${i}`}
+                  colSpan={m.span}
+                  className="border-b border-line-mid bg-surface-2 pt-2.5 pb-1 text-[8px] font-extrabold tracking-[0.13em] text-ink-3"
+                  style={{ borderLeft: i ? '1px solid var(--line-mid)' : undefined }}
+                >
+                  {m.label}
+                </th>
+              ))}
+              <th className="bg-surface-2" />
+            </tr>
+          )}
+          <tr>
+            <th className="sticky left-0 z-10 bg-surface-2 px-2.5 py-2 text-left text-[8.5px] font-extrabold tracking-[0.11em] text-ink-3 uppercase">Club</th>
+            {gws.map((gw) => <th key={gw} className="bg-surface-2 px-1 py-2 text-center text-[9px] font-extrabold text-ink-3">{gw}</th>)}
+            <th className="bg-surface-2 px-2.5 py-2 text-right text-[8.5px] font-extrabold tracking-[0.11em] text-ink-3 uppercase">Best run</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map(({ team, runs: rs }) => (
-            <tr key={team} className="border-t border-line">
-              <th className="sticky left-0 z-10 bg-surface-1 px-2 py-1.5 text-left font-bold whitespace-nowrap text-ink">
+          {rows.map(({ team, runs: rs }, ri) => (
+            <tr key={team} className={ri % 2 ? 'bg-white/[.014]' : undefined}>
+              <th className={`sticky left-0 z-10 border-t border-line px-2.5 py-1.5 text-left font-bold whitespace-nowrap text-ink ${ri % 2 ? 'bg-[color-mix(in_srgb,var(--surface-1)_97%,white)]' : 'bg-surface-1'}`}>
                 <span className="flex items-center gap-1.5"><TeamBadge team={team} size={14} />{team}</span>
               </th>
               {gws.map((gw) => {
                 const f = byTeam.get(team)?.get(gw)
                 const run = rs.find((r) => gw >= r.from && gw <= r.to)
-                if (!f) return <td key={gw} className="px-1 py-1.5 text-center text-ink-3">–</td>
+                if (!f) return <td key={gw} className="border-t border-line px-1 py-1.5 text-center text-ink-3">–</td>
+                if (!run) {
+                  return (
+                    <td key={gw} className="border-t border-line px-1 py-1.5 text-center leading-none">
+                      <span className="font-semibold text-ink-3 opacity-[.34]">{f.opp}</span>
+                      {/* the surrounding weeks stay readable as colour without
+                          competing as text */}
+                      <i className="mx-auto mt-[3px] block h-[2px] w-3.5 rounded-full opacity-50" style={{ background: diffTick(f.diff) }} />
+                    </td>
+                  )
+                }
+                const a = gw === run.from, b = gw === run.to
                 return (
                   <td
                     key={gw}
-                    title={`GW${gw} · ${f.venue === 'H' ? 'home to' : 'away at'} ${f.opp} · difficulty ${f.diff.toFixed(1)}${run ? ` · best run GW${run.from}–${run.to}` : ''}`}
-                    className={`px-1 py-1.5 text-center leading-none whitespace-nowrap ${
-                      run ? 'font-extrabold text-ink' : 'font-medium text-ink-3 opacity-45'
-                    }`}
-                    style={run ? {
+                    title={`GW${gw} · ${f.venue === 'H' ? 'home to' : 'away at'} ${f.opp} · difficulty ${f.diff.toFixed(1)} · best run GW${run.from}–${run.to}`}
+                    className="border-t border-line px-1 py-2 text-center leading-none whitespace-nowrap"
+                    style={{
                       background: diffFill(f.diff),
-                      // Bracket the run so its edges are the thing you read —
-                      // that is where you get on and where you get off.
-                      borderLeft: gw === run.from ? '2px solid var(--accent)' : undefined,
-                      borderRight: gw === run.to ? '2px solid var(--accent)' : undefined,
-                    } : undefined}
+                      // One continuous band, not a row of boxes: only the first
+                      // and last week carry a hard edge, because those are the
+                      // two weeks you act on.
+                      borderTopLeftRadius: a ? 9 : 0, borderBottomLeftRadius: a ? 9 : 0,
+                      borderTopRightRadius: b ? 9 : 0, borderBottomRightRadius: b ? 9 : 0,
+                      boxShadow: [
+                        'inset 0 1px 0 rgba(226,192,106,.34)',
+                        'inset 0 -1px 0 rgba(226,192,106,.34)',
+                        a ? 'inset 1px 0 0 var(--accent)' : '',
+                        b ? 'inset -1px 0 0 var(--accent)' : '',
+                      ].filter(Boolean).join(','),
+                    }}
                   >
-                    {f.opp}<span className={run ? 'ml-0.5 text-ink-2' : 'ml-0.5'}>{f.venue}</span>
+                    <span className="text-[10.5px] font-extrabold text-ink">{f.opp}</span>
+                    <span className="ml-0.5 text-[8px] text-ink-2">{f.venue}</span>
                   </td>
                 )
               })}
+              <td className="border-t border-line px-2.5 py-1.5 text-right whitespace-nowrap">
+                {rs.map((r) => (
+                  <span key={r.half} className="block">
+                    <b className="text-[11px] font-extrabold text-accent-2">GW{r.from}–{r.to}</b>
+                    <span className="ml-1 text-[9px] text-ink-3">{r.avg.toFixed(2)} avg</span>
+                  </span>
+                ))}
+              </td>
             </tr>
           ))}
         </tbody>

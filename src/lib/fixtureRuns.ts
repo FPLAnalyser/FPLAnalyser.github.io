@@ -139,6 +139,13 @@ export function bandOf(t: number): string {
  *  end. */
 export const diffFill = (d: number): string => bandOf(Math.max(-1, Math.min(1, (3 - d) / 2)))
 
+/** The same five bands as a solid colour, for marks too small to carry a wash
+ *  — the difficulty tick under a dimmed fixture on the season map. */
+export function diffTick(d: number): string {
+  const t = Math.max(-1, Math.min(1, (3 - d) / 2))
+  return t <= -0.6 ? '#e0655f' : t <= -0.2 ? '#e8b04a' : t < 0.2 ? '#8b8274' : t < 0.6 ? '#5ec98a' : '#3ddc7a'
+}
+
 /** The difficulty scale for the current season's data, built once and shared.
  *  Promoted clubs have no season history, so the odds layer backs their
  *  attack/defence out of every priced fixture against a club we do know —
