@@ -29,6 +29,13 @@ import type { RatingRow } from '../lib/types'
    ════════════════════════════════════════════════════════════════════════ */
 
 const OUT = new Set(['i', 's', 'u', 'n'])
+
+/** How many of each position a club typically starts. Used to work out who is
+ *  in the first-choice line and therefore who gets promoted when one of them
+ *  is out. Typical rather than tactical — a 4-2-3-1 and a 4-3-3 disagree about
+ *  midfielders — which is why the page projects a replacement rather than
+ *  claiming a team sheet. */
+const STARTERS: Record<string, number> = { GKP: 1, DEF: 4, MID: 4, FWD: 2 }
 const pc = (x: number) => `${Math.round(x * 100)}%`
 
 /** Clean-sheet odds on the site's five-band language, so a green percentage
@@ -168,26 +175,59 @@ export default function Preview() {
     return rows.sort((a, b) => b.xp - a.xp)
   }, [ratings, avail, sides, data?.fixtureEase, gw, model, market, profiles])
 
-  /* Flagged players, and who actually steps up. Only shown when the missing
-     man was AHEAD in the pecking order — otherwise the page prints "Bruno
-     Fernandes benefits from Tielemans being doubtful", which is true of
-     nobody. Rating stands in for the pecking order; it is a rough proxy and
-     the honest limit of what we can know before a team sheet lands. */
+  /* Flagged players, and who actually steps up.
+
+     This is a promotion model, not a "next best player" one. The first
+     version named the highest-rated fit team-mate and only printed him if he
+     was rated BELOW the absentee — which silently dropped the biggest news of
+     the week. Saliba out at Arsenal returned Gabriel, rated above him, so the
+     rule threw the pair away; but Gabriel was always starting. He is not the
+     replacement.
+
+     Instead: rank the club's players at that position, take the first-choice
+     line (four defenders, one keeper, and so on), and see who enters it once
+     the absentees are removed. The men who are newly in ARE the replacements,
+     paired to the absentees in rating order. Two Arsenal centre-halves out
+     promotes two players, not one.
+
+     Rating stands in for the pecking order and the line sizes are typical
+     rather than tactical, so this is a projection of who comes in — the
+     honest limit of what anyone can know before a team sheet lands. */
   const flagged = useMemo(() => {
+    const score = (r: RatingRow) => num(r, 'season_overall_score') ?? 0
+    const statusOf = (r: RatingRow) => String(availFor(avail, num(r, 'element'), num(r, 'code'))?.status ?? 'a')
+
+    const groups = new Map<string, RatingRow[]>()
+    for (const r of ratings) {
+      const k = `${r.team}|${r.position}`
+      const g = groups.get(k)
+      if (g) g.push(r); else groups.set(k, [r])
+    }
+
+    const stepFor = new Map<number, RatingRow>()
+    for (const [k, pool] of groups) {
+      const n = STARTERS[k.split('|')[1]] ?? 4
+      pool.sort((a, b) => score(b) - score(a))
+      const firstChoice = pool.slice(0, n)
+      const fc = new Set(firstChoice.map((r) => r.element))
+      // A doubt has not vacated anything, so he still counts as in the line.
+      const fit = pool.filter((r) => !OUT.has(statusOf(r)))
+      const promoted = fit.slice(0, n).filter((r) => !fc.has(r.element))
+      const absent = firstChoice.filter((r) => OUT.has(statusOf(r)))
+      absent.forEach((r, i) => { if (promoted[i]) stepFor.set(r.element, promoted[i]) })
+      // For a doubtful starter, name the man who would come in if he misses.
+      const next = fit[n]
+      if (next) for (const r of fit.slice(0, n)) if (statusOf(r) === 'd') stepFor.set(r.element, next)
+    }
+
     const out: { r: RatingRow; status: string; news: string; own: number | null; step: RatingRow | null }[] = []
     for (const r of ratings) {
       const p = availFor(avail, num(r, 'element'), num(r, 'code'))
       if (!p || String(p.status ?? 'a') === 'a') continue
-      const mine = num(r, 'season_overall_score') ?? 0
-      const mates = ratings
-        .filter((x) => x.team === r.team && x.position === r.position && x.element !== r.element)
-        .filter((x) => { const q = availFor(avail, num(x, 'element'), num(x, 'code')); return !q || !OUT.has(String(q.status ?? 'a')) })
-        .sort((a, b) => (num(b, 'season_overall_score') ?? 0) - (num(a, 'season_overall_score') ?? 0))
-      const best = mates[0]
       out.push({
         r, status: String(p.status), news: String(p.news ?? '').split(' - ')[0],
         own: p.own ?? null,
-        step: best && (num(best, 'season_overall_score') ?? 0) < mine ? best : null,
+        step: stepFor.get(r.element) ?? null,
       })
     }
     return out.sort((a, b) => (b.own ?? 0) - (a.own ?? 0))
@@ -344,7 +384,7 @@ export default function Preview() {
                       </div>
 
                       <div className="text-[12.5px] leading-relaxed">
-                        <div className="mb-2 text-[11px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Team notes</div>
+                        <div className="mb-2 text-[11px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Behind the numbers</div>
                         {/* Projected score and clean-sheet odds are already on the
                             card above, so repeating them here spends the best
                             space on the page saying nothing twice. These are the
@@ -398,9 +438,22 @@ export default function Preview() {
                                 return (
                                   <Fact
                                     key={`miss-${t}`}
-                                    k={<ClubTag team={team} what="missing" />}
+                                    k={<ClubTag team={team} what="team news" />}
                                     v={outs.length
-                                      ? <span className="text-warn">{outs.slice(0, 5).map((f) => String(f.r.web_name)).join(', ')}</span>
+                                      ? (
+                                        // Red is a ruling, amber is a doubt.
+                                        // Printing both in one colour under the
+                                        // word "missing" claimed a certainty
+                                        // FPL itself doesn't have: a doubtful
+                                        // player starts most weeks.
+                                        <span className="inline-flex flex-wrap justify-end gap-x-1.5">
+                                          {outs.slice(0, 5).map((f, i, a) => (
+                                            <span key={String(f.r.element)} className={outTone(f.status)} title={`${LABEL[f.status] ?? 'OUT'}${f.news ? ` — ${f.news}` : ''}`}>
+                                              {String(f.r.web_name)}{f.status === 'd' ? ' (doubt)' : ''}{i < a.length - 1 ? ',' : ''}
+                                            </span>
+                                          ))}
+                                        </span>
+                                      )
                                       : <span className="text-ink-3">Nobody flagged</span>}
                                   />
                                 )
@@ -555,7 +608,7 @@ export default function Preview() {
             </div>
 
             <div>
-              <Band label="Who's missing" tip="A replacement is only named when the missing man was genuinely ahead in the pecking order — otherwise the page would credit a nailed starter with benefiting from a squad player's absence." />
+              <Band label="Who steps up" tip="A replacement is only named when the absent man was genuinely ahead in the pecking order — otherwise the page would credit a nailed starter with benefiting from a squad player's absence." />
               <div className="overflow-hidden rounded-xl border border-line">
                 {/* Out on the left, the man who benefits on the right: the
                     row reads as the swap it describes. */}
@@ -563,7 +616,7 @@ export default function Preview() {
                   <div key={String(f.r.element)} className="flex items-center gap-2.5 border-b border-line px-3 py-2.5 last:border-0">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide ${f.status === 'd' ? 'bg-warn/30' : 'bg-bad/30'}`}>{LABEL[f.status] ?? 'OUT'}</span>
+                        <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide ${f.status === 'd' ? 'bg-warn/30 text-warn' : 'bg-bad/30 text-bad'}`}>{LABEL[f.status] ?? 'OUT'}</span>
                         <TeamBadge team={String(f.r.team)} size={18} className="shrink-0" />
                         <b className="truncate text-[14px] text-ink">{String(f.r.web_name)}</b>
                       </div>
@@ -582,12 +635,12 @@ export default function Preview() {
             </div>
 
             <div>
-              <Band label="Injury doubts" tip="Every flagged player in the round, most-owned first — FPL's own status and news, refreshed daily." />
+              <Band label="Team news" tip="Every flagged player in the round, most-owned first, from FPL's own status and news. Red is a ruling — injured, suspended, unavailable. Amber is a doubt, and most doubts start." />
               <div className="overflow-hidden rounded-xl border border-line">
                 {flagged.slice(0, 12).map((f) => (
                   <div key={String(f.r.element)} className="border-b border-line px-3 py-2 last:border-0">
                     <div className="flex items-center gap-2">
-                      <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide ${f.status === 'd' ? 'bg-warn/30' : 'bg-bad/30'}`}>{LABEL[f.status] ?? 'OUT'}</span>
+                      <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide ${f.status === 'd' ? 'bg-warn/30 text-warn' : 'bg-bad/30 text-bad'}`}>{LABEL[f.status] ?? 'OUT'}</span>
                       <TeamBadge team={String(f.r.team)} size={16} />
                       <b className="truncate text-[13.5px] font-semibold text-ink">{String(f.r.web_name)}</b>
                       <span className="ml-auto shrink-0 text-[11px] text-ink-3">{f.r.position}</span>
@@ -671,6 +724,11 @@ function ClubTag({ team, what }: { team: string; what: string }) {
 }
 
 const LABEL: Record<string, string> = { i: 'OUT', s: 'SUSP', d: 'DOUBT', u: 'OUT', n: 'OUT' }
+
+/** How certain FPL is. `d` is a doubt carrying a chance of playing — most
+ *  doubts start — and everything else in OUT is a ruling. Red therefore means
+ *  he is not playing; amber means nobody knows yet, including the club. */
+const outTone = (status: string) => (status === 'd' ? 'text-warn' : 'text-bad')
 
 function Band({ label, tip }: { label: string; tip?: string }) {
   return (
