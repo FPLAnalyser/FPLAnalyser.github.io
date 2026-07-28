@@ -32,10 +32,11 @@ const WINDOWS = [4, 6, 8] as const
 
 const VIEW_TABS: TabDef[] = [
   { id: 'difficulty', label: 'Difficulty' },
+  { id: 'runs', label: 'Best Runs' },
   { id: 'rotation', label: 'Rotation Planner' },
   { id: 'matchup', label: 'Matchup Explorer' },
 ]
-type View = 'difficulty' | 'rotation' | 'matchup'
+type View = 'difficulty' | 'runs' | 'rotation' | 'matchup'
 
 /* The grid shows one of three things per cell: our 1–5 difficulty, the
    projected xG the team's attack should produce in that fixture, or the
@@ -388,13 +389,38 @@ export default function Fixtures() {
             <FixtureGrid key={mode} fixtureEase={fixtureEase} windowN={windowN} lens={lens} mode={mode} baselines={baselines} leagueBase={leagueBase} profiles={profiles} league={league} />
             </Exportable>
             <ChipPlanner fixtureEase={fixtureEase} ratings={data.ratings as RatingRow[]} />
-            <SeasonRunsBoard fixtureEase={fixtureEase} lens={lens} baselines={baselines} />
           </>
         ) : (
           <EmptyState icon={<Icon name="calendar" size={44} />}>
             The difficulty grid and chip planner switch on when next season's fixtures are published.
             <div className="mt-1 text-sm text-ink-3">The Matchup Explorer tab already works on this season's full shot data.</div>
           </EmptyState>
+        )
+      ) : view === 'runs' ? (
+        hasFixtures ? (
+          <>
+            {/* The lens matters more here than anywhere: a run that's kind to
+                a striker is not the same run that's kind to a keeper. */}
+            <div className="mb-4 flex items-center gap-1.5">
+              <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Rate for</span>
+              {LENS_TABS.map((l) => (
+                <span key={l.id} className="flex items-center gap-1">
+                  <button
+                    onClick={() => setLens(l.id as Lens)}
+                    className={`min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${
+                      lens === l.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+                    }`}
+                  >
+                    {l.label}
+                  </button>
+                  <InfoTip text={LENS_TIP[l.id as Lens]} />
+                </span>
+              ))}
+            </div>
+            <SeasonRunsBoard fixtureEase={fixtureEase} lens={lens} baselines={baselines} />
+          </>
+        ) : (
+          <EmptyState icon={<Icon name="calendar" size={44} />}>Best runs switch on when the fixtures are published.</EmptyState>
         )
       ) : view === 'rotation' ? (
         hasFixtures ? (
@@ -432,7 +458,7 @@ function SeasonRunsBoard({ fixtureEase, lens, baselines }: {
   const spansSeason = rows.some((r) => r.runs.length > 1)
 
   return (
-    <div className="mt-8">
+    <div>
       <div className="mb-1 flex items-center gap-2">
         <h3 className="text-sm font-semibold tracking-wide text-ink uppercase">Best Runs of the Season</h3>
         <InfoTip text="Each club's kindest stretch of 3–6 consecutive gameweeks, one before the turn of the year and one after. Runs are picked on total advantage over an average fixture across the whole stretch, not on average difficulty — otherwise a single home banker would beat any four games ever assembled. A gameweek with no fixture ends a run." />
