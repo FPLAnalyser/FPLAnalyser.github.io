@@ -101,14 +101,15 @@ const LENS_TIP: Record<Lens, string> = {
   defence: "How kind the fixture is for this team's DEFENCE and keeper (clean-sheet odds) — set by the goals they're expected to concede in it. Expected to concede fewer than most fixtures in the table → easier.",
 }
 
-/** Our own 1 (easy) … 5 (hard) fixture difficulty from the opponent's team
- *  rating, per lens. Falls back to FPL's FDR when the opponent has no rating. */
-function analyserDiff(lens: Lens, fdr: number, scale: DiffScale | null, lam?: Lambdas | null): { diff: number; ours: boolean; market?: boolean } {
-  if (!lam || !scale) return { diff: fdr, ours: false }
-  const atk = 5 - 4 * scale.pctFor(lam.for)          // expected to score more → easier
-  const def = 1 + 4 * scale.pctAgainst(lam.against)  // expected to concede more → harder
-  const diff = lens === 'attack' ? atk : lens === 'defence' ? def : (atk + def) / 2
-  return { diff: Math.max(1, Math.min(5, diff)), ours: true, market: lam.market }
+/** Our own 1 (easy) … 5 (hard) fixture difficulty: how strong the opponent is
+ *  at the end of the pitch this lens cares about, plus a venue nudge. Falls
+ *  back to FPL's FDR only when we have no baseline for the opponent at all. */
+function analyserDiff(opp: string, lens: Lens, venue: 'H' | 'A', fdr: number, scale: DiffScale | null): { diff: number; ours: boolean } {
+  const a = scale?.attackDiff(opp)
+  const d = scale?.defenceDiff(opp)
+  if (a == null || d == null) return { diff: fdr, ours: false }
+  const base = lens === 'attack' ? a : lens === 'defence' ? d : (a + d) / 2
+  return { diff: Math.max(1, Math.min(5, base + (venue === 'H' ? -0.25 : 0.25))), ours: true }
 }
 
 /** −1 (well under a normal fixture) … +1 (well over) → one of five washes.
@@ -127,48 +128,46 @@ export function bandOf(t: number): string {
 export const diffFill = (d: number): string => bandOf(Math.max(-1, Math.min(1, (3 - d) / 2)))
 
 /* ── The difficulty scale ────────────────────────────────────────────────────
-   Difficulty used to rank the OPPONENT on our 0–100 team ratings, which had
-   two faults. It rated the club rather than the fixture, so Liverpool at
-   Fulham and Hull at Fulham came out the same game. And the ranking population
-   was only the clubs with a season rating — the three promoted sides have
-   none — so whichever rated club sat bottom was pinned to the floor of the
-   scale. That was Fulham: every side that played them, promoted clubs
-   included, got a 1.0.
+   Two goes at this were wrong in opposite directions, and both showed up as a
+   grid you couldn't read.
 
-   Difficulty is now the same pair of goal expectancies everything else on the
-   page runs on, placed against the league's own distribution of them. That
-   rates the matchup, includes all twenty clubs, and keeps the full 1–5 spread
-   by construction — mapping goals onto 1–5 through fixed anchors bunched 47%
-   of fixtures onto a 3.
+   It first ranked the opponent on our 0–100 team ratings — but only over the
+   clubs that HAVE a season rating, and the three promoted sides don't.
+   Whichever rated club sat bottom was pinned to the floor of the scale. That
+   was Fulham, so everyone who played them got a 1.0, promoted clubs included.
 
-   Percentiles come from every fixture in the table rather than the visible
-   window, so a fixture's difficulty doesn't shift when you switch between
-   Next 4 and Next 8. */
-export interface DiffScale { pctFor: (v: number) => number; pctAgainst: (v: number) => number }
+   Rating the whole matchup instead fixed Fulham but swapped one flattening for
+   another: difficulty then tracked how good YOU are as much as who you play,
+   so Arsenal's next eight ran 1.1 to 1.9 and Hull's 4.2 to 4.9 — a club's
+   entire run in one colour, and Arsenal at Villa indistinguishable from
+   Arsenal against Chelsea.
 
-export function buildDiffScale(
-  fixtureEase: FixtureEaseRow[],
-  baselines: Map<string, TeamBase>,
-  leagueBase: TeamBase,
-  market: MarketOdds | null,
-): DiffScale | null {
-  const fors: number[] = []
-  const against: number[] = []
-  for (const f of fixtureEase) {
-    const l = lambdasFor(baselines.get(f.team), baselines.get(f.opponent), leagueBase, f.venue, mktOf(market, f.team, f))
-    if (!l) continue
-    fors.push(l.for)
-    against.push(l.against)
-  }
-  if (fors.length < 8) return null
-  fors.sort((a, b) => a - b)
-  against.sort((a, b) => a - b)
+   So: the opponent's strength, which is what a fixture ticker means, ranked
+   over a population that finally holds all twenty clubs. The goal baselines
+   cover the promoted sides through the odds layer, which is exactly what the
+   team ratings could not. Against the real fixture list that lifts the average
+   club's run from a 2.2 spread to 3.3, and the most compressed club in the
+   league from 0.7 to 2.3. */
+export interface DiffScale { attackDiff: (opp: string) => number | null; defenceDiff: (opp: string) => number | null }
+
+export function buildDiffScale(baselines: Map<string, TeamBase>): DiffScale | null {
+  const clubs = [...baselines.values()]
+  if (clubs.length < 8) return null
+  const xg = clubs.map((c) => c.xg).sort((a, b) => a - b)
+  const xgc = clubs.map((c) => c.xgc).sort((a, b) => a - b)
   const pctIn = (arr: number[]) => (v: number) => {
     let lo = 0, hi = arr.length
     while (lo < hi) { const mid = (lo + hi) >> 1; if (arr[mid] < v) lo = mid + 1; else hi = mid }
     return lo / (arr.length - 1)
   }
-  return { pctFor: pctIn(fors), pctAgainst: pctIn(against) }
+  const pXg = pctIn(xg)
+  const pXgc = pctIn(xgc)
+  return {
+    // Our attack is judged on how freely they concede; our defence on how much
+    // they score. Both read off the same twenty-club distribution.
+    attackDiff: (opp) => { const o = baselines.get(opp); return o ? 5 - 4 * pXgc(o.xgc) : null },
+    defenceDiff: (opp) => { const o = baselines.get(opp); return o ? 1 + 4 * pXg(o.xg) : null },
+  }
 }
 
 /** The scouting read on a team's upcoming run.
@@ -486,7 +485,7 @@ const mean = (ds: number[]) => (ds.length ? ds.reduce((a, b) => a + b, 0) / ds.l
    fixtures. With nothing picked we surface the best-rotating groups of size N. */
 function RotationPlanner({ ratings: _ratings, fixtureEase, baselines, leagueBase }: { ratings: RatingRow[]; fixtureEase: FixtureEaseRow[]; baselines: Map<string, TeamBase>; leagueBase: TeamBase }) {
   const market = useMarketOdds()
-  const diffScale = useMemo(() => buildDiffScale(fixtureEase, baselines, leagueBase, market), [fixtureEase, baselines, leagueBase, market])
+  const diffScale = useMemo(() => buildDiffScale(baselines), [baselines])
   const [teams, setTeams] = useState<string[]>([])
   const [size, setSize] = useState<(typeof ROT_SIZES)[number]>(2)
   const [startK, setStartK] = useState(1)
@@ -505,7 +504,7 @@ function RotationPlanner({ ratings: _ratings, fixtureEase, baselines, leagueBase
       if (cache.has(key)) return cache.get(key)!
       const fs = fixtureEase.filter((f) => f.team === team && f.gw === gw)
       const v = !fs.length ? null : fs
-        .map((f) => ({ f, diff: analyserDiff(lens, f.fdr, diffScale, lambdasFor(baselines.get(f.team), baselines.get(f.opponent), leagueBase, f.venue, mktOf(market, f.team, f))).diff }))
+        .map((f) => ({ f, diff: analyserDiff(f.opponent, lens, f.venue, f.fdr, diffScale).diff }))
         .sort((a, b) => a.diff - b.diff)[0]
       cache.set(key, v)
       return v
@@ -761,7 +760,7 @@ function FixtureGrid({
   league: Profile
 }) {
   const market = useMarketOdds()
-  const diffScale = useMemo(() => buildDiffScale(fixtureEase, baselines, leagueBase, market), [fixtureEase, baselines, leagueBase, market])
+  const diffScale = useMemo(() => buildDiffScale(baselines), [baselines])
   const [sortKey, setSortKey] = useState<number | 'run'>('run')
   // Difficulty: ascending = easiest first. Projections: descending = most
   // goals / best clean-sheet odds first.
@@ -778,8 +777,9 @@ function FixtureGrid({
   // projection grids and the written read are all quoting the same model.
   const lamOf = (team: string, f: { gw: number; opponent: string; venue: 'H' | 'A' }) =>
     lambdasFor(baselines.get(team), baselines.get(f.opponent), leagueBase, f.venue, mktOf(market, team, f))
-  const diffOf = (team: string, f: FixtureEaseRow) =>
-    analyserDiff(lens, f.fdr, diffScale, lamOf(team, f))
+  // Difficulty is a property of the opponent and the venue, so it needs no
+  // team argument — the projections below still do.
+  const diffOf = (f: FixtureEaseRow) => analyserDiff(f.opponent, lens, f.venue, f.fdr, diffScale)
 
   const rows = useMemo(() => {
     const teams = [...new Set(fixtureEase.map((f) => f.team))]
@@ -795,7 +795,7 @@ function FixtureGrid({
         byGw.get(f.gw)!.push(f)
         opponents.push(f.opponent)
         if (mode === 'diff') {
-          const { diff, ours } = diffOf(team, f)
+          const { diff, ours } = diffOf(f)
           if (!ours) usedFdr = true
           sum += diff
           count++
@@ -856,7 +856,7 @@ function FixtureGrid({
   const gwVal = (r: (typeof rows)[number], gw: number): number | null => {
     const fs = r.byGw.get(gw)
     if (!fs || !fs.length) return null
-    if (mode === 'diff') return fs.reduce((s, f) => s + diffOf(r.team, f).diff, 0) / fs.length
+    if (mode === 'diff') return fs.reduce((s, f) => s + diffOf(f).diff, 0) / fs.length
     let sum = 0
     let any = false
     for (const f of fs) {
@@ -944,7 +944,7 @@ function FixtureGrid({
                           <span className="flex flex-col items-center gap-1">
                             {fs.map((f, i) => {
                               if (mode === 'diff') {
-                                const { diff, ours } = diffOf(r.team, f)
+                                const { diff, ours } = diffOf(f)
                                 return (
                                   <span
                                     key={i}
@@ -1013,7 +1013,7 @@ function FixtureGrid({
                           const l = lamOf(r.team, f)
                           return {
                             gw, opponent: f.opponent, venue: f.venue,
-                            diff: diffOf(r.team, f).diff,
+                            diff: diffOf(f).diff,
                             xg: l ? l.for : null,
                             cs: l ? Math.exp(-l.against) : null,
                           }

@@ -14,6 +14,7 @@ import { SquadLab } from '../components/SquadLab'
 import { Icon } from '../components/Icon'
 import { Pitch, PitchCard, BenchSpine, CARD_W } from '../components/Pitch'
 import { PlayerCardSheet } from '../components/PlayerCardSheet'
+import { DutyBadges, dutiesOf } from '../components/DutyBadges'
 import { SquadRatingSheet, squadNarrative } from '../components/SquadRatingSheet'
 import { useCore } from '../lib/useData'
 import { tapHaptic, shareImageNative } from '../lib/native'
@@ -98,6 +99,30 @@ const dim100 = (r: RatingRow, key: string): number | null => {
   const v = num(r, key)
   return v == null ? null : Math.round(Math.max(0, Math.min(100, v * 20)))
 }
+/** Scroll the page to `y` over a fixed, short duration.
+ *
+ *  `scrollIntoView({behavior:'smooth'})` picks its own duration and scales it
+ *  with distance, so dropping from the pitch to the list below took the best
+ *  part of a second and felt like the page was thinking about it. This is a
+ *  flat 280ms with an ease-out, so a long jump lands as fast as a short one.
+ *  Honours the reduced-motion preference by jumping outright. */
+function glideTo(y: number) {
+  const from = window.scrollY
+  const to = Math.max(0, y)
+  const dist = to - from
+  if (Math.abs(dist) < 2) return
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { window.scrollTo(0, to); return }
+  const DUR = 280
+  let start: number | null = null
+  const step = (t: number) => {
+    if (start == null) start = t
+    const k = Math.min(1, (t - start) / DUR)
+    window.scrollTo(0, from + dist * (1 - Math.pow(1 - k, 3)))
+    if (k < 1) requestAnimationFrame(step)
+  }
+  requestAnimationFrame(step)
+}
+
 const PRICE_MIN = 4.0
 const PRICE_MAX = 15.5 // a hair above the most expensive player so nobody is filtered out by default
 
@@ -132,7 +157,7 @@ export default function SquadBuilder() {
       // "On screen" is generous on purpose: a desktop that can already see the
       // top of the list should not twitch, only a phone that can't should move.
       const seen = r.top < window.innerHeight * 0.9 && r.bottom > 80
-      if (!seen) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      if (!seen) glideTo(window.scrollY + r.top - 72)
     })
   }
   const [maxPrice, setMaxPrice] = useState(PRICE_MAX)
@@ -165,6 +190,14 @@ export default function SquadBuilder() {
     for (const r of pool) m.set(r.element, r)
     return m
   }, [pool])
+
+  // Form streak comes from the season-to-date table, keyed by element.
+  const streakByEl = useMemo(() => {
+    const m = new Map<number, string>()
+    for (const r of data?.seasonToDate ?? []) m.set(Number(r.element), String(r.streak ?? ''))
+    return m
+  }, [data])
+  const nameOfEl = (el: number) => String(byEl.get(el)?.web_name ?? '')
 
   const persist = (next: number[]) => {
     setPicked(next)
@@ -444,6 +477,7 @@ export default function SquadBuilder() {
                     <button className="block w-full text-left" onClick={() => navigate(playerHref(String(r.web_name), num(r, 'code')))}>
                       <div className="flex items-center gap-1.5">
                         <span className="truncate text-sm font-medium text-ink hover:text-accent">{String(r.web_name)}</span>
+                        <DutyBadges d={dutiesOf(avail, num(r, 'element'), num(r, 'code'), streakByEl.get(Number(r.element)), nameOfEl)} />
                         {inSquad && (
                           <span className={`shrink-0 rounded px-1 py-0.5 text-[10px] leading-none font-bold ${onMarket ? 'bg-bad/15 text-bad' : 'bg-surface-3 text-ink-3'}`}>
                             {onMarket ? 'SOLD' : 'IN SQUAD'}
@@ -467,20 +501,33 @@ export default function SquadBuilder() {
                     <div className="mt-1"><FixtureChips fixtureEase={fixtureEase} team={String(r.team)} n={4} fromGw={liveGw} /></div>
                   </div>
                   <span className="w-9 shrink-0 text-right font-num text-sm font-semibold tabular-nums text-ink-2">{o ?? '—'}</span>
-                  <button
-                    onClick={() => {
-                      if (!complete) { add(r); return }
-                      if (filling) { planner.fill(r.element); tapHaptic('medium'); return }
-                      setPendingIn(r)
-                    }}
-                    disabled={!!why}
-                    title={why ?? (filling ? 'Sign him into the empty place' : complete ? 'Transfer in' : 'Add to squad')}
-                    className={`grid size-8 shrink-0 place-items-center rounded-lg border transition-colors ${
-                      why ? 'cursor-not-allowed border-line text-ink-3 opacity-50' : 'border-accent/50 text-accent hover:bg-accent-soft'
-                    }`}
-                  >
-                    <Icon name={complete && !filling ? 'arrow-right' : 'check'} size={15} />
-                  </button>
+                  {/* Once he's on the market the sign-him button is dead, and a
+                      greyed-out tick just looks broken. The one thing you can
+                      actually do with him is take him back. */}
+                  {onMarket ? (
+                    <button
+                      onClick={() => { planner.undoTransfer(r.element); tapHaptic('light') }}
+                      title="Keep him — undo the sale"
+                      className="grid size-8 shrink-0 place-items-center rounded-lg border border-good/50 text-good transition-colors hover:bg-good/10"
+                    >
+                      <Icon name="undo" size={15} />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        if (!complete) { add(r); return }
+                        if (filling) { planner.fill(r.element); tapHaptic('medium'); return }
+                        setPendingIn(r)
+                      }}
+                      disabled={!!why}
+                      title={why ?? (filling ? 'Sign him into the empty place' : complete ? 'Transfer in' : 'Add to squad')}
+                      className={`grid size-8 shrink-0 place-items-center rounded-lg border transition-colors ${
+                        why ? 'cursor-not-allowed border-line text-ink-3 opacity-50' : 'border-accent/50 text-accent hover:bg-accent-soft'
+                      }`}
+                    >
+                      <Icon name={complete && !filling ? 'arrow-right' : 'check'} size={15} />
+                    </button>
+                  )}
                 </div>
               )
             })}

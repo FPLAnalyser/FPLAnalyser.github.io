@@ -525,6 +525,16 @@ function ScoutReport({
     const pc = (k: string) => scoutPct(row, k)
     const hi = (k: string, t = 70) => { const v = pc(k); return v != null && v >= t }
     const lo = (k: string, t = 30) => { const v = pc(k); return v != null && v <= t }
+    /* Language has to match the percentile it came from. A 72nd-percentile
+       shot volume was being called "elite" and a scorer "captaincy-adjacent" —
+       Schade, on an 82nd-percentile npxG, read as a captain. These are per-90
+       rates against positional peers: they can say how a player scores, not
+       whether to hand him the armband, which also needs minutes and fixtures
+       this read never sees. */
+    const tier = (...keys: string[]): 'elite' | 'strong' | 'useful' | null => {
+      const best = Math.max(...keys.map((k) => pc(k) ?? -1))
+      return best >= 92 ? 'elite' : best >= 80 ? 'strong' : best >= 68 ? 'useful' : null
+    }
     const td = teamDef.get(sel.team)
     const starts = metaOf(sel)?.starts ?? null
     const share = starts == null ? null : starts / 38
@@ -562,13 +572,16 @@ function ScoutReport({
       else if (!attack && csOdds !== 'strong') sentences.push('Little attacking or defensive-contribution output, so he needs the clean sheet to pay off.')
     } else {
       // MID / FWD
-      const goals = hi('npxg', 72) || hi('goals', 72)
-      const creator = hi('xa', 72) || hi('chances_created', 72) || hi('big_chances', 72)
+      const gt = tier('npxg', 'goals')
+      const ct = tier('xa', 'chances_created', 'big_chances')
       const dc = hi('def_contrib', 66)
+      const WORD = { elite: 'elite', strong: 'strong', useful: 'decent' } as const
       sentences.push(`${avail} ${teamFullNames[sel.team] || sel.team}.`)
-      if (goals && creator) sentences.push('An all-round attacking threat — real goal volume and elite creation, so points can land as goals or assists in any given week.')
-      else if (goals) sentences.push('Gets his points chiefly from goals, with high-quality shot volume in dangerous areas — a captaincy-adjacent scorer when fixtures suit.')
-      else if (creator) sentences.push('An assist-first pick: elite chance creation, but the goals are secondary, so returns hinge on teammates finishing.')
+      if (gt && ct) sentences.push(`Threatens both ways — ${WORD[gt]} goal volume alongside ${WORD[ct]} chance creation, so points can land as goals or assists.`)
+      else if (gt === 'elite') sentences.push('Points come through goals, and the shot volume is top of the position for both quality and quantity — the kind of profile that carries a captaincy case when the fixture suits.')
+      else if (gt) sentences.push(`Points come chiefly through goals, on ${WORD[gt]} shot volume from dangerous areas.`)
+      else if (ct === 'elite') sentences.push('An assist-first pick with chance creation right at the top of the position, though the goals are secondary — returns hinge on teammates finishing.')
+      else if (ct) sentences.push(`An assist-first pick on ${WORD[ct]} chance creation; the goals are secondary, so returns hinge on teammates finishing.`)
       else sentences.push("Underlying attacking numbers are modest — the xG and xA don't point to consistent returns, so he's a punt rather than a plan.")
       if (lo('xg_delta', 22)) sentences.push('Has been finishing below expectation, so some positive regression may be coming.')
       else if (hi('xg_delta', 78)) sentences.push('And has been clinical, converting above his xG.')
