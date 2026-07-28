@@ -30,12 +30,16 @@ import type { RatingRow } from '../lib/types'
 
 const OUT = new Set(['i', 's', 'u', 'n'])
 
-/** How many of each position a club typically starts. Used to work out who is
- *  in the first-choice line and therefore who gets promoted when one of them
- *  is out. Typical rather than tactical — a 4-2-3-1 and a 4-3-3 disagree about
- *  midfielders — which is why the page projects a replacement rather than
- *  claiming a team sheet. */
-const STARTERS: Record<string, number> = { GKP: 1, DEF: 4, MID: 4, FWD: 2 }
+/** How many of each position a club typically starts, in FPL's classification
+ *  rather than football's: wingers are midfielders here, so the common
+ *  4-2-3-1 and 4-3-3 both come out as one keeper, four defenders, five
+ *  midfielders and a lone striker. Last season's starts back that up — across
+ *  the twenty clubs the average forward count is 0.85, not 2.
+ *
+ *  Used to work out who is in the first-choice line and therefore who gets
+ *  promoted when one of them is out. Typical rather than tactical, which is
+ *  why the page projects a replacement rather than claiming a team sheet. */
+const STARTERS: Record<string, number> = { GKP: 1, DEF: 4, MID: 5, FWD: 1 }
 const pc = (x: number) => `${Math.round(x * 100)}%`
 
 /** Clean-sheet odds on the site's five-band language, so a green percentage
@@ -210,14 +214,18 @@ export default function Preview() {
       pool.sort((a, b) => score(b) - score(a))
       const firstChoice = pool.slice(0, n)
       const fc = new Set(firstChoice.map((r) => r.element))
-      // A doubt has not vacated anything, so he still counts as in the line.
+      // A doubt has not vacated anything, so he still counts as holding a
+      // shirt — but he can never BE the answer. Naming a doubtful player as
+      // the man who steps up produced rows like "Kudus (doubt) steps up" on a
+      // page that flagged Kudus two lines below.
       const fit = pool.filter((r) => !OUT.has(statusOf(r)))
-      const promoted = fit.slice(0, n).filter((r) => !fc.has(r.element))
+      const line = fit.slice(0, n)
+      const promoted = line.filter((r) => !fc.has(r.element) && statusOf(r) === 'a')
       const absent = firstChoice.filter((r) => OUT.has(statusOf(r)))
       absent.forEach((r, i) => { if (promoted[i]) stepFor.set(r.element, promoted[i]) })
-      // For a doubtful starter, name the man who would come in if he misses.
-      const next = fit[n]
-      if (next) for (const r of fit.slice(0, n)) if (statusOf(r) === 'd') stepFor.set(r.element, next)
+      // For a doubtful starter, the first fit man outside the line comes in.
+      const next = fit.slice(n).find((r) => statusOf(r) === 'a')
+      if (next) for (const r of line) if (statusOf(r) === 'd') stepFor.set(r.element, next)
     }
 
     const out: { r: RatingRow; status: string; news: string; own: number | null; step: RatingRow | null }[] = []
