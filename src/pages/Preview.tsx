@@ -260,7 +260,7 @@ export default function Preview() {
   if (!data) {
     return (
       <PageShell>
-        <SectionBanner imgKey="fixtures" title="Preview" subtitle="The whole gameweek on one screen, before the deadline" />
+        <SectionBanner imgKey="preview" title="Preview" subtitle="The whole gameweek on one screen, before the deadline" />
         <PageSkeleton error={error} />
       </PageShell>
     )
@@ -295,18 +295,23 @@ export default function Preview() {
                   key={id}
                   className={`relative overflow-hidden rounded-xl border bg-surface-1 transition-colors ${feat ? 'border-accent/45 p-4 pt-[1.15rem]' : 'p-3 pt-[0.95rem]'} ${isOpen && !feat ? 'border-accent/45 lg:col-span-2' : feat ? '' : 'border-line'}`}
                 >
-                  {/* Both clubs, as a band across the top rather than two
-                      radial washes bleeding in from the corners. The washes
-                      carried no information, put two saturated hues in
-                      collision mid-card, and were unfair besides — a red kit
-                      shouted while a silver one barely registered. The band
-                      gives every club the same four pixels and lines up from
-                      card to card down the page. */}
-                  <div
-                    aria-hidden="true"
-                    className="absolute inset-x-0 top-0 h-1"
-                    style={{ background: `linear-gradient(90deg, ${teamColors[m.h] ?? 'var(--accent)'} 0 50%, ${teamColors[m.a] ?? 'var(--info)'} 50% 100%)` }}
-                  />
+                  {/* A stub of club colour over each club, and nothing across
+                      the middle. Corner-to-corner radial washes carried no
+                      information and put two saturated hues in collision; a
+                      full-width band fixed the fairness but still painted the
+                      whole top edge. Each side now gets the same short run,
+                      sitting directly above its own crest, and it fades out
+                      before it reaches the numbers. */}
+                  <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 flex h-1 justify-between">
+                    <span
+                      className="block w-[78px] sm:w-[150px]"
+                      style={{ background: `linear-gradient(90deg, ${teamColors[m.h] ?? 'var(--accent)'}, transparent)` }}
+                    />
+                    <span
+                      className="block w-[78px] sm:w-[150px]"
+                      style={{ background: `linear-gradient(270deg, ${teamColors[m.a] ?? 'var(--info)'}, transparent)` }}
+                    />
+                  </div>
                   <button
                     onClick={(e) => {
                       // An opening card spans both columns, which pushes it to
@@ -484,7 +489,7 @@ export default function Preview() {
 
   return (
     <PageShell>
-      <SectionBanner imgKey="fixtures" title={`GW${gw} Preview`} subtitle="Captain, chips, the games that produce the points, and who is missing" />
+      <SectionBanner imgKey="preview" title={`GW${gw} Preview`} subtitle="Captain, chips, the games that produce the points, and who is missing" />
 
       <DeadlineStrip gw={gw} at={avail.deadlines.get(gw)} />
 

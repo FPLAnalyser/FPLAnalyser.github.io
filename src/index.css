@@ -358,6 +358,12 @@ body {
 .hw-teams { background:
   radial-gradient(90% 45% at 50% 4%, rgba(255,244,236,.22), transparent 52%),
   linear-gradient(180deg, #050506 0%, #0c0708 40%, #3a0c11 82%, #5a121a 100%); }
+/* GW Preview: floodlit pitch under a gold wash — kept distinct from the
+   Fixtures tile it used to share a photo with. */
+.hw-preview { background:
+  radial-gradient(70% 55% at 50% -5%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 60%),
+  repeating-linear-gradient(90deg, rgba(255,255,255,.03) 0 8%, transparent 8% 16%),
+  linear-gradient(180deg, #10233a 0%, #0a1626 55%, #060c15 100%); }
 .hw-fixtures { background:
   radial-gradient(80% 60% at 50% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 55%),
   repeating-linear-gradient(90deg, #0a2417 0 12.5%, #0c2b1b 12.5% 25%),

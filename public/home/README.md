@@ -8,6 +8,7 @@ then the photo fades in automatically — no code change needed.
 
 | File            | Section        | Suggested shot                          |
 | --------------- | -------------- | --------------------------------------- |
+| `preview.jpg`   | GW Preview     | Floodlit matchday / crowd imagery        |
 | `players.jpg`   | Players        | A premium player portrait (e.g. Bruno)  |
 | `teams.jpg`     | Teams          | A team / celebration shot (e.g. Arsenal)|
 | `fixtures.jpg`  | Fixtures       | Pitch / fixtures imagery                 |
