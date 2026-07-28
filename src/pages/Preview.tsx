@@ -206,14 +206,17 @@ export default function Preview() {
                       </span>
                       <span className="flex w-16 shrink-0 items-center justify-end gap-1.5 text-[13px] font-extrabold text-ink">{m.a}<TeamBadge team={m.a} size={15} /></span>
                     </div>
-                    {/* One bar, split by which side the goals belong to. */}
-                    <div className="mt-2 flex h-[5px] overflow-hidden rounded-full bg-info/35">
-                      <span className="block bg-accent" style={{ width: `${(m.lh / m.total) * 100}%` }} />
+                    {/* One bar, split by which side the goals belong to. Gold is
+                        the favoured attack rather than the home side, so the bar
+                        and the two numbers above it always agree about who is
+                        expected to score more. */}
+                    <div className={`mt-2 flex h-[6px] overflow-hidden rounded-full ${m.lh > m.la ? 'bg-info/35' : 'bg-accent/70'}`}>
+                      <span className={`block ${m.lh > m.la ? 'bg-accent' : 'bg-info/35'}`} style={{ width: `${(m.lh / m.total) * 100}%` }} />
                     </div>
-                    <div className="mt-1.5 flex justify-between text-[10px] text-ink-3">
-                      <span>clean sheet <b className={csTone(m.csh)}>{pc(m.csh)}</b></span>
-                      <span>{m.total.toFixed(2)} goals expected</span>
-                      <span>clean sheet <b className={csTone(m.csa)}>{pc(m.csa)}</b></span>
+                    <div className="mt-2 flex items-baseline justify-between text-[11px] text-ink-3">
+                      <span>Clean sheet <b className={`text-[14px] font-extrabold ${csTone(m.csh)}`}>{pc(m.csh)}</b></span>
+                      <span className="text-[10.5px]">{m.total.toFixed(2)} goals expected</span>
+                      <span>Clean sheet <b className={`text-[14px] font-extrabold ${csTone(m.csa)}`}>{pc(m.csa)}</b></span>
                     </div>
                   </button>
                   {isOpen && (
@@ -262,20 +265,54 @@ export default function Preview() {
                       </div>
 
                       <div className="text-[11.5px] leading-relaxed">
-                        <div className="mb-1.5 text-[9px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">The matchup</div>
-                        <Fact k="Projected score" v={`${m.h} ${m.lh.toFixed(1)} — ${m.la.toFixed(1)} ${m.a}`} />
-                        <Fact k="Clean sheet" v={<><span className={csTone(m.csh)}>{m.h} {pc(m.csh)}</span> · <span className={csTone(m.csa)}>{m.a} {pc(m.csa)}</span></>} />
-                        <Fact k="Both teams score" v={pc((1 - Math.exp(-m.lh)) * (1 - Math.exp(-m.la)))} />
-                        <Fact k="Over 2.5 goals" v={pc(over25(m.total))} />
-                        {PEN.map((t) => {
-                          const taker = penTaker(t === 'h' ? m.h : m.a)
-                          return taker ? <Fact key={t} k={`${t === 'h' ? m.h : m.a} penalties`} v={<b className="text-ink">{taker}</b>} /> : null
-                        })}
+                        <div className="mb-1.5 text-[9px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">What the card doesn&rsquo;t say</div>
+                        {/* Projected score and clean-sheet odds are already on the
+                            card above, so repeating them here spends the best
+                            space on the page saying nothing twice. These are the
+                            things you would otherwise have to leave the page to
+                            find. */}
                         {(() => {
-                          const outs = flagged.filter((f) => f.r.team === m.h || f.r.team === m.a).slice(0, 4)
-                          return outs.length
-                            ? <Fact k="Missing" v={<span className="text-warn">{outs.map((f) => String(f.r.web_name)).join(', ')}</span>} />
-                            : <Fact k="Missing" v={<span className="text-ink-3">Nobody flagged</span>} />
+                          const inGameAll = board.filter((x) => x.side.team === m.h || x.side.team === m.a)
+                          const sp = (team: string) => {
+                            const names: string[] = []
+                            for (const r of ratings) {
+                              if (r.team !== team) continue
+                              const p = availFor(avail, num(r, 'element'), num(r, 'code'))
+                              if (p && ((p.corner_order != null && p.corner_order <= 1) || (p.fk_order != null && p.fk_order <= 1))) names.push(String(r.web_name))
+                            }
+                            return names.slice(0, 2).join(', ')
+                          }
+                          const owned = (x: typeof inGameAll[number]) => num(x.r, 'selected_by_percent') ?? 0
+                          const diff = [...inGameAll].filter((x) => owned(x) <= 5 && x.xp >= 3).sort((a, c) => c.xp - a.xp)[0]
+                          const value = [...inGameAll].sort((a, c) => c.xp / Math.max(num(c.r, 'price') ?? 4, 0.1) - a.xp / Math.max(num(a.r, 'price') ?? 4, 0.1))[0]
+                          const bonus = [...inGameAll].sort((a, c) => (c.parts?.bonus ?? 0) - (a.parts?.bonus ?? 0))[0]
+                          const outs = flagged.filter((f) => f.r.team === m.h || f.r.team === m.a)
+                          return (
+                            <>
+                              {PEN.map((t) => {
+                                const team = t === 'h' ? m.h : m.a
+                                const taker = penTaker(team)
+                                const set = sp(team)
+                                const bits = [taker ? `${taker} (pens)` : null, set ? `${set} (set pieces)` : null].filter(Boolean).join(' · ')
+                                return bits ? <Fact key={t} k={`${team} dead balls`} v={<b className="text-ink">{bits}</b>} /> : null
+                              })}
+                              {diff && (
+                                <Fact k="Best differential" v={<><b className="text-ink">{String(diff.r.web_name)}</b> <span className="text-ink-3">{owned(diff).toFixed(1)}% owned · {diff.xp.toFixed(2)} xP</span></>} />
+                              )}
+                              {value && (
+                                <Fact k="Most points per £m" v={<><b className="text-ink">{String(value.r.web_name)}</b> <span className="text-ink-3">£{value.r.price}m · {value.xp.toFixed(2)} xP</span></>} />
+                              )}
+                              {bonus && (bonus.parts?.bonus ?? 0) > 0.2 && (
+                                <Fact k="Most likely bonus" v={<><b className="text-ink">{String(bonus.r.web_name)}</b> <span className="text-ink-3">{bonus.parts!.bonus.toFixed(2)} of his xP</span></>} />
+                              )}
+                              <Fact
+                                k="Missing"
+                                v={outs.length
+                                  ? <span className="text-warn">{outs.slice(0, 5).map((f) => String(f.r.web_name)).join(', ')}</span>
+                                  : <span className="text-ink-3">Nobody flagged</span>}
+                              />
+                            </>
+                          )
                         })()}
                       </div>
                     </div>
@@ -341,12 +378,6 @@ export default function Preview() {
 }
 
 const PEN = ['h', 'a'] as const
-
-/** P(at least three goals) from the match total, Poisson. */
-function over25(total: number): number {
-  const e = Math.exp(-total)
-  return 1 - e * (1 + total + (total * total) / 2)
-}
 
 function Fact({ k, v }: { k: string; v: React.ReactNode }) {
   return (
