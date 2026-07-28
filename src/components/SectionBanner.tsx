@@ -94,8 +94,8 @@ export function StadiumBanner({
           <div className="sb-tools">
             {stats.map((s) => (
               <div key={s.label} className="sb-statchip">
-                <div className="metallic-num font-num text-lg font-extrabold tabular-nums">{s.value}</div>
-                <div className="text-[10px] font-bold tracking-[0.12em] text-white/60 uppercase">{s.label}</div>
+                <div className="metallic-num font-num text-[15px] leading-tight font-extrabold tabular-nums">{s.value}</div>
+                <div className="text-[9px] font-bold tracking-[0.12em] text-white/60 uppercase">{s.label}</div>
               </div>
             ))}
           </div>
