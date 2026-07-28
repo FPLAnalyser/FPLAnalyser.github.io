@@ -27,3 +27,14 @@ then the photo fades in automatically — no code change needed.
 
 The title, kicker and stat chip sit over a dark scrim at the bottom of every
 card, so busy or bright photos still keep the text readable.
+
+The page banner that reuses the same file is a wide letterbox using
+`object-fit: cover`, so crop to landscape before dropping a file in rather
+than leaving it to CSS. Artwork carrying its own headline is a poor fit here:
+the banner prints the section title over the top, so the words collide and the
+lettering gets sliced mid-glyph. `preview.jpg` is cropped to the tactics-board
+half of its source card for exactly that reason.
+
+## Credits
+
+`scouting.jpg` — Gregorio Cavana (Unsplash).
