@@ -16,6 +16,7 @@ import { FixtureChips } from '../components/FixtureChips'
 import { MatchupBars, UnknownModules, minutesRead, formRead, valueRead, defConRead } from '../components/PlayerStory'
 import { PlayerZoneMap } from '../components/ShotMap'
 import { useCore } from '../lib/useData'
+import { useWide } from '../lib/useWide'
 import { num, str, bool } from '../lib/rows'
 import { useAvailability, availFor, availBadge, SEV_COLOUR, type AvailBadgeInfo } from '../lib/availability'
 import { xpForGw, useXpModel, useMarketOdds, useShotProfiles } from '../lib/xp'
@@ -609,20 +610,6 @@ function TheBrief({ r, data, verdict }: { r: RatingRow; data: CoreData; verdict:
 
 const FIX_MOBILE = 4
 const FIX_DESKTOP = 8
-
-/** True at the lg breakpoint. The run's verdict and its best-week marker have
- *  to describe exactly the fixtures on screen, so the count is decided here
- *  rather than by hiding cells in CSS. */
-function useWide(): boolean {
-  const [wide, setWide] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(min-width: 1024px)').matches)
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1024px)')
-    const on = () => setWide(mq.matches)
-    mq.addEventListener('change', on)
-    return () => mq.removeEventListener('change', on)
-  }, [])
-  return !!wide
-}
 
 function FixtureOutlook({ r, data }: { r: RatingRow; data: CoreData }) {
   const avail = useAvailability()

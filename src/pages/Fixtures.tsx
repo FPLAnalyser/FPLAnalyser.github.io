@@ -15,6 +15,7 @@ import { useMarketOdds, type MarketOdds } from '../lib/xp'
 import { teamLabel, playerHref } from '../lib/util'
 import { analyserDiff, bandOf, bestRuns, buildDiffScale, diffFill, windowGames, type Lens, type TeamBase } from '../lib/fixtureRuns'
 import { BestRuns } from '../components/BestRuns'
+import { useWide } from '../lib/useWide'
 import type { FixtureEaseRow, RatingRow, Row } from '../lib/types'
 
 /* ── Difficulty model ────────────────────────────────────────────────────────
@@ -254,7 +255,13 @@ function profileOf(shots: Row[], withHead: boolean): Profile {
 export default function Fixtures() {
   const { data, error: coreError } = useCore()
   const [view, setView] = useState<View>('difficulty')
-  const [windowN, setWindowN] = useState<(typeof WINDOWS)[number]>(4)
+  // Six is the right first look on a desktop — the grid has the width for it
+  // and six weeks is the horizon people actually plan a transfer over. On a
+  // phone six columns of opponent codes is a squeeze, so it opens on four.
+  // Read once at mount: rotating a phone should not overrule a choice already
+  // made.
+  const wide = useWide()
+  const [windowN, setWindowN] = useState<(typeof WINDOWS)[number]>(() => (wide ? 6 : 4))
   const [lens, setLens] = useState<Lens>('overall')
   const [mode, setMode] = useState<GridMode>('diff')
 
