@@ -14,7 +14,7 @@ import { Exportable } from '../components/ExportPanel'
 import { num, str } from '../lib/rows'
 import { useMarketOdds, type MarketOdds } from '../lib/xp'
 import { teamLabel, playerHref } from '../lib/util'
-import { analyserDiff, bandOf, bestRuns, buildDiffScale, diffFill, windowGames, type Lens, type TeamBase } from '../lib/fixtureRuns'
+import { analyserDiff, bandOf, bestRuns, buildDiffScale, diffFill, windowGames, type DiffScale, type Lens, type SeasonRun, type TeamBase } from '../lib/fixtureRuns'
 import { useWide } from '../lib/useWide'
 import type { FixtureEaseRow, RatingRow, Row } from '../lib/types'
 
@@ -431,6 +431,99 @@ export default function Fixtures() {
   )
 }
 
+/* ── Season map: every club's whole run of gameweeks, with only its best
+   stretch lit ────────────────────────────────────────────────────────────
+   The ranked table answers "whose run is the kindest". This answers the
+   question you actually act on, which is a timing one: when do I get on, and
+   when do I get off. Rows are ordered by when the highlighted run STARTS, so
+   reading down the page is reading the season in order — the clubs to be on
+   in September sit above the clubs to be on in November, and the handover
+   between two teams is a diagonal you can see rather than a comparison you
+   have to hold in your head.
+
+   Everything outside a run is drawn faint on purpose. A grid where all 38
+   cells are coloured is the difficulty grid, and we already have one. */
+function RunsTimeline({ fixtureEase, runs, gws, lens, scale }: {
+  fixtureEase: FixtureEaseRow[]
+  runs: (SeasonRun & { team: string })[]
+  gws: number[]
+  lens: Lens
+  scale: DiffScale | null
+}) {
+  const byTeam = useMemo(() => {
+    const m = new Map<string, Map<number, { opp: string; venue: 'H' | 'A'; diff: number }>>()
+    for (const f of fixtureEase) {
+      const team = String(f.team)
+      const venue: 'H' | 'A' = String(f.venue) === 'H' ? 'H' : 'A'
+      const { diff } = analyserDiff(String(f.opponent), lens, venue, num(f, 'fdr') ?? 3, scale)
+      if (!m.has(team)) m.set(team, new Map())
+      m.get(team)!.set(f.gw, { opp: String(f.opponent), venue, diff })
+    }
+    return m
+  }, [fixtureEase, lens, scale])
+
+  // One row per club, carrying every run of its that falls in view.
+  const rows = useMemo(() => {
+    const m = new Map<string, (SeasonRun & { team: string })[]>()
+    for (const r of runs) {
+      if (!m.has(r.team)) m.set(r.team, [])
+      m.get(r.team)!.push(r)
+    }
+    return [...m.entries()]
+      .map(([team, rs]) => ({ team, runs: rs.sort((a, b) => a.from - b.from) }))
+      .sort((a, b) => a.runs[0].from - b.runs[0].from || b.runs[0].advantage - a.runs[0].advantage)
+  }, [runs])
+
+  if (!rows.length) return null
+
+  return (
+    <div className="overflow-x-auto rounded-xl border border-line">
+      <table className="w-full border-collapse text-[11px]">
+        <thead>
+          <tr className="bg-surface-2">
+            <th className="sticky left-0 z-10 bg-surface-2 px-2 py-2 text-left text-[10px] font-semibold tracking-wide text-ink-3 uppercase">Club</th>
+            {gws.map((gw) => (
+              <th key={gw} className="px-1 py-2 text-center text-[10px] font-semibold text-ink-3">{gw}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(({ team, runs: rs }) => (
+            <tr key={team} className="border-t border-line">
+              <th className="sticky left-0 z-10 bg-surface-1 px-2 py-1.5 text-left font-bold whitespace-nowrap text-ink">
+                <span className="flex items-center gap-1.5"><TeamBadge team={team} size={14} />{team}</span>
+              </th>
+              {gws.map((gw) => {
+                const f = byTeam.get(team)?.get(gw)
+                const run = rs.find((r) => gw >= r.from && gw <= r.to)
+                if (!f) return <td key={gw} className="px-1 py-1.5 text-center text-ink-3">–</td>
+                return (
+                  <td
+                    key={gw}
+                    title={`GW${gw} · ${f.venue === 'H' ? 'home to' : 'away at'} ${f.opp} · difficulty ${f.diff.toFixed(1)}${run ? ` · best run GW${run.from}–${run.to}` : ''}`}
+                    className={`px-1 py-1.5 text-center leading-none whitespace-nowrap ${
+                      run ? 'font-extrabold text-ink' : 'font-medium text-ink-3 opacity-45'
+                    }`}
+                    style={run ? {
+                      background: diffFill(f.diff),
+                      // Bracket the run so its edges are the thing you read —
+                      // that is where you get on and where you get off.
+                      borderLeft: gw === run.from ? '2px solid var(--accent)' : undefined,
+                      borderRight: gw === run.to ? '2px solid var(--accent)' : undefined,
+                    } : undefined}
+                  >
+                    {f.opp}<span className={run ? 'ml-0.5 text-ink-2' : 'ml-0.5'}>{f.venue}</span>
+                  </td>
+                )
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 /* ── Best runs of the season, every club ─────────────────────────────────
    The grid above answers "who has the kindest next six". This answers the
    other half of the question — when each club's good weeks actually fall —
@@ -444,6 +537,7 @@ function SeasonRunsBoard({ fixtureEase, lens, baselines }: {
 }) {
   const scale = useMemo(() => buildDiffScale(baselines), [baselines])
   const [half, setHalf] = useState<'all' | 1 | 2>('all')
+  const [view, setView] = useState<'ranked' | 'map'>('ranked')
 
   const runs = useMemo(() => {
     const teams = [...new Set(fixtureEase.map((f) => String(f.team)))]
@@ -501,6 +595,13 @@ function SeasonRunsBoard({ fixtureEase, lens, baselines }: {
 
   const HALVES: [typeof half, string][] = [['all', 'Whole season'], [1, 'First half'], [2, 'Second half']]
 
+  // The gameweeks the map draws — whatever the half filter leaves in play.
+  const mapGws = useMemo(() => {
+    const all = [...new Set(fixtureEase.map((f) => f.gw))].sort((a, b) => a - b)
+    if (half === 'all') return all
+    return all.filter((gw) => (half === 1 ? gw <= 19 : gw >= 20))
+  }, [fixtureEase, half])
+
   return (
     <div>
       <div className="mb-1 flex items-center gap-2">
@@ -508,9 +609,24 @@ function SeasonRunsBoard({ fixtureEase, lens, baselines }: {
         <InfoTip text="Each club's kindest stretch of 3–6 consecutive gameweeks, one before the turn of the year and one after. Score is the total advantage over an average fixture across the whole run — every game below a 3 adds to it, so a long kind run outranks a short perfect one. Ranking on average difficulty instead would always pick the shortest window, because one home banker beats any four games ever assembled. A gameweek with no fixture ends a run." />
       </div>
       <p className="mb-3 text-xs text-ink-2">
-        Ranked by score: the lower the difficulty and the longer it holds, the higher it places.
+        {view === 'ranked'
+          ? 'Ranked by score: the lower the difficulty and the longer it holds, the higher it places.'
+          : 'Every gameweek, with only each club\u2019s best run lit — read down the page to see when to get on and when to get off.'}
         {spansSeason ? ' Every club gets its best run in each half.' : ' The kindest stretch left in the season.'}
       </p>
+      <div className="mb-3 flex items-center gap-1.5">
+        {([['ranked', 'Ranked'], ['map', 'Season map']] as const).map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setView(id)}
+            className={`min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${
+              view === id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       {spansSeason && (
         <div className="mb-3 flex items-center gap-1.5">
           {HALVES.map(([id, label]) => (
@@ -526,13 +642,17 @@ function SeasonRunsBoard({ fixtureEase, lens, baselines }: {
           ))}
         </div>
       )}
-      <SortableTable
-        rows={ranked}
-        columns={columns}
-        initialSort="score"
-        initialDir="desc"
-        rowKey={(r) => `${r.team}-${r.half}`}
-      />
+      {view === 'ranked' ? (
+        <SortableTable
+          rows={ranked}
+          columns={columns}
+          initialSort="score"
+          initialDir="desc"
+          rowKey={(r) => `${r.team}-${r.half}`}
+        />
+      ) : (
+        <RunsTimeline fixtureEase={fixtureEase} runs={shown} gws={mapGws} lens={lens} scale={scale} />
+      )}
     </div>
   )
 }
@@ -562,7 +682,7 @@ const mean = (ds: number[]) => (ds.length ? ds.reduce((a, b) => a + b, 0) / ds.l
    chosen lens. You set how many teams are in the rotation (N) and how many you
    actually start each week (K) — every gameweek we start the K with the kindest
    fixtures. With nothing picked we surface the best-rotating groups of size N. */
-function RotationPlanner({ ratings: _ratings, fixtureEase, baselines, leagueBase }: { ratings: RatingRow[]; fixtureEase: FixtureEaseRow[]; baselines: Map<string, TeamBase>; leagueBase: TeamBase }) {
+function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase }: { ratings: RatingRow[]; fixtureEase: FixtureEaseRow[]; baselines: Map<string, TeamBase>; leagueBase: TeamBase }) {
   const market = useMarketOdds()
   const diffScale = useMemo(() => buildDiffScale(baselines), [baselines])
   const [teams, setTeams] = useState<string[]>([])
@@ -570,12 +690,38 @@ function RotationPlanner({ ratings: _ratings, fixtureEase, baselines, leagueBase
   // player from, or one you refuse to buy into, should never be offered as
   // half of a suggested pair.
   const [excluded, setExcluded] = useState<string[]>([])
+  // A rotation is only useful if you can actually afford both ends of it, and
+  // the classic case is a pair of £4.5m defenders. So the pool can be cut to
+  // clubs that field a player at a position within a budget, and every
+  // suggestion names the man you'd be buying.
+  const [needPos, setNeedPos] = useState<'any' | 'GKP' | 'DEF' | 'MID' | 'FWD'>('any')
+  const [maxPrice, setMaxPrice] = useState<number | null>(null)
   const [size, setSize] = useState<(typeof ROT_SIZES)[number]>(2)
   const [startK, setStartK] = useState(1)
   const [windowN, setWindowN] = useState<(typeof ROT_WINDOWS)[number]>(6)
   const [lens, setLens] = useState<Lens>('overall')
 
   const allTeams = useMemo(() => [...new Set(fixtureEase.map((f) => f.team))].sort(), [fixtureEase])
+
+  /** The best player each club can offer inside the budget — highest rated,
+   *  not cheapest: at a fixed price cap you want the best man available at
+   *  that price, and the whole point of the cap is that it is already set. */
+  const pickBy = useMemo(() => {
+    const m = new Map<string, RatingRow | null>()
+    if (needPos === 'any' && maxPrice == null) return m
+    for (const t of allTeams) {
+      const cands = ratings.filter((r) =>
+        String(r.team) === t &&
+        (needPos === 'any' || r.position === needPos) &&
+        (maxPrice == null || (num(r, 'price') ?? 99) <= maxPrice + 1e-9))
+      cands.sort((a, b) => (num(b, 'season_overall_score') ?? -1) - (num(a, 'season_overall_score') ?? -1))
+      m.set(t, cands[0] ?? null)
+    }
+    return m
+  }, [ratings, allTeams, needPos, maxPrice])
+
+  const filtering = needPos !== 'any' || maxPrice != null
+  const qualifies = (t: string) => !filtering || !!pickBy.get(t)
   const gws = useMemo(() => [...new Set(fixtureEase.map((f) => f.gw))].sort((a, b) => a - b).slice(0, windowN), [fixtureEase, windowN])
 
   // A team's (easier, if a double) fixture + our difficulty for one gameweek, in
@@ -643,7 +789,7 @@ function RotationPlanner({ ratings: _ratings, fixtureEase, baselines, leagueBase
     // Ruled-out clubs never enter the pool, and every suggestion has to carry
     // the ones already picked — "I know I want an Arsenal defender, show me
     // who partners them" is the question this answers.
-    const pool = allTeams.filter((t) => !excluded.includes(t))
+    const pool = allTeams.filter((t) => !excluded.includes(t) && qualifies(t))
     const out: { group: string[]; combined: number }[] = []
     for (const group of combos(pool, size)) {
       if (!teams.every((t) => group.includes(t))) continue
@@ -652,7 +798,7 @@ function RotationPlanner({ ratings: _ratings, fixtureEase, baselines, leagueBase
     }
     return out.sort((x, y) => x.combined - y.combined).slice(0, 8)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allTeams, excluded, teams, size, startK, gws, cellFor])
+  }, [allTeams, excluded, teams, size, startK, gws, cellFor, pickBy, filtering])
 
   const headCls = 'px-2 py-2 text-center text-[11px] font-semibold tracking-wide text-ink-3 uppercase'
   const pill = (active: boolean) => `min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${active ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`
@@ -691,6 +837,22 @@ function RotationPlanner({ ratings: _ratings, fixtureEase, baselines, leagueBase
         </div>
       </div>
 
+      {/* Budget filter — the reason most rotations exist. */}
+      <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-3">
+        <div className="flex items-center gap-1.5">
+          <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Must field</span>
+          {(['any', 'GKP', 'DEF', 'MID', 'FWD'] as const).map((pos) => (
+            <button key={pos} onClick={() => setNeedPos(pos)} className={pill(needPos === pos)}>{pos === 'any' ? 'Anyone' : pos}</button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Up to</span>
+          {([null, 4, 4.5, 5, 5.5, 6] as const).map((v) => (
+            <button key={String(v)} onClick={() => setMaxPrice(v)} className={pill(maxPrice === v)}>{v == null ? 'Any price' : `£${v.toFixed(1)}m`}</button>
+          ))}
+        </div>
+      </div>
+
       {/* Team chips — three states on one control, because two rows of twenty
           clubs is worse than one rule to learn. */}
       <p className="mb-1.5 text-[11px] text-ink-3">Tap a club to lock it into the rotation, tap again to rule it out of the suggestions.</p>
@@ -698,7 +860,8 @@ function RotationPlanner({ ratings: _ratings, fixtureEase, baselines, leagueBase
         {allTeams.map((t) => {
           const on = teams.includes(t)
           const out = excluded.includes(t)
-          const full = !on && !out && teams.length >= size
+          const ok = qualifies(t)
+          const full = (!on && !out && teams.length >= size) || (!on && !out && !ok)
           const cycle = () => {
             if (on) { setTeams(teams.filter((x) => x !== t)); setExcluded([...excluded, t]); return }
             if (out) { setExcluded(excluded.filter((x) => x !== t)); return }
@@ -709,7 +872,7 @@ function RotationPlanner({ ratings: _ratings, fixtureEase, baselines, leagueBase
               key={t}
               onClick={cycle}
               disabled={full}
-              title={on ? 'Locked in — tap to rule out' : out ? 'Ruled out — tap to clear' : 'Tap to lock into the rotation'}
+              title={on ? 'Locked in — tap to rule out' : out ? 'Ruled out — tap to clear' : !ok ? `No ${needPos === 'any' ? 'player' : needPos} here at this price` : 'Tap to lock into the rotation'}
               className={`flex min-h-9 items-center gap-1.5 rounded-full border px-2.5 text-sm font-medium transition-colors ${
                 on ? 'border-accent bg-accent-soft text-accent'
                   : out ? 'border-bad/50 text-ink-3 line-through opacity-60'
@@ -738,13 +901,25 @@ function RotationPlanner({ ratings: _ratings, fixtureEase, baselines, leagueBase
                     <span key={t} className="flex items-center gap-1.5">{k > 0 && <span className="text-ink-3">+</span>}<TeamBadge team={t} size={16} />{teamLabel(t)}</span>
                   ))}
                 </span>
+                {filtering && (
+                  <span className="hidden shrink-0 text-right text-[11px] text-ink-2 sm:block">
+                    {g.group.map((t) => {
+                      const pk = pickBy.get(t)
+                      return pk ? <span key={t} className="block whitespace-nowrap"><b className="text-ink">{String(pk.web_name)}</b> £{num(pk, 'price')}m</span> : null
+                    })}
+                  </span>
+                )}
                 <span className="shrink-0 text-right">
                   <span className="font-num text-sm font-semibold tabular-nums" style={{ color: runColor(g.combined) }}>{g.combined.toFixed(1)}</span>
                   <span className="ml-1 text-[10px] text-ink-3">avg diff</span>
                 </span>
               </button>
             ))}
-            {topGroups.length === 0 && <div className="px-3 py-8 text-center text-sm text-ink-3">No fixtures to rank yet.</div>}
+            {topGroups.length === 0 && (
+              <div className="px-3 py-8 text-center text-sm text-ink-3">
+                {filtering ? 'No rotation fits that budget — try a higher cap or a different position.' : 'No fixtures to rank yet.'}
+              </div>
+            )}
           </div>
           <p className="mt-2 text-xs text-ink-3">Lower is kinder — the combined difficulty if you always start the {startK} kindest fixture{startK > 1 ? 's' : ''} in the group.</p>
         </div>
