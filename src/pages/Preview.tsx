@@ -293,14 +293,20 @@ export default function Preview() {
               return (
                 <div
                   key={id}
-                  className={`relative overflow-hidden rounded-xl border transition-colors ${feat ? 'border-accent/45 p-4' : 'p-3'} ${isOpen && !feat ? 'border-accent/45 lg:col-span-2' : feat ? '' : 'border-line'}`}
-                  style={{
-                    // A wash in each club's colour, bleeding in from its own
-                    // corner, so a card carries both identities without a
-                    // photograph competing with the numbers.
-                    background: `radial-gradient(110% ${feat ? 200 : 150}% at 6% 0%, color-mix(in srgb, ${teamColors[m.h] ?? 'var(--accent)'} ${feat ? 26 : 14}%, transparent), transparent 56%), radial-gradient(110% ${feat ? 200 : 150}% at 94% 0%, color-mix(in srgb, ${teamColors[m.a] ?? 'var(--info)'} ${feat ? 26 : 14}%, transparent), transparent 56%), var(--surface-1)`,
-                  }}
+                  className={`relative overflow-hidden rounded-xl border bg-surface-1 transition-colors ${feat ? 'border-accent/45 p-4 pt-[1.15rem]' : 'p-3 pt-[0.95rem]'} ${isOpen && !feat ? 'border-accent/45 lg:col-span-2' : feat ? '' : 'border-line'}`}
                 >
+                  {/* Both clubs, as a band across the top rather than two
+                      radial washes bleeding in from the corners. The washes
+                      carried no information, put two saturated hues in
+                      collision mid-card, and were unfair besides — a red kit
+                      shouted while a silver one barely registered. The band
+                      gives every club the same four pixels and lines up from
+                      card to card down the page. */}
+                  <div
+                    aria-hidden="true"
+                    className="absolute inset-x-0 top-0 h-1"
+                    style={{ background: `linear-gradient(90deg, ${teamColors[m.h] ?? 'var(--accent)'} 0 50%, ${teamColors[m.a] ?? 'var(--info)'} 50% 100%)` }}
+                  />
                   <button
                     onClick={(e) => {
                       // An opening card spans both columns, which pushes it to
