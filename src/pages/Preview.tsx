@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageShell, EmptyState } from '../components/PageShell'
 import { SectionBanner } from '../components/SectionBanner'
@@ -40,6 +40,43 @@ const xgTone = (mine: number, theirs: number) => (mine > theirs ? 'text-accent-2
 const ord = (n: number) => `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'}`
 const DAY = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 const TIME = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' })
+
+const DEADLINE_FMT = new Intl.DateTimeFormat('en-GB', {
+  weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
+})
+
+/** The gameweek deadline, with a live countdown — the one fact that decides
+ *  whether anything else on this page is still actionable. Renders nothing
+ *  until the availability feed has the gameweek, rather than guessing a date. */
+function DeadlineStrip({ gw, at }: { gw: number; at?: Date }) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [])
+  if (!at) return null
+  const left = at.getTime() - now
+  const d = Math.floor(left / 86400000)
+  const h = Math.floor((left % 86400000) / 3600000)
+  const mi = Math.floor((left % 3600000) / 60000)
+  const s = Math.floor((left % 60000) / 1000)
+  // Inside the last hour every minute matters, so the seconds appear; before
+  // that they are noise on a page you sit and read.
+  const cd = d > 0 ? `${d}d ${h}h ${mi}m` : h > 0 ? `${h}h ${mi}m` : `${mi}m ${s}s`
+  const urgent = left > 0 && left < 6 * 3600000
+  return (
+    <div className={`mb-5 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl border px-4 py-3 ${urgent ? 'border-warn/50 bg-warn/10' : 'border-accent/35 bg-accent-soft/30'}`}>
+      <span className="flex items-center gap-2 text-[11px] font-extrabold tracking-[0.14em] text-ink-3 uppercase">
+        <Icon name="clock" size={15} className="text-accent" />
+        GW{gw} deadline
+      </span>
+      <span className="text-[16px] font-extrabold text-ink">{DEADLINE_FMT.format(at)}</span>
+      <span className={`font-num ml-auto text-[17px] font-extrabold tabular-nums ${urgent ? 'text-warn' : 'text-accent-2'}`}>
+        {left > 0 ? cd : 'Deadline passed'}
+      </span>
+    </div>
+  )
+}
 
 /** Last five results, most recent last. Renders nothing before a ball is
  *  kicked, which is the honest answer in August. */
@@ -192,7 +229,7 @@ export default function Preview() {
               return (
                 <div
                   key={id}
-                  className={`relative overflow-hidden rounded-xl border transition-colors ${feat ? 'border-accent/45 p-4' : 'p-3'} ${isOpen && !feat ? 'border-accent/45 lg:col-span-2' : feat ? '' : 'border-line'}`}
+                  className={`relative overflow-hidden rounded-xl border transition-colors ${feat ? 'border-accent/45 p-4' : 'p-3'} ${isOpen && !feat ? 'border-accent/45' : feat ? '' : 'border-line'}`}
                   style={{
                     // A wash in each club's colour, bleeding in from its own
                     // corner, so a card carries both identities without a
@@ -200,21 +237,30 @@ export default function Preview() {
                     background: `radial-gradient(110% ${feat ? 200 : 150}% at 6% 0%, color-mix(in srgb, ${teamColors[m.h] ?? 'var(--accent)'} ${feat ? 26 : 14}%, transparent), transparent 56%), radial-gradient(110% ${feat ? 200 : 150}% at 94% 0%, color-mix(in srgb, ${teamColors[m.a] ?? 'var(--info)'} ${feat ? 26 : 14}%, transparent), transparent 56%), var(--surface-1)`,
                   }}
                 >
-                  {/* Both tags ride in the flow above the teams. Pinned to the
-                      top-right corner the derby ribbon sat on top of the away
-                      club's crest, and no amount of padding fixes that on the
-                      narrow cards. */}
-                  {(feat || derby) && (
-                    <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
-                      {feat && <span className="rounded bg-accent px-2 py-1 text-[9px] font-extrabold tracking-[0.12em] text-accent-contrast uppercase">Match of the round</span>}
-                      {derby && <span className="rounded bg-gradient-to-r from-accent to-accent-2 px-2 py-1 text-[9px] font-extrabold tracking-[0.1em] text-accent-contrast uppercase">{derby}</span>}
-                    </div>
-                  )}
                   <button
                     onClick={() => (feat ? setFeatOpen(!featOpen) : setOpen(isOpen ? null : id))}
                     aria-expanded={isOpen}
-                    className="w-full text-left"
+                    aria-label={`${m.h} v ${m.a} — ${isOpen ? 'hide' : 'show'} detail`}
+                    className="w-full cursor-pointer text-left"
                   >
+                    {/* Both tags ride in the flow above the teams, INSIDE the
+                        toggle. Pinned to the top-right corner the derby ribbon
+                        sat on the away club's crest; left outside the button
+                        they were a dead strip across the top of the card that
+                        swallowed clicks. */}
+                    <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
+                      {feat && <span className="rounded bg-accent px-2 py-1 text-[9px] font-extrabold tracking-[0.12em] text-accent-contrast uppercase">Match of the round</span>}
+                      {derby && <span className="rounded bg-gradient-to-r from-accent to-accent-2 px-2 py-1 text-[9px] font-extrabold tracking-[0.1em] text-accent-contrast uppercase">{derby}</span>}
+                      {/* The featured match is lifted out of its day group, so
+                          it has to carry its own date — the rest sit under one. */}
+                      {feat && m.k && (
+                        <span className="rounded border border-line-mid px-2 py-1 text-[10px] font-extrabold tracking-[0.08em] text-ink-2 uppercase">{DAY.format(new Date(m.k))}</span>
+                      )}
+                      <span className="ml-auto flex items-center gap-1 text-[10px] font-bold tracking-wide text-ink-3 uppercase">
+                        {isOpen ? 'Hide' : 'Detail'}
+                        <Icon name="chevron-right" size={13} className={`transition-transform ${isOpen ? '-rotate-90' : 'rotate-90'}`} />
+                      </span>
+                    </div>
                     <div className="flex items-center gap-2.5">
                       <Club team={m.h} rec={avail.table.get(m.hid)} big={feat} />
                       <span className="flex-1 text-center">
@@ -248,7 +294,7 @@ export default function Preview() {
                     </div>
                   </button>
                   {isOpen && (
-                    <div className="mt-3 grid gap-4 border-t border-line-mid pt-3 lg:grid-cols-[1.4fr_1fr]">
+                    <div className="mt-3 grid gap-4 border-t border-line-mid pt-3 xl:grid-cols-[1.4fr_1fr]">
                       <div>
                         <div className="mb-2 text-[11px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Expected points</div>
                         {/* One gold bar each, on the same scale, so the gap
@@ -346,6 +392,8 @@ export default function Preview() {
     <PageShell>
       <SectionBanner imgKey="fixtures" title={`GW${gw} Preview`} subtitle="Captain, chips, the games that produce the points, and who is missing" />
 
+      <DeadlineStrip gw={gw} at={avail.deadlines.get(gw)} />
+
       {!ready ? (
         <EmptyState icon={<Icon name="calendar" size={44} />}>
           The preview switches on once the bookmakers price gameweek {gw}.
@@ -372,12 +420,13 @@ export default function Preview() {
             <Tile
               k="Best differential" v={differential ? differential.xp.toFixed(2) : '—'}
               s={differential
-                ? <><b>{String(differential.r.web_name)}</b> — {differential.own.toFixed(1)}% owned, {differential.side.venue === 'H' ? 'v' : 'at'} {teamLabel(differential.side.opp)}</>
+                ? <span className="flex items-center gap-1.5">
+                    <TeamBadge team={differential.side.team} size={18} className="shrink-0" />
+                    <span><b>{String(differential.r.web_name)}</b> — {differential.own.toFixed(1)}% owned, {differential.side.venue === 'H' ? 'v' : 'at'} {teamLabel(differential.side.opp)}</span>
+                  </span>
                 : <span className="text-ink-3">Nobody under 5% owned projects a return worth the risk.</span>}
               media={differential
-                ? <span className="block h-[52px] w-[52px] overflow-hidden rounded-full bg-surface-2">
-                    <PlayerPhoto element={num(differential.r, 'element')} code={num(differential.r, 'code')} placeholder={<TeamBadge team={differential.side.team} size={46} />} className="h-full w-full object-cover object-top" />
-                  </span>
+                ? <PlayerPhoto element={num(differential.r, 'element')} code={num(differential.r, 'code')} placeholder={<TeamBadge team={differential.side.team} size={46} />} className="h-[68px] w-auto object-contain object-bottom" />
                 : undefined}
             />
             <Tile
@@ -402,7 +451,7 @@ export default function Preview() {
                   style={{ padding: 2, background: p.edge, boxShadow: p.glow }}
                 >
                   <div className="relative min-h-[132px] overflow-hidden rounded-[9px] p-3.5 pr-[96px]" style={{ background: p.stock }}>
-                    {p.foil && <div className="foil-shine" aria-hidden="true" />}
+                    {p.foil && <div className="foil-shine-once" aria-hidden="true" />}
                     <PlayerPhoto
                       element={num(b.r, 'element')}
                       code={num(b.r, 'code')}
@@ -479,8 +528,8 @@ export default function Preview() {
                 {/* Out on the left, the man who benefits on the right: the
                     row reads as the swap it describes. */}
                 {steps.map((f) => (
-                  <div key={String(f.r.element)} className="flex items-center gap-3 border-b border-line px-3 py-2.5 last:border-0">
-                    <div className="min-w-0 flex-1">
+                  <div key={String(f.r.element)} className="flex items-center gap-2.5 border-b border-line px-3 py-2.5 last:border-0">
+                    <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide ${f.status === 'd' ? 'bg-warn/30' : 'bg-bad/30'}`}>{LABEL[f.status] ?? 'OUT'}</span>
                         <TeamBadge team={String(f.r.team)} size={18} className="shrink-0" />
@@ -489,7 +538,7 @@ export default function Preview() {
                       <div className="mt-0.5 truncate text-[11.5px] text-ink-3">{f.news}</div>
                     </div>
                     <Icon name="arrow-right" size={14} className="shrink-0 text-ink-3" />
-                    <div className="shrink-0 text-right">
+                    <div className="min-w-0">
                       <div className="text-[9.5px] font-extrabold tracking-[0.1em] text-good uppercase">Steps up</div>
                       <b className="text-[14px] text-ink">{String(f.step!.web_name)}</b>
                       <div className="text-[11.5px] text-ink-3">£{f.step!.price}m</div>
@@ -538,14 +587,14 @@ const PODIUM = [
     glow: '0 0 0 1px rgba(255,251,240,.16), 0 0 20px -4px rgba(201,162,39,.55)',
   },
   {
-    label: 'Alternative 1',
+    label: 'The challenger',
     edge: 'linear-gradient(160deg,#5C636B,#C9CFD6,#e8ecf1,#4a5057)',
     stock: 'linear-gradient(168deg,#1a1d21,#12151a 56%,#0a0c0e)',
     num: 'linear-gradient(180deg,#f4f7fa,#c9cfd6 52%,#7c838c)',
     glow: undefined as string | undefined,
   },
   {
-    label: 'Alternative 2',
+    label: 'The outsider',
     edge: 'linear-gradient(160deg,#4a2f1a,#b87333,#e8b98a,#3d2614)',
     stock: 'linear-gradient(168deg,#221811,#17100b 56%,#0d0806)',
     num: 'linear-gradient(180deg,#f5d9bc,#d79a5e 52%,#9c5f2c)',
@@ -556,11 +605,11 @@ const PODIUM = [
 /** One side of a fixture: crest, code, league position and last five. */
 function Club({ team, rec, big, right }: { team: string; rec?: TeamRecord; big?: boolean; right?: boolean }) {
   return (
-    <span className={`flex shrink-0 items-center gap-1.5 sm:gap-2.5 ${big ? 'w-[74px] sm:w-[168px]' : 'w-[74px] sm:w-[142px]'} ${right ? 'flex-row-reverse justify-start' : ''}`}>
-      <TeamBadge team={team} size={big ? 26 : 22} className="shrink-0 sm:hidden" />
-      <TeamBadge team={team} size={big ? 40 : 32} className="hidden shrink-0 sm:block" />
+    <span className={`flex shrink-0 items-center gap-1.5 sm:gap-2.5 ${big ? 'w-[74px] sm:w-[168px]' : 'w-[74px] sm:w-[158px]'} ${right ? 'flex-row-reverse justify-start' : ''}`}>
+      <TeamBadge team={team} size={big ? 26 : 24} className="shrink-0 sm:hidden" />
+      <TeamBadge team={team} size={big ? 42 : 38} className="hidden shrink-0 sm:block" />
       <span className={`min-w-0 ${right ? 'text-right' : ''}`}>
-        <b className={`block leading-tight font-extrabold text-ink ${big ? 'text-[16px] sm:text-[24px]' : 'text-[14px] sm:text-[18px]'}`}>{team}</b>
+        <b className={`block leading-tight font-extrabold text-ink ${big ? 'text-[16px] sm:text-[24px]' : 'text-[14px] sm:text-[22px]'}`}>{team}</b>
         {rec?.pos ? <em className="text-[10.5px] font-bold text-ink-3 not-italic">{ord(rec.pos)}</em> : null}
       </span>
       <FormDots form={rec?.form} />

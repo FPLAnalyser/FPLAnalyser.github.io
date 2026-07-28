@@ -428,6 +428,15 @@ body {
 @keyframes foil-sweep { 0%, 100% { transform: translateX(-45%); } 50% { transform: translateX(45%); } }
 @media (prefers-reduced-motion: reduce) { .foil-shine { display: none; } }
 
+/* One pass, then gone. A card you sit and read (the captain pick) can't carry
+   a shimmer that loops — it stops being a flourish and becomes a distraction.
+   `both` parks it off the card edge when it's done. */
+.foil-shine-once { position: absolute; inset: -40%; z-index: 1; pointer-events: none;
+  background: linear-gradient(115deg, transparent 42%, rgba(255,246,216,.34) 50%, transparent 58%);
+  animation: foil-pass 1.5s ease-out .35s 1 both; }
+@keyframes foil-pass { from { transform: translateX(-60%); } to { transform: translateX(60%); } }
+@media (prefers-reduced-motion: reduce) { .foil-shine-once { display: none; } }
+
 /* ── Tile→page view transition (guarded: only runs when the browser supports
    the View Transitions API and motion isn't reduced) ── */
 @media not (prefers-reduced-motion: reduce) {
