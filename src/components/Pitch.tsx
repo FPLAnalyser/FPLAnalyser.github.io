@@ -24,7 +24,7 @@ export function Pitch({ children, footer, className, maxWidth, boosted }: {
       // a fixed `aspect-ratio` plus `overflow-hidden` silently ate the
       // forwards. One grid cell, two children stacked in it: a spacer that
       // enforces the ratio and the content that can outgrow it.
-      className={`relative grid overflow-hidden rounded-2xl px-2 py-3 sm:px-3 sm:py-4 md:px-4 md:py-5 ${className ?? ''}`}
+      className={`relative grid overflow-hidden rounded-2xl px-1.5 py-3 sm:px-3 sm:py-4 md:px-4 md:py-5 ${className ?? ''}`}
       style={{
         maxWidth,
         margin: maxWidth ? '0 auto' : undefined,
@@ -72,7 +72,7 @@ export function Pitch({ children, footer, className, maxWidth, boosted }: {
           // The bench: a band across the foot of the pitch, the way it sits on
           // a teamsheet — still inside the frame, clearly not on the field.
           <div
-            className={`mt-2 rounded-xl border px-2 py-2 backdrop-blur-[1px] sm:px-3 ${boosted ? 'border-[#c9a227]' : 'border-white/12 bg-black/35'}`}
+            className={`mt-2 rounded-xl border px-1 py-2 backdrop-blur-[1px] sm:px-3 ${boosted ? 'border-[#c9a227]' : 'border-white/12 bg-black/35'}`}
             style={boosted ? { background: 'linear-gradient(180deg, rgba(201,162,39,.22), rgba(0,0,0,.45))', boxShadow: '0 0 0 1px rgba(247,227,166,.25)' } : undefined}
           >
             <div className={`mb-1.5 text-[10px] font-extrabold tracking-[0.18em] uppercase ${boosted ? 'text-[#F7E3A6]' : 'text-white/55'}`}>{boosted ? 'Boost' : 'Bench'}</div>
@@ -99,6 +99,23 @@ export function initialsOf(name: string): string {
  *  row and pushes the forwards out of the frame. `flex-1 basis-0` divides what
  *  there is; `max-w` stops them ballooning on a desktop. */
 export const CARD_W = 'min-w-0 flex-1 basis-0 max-w-[108px] sm:max-w-[118px] lg:max-w-[136px]'
+
+/** Name type size on a pitch card, below the `sm` breakpoint only.
+ *
+ *  The site's floor is 10px, and this is the one place that earns an
+ *  exception: a five-across defence on a phone leaves each card about 64px of
+ *  text at 390px, and "Calvert-Lewin" needs 68px at 10px. Truncating the name
+ *  is worse than half a point of type, so long names step down instead.
+ *
+ *  Thresholds are measured rather than guessed, and an armband counts for four
+ *  characters because the C/V badge takes ~18px out of the same row — which is
+ *  why a six-letter captain can run out of room while an eleven-letter
+ *  midfielder does not. Above `sm` the cards are wide enough that everything
+ *  sits at 10.5px regardless. */
+export function nameSize(name: string, hasArmband = false): string {
+  const n = name.length + (hasArmband ? 4 : 0)
+  return n >= 13 ? 'text-[9px]' : n >= 9 ? 'text-[9.5px]' : 'text-[10px]'
+}
 
 /** Rating tiers. The band a player falls in is what the card's material says,
  *  so a shelf of them sorts itself before you read a single name. `ice` is not
@@ -198,7 +215,7 @@ export function PitchCard({ rating, cornerText, name, team, price, code, element
           {flag.label}
         </span>
       )}
-      <span className="block px-1 pt-1 pb-2 sm:px-1.5 sm:pt-1.5 sm:pb-2.5">
+      <span className="block px-0.5 pt-1 pb-2 sm:px-1.5 sm:pt-1.5 sm:pb-2.5">
         <span className="tier-num font-num block text-[13px] leading-none font-extrabold tabular-nums sm:text-[15px]">{cornerText ?? rating ?? '—'}</span>
         {/* The headshot sits straight on the card — no plate behind it. These
             are transparent cut-outs, so a filled box shows through the player
@@ -214,7 +231,7 @@ export function PitchCard({ rating, cornerText, name, team, price, code, element
             placeholder={<span className="grid h-full w-full place-items-center text-[11px] font-extrabold text-white/35">{initialsOf(name)}</span>}
           />
         </span>
-        <span className="capture-line flex w-full items-center justify-center gap-1 text-[10px] leading-tight font-bold text-white sm:text-[10.5px]">
+        <span className={`capture-line flex w-full items-center justify-center gap-1 leading-tight font-bold text-white sm:text-[10.5px] ${nameSize(name, !!armband)}`}>
           {armband && (
             <span
               className={`grid h-[14px] min-w-[14px] shrink-0 place-items-center rounded-full px-1 text-[10px] leading-none font-black ${
@@ -265,7 +282,7 @@ export function BenchSpine({ boosted, maxWidth, children }: { boosted?: boolean;
             {boosted ? 'Boost' : 'Subs'}
           </span>
         </span>
-        <div className="flex min-w-0 flex-1 justify-center gap-1.5 sm:gap-2.5">{children}</div>
+        <div className="flex min-w-0 flex-1 justify-center gap-1 sm:gap-2.5">{children}</div>
       </div>
     </div>
   )

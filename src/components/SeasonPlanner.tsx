@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { PlayerPhoto } from './PlayerPhoto'
-import { FoilShell, Pitch, BenchSpine, CARD_W, initialsOf, tierOf } from './Pitch'
+import { FoilShell, Pitch, BenchSpine, CARD_W, initialsOf, tierOf, nameSize } from './Pitch'
 import { PlayerCardSheet } from './PlayerCardSheet'
 import { availBadge, availFor, SEV_COLOUR, type Availability } from '../lib/availability'
 import { xpForGw, useXpModel, useMarketOdds, gwBenchmark, gwRating } from '../lib/xp'
@@ -456,7 +456,7 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
         {/* Flex rather than a truncating text line: `truncate` clips
             anything taller than the line box, which sliced the top and
             bottom off the armband. Only the name truncates now. */}
-        <span className="capture-line mt-1 flex w-full items-center justify-center gap-1 text-[10px] leading-tight font-bold text-white sm:text-[11px]">
+        <span className={`capture-line mt-1 flex w-full items-center justify-center gap-1 leading-tight font-bold text-white sm:text-[11px] ${nameSize(name, captain || vice)}`}>
           {(captain || vice) && (
             <span
               title={captain && tripleCap ? 'Triple captain' : captain ? 'Captain' : 'Vice-captain'}
@@ -467,7 +467,7 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
           )}
           <span className="truncate">{name}</span>
         </span>
-        <span className="mt-0.5 block w-full truncate rounded px-1 text-[10px] font-bold" style={{ background: bg, color: fg }}>{next ? `${next.opponent} (${next.venue})` : 'No game'}</span>
+        <span className="mt-0.5 block w-full truncate rounded px-0.5 text-[10px] font-bold sm:px-1" style={{ background: bg, color: fg }}>{next ? `${next.opponent} (${next.venue})` : 'No game'}</span>
         {fixtures.length > 1 && (
           <span className="mt-0.5 hidden w-full gap-0.5 sm:flex">
             {fixtures.slice(1).map((f, i) => {
