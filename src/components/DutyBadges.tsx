@@ -81,9 +81,9 @@ export function DutyBadges({ d, className = '' }: { d: Duties; className?: strin
       ) : d.pen === 1 ? (
         <span className={`${CHIP} bg-accent/30`} title="Penalties — first choice">P</span>
       ) : d.pen === 2 ? (
+        // Third in line and below is noise — he only takes one if two men are
+        // missing, and by then the badge on the second name has gone green.
         <span className={`${CHIP} bg-accent/16`} title={d.penAhead ? `Penalties — second, behind ${d.penAhead}` : 'Penalties — second in line'}>P²</span>
-      ) : d.pen === 3 ? (
-        <span className={`${CHIP} bg-accent/9`} title={d.penAhead ? `Penalties — third, behind ${d.penAhead}` : 'Penalties — third in line'}>P³</span>
       ) : null}
       {setPiece && <span className={`${CHIP} bg-info/26`} title={`Set pieces — ${spTitle}`}>SP</span>}
       {d.streak === 'hot' && <span className={`${CHIP} bg-hot/22`} title="Hot streak — scoring above his season rate">🔥</span>}

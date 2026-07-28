@@ -146,6 +146,43 @@ export default function SquadBuilder() {
      it happen; stacked on a phone it sits below the pitch, so the tap looked
      like it did nothing. Bring the list to the player — but only when it isn't
      already on screen, so the desktop layout never jumps. */
+  /* Keep the pitch where it is across a removal.
+
+     Selling a player switches the picker to his position, and that used to be
+     all it did — yet the page still moved, by 800px on a phone. Nothing was
+     scrolling it: taking a man out changes the height of the read above the
+     board, and the browser's own scroll anchoring then dragged the view. You
+     often clear two or three players in a row, so being thrown down the page
+     after each one made that a fight.
+
+     The reflow arrives over several frames, not one, so a single correction
+     measured against a half-finished layout and missed most of the jump. This
+     holds the pitch still until the layout stops moving — and gets out of the
+     way the moment you scroll yourself. */
+  const holdPitch = () => {
+    const at = () => document.querySelector('[data-pitch]')?.getBoundingClientRect().top ?? null
+    const before = at()
+    if (before == null) return
+    let frames = 0
+    let settled = 0
+    let cancelled = false
+    const stop = () => { cancelled = true }
+    window.addEventListener('wheel', stop, { once: true, passive: true })
+    window.addEventListener('touchstart', stop, { once: true, passive: true })
+    const tick = () => {
+      if (cancelled || frames++ > 40) {
+        window.removeEventListener('wheel', stop)
+        window.removeEventListener('touchstart', stop)
+        return
+      }
+      const now = at()
+      if (now != null && Math.abs(now - before) > 1) { window.scrollBy(0, now - before); settled = 0 }
+      else if (++settled > 3) { window.removeEventListener('wheel', stop); window.removeEventListener('touchstart', stop); return }
+      requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  }
+
   const focusMarket = (pos: Pos) => {
     setPickPos(pos)
     setQuery('')
@@ -348,7 +385,7 @@ export default function SquadBuilder() {
       <SectionBanner imgKey="squad" title="Squad Builder" subtitle={`Pick your Gameweek ${buildGw} fifteen within £100m, then step forward week by week — transfers, captain and chips`} />
 
       <>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_440px] lg:items-start">
+      <div className="no-anchor grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_440px] lg:items-start">
         {/* The board — the same object from an empty squad to a full one:
             unfilled places are just empty slots you tap to fill. */}
         <div className="min-w-0">
@@ -391,7 +428,7 @@ export default function SquadBuilder() {
                 {complete && !valid && <span className="text-sm font-medium text-bad">Over budget by £{Math.abs(remaining).toFixed(1)}m</span>}
               </div>
             ) : null}
-            onSold={(el: number) => { focusMarket(String(byEl.get(el)?.position ?? 'MID') as Pos); setPendingIn(null) }}
+            onSold={(el: number) => { holdPitch(); setPickPos(String(byEl.get(el)?.position ?? 'MID') as Pos); setQuery(''); setPendingIn(null) }}
           />
         </div>
 

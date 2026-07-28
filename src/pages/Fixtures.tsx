@@ -191,6 +191,9 @@ function fixtureRead(
   fixtures: ReadFixture[],
   profiles: Map<string, Profile>,
   league: Profile,
+  /** Every club's average difficulty over the same window, so "kind" can mean
+   *  kinder than the rest of the league rather than under a fixed number. */
+  leagueRuns: number[],
 ): string | null {
   if (!fixtures.length) return null
   const bits: string[] = []
@@ -198,12 +201,32 @@ function fixtureRead(
   const avg = fixtures.reduce((s, f) => s + f.diff, 0) / n
   const when = (f: ReadFixture) => `GW${f.gw} ${f.venue === 'H' ? 'at home to' : 'away to'} ${teamLabel(f.opponent)}`
 
-  // 1. How the run rates, and where the weight sits.
+  /* 1. How the run rates — against the rest of the league, not against a
+     constant. Fixed thresholds of 2.3 and 3.5 were tuned for an older, wider
+     difficulty scale; on the current one nineteen clubs out of twenty landed
+     between them and every read opened "A middling run". Runs genuinely do
+     even out — over eight gameweeks the whole league sits between 2.5 and 3.5
+     — so the only honest way to say "kind" is to say kinder than whom. */
   const home = fixtures.filter((f) => f.venue === 'H').length
-  const shape = avg <= 2.3 ? 'One of the kinder runs in the league'
-    : avg >= 3.5 ? 'A hard run'
-    : 'A middling run'
-  bits.push(`${shape} — ${avg.toFixed(1)} average difficulty over ${n}, ${home} at home.`)
+  const pool = leagueRuns.length >= 8 ? [...leagueRuns].sort((a, b) => a - b) : null
+  const rank = pool ? pool.filter((v) => v < avg - 1e-9).length + 1 : null
+  const ordinal = (k: number) => {
+    const t = k % 100
+    return `${k}${t >= 11 && t <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][k % 10] ?? 'th'}`
+  }
+  if (rank && pool) {
+    const of = pool.length
+    const spread = pool[of - 1] - pool[0]
+    const where = rank <= 4 ? 'One of the kindest runs in the league'
+      : rank >= of - 3 ? 'One of the toughest runs in the league'
+      : rank <= Math.round(of / 2) ? 'A slightly kinder run than most'
+      : 'A slightly tougher run than most'
+    bits.push(`${where} — ${ordinal(rank)} easiest of ${of} over the next ${n}, averaging ${avg.toFixed(1)} difficulty with ${home} at home.`)
+    // Over a long window the league bunches up, and a rank hides that. Say it.
+    if (spread < 0.8) bits.push(`Across ${n} gameweeks the league bunches up — every club sits between ${pool[0].toFixed(1)} and ${pool[of - 1].toFixed(1)}, so the edge is in the individual weeks rather than the run as a whole.`)
+  } else {
+    bits.push(`${avg.toFixed(1)} average difficulty over ${n}, ${home} at home.`)
+  }
 
   // 2. The weeks that decide it, named by the projections on the grid rather
   // than by the difficulty score. Those two used to be separate models, so
@@ -761,7 +784,7 @@ function FixtureGrid({
 }) {
   const market = useMarketOdds()
   const diffScale = useMemo(() => buildDiffScale(baselines), [baselines])
-  const [sortKey, setSortKey] = useState<number | 'run'>('run')
+  const [sortKey, setSortKey] = useState<number | 'run' | 'team'>('run')
   // Difficulty: ascending = easiest first. Projections: descending = most
   // goals / best clean-sheet odds first.
   const [dir, setDir] = useState<'asc' | 'desc'>(mode === 'diff' ? 'asc' : 'desc')
@@ -852,6 +875,23 @@ function FixtureGrid({
 
   const bandFill = (v: number): string => bandOf(deviation(v))
 
+  /* Every club's average difficulty over this window — the yardstick the
+     written read ranks a run against. Always difficulty, whichever grid is on
+     screen, so the sentence doesn't change meaning with the tab. */
+  const runAverages = useMemo(() => {
+    const out: number[] = []
+    for (const team of new Set(fixtureEase.map((f) => f.team))) {
+      let sum = 0, count = 0
+      for (const f of fixtureEase) {
+        if (f.team !== team || !gwSet.has(f.gw)) continue
+        sum += analyserDiff(f.opponent, lens, f.venue, f.fdr, diffScale).diff
+        count++
+      }
+      if (count) out.push(sum / count)
+    }
+    return out
+  }, [fixtureEase, gwSet, lens, diffScale])
+
   // A team's value in one gameweek (blanks → null; doubles → avg diff / summed projection).
   const gwVal = (r: (typeof rows)[number], gw: number): number | null => {
     const fs = r.byGw.get(gw)
@@ -885,6 +925,10 @@ function FixtureGrid({
   }, [rows, gws, mode, lens, baselines, leagueBase, market])
 
   const sorted = useMemo(() => {
+    if (sortKey === 'team') {
+      const by = [...rows].sort((a, b) => teamLabel(a.team).localeCompare(teamLabel(b.team)))
+      return dir === 'asc' ? by : by.reverse()
+    }
     const val = (r: (typeof rows)[number]) => (sortKey === 'run' ? r.run : gwVal(r, sortKey))
     return [...rows].sort((a, b) => {
       const av = val(a)
@@ -897,14 +941,14 @@ function FixtureGrid({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, sortKey, dir, lens, mode])
 
-  const clickHeader = (key: number | 'run') => {
+  const clickHeader = (key: number | 'run' | 'team') => {
     if (sortKey === key) setDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     else {
       setSortKey(key)
       setDir('asc')
     }
   }
-  const arrow = (key: number | 'run') => (sortKey === key ? (dir === 'asc' ? ' ↑' : ' ↓') : '')
+  const arrow = (key: number | 'run' | 'team') => (sortKey === key ? (dir === 'asc' ? ' ↑' : ' ↓') : '')
 
   const headCls = 'cursor-pointer select-none px-2 py-2 text-center text-[11px] font-semibold tracking-wide text-ink-3 uppercase transition-colors hover:text-ink'
   const colSpan = gws.length + 2
@@ -919,7 +963,11 @@ function FixtureGrid({
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-line bg-surface-1">
-              <th className="sticky left-0 z-10 bg-surface-1 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-ink-3 uppercase">Team</th>
+              <th
+                onClick={() => clickHeader('team')}
+                className="sticky left-0 z-10 cursor-pointer bg-surface-1 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-ink-3 uppercase transition-colors select-none hover:text-ink"
+                title="Sort A–Z by club"
+              >Team{arrow('team')}</th>
               {gws.map((gw) => (
                 <th key={gw} onClick={() => clickHeader(gw)} className={headCls}>GW{gw}{arrow(gw)}</th>
               ))}
@@ -1019,6 +1067,7 @@ function FixtureGrid({
                           }
                         }))}
                         profiles={profiles} league={league} usedFdr={r.usedFdr} n={gws.length}
+                        leagueRuns={runAverages}
                       />
                     </td>
                   </tr>
@@ -1061,12 +1110,13 @@ function FixtureGrid({
 }
 
 /** The expandable per-team scouting read of an upcoming run. */
-function RunRead({ team, fixtures, profiles, league, usedFdr, n }: {
+function RunRead({ team, fixtures, profiles, league, usedFdr, n, leagueRuns }: {
   team: string
   fixtures: ReadFixture[]
   profiles: Map<string, Profile>; league: Profile; usedFdr: boolean; n: number
+  leagueRuns: number[]
 }) {
-  const read = fixtureRead(fixtures, profiles, league)
+  const read = fixtureRead(fixtures, profiles, league, leagueRuns)
   return (
     <div className="text-sm text-ink-2">
       <div className="mb-1 flex items-center gap-2 font-semibold text-ink"><TeamBadge team={team} size={15} />Next {n}: {teamLabel(team)}</div>
