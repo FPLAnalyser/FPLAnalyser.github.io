@@ -193,6 +193,22 @@ export default function Preview() {
     return out.sort((a, b) => (b.own ?? 0) - (a.own ?? 0))
   }, [ratings, avail])
 
+  /* The round's biggest game by total goals, lifted out of the list, and
+     everything else grouped by matchday. This has to sit ABOVE the loading
+     return: a hook after an early return runs on the loaded pass and not the
+     loading one, and React counts hooks — that mismatch is what crashed this
+     page with error #310 on the first paint after the data landed. */
+  const { feature, byDay } = useMemo(() => {
+    const feature = matches.length ? matches.reduce((best, m) => (m.total > best.total ? m : best)) : null
+    const out = new Map<string, Match[]>()
+    for (const m of matches) {
+      if (m === feature) continue
+      const key = m.k ? DAY.format(new Date(m.k)) : 'Kickoff to be confirmed'
+      out.set(key, [...(out.get(key) ?? []), m])
+    }
+    return { feature, byDay: [...out.entries()] }
+  }, [matches])
+
   if (!data) {
     return (
       <PageShell>
@@ -229,7 +245,7 @@ export default function Preview() {
               return (
                 <div
                   key={id}
-                  className={`relative overflow-hidden rounded-xl border transition-colors ${feat ? 'border-accent/45 p-4' : 'p-3'} ${isOpen && !feat ? 'border-accent/45' : feat ? '' : 'border-line'}`}
+                  className={`relative overflow-hidden rounded-xl border transition-colors ${feat ? 'border-accent/45 p-4' : 'p-3'} ${isOpen && !feat ? 'border-accent/45 lg:col-span-2' : feat ? '' : 'border-line'}`}
                   style={{
                     // A wash in each club's colour, bleeding in from its own
                     // corner, so a card carries both identities without a
@@ -238,7 +254,16 @@ export default function Preview() {
                   }}
                 >
                   <button
-                    onClick={() => (feat ? setFeatOpen(!featOpen) : setOpen(isOpen ? null : id))}
+                    onClick={(e) => {
+                      // An opening card spans both columns, which pushes it to
+                      // a row of its own — so it is scrolled back under the
+                      // cursor, or the next click lands on whatever moved up
+                      // into its place.
+                      const el = e.currentTarget
+                      if (feat) setFeatOpen(!featOpen)
+                      else setOpen(isOpen ? null : id)
+                      requestAnimationFrame(() => el.scrollIntoView({ block: 'nearest' }))
+                    }}
                     aria-expanded={isOpen}
                     aria-label={`${m.h} v ${m.a} — ${isOpen ? 'hide' : 'show'} detail`}
                     className="w-full cursor-pointer text-left"
@@ -294,7 +319,7 @@ export default function Preview() {
                     </div>
                   </button>
                   {isOpen && (
-                    <div className="mt-3 grid gap-4 border-t border-line-mid pt-3 xl:grid-cols-[1.4fr_1fr]">
+                    <div className="mt-3 grid gap-4 border-t border-line-mid pt-3 lg:grid-cols-[1.4fr_1fr]">
                       <div>
                         <div className="mb-2 text-[11px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Expected points</div>
                         {/* One gold bar each, on the same scale, so the gap
@@ -376,18 +401,6 @@ export default function Preview() {
               )
   }
 
-  // The biggest game of the round by total goals, lifted out of the list.
-  const feature = matches.length ? matches.reduce((best, m) => (m.total > best.total ? m : best)) : null
-  const byDay = useMemo(() => {
-    const out = new Map<string, Match[]>()
-    for (const m of matches) {
-      if (m === feature) continue
-      const key = m.k ? DAY.format(new Date(m.k)) : 'Kickoff to be confirmed'
-      out.set(key, [...(out.get(key) ?? []), m])
-    }
-    return [...out.entries()]
-  }, [matches, feature])
-
   return (
     <PageShell>
       <SectionBanner imgKey="fixtures" title={`GW${gw} Preview`} subtitle="Captain, chips, the games that produce the points, and who is missing" />
@@ -426,7 +439,20 @@ export default function Preview() {
                   </span>
                 : <span className="text-ink-3">Nobody under 5% owned projects a return worth the risk.</span>}
               media={differential
-                ? <PlayerPhoto element={num(differential.r, 'element')} code={num(differential.r, 'code')} placeholder={<TeamBadge team={differential.side.team} size={46} />} className="h-[68px] w-auto object-contain object-bottom" />
+                ? (
+                  // A fixed box the photo is anchored inside, rather than an
+                  // image left to size itself: a headshot that 404s, or one
+                  // with a different aspect, then falls back to the crest in
+                  // the same space instead of collapsing the tile.
+                  <span className="relative flex h-[74px] w-[66px] items-end justify-center overflow-hidden rounded-lg bg-surface-2/70">
+                    <PlayerPhoto
+                      element={num(differential.r, 'element')}
+                      code={num(differential.r, 'code')}
+                      placeholder={<TeamBadge team={differential.side.team} size={40} className="mb-4" />}
+                      className="h-[82px] w-auto max-w-none object-contain object-bottom"
+                    />
+                  </span>
+                )
                 : undefined}
             />
             <Tile
