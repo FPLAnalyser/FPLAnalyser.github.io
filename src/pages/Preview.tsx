@@ -377,18 +377,9 @@ export default function Preview() {
                                   k="Best differential"
                                   v={
                                     <span className="flex items-center justify-end gap-2">
-                                      {/* The one row in the notes that names a
-                                          player rather than a club, so it gets
-                                          his face and his crest — otherwise it
-                                          reads as another line of club admin. */}
-                                      <span className="flex h-[30px] w-[26px] shrink-0 items-end justify-center overflow-hidden rounded bg-surface-2/70">
-                                        <PlayerPhoto
-                                          element={num(diff.r, 'element')}
-                                          code={num(diff.r, 'code')}
-                                          placeholder={<TeamBadge team={diff.side.team} size={18} className="mb-1.5" />}
-                                          className="h-[34px] w-auto max-w-none object-contain object-bottom"
-                                        />
-                                      </span>
+                                      {/* Crest only. A headshot cropped to a
+                                          table row's height is unreadable —
+                                          you get a chin and a shoulder. */}
                                       <TeamBadge team={diff.side.team} size={17} className="shrink-0" />
                                       <span>
                                         <b className="text-ink">{String(diff.r.web_name)}</b>{' '}
