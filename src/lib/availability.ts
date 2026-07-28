@@ -20,6 +20,12 @@ export interface AvailPlayer {
   news?: string
   news_added?: string
   chance?: number
+  /** Transfers in and out this gameweek, and the price move they have already
+   *  caused (in tenths of a million). FPL publishes all three; it does not
+   *  publish the threshold for the NEXT move, so nothing here is a forecast. */
+  tin?: number
+  tout?: number
+  dprice?: number
   /** Today's price in millions, and today's ownership percentage. */
   price?: number
   own?: number
@@ -29,7 +35,21 @@ export interface AvailPlayer {
 }
 export interface AvailEvent { gw: number; deadline: string; finished: boolean }
 /** One fixture: gameweek, home/away FPL team ids, kickoff time. */
-export interface AvailFixture { gw: number; h: number; a: number; k: string }
+export interface AvailFixture {
+  gw: number; h: number; a: number; k: string
+  /** Final score, present only once the game is finished. */
+  hs?: number; as?: number
+}
+
+/** A club's record and recent results, built from finished fixtures. */
+export interface TeamRecord {
+  played: number; won: number; drawn: number; lost: number
+  gf: number; ga: number; pts: number
+  /** Oldest first, most recent last — the way form is read. */
+  form: ('W' | 'D' | 'L')[]
+  /** 1–20 on points, then goal difference, then goals scored. */
+  pos: number
+}
 interface AvailFile { generated_at: string; events: AvailEvent[]; players: AvailPlayer[]; fixtures?: AvailFixture[] }
 
 export interface Availability {
@@ -38,10 +58,14 @@ export interface Availability {
   deadlines: Map<number, Date>
   /** `${teamId}:${gw}` → that team's kickoff times in the gameweek. */
   kickoffs: Map<string, Date[]>
+  /** Every fixture in the season, scores included where played. */
+  fixtures: AvailFixture[]
+  /** FPL team id → record and form. Empty until the first game is played. */
+  table: Map<number, TeamRecord>
   generatedAt: string | null
 }
 
-const EMPTY: Availability = { byElement: new Map(), byCode: new Map(), deadlines: new Map(), kickoffs: new Map(), generatedAt: null }
+const EMPTY: Availability = { byElement: new Map(), byCode: new Map(), deadlines: new Map(), kickoffs: new Map(), fixtures: [], table: new Map(), generatedAt: null }
 
 export function useAvailability(): Availability {
   const q = useLazyTable<AvailFile>('availability')
@@ -64,8 +88,40 @@ export function useAvailability(): Availability {
         kickoffs.set(key, [...(kickoffs.get(key) ?? []), when])
       }
     }
-    return { byElement, byCode, deadlines, kickoffs, generatedAt: d.generated_at ?? null }
+    return { byElement, byCode, deadlines, kickoffs, fixtures: d.fixtures ?? [], table: buildTable(d.fixtures ?? []), generatedAt: d.generated_at ?? null }
   }, [q.data])
+}
+
+/** The league table and each club's last five, from finished fixtures.
+ *
+ *  Derived here rather than shipped as its own file because the fixtures are
+ *  already on the wire for the kickoff times — the scores ride along with
+ *  them. Returns an empty map before a ball is kicked, which is the correct
+ *  answer in August: there is no form yet, and inventing one from last season
+ *  would be worse than showing nothing. */
+function buildTable(fixtures: AvailFixture[]): Map<number, TeamRecord> {
+  const t = new Map<number, TeamRecord>()
+  const get = (id: number): TeamRecord => {
+    let r = t.get(id)
+    if (!r) { r = { played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, pts: 0, form: [], pos: 0 }; t.set(id, r) }
+    return r
+  }
+  // Chronological, so `form` ends up oldest-first without a second sort.
+  const played = fixtures.filter((f) => f.hs != null && f.as != null).sort((a, b) => (a.k < b.k ? -1 : 1))
+  for (const f of played) {
+    const hs = f.hs as number, as = f.as as number
+    for (const [id, mine, theirs] of [[f.h, hs, as], [f.a, as, hs]] as const) {
+      const r = get(id)
+      r.played += 1; r.gf += mine; r.ga += theirs
+      if (mine > theirs) { r.won += 1; r.pts += 3; r.form.push('W') }
+      else if (mine === theirs) { r.drawn += 1; r.pts += 1; r.form.push('D') }
+      else { r.lost += 1; r.form.push('L') }
+    }
+  }
+  const order = [...t.entries()].sort((a, b) =>
+    b[1].pts - a[1].pts || (b[1].gf - b[1].ga) - (a[1].gf - a[1].ga) || b[1].gf - a[1].gf)
+  order.forEach(([, r], i) => { r.pos = i + 1 })
+  return t
 }
 
 /** Look a player up by element id, falling back to the permanent code —

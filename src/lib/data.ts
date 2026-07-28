@@ -174,6 +174,7 @@ export function loadCore(): Promise<CoreData> {
       personaShifts,
       priceRisk,
       playerForm,
+      teams,
     }
   })()
   corePromise = p

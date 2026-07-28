@@ -7,10 +7,10 @@ import { InfoTip } from '../components/InfoTip'
 import { Icon } from '../components/Icon'
 import { PageSkeleton } from '../components/Skeleton'
 import { useCore } from '../lib/useData'
-import { useAvailability, availFor } from '../lib/availability'
+import { useAvailability, availFor, type TeamRecord } from '../lib/availability'
 import { useMarketOdds, useXpModel, useShotProfiles, xpForGw, xpPartsForGw, type XpParts } from '../lib/xp'
 import { num } from '../lib/rows'
-import { teamLabel, playerHref } from '../lib/util'
+import { teamLabel, playerHref, derbyName, teamColors } from '../lib/util'
 import type { RatingRow } from '../lib/types'
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -36,9 +36,24 @@ const csTone = (cs: number) => (cs >= 0.38 ? 'text-good' : cs >= 0.28 ? 'text-go
 /** Within a fixture the favoured attack is gold and the other side cool, so
  *  which way a game is expected to go is readable without comparing digits. */
 const xgTone = (mine: number, theirs: number) => (mine > theirs ? 'text-accent-2' : 'text-info')
+const ord = (n: number) => `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'}`
+const DAY = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+const TIME = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' })
+
+/** Last five results, most recent last. Renders nothing before a ball is
+ *  kicked, which is the honest answer in August. */
+function FormDots({ form }: { form?: ('W' | 'D' | 'L')[] }) {
+  if (!form?.length) return null
+  const tint = { W: 'bg-good', D: 'bg-ink-3', L: 'bg-bad/70' }
+  return (
+    <span className="flex gap-[2px]" title={`Last ${form.length}: ${form.join('')}`}>
+      {form.slice(-5).map((r, i) => <i key={i} className={`h-2 w-2 rounded-[2px] ${tint[r]}`} />)}
+    </span>
+  )
+}
 
 interface Side { team: string; lam: number; against: number; cs: number; opp: string; venue: 'H' | 'A' }
-interface Match { h: string; a: string; lh: number; la: number; csh: number; csa: number; total: number }
+interface Match { h: string; a: string; lh: number; la: number; csh: number; csa: number; total: number; k: string; hid: number; aid: number }
 
 export default function Preview() {
   const { data, error } = useCore()
@@ -50,6 +65,8 @@ export default function Preview() {
   const [open, setOpen] = useState<string | null>(null)
 
   const gw = data?.meta?.next_gw != null ? Number(data.meta.next_gw) : 1
+  // FPL team ids are assigned alphabetically — the order of teams.json.
+  const teamShorts = useMemo(() => (data?.teams ?? []).map((t) => String(t.short_name)), [data?.teams])
   const ratings = (data?.ratings ?? []) as RatingRow[]
 
   /* Both sides of every fixture in the round, from the market's goal
@@ -63,7 +80,7 @@ export default function Preview() {
       if (Number(g) !== gw) continue
       sides.set(team, { team, lam: v.for, against: v.against, cs: Math.exp(-v.against), opp, venue: 'H', })
       const pair = [team, opp].sort().join('|')
-      if (!seen.has(pair)) { seen.add(pair); matches.push({ h: team, a: opp, lh: v.for, la: v.against, csh: Math.exp(-v.against), csa: Math.exp(-v.for), total: v.for + v.against }) }
+      if (!seen.has(pair)) { seen.add(pair); matches.push({ h: team, a: opp, lh: v.for, la: v.against, csh: Math.exp(-v.against), csa: Math.exp(-v.for), total: v.for + v.against, k: '', hid: 0, aid: 0 }) }
     }
     // byKey holds both directions, so venue has to come from the fixture list.
     for (const f of data?.fixtureEase ?? []) {
@@ -73,9 +90,18 @@ export default function Preview() {
     }
     // Keep only the home side's view of each pairing so h/a are the right way round.
     const fixed = matches.map((m) => (sides.get(m.h)?.venue === 'A' ? { ...m, h: m.a, a: m.h, lh: m.la, la: m.lh, csh: m.csa, csa: m.csh } : m))
-    fixed.sort((x, y) => y.total - x.total)
+    // Kickoff time and team ids, for the day grouping and the league table.
+    const short = (id: number) => teamShorts[id - 1]
+    for (const f of avail.fixtures) {
+      if (f.gw !== gw) continue
+      const h = short(f.h), a = short(f.a)
+      const hit = fixed.find((m) => (m.h === h && m.a === a) || (m.h === a && m.a === h))
+      if (hit) { hit.k = f.k; hit.hid = hit.h === h ? f.h : f.a; hit.aid = hit.a === a ? f.a : f.h }
+    }
+    // Kickoff order: the round is lived in time, not in a table.
+    fixed.sort((x, y) => (x.k ?? '').localeCompare(y.k ?? '') || y.total - x.total)
     return { matches: fixed, sides }
-  }, [market, data?.fixtureEase, gw])
+  }, [market, data?.fixtureEase, gw, avail.fixtures, teamShorts])
 
   /* Expected points for THIS gameweek, from the site's own per-gameweek model:
      goal, assist, clean sheet, saves, defensive contribution, bonus and
@@ -148,63 +174,43 @@ export default function Preview() {
     return null
   }
 
-  return (
-    <PageShell>
-      <SectionBanner imgKey="fixtures" title={`GW${gw} Preview`} subtitle="Captain, chips, the games that produce the points, and who is missing" />
-
-      {!ready ? (
-        <EmptyState icon={<Icon name="calendar" size={44} />}>
-          The preview switches on once the bookmakers price gameweek {gw}.
-          <div className="mt-1 text-sm text-ink-3">Every number on it is market-implied for these exact fixtures, so it waits for real odds rather than guessing.</div>
-        </EmptyState>
-      ) : (
-        <>
-          <Band label="The round at a glance" />
-          <div className="mb-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Tile k="Biggest attack" v={attacks[0].lam.toFixed(2)} s={<><b>{teamLabel(attacks[0].team)}</b> projected goals {attacks[0].venue === 'H' ? 'v' : 'at'} {attacks[0].opp}</>} />
-            <Tile k="Safest clean sheet" v={pc(shutouts[0].cs)} s={<><b>{teamLabel(shutouts[0].team)}</b> — the shutout to buy into</>} />
-            <Tile k="Top expected points" v={board[0] ? board[0].xp.toFixed(1) : '—'} s={board[0] ? <><b>{String(board[0].r.web_name)}</b> {board[0].side.venue === 'H' ? 'v' : 'at'} {board[0].side.opp}</> : null} />
-            <Tile k="Goal-fest" v={matches[0].total.toFixed(2)} s={<><b>{matches[0].h} v {matches[0].a}</b> — most goals expected</>} />
-          </div>
-
-          <Band label="Captain" tip="Expected points for this gameweek: each player's availability-adjusted baseline scaled by how kind this specific fixture is — attackers by their side's projected goals, defenders and keepers by the clean-sheet odds." />
-          <div className="mb-7 grid gap-3 sm:grid-cols-3">
-            {board.slice(0, 3).map((b, i) => (
-              <button
-                key={String(b.r.element)}
-                onClick={() => navigate(playerHref(b.r.web_name, num(b.r, 'code')))}
-                className={`rounded-xl border p-3.5 text-left transition-colors ${i === 0 ? 'border-accent/55 bg-accent-soft/40' : 'border-line bg-surface-1/60 hover:border-line-strong'}`}
-              >
-                <div className="text-[9px] font-extrabold tracking-[0.14em] text-accent uppercase">{i === 0 ? 'The pick' : `Alternative ${i}`}</div>
-                <div className="mt-1 text-[17px] font-extrabold text-ink">{String(b.r.web_name)}</div>
-                <div className="text-[11px] text-ink-3">{b.r.position} · {b.side.team} {b.side.venue === 'H' ? 'v' : 'at'} {b.side.opp} · £{b.r.price}m</div>
-                <div className="mt-2 font-num text-[26px] leading-none font-extrabold text-accent-2">{b.xp.toFixed(2)}</div>
-                <div className="text-[10px] text-ink-3">expected points</div>
-              </button>
-            ))}
-          </div>
-
-          <Band label="Every fixture" tip="Projected goals for each side and the chance of a clean sheet, both from the bookmakers' prices for these exact games. Tap a fixture to see the players it should produce." />
-          <div className="mb-7 grid gap-2.5 lg:grid-cols-2">
-            {matches.map((m) => {
+  /** One fixture card. `feat` is the round's headline game: bigger, opened,
+   *  and carrying the full read rather than waiting for a tap. */
+  const card = (m: Match, feat: boolean) => {
               const id = `${m.h}-${m.a}`
-              const isOpen = open === id
+              const isOpen = feat || open === id
+              const derby = derbyName(m.h, m.a)
               const inGame = board.filter((b) => b.side.team === m.h || b.side.team === m.a).slice(0, 5)
               return (
-                <div key={id} className={`rounded-xl border p-3 transition-colors ${isOpen ? 'border-accent/45 bg-surface-2/50 lg:col-span-2' : 'border-line bg-surface-1/50'}`}>
+                <div
+                  key={id}
+                  className={`relative overflow-hidden rounded-xl border transition-colors ${feat ? 'border-accent/45 p-4' : 'p-3'} ${isOpen && !feat ? 'border-accent/45 lg:col-span-2' : feat ? '' : 'border-line'}`}
+                  style={{
+                    // A wash in each club's colour, bleeding in from its own
+                    // corner, so a card carries both identities without a
+                    // photograph competing with the numbers.
+                    background: `radial-gradient(110% ${feat ? 200 : 150}% at 6% 0%, color-mix(in srgb, ${teamColors[m.h] ?? 'var(--accent)'} ${feat ? 26 : 14}%, transparent), transparent 56%), radial-gradient(110% ${feat ? 200 : 150}% at 94% 0%, color-mix(in srgb, ${teamColors[m.a] ?? 'var(--info)'} ${feat ? 26 : 14}%, transparent), transparent 56%), var(--surface-1)`,
+                  }}
+                >
+                  {feat && <div className="mb-2.5 inline-block rounded bg-accent px-2 py-1 text-[8.5px] font-extrabold tracking-[0.12em] text-accent-contrast uppercase">Match of the round</div>}
+                  {derby && (
+                    <div className="absolute top-0 right-0 rounded-bl-lg bg-gradient-to-r from-accent to-accent-2 px-2.5 py-1 text-[8.5px] font-extrabold tracking-[0.1em] text-accent-contrast uppercase">{derby}</div>
+                  )}
                   <button onClick={() => setOpen(isOpen ? null : id)} className="w-full text-left">
                     <div className="flex items-center gap-2.5">
-                      <span className="flex w-16 shrink-0 items-center gap-1.5 text-[13px] font-extrabold text-ink"><TeamBadge team={m.h} size={15} />{m.h}</span>
+                      <Club team={m.h} rec={avail.table.get(m.hid)} big={feat} />
                       <span className="flex-1 text-center">
                         <span className={`block font-num text-[19px] leading-none font-extrabold ${xgTone(m.lh, m.la)}`}>{m.lh.toFixed(2)}</span>
                         <span className="mt-0.5 block text-[8px] font-extrabold tracking-[0.14em] text-ink-3">xG</span>
                       </span>
-                      <span className="text-[10px] text-ink-3">v</span>
+                      <span className="rounded bg-black/35 px-2 py-1 text-[10.5px] font-extrabold whitespace-nowrap text-ink-2">
+                        {m.k ? TIME.format(new Date(m.k)) : 'v'}
+                      </span>
                       <span className="flex-1 text-center">
                         <span className={`block font-num text-[19px] leading-none font-extrabold ${xgTone(m.la, m.lh)}`}>{m.la.toFixed(2)}</span>
                         <span className="mt-0.5 block text-[8px] font-extrabold tracking-[0.14em] text-ink-3">xG</span>
                       </span>
-                      <span className="flex w-16 shrink-0 items-center justify-end gap-1.5 text-[13px] font-extrabold text-ink">{m.a}<TeamBadge team={m.a} size={15} /></span>
+                      <Club team={m.a} rec={avail.table.get(m.aid)} big={feat} right />
                     </div>
                     {/* One bar, split by which side the goals belong to. Gold is
                         the favoured attack rather than the home side, so the bar
@@ -319,8 +325,69 @@ export default function Preview() {
                   )}
                 </div>
               )
-            })}
+  }
+
+  // The biggest game of the round by total goals, lifted out of the list.
+  const feature = matches.length ? matches.reduce((best, m) => (m.total > best.total ? m : best)) : null
+  const byDay = useMemo(() => {
+    const out = new Map<string, Match[]>()
+    for (const m of matches) {
+      if (m === feature) continue
+      const key = m.k ? DAY.format(new Date(m.k)) : 'Kickoff to be confirmed'
+      out.set(key, [...(out.get(key) ?? []), m])
+    }
+    return [...out.entries()]
+  }, [matches, feature])
+
+  return (
+    <PageShell>
+      <SectionBanner imgKey="fixtures" title={`GW${gw} Preview`} subtitle="Captain, chips, the games that produce the points, and who is missing" />
+
+      {!ready ? (
+        <EmptyState icon={<Icon name="calendar" size={44} />}>
+          The preview switches on once the bookmakers price gameweek {gw}.
+          <div className="mt-1 text-sm text-ink-3">Every number on it is market-implied for these exact fixtures, so it waits for real odds rather than guessing.</div>
+        </EmptyState>
+      ) : (
+        <>
+          <Band label="The round at a glance" />
+          <div className="mb-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Tile k="Biggest attack" v={attacks[0].lam.toFixed(2)} s={<><b>{teamLabel(attacks[0].team)}</b> projected goals {attacks[0].venue === 'H' ? 'v' : 'at'} {attacks[0].opp}</>} />
+            <Tile k="Safest clean sheet" v={pc(shutouts[0].cs)} s={<><b>{teamLabel(shutouts[0].team)}</b> — the shutout to buy into</>} />
+            <Tile k="Top expected points" v={board[0] ? board[0].xp.toFixed(1) : '—'} s={board[0] ? <><b>{String(board[0].r.web_name)}</b> {board[0].side.venue === 'H' ? 'v' : 'at'} {board[0].side.opp}</> : null} />
+            <Tile k="Goal-fest" v={matches[0].total.toFixed(2)} s={<><b>{matches[0].h} v {matches[0].a}</b> — most goals expected</>} />
           </div>
+
+          <Band label="Captain" tip="Expected points for this gameweek: each player's availability-adjusted baseline scaled by how kind this specific fixture is — attackers by their side's projected goals, defenders and keepers by the clean-sheet odds." />
+          <div className="mb-7 grid gap-3 sm:grid-cols-3">
+            {board.slice(0, 3).map((b, i) => (
+              <button
+                key={String(b.r.element)}
+                onClick={() => navigate(playerHref(b.r.web_name, num(b.r, 'code')))}
+                className={`rounded-xl border p-3.5 text-left transition-colors ${i === 0 ? 'border-accent/55 bg-accent-soft/40' : 'border-line bg-surface-1/60 hover:border-line-strong'}`}
+              >
+                <div className="text-[9px] font-extrabold tracking-[0.14em] text-accent uppercase">{i === 0 ? 'The pick' : `Alternative ${i}`}</div>
+                <div className="mt-1 text-[17px] font-extrabold text-ink">{String(b.r.web_name)}</div>
+                <div className="text-[11px] text-ink-3">{b.r.position} · {b.side.team} {b.side.venue === 'H' ? 'v' : 'at'} {b.side.opp} · £{b.r.price}m</div>
+                <div className="mt-2 font-num text-[26px] leading-none font-extrabold text-accent-2">{b.xp.toFixed(2)}</div>
+                <div className="text-[10px] text-ink-3">expected points</div>
+              </button>
+            ))}
+          </div>
+
+          <Band label="Every fixture" tip="Projected goals for each side and the chance of a clean sheet, both from the bookmakers' prices for these exact games. Ordered by kickoff and grouped by day, because that is how a round is actually lived. Tap a fixture to see the players it should produce." />
+
+          {/* One featured match — the round's biggest game, opened by default
+              and given the room to carry the full read. Everything else stays
+              in kickoff order underneath it. */}
+          {feature && <div className="mb-4">{card(feature, true)}</div>}
+
+          {byDay.map(([day, list]) => (
+            <div key={day} className="mb-5">
+              <div className="mb-2 border-b border-line pb-1.5 text-[9.5px] font-extrabold tracking-[0.14em] text-ink-3 uppercase">{day}</div>
+              <div className="grid gap-2.5 lg:grid-cols-2">{list.map((m) => card(m, false))}</div>
+            </div>
+          ))}
 
           <div className="grid gap-4 lg:grid-cols-2">
             <div>
@@ -378,6 +445,20 @@ export default function Preview() {
 }
 
 const PEN = ['h', 'a'] as const
+
+/** One side of a fixture: crest, code, league position and last five. */
+function Club({ team, rec, big, right }: { team: string; rec?: TeamRecord; big?: boolean; right?: boolean }) {
+  return (
+    <span className={`flex shrink-0 items-center gap-2 ${big ? 'w-[148px]' : 'w-[124px]'} ${right ? 'flex-row-reverse justify-start' : ''}`}>
+      <TeamBadge team={team} size={big ? 32 : 24} />
+      <span className={right ? 'text-right' : ''}>
+        <b className={`block leading-tight font-extrabold text-ink ${big ? 'text-[17px]' : 'text-[13px]'}`}>{team}</b>
+        {rec?.pos ? <em className="text-[9px] font-bold text-ink-3 not-italic">{ord(rec.pos)}</em> : null}
+      </span>
+      <FormDots form={rec?.form} />
+    </span>
+  )
+}
 
 function Fact({ k, v }: { k: string; v: React.ReactNode }) {
   return (

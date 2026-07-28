@@ -107,4 +107,7 @@ export interface CoreData {
   personaShifts: Row[]
   priceRisk: Row[]
   playerForm: Row[]
+  /** The season's clubs in FPL id order — index + 1 IS the team id, which is
+   *  how the availability feed and the odds refer to them. */
+  teams: Row[]
 }

@@ -52,10 +52,26 @@ events = [
 # 22 Aug" means he plays the game ON 22 Aug, so the site must compare return
 # dates against each team's kickoff in a gameweek, not the deadline before it.
 fixtures = [
-    {"gw": f["event"], "h": f["team_h"], "a": f["team_a"], "k": f["kickoff_time"]}
+    _fixture(f)
     for f in get(f"{API}/fixtures/")
     if f.get("event") and f.get("kickoff_time")
 ]
+
+def _fixture(f):
+    """Kickoff plus, once played, the score.
+
+    The scores are the cheapest data on the site: this endpoint is already
+    being called for the kickoff times and they arrive in the same payload.
+    Without them there is no way to draw form or a league table — and there is
+    no deriving it from the player rows either, because goals_conceded is only
+    recorded for keepers and defenders who played, so any club with a thin
+    defensive sample comes out unbeaten."""
+    row = {"gw": f["event"], "h": f["team_h"], "a": f["team_a"], "k": f["kickoff_time"]}
+    if f.get("finished") and f.get("team_h_score") is not None:
+        row["hs"] = f["team_h_score"]
+        row["as"] = f["team_a_score"]
+    return row
+
 
 players = []
 for el in boot["elements"]:
@@ -72,6 +88,14 @@ for el in boot["elements"]:
         "price": round(el["now_cost"] / 10, 1),
         "own": float(el.get("selected_by_percent") or 0),
     }
+    # Where the market is going on him this week. FPL publishes the transfer
+    # counts and the price move it has already caused; it does NOT publish the
+    # threshold for the next one, so we report what happened and let the
+    # reader draw the line rather than inventing a countdown.
+    for src, dst in (("transfers_in_event", "tin"), ("transfers_out_event", "tout"), ("cost_change_event", "dprice")):
+        v = el.get(src)
+        if v:
+            row[dst] = v
     # Only ship the noisy fields when they carry information — keeps the file
     # small enough to fetch on a phone without thinking about it.
     if el.get("news"):
@@ -104,5 +128,8 @@ owned = sum(p["own"] for p in players) / 100
 print(f"{out_path}: {len(players)} players ({flagged} flagged unavailable/doubtful, "
       f"{pens} first-choice penalty takers), {len(events)} gameweek deadlines, "
       f"{len(fixtures)} fixtures")
+played = sum(1 for f in fixtures if "hs" in f)
+moved = sum(1 for p in players if p.get("dprice"))
+print(f"  {played} fixtures with a score, {moved} players whose price moved this gameweek")
 print(f"  prices £{min(p['price'] for p in players):.1f}m–£{max(p['price'] for p in players):.1f}m; "
       f"ownership sums to {owned:.1f} players, which is the squad size when the feed is sane")

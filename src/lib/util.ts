@@ -195,3 +195,31 @@ export const TOOLTIPS: TooltipDict = {
     'Minutes risk': 'Not starting regularly over the last 4 games. Everything else here rests on a thin sample.',
   },
 }
+
+/* ── Derbies ─────────────────────────────────────────────────────────────
+   Named where football names them, and "London derby" for the rest, because
+   six clubs in one city produce fifteen pairings and only three of them have
+   a name anyone uses. A fixture only gets the ribbon if it earns it. */
+const NAMED_DERBIES: [string, string, string][] = [
+  ['LIV', 'EVE', 'Merseyside derby'],
+  ['MCI', 'MUN', 'Manchester derby'],
+  ['ARS', 'TOT', 'North London derby'],
+  ['NEW', 'SUN', 'Tyne–Wear derby'],
+  ['CRY', 'BHA', 'M23 derby'],
+  ['LEE', 'HUL', 'Yorkshire derby'],
+  ['CHE', 'FUL', 'West London derby'],
+  ['CHE', 'BRE', 'West London derby'],
+  ['FUL', 'BRE', 'West London derby'],
+  ['AVL', 'WOL', 'Midlands derby'],
+  ['NFO', 'LEI', 'East Midlands derby'],
+  ['IPS', 'NOR', 'East Anglian derby'],
+  ['BUR', 'BLA', 'Lancashire derby'],
+]
+const LONDON = new Set(['ARS', 'TOT', 'CHE', 'CRY', 'FUL', 'BRE', 'WHU'])
+
+export function derbyName(a: string, b: string): string | null {
+  for (const [x, y, name] of NAMED_DERBIES) {
+    if ((a === x && b === y) || (a === y && b === x)) return name
+  }
+  return LONDON.has(a) && LONDON.has(b) ? 'London derby' : null
+}
