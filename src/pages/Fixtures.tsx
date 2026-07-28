@@ -13,8 +13,8 @@ import { windowGames } from '../components/TeamStory'
 import { Exportable } from '../components/ExportPanel'
 import { num, str } from '../lib/rows'
 import { useMarketOdds, type MarketOdds } from '../lib/xp'
-import { teamLabel, FDR_COLORS, playerHref } from '../lib/util'
-import type { FixtureEaseRow, RatingRow, Row, TeamRatingRow } from '../lib/types'
+import { teamLabel, playerHref } from '../lib/util'
+import type { FixtureEaseRow, RatingRow, Row } from '../lib/types'
 
 /* ── Difficulty model ────────────────────────────────────────────────────────
    Every fixture carries FPL's own 1–5 difficulty (fdr). When the richer
@@ -46,7 +46,7 @@ const MODE_TABS: TabDef[] = [
   { id: 'cs', label: 'Clean sheets' },
 ]
 const MODE_TIP: Record<GridMode, string> = {
-  diff: 'Our own difficulty (1 = easy … 5 = hard) from opponent strength on our team ratings.',
+  diff: 'Our own difficulty (1 = easy … 5 = hard), from the goals each side is expected to score and concede in that fixture, placed against the spread of every fixture in the table. It rates the matchup rather than the opponent, so Liverpool at Fulham and Hull at Fulham are not the same game.',
   xg: "Projected expected goals for this team's ATTACK in each fixture: their xG/game baseline × how freely the opponent concedes vs the league × a ±5% venue nudge. The Σ column is the plain sum over the window — the goals their attack should produce across the run.",
   cs: 'The chance of a clean sheet in each fixture: projected goals conceded (opponent xG/game × our concession rate vs the league × venue) turned into a shutout probability (Poisson, e^−λ). The Σ column sums the probabilities — the number of clean sheets to expect over the window.',
 }
@@ -83,22 +83,6 @@ function projectCell(mode: 'xg' | 'cs', teamBase: TeamBase | undefined, oppBase:
   return { v: mode === 'xg' ? l.for : Math.exp(-l.against), assumed: l.assumed, market: l.market }
 }
 
-// Expected-goals anchors for reading a goal expectancy as 1–5 difficulty.
-const MKT_EASY = 2.5
-const MKT_HARD = 0.6
-
-/** Difficulty from a pair of goal expectancies. Both anchors are named from an
- *  attack's point of view — 2.5 goals is a kind evening — and the two reads
- *  then pull in opposite directions from that one ratio. Getting those
- *  directions the wrong way round inverted every priced fixture on the grid:
- *  Coventry away at Arsenal came out the easiest game of the week. */
-function diffFromLambdas(lamFor: number, lamAgainst: number, lens: Lens): { diff: number } {
-  const ease = (lam: number) => Math.max(0, Math.min(1, (lam - MKT_HARD) / (MKT_EASY - MKT_HARD)))
-  const atk = 5 - 4 * ease(lamFor)        // expected to score more → easier
-  const def = 1 + 4 * ease(lamAgainst)    // expected to concede more → harder
-  return { diff: lens === 'attack' ? atk : lens === 'defence' ? def : (atk + def) / 2 }
-}
-
 const mktOf = (market: MarketOdds | null, team: string, f: { gw: number; opponent: string }) =>
   market?.byKey.get(`${team}:${f.gw}:${f.opponent}`) ?? null
 
@@ -113,60 +97,78 @@ const LENS_TABS: TabDef[] = [
 ]
 const LENS_TIP: Record<Lens, string> = {
   overall: 'Our own difficulty (1 = easy … 5 = hard): the average of the Attack and Defence reads — a single score for the run.',
-  attack: "How kind the fixture is for this team's ATTACKERS — set by how strong the opponent's defence is on our 0–100 defence rating. Weak opponent defence → easier.",
-  defence: "How kind the fixture is for this team's DEFENCE and keeper (clean-sheet odds) — set by how strong the opponent's attack is on our 0–100 attack rating. Weak opponent attack → easier.",
+  attack: "How kind the fixture is for this team's ATTACKERS — set by the goals they're expected to score in it. Expected to score more than most fixtures in the table → easier.",
+  defence: "How kind the fixture is for this team's DEFENCE and keeper (clean-sheet odds) — set by the goals they're expected to concede in it. Expected to concede fewer than most fixtures in the table → easier.",
 }
 
 /** Our own 1 (easy) … 5 (hard) fixture difficulty from the opponent's team
  *  rating, per lens. Falls back to FPL's FDR when the opponent has no rating. */
-function analyserDiff(opp: TeamRatingRow | undefined, lens: Lens, venue: 'H' | 'A', fdr: number, mkt?: { for: number; against: number } | null, rank?: (o: TeamRatingRow, l: Lens) => number, lam?: Lambdas | null): { diff: number; ours: boolean; market?: boolean } {
-  // A priced fixture states the difficulty outright: the goals the market
-  // expects this team to score set how kind it is for their attack, and the
-  // goals it expects them to concede set how kind it is for their defence.
-  if (mkt) return { ...diffFromLambdas(mkt.for, mkt.against, lens), ours: true, market: true }
-  // No rating for this opponent — but a promoted club we have solved out of
-  // the odds is not an unknown. Falling straight through to FPL's FDR threw
-  // that away and made the difficulty grid contradict the projections beside
-  // it: Man City at home to Coventry showed as a hard week on one tab and the
-  // best week of the run on the other two.
-  if (!opp) {
-    if (lam && !lam.assumed) return { ...diffFromLambdas(lam.for, lam.against, lens), ours: true }
-    return { diff: fdr, ours: false }
-  }
-  // Where the opponent sits in the league, not their absolute score. Team
-  // ratings cluster — mean 56 with a spread of 16 — so mapping 0–100 straight
-  // onto 1–5 put three fifths of every run on 3 and nobody at all on 1. A
-  // ranking uses the whole scale by construction, which is the point of
-  // having one.
-  const pct = rank ? rank(opp, lens) : (strengthOf(opp, lens) / 100)
-  let d = 1 + 4 * pct
-  d += venue === 'H' ? -0.25 : 0.25 // home is marginally kinder
-  return { diff: Math.max(1, Math.min(5, d)), ours: true }
+function analyserDiff(lens: Lens, fdr: number, scale: DiffScale | null, lam?: Lambdas | null): { diff: number; ours: boolean; market?: boolean } {
+  if (!lam || !scale) return { diff: fdr, ours: false }
+  const atk = 5 - 4 * scale.pctFor(lam.for)          // expected to score more → easier
+  const def = 1 + 4 * scale.pctAgainst(lam.against)  // expected to concede more → harder
+  const diff = lens === 'attack' ? atk : lens === 'defence' ? def : (atk + def) / 2
+  return { diff: Math.max(1, Math.min(5, diff)), ours: true, market: lam.market }
 }
 
-/** The opponent quality that matters for this lens: to rate our attack we
- *  care how good their defence is, and vice versa. */
-function strengthOf(r: TeamRatingRow, lens: Lens): number {
-  const att = num(r, 'attack') ?? 50
-  const def = num(r, 'defence') ?? 50
-  return lens === 'attack' ? def : lens === 'defence' ? att : (att + def) / 2
+/** −1 (well under a normal fixture) … +1 (well over) → one of five washes.
+ *  Every grid on this page shares it, so a green cell means the same thing
+ *  whichever tab you're on. */
+export function bandOf(t: number): string {
+  const [hue, pct] =
+    t <= -0.6 ? ['--bad', 34] : t <= -0.2 ? ['--warn', 26] :
+    t < 0.2 ? ['--warn', 9] : t < 0.6 ? ['--good', 24] : ['--good', 42]
+  return `color-mix(in srgb, var(${hue}) ${pct}%, transparent)`
 }
 
-/** Rank a team's strength against the rest of the league, 0 (weakest) to 1. */
-export function buildRanker(rows: Iterable<TeamRatingRow>) {
-  const all = [...rows]
-  const sorted: Record<Lens, number[]> = { overall: [], attack: [], defence: [] }
-  for (const lens of ['overall', 'attack', 'defence'] as Lens[]) {
-    sorted[lens] = all.map((r) => strengthOf(r, lens)).sort((a, b) => a - b)
+/** Difficulty already runs on a fixed 1–5 with 3 as the average fixture, so it
+ *  needs no percentile step — it just points the other way, 1 being the good
+ *  end. */
+export const diffFill = (d: number): string => bandOf(Math.max(-1, Math.min(1, (3 - d) / 2)))
+
+/* ── The difficulty scale ────────────────────────────────────────────────────
+   Difficulty used to rank the OPPONENT on our 0–100 team ratings, which had
+   two faults. It rated the club rather than the fixture, so Liverpool at
+   Fulham and Hull at Fulham came out the same game. And the ranking population
+   was only the clubs with a season rating — the three promoted sides have
+   none — so whichever rated club sat bottom was pinned to the floor of the
+   scale. That was Fulham: every side that played them, promoted clubs
+   included, got a 1.0.
+
+   Difficulty is now the same pair of goal expectancies everything else on the
+   page runs on, placed against the league's own distribution of them. That
+   rates the matchup, includes all twenty clubs, and keeps the full 1–5 spread
+   by construction — mapping goals onto 1–5 through fixed anchors bunched 47%
+   of fixtures onto a 3.
+
+   Percentiles come from every fixture in the table rather than the visible
+   window, so a fixture's difficulty doesn't shift when you switch between
+   Next 4 and Next 8. */
+export interface DiffScale { pctFor: (v: number) => number; pctAgainst: (v: number) => number }
+
+export function buildDiffScale(
+  fixtureEase: FixtureEaseRow[],
+  baselines: Map<string, TeamBase>,
+  leagueBase: TeamBase,
+  market: MarketOdds | null,
+): DiffScale | null {
+  const fors: number[] = []
+  const against: number[] = []
+  for (const f of fixtureEase) {
+    const l = lambdasFor(baselines.get(f.team), baselines.get(f.opponent), leagueBase, f.venue, mktOf(market, f.team, f))
+    if (!l) continue
+    fors.push(l.for)
+    against.push(l.against)
   }
-  return (opp: TeamRatingRow, lens: Lens): number => {
-    const arr = sorted[lens]
-    if (arr.length < 2) return 0.5
-    const v = strengthOf(opp, lens)
-    let below = 0
-    for (const x of arr) if (x < v) below++
-    return below / (arr.length - 1)
+  if (fors.length < 8) return null
+  fors.sort((a, b) => a - b)
+  against.sort((a, b) => a - b)
+  const pctIn = (arr: number[]) => (v: number) => {
+    let lo = 0, hi = arr.length
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (arr[mid] < v) lo = mid + 1; else hi = mid }
+    return lo / (arr.length - 1)
   }
+  return { pctFor: pctIn(fors), pctAgainst: pctIn(against) }
 }
 
 /** The scouting read on a team's upcoming run.
@@ -306,12 +308,6 @@ export default function Fixtures() {
   const [lens, setLens] = useState<Lens>('overall')
   const [mode, setMode] = useState<GridMode>('diff')
 
-  // Season team ratings (opponent strength) drive our own difficulty.
-  const seasonRating = useMemo(() => {
-    const m = new Map<string, TeamRatingRow>()
-    for (const r of (data?.teamRatings ?? []) as TeamRatingRow[]) if (r.window === 'season') m.set(r.team, r)
-    return m
-  }, [data])
 
   // Per-game xG / xGC baselines for the projection modes (normalised from
   // window totals — never show a total as a rate).
@@ -440,7 +436,7 @@ export default function Fixtures() {
             <MarketNote market={marketStrength} />
 
             <Exportable title={mode === 'diff' ? `Fixture difficulty — next ${windowN}` : mode === 'xg' ? `Projected xG — next ${windowN}` : `Clean sheet odds — next ${windowN}`}>
-            <FixtureGrid key={mode} fixtureEase={fixtureEase} windowN={windowN} lens={lens} mode={mode} seasonRating={seasonRating} baselines={baselines} leagueBase={leagueBase} profiles={profiles} league={league} />
+            <FixtureGrid key={mode} fixtureEase={fixtureEase} windowN={windowN} lens={lens} mode={mode} baselines={baselines} leagueBase={leagueBase} profiles={profiles} league={league} />
             </Exportable>
             <ChipPlanner fixtureEase={fixtureEase} ratings={data.ratings as RatingRow[]} />
           </>
@@ -452,7 +448,7 @@ export default function Fixtures() {
         )
       ) : view === 'rotation' ? (
         hasFixtures ? (
-          <RotationPlanner ratings={data.ratings as RatingRow[]} fixtureEase={fixtureEase} seasonRating={seasonRating} />
+          <RotationPlanner ratings={data.ratings as RatingRow[]} fixtureEase={fixtureEase} baselines={baselines} leagueBase={leagueBase} />
         ) : (
           <EmptyState icon={<Icon name="calendar" size={44} />}>The rotation planner switches on when the fixtures are published.</EmptyState>
         )
@@ -488,8 +484,9 @@ const mean = (ds: number[]) => (ds.length ? ds.reduce((a, b) => a + b, 0) / ds.l
    chosen lens. You set how many teams are in the rotation (N) and how many you
    actually start each week (K) — every gameweek we start the K with the kindest
    fixtures. With nothing picked we surface the best-rotating groups of size N. */
-function RotationPlanner({ ratings: _ratings, fixtureEase, seasonRating }: { ratings: RatingRow[]; fixtureEase: FixtureEaseRow[]; seasonRating: Map<string, TeamRatingRow> }) {
-  const rank = useMemo(() => buildRanker(seasonRating.values()), [seasonRating])
+function RotationPlanner({ ratings: _ratings, fixtureEase, baselines, leagueBase }: { ratings: RatingRow[]; fixtureEase: FixtureEaseRow[]; baselines: Map<string, TeamBase>; leagueBase: TeamBase }) {
+  const market = useMarketOdds()
+  const diffScale = useMemo(() => buildDiffScale(fixtureEase, baselines, leagueBase, market), [fixtureEase, baselines, leagueBase, market])
   const [teams, setTeams] = useState<string[]>([])
   const [size, setSize] = useState<(typeof ROT_SIZES)[number]>(2)
   const [startK, setStartK] = useState(1)
@@ -508,12 +505,12 @@ function RotationPlanner({ ratings: _ratings, fixtureEase, seasonRating }: { rat
       if (cache.has(key)) return cache.get(key)!
       const fs = fixtureEase.filter((f) => f.team === team && f.gw === gw)
       const v = !fs.length ? null : fs
-        .map((f) => ({ f, diff: analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr, null, rank).diff }))
+        .map((f) => ({ f, diff: analyserDiff(lens, f.fdr, diffScale, lambdasFor(baselines.get(f.team), baselines.get(f.opponent), leagueBase, f.venue, mktOf(market, f.team, f))).diff }))
         .sort((a, b) => a.diff - b.diff)[0]
       cache.set(key, v)
       return v
     }
-  }, [fixtureEase, seasonRating, lens])
+  }, [fixtureEase, baselines, leagueBase, market, diffScale, lens])
 
   const changeSize = (n: (typeof ROT_SIZES)[number]) => {
     setSize(n)
@@ -679,11 +676,12 @@ function RotationPlanner({ ratings: _ratings, fixtureEase, seasonRating }: { rat
                       const c = cellFor(t, gw)
                       const start = startByGw.get(gw)?.has(t)
                       if (!c) return <td key={gw} className="px-1.5 py-1.5 text-center text-ink-3">—</td>
-                      const [bg, fg] = FDR_COLORS[Math.max(1, Math.min(5, Math.round(c.diff)))] || FDR_COLORS[3]
+                      const bg = diffFill(c.diff)
                       return (
                         <td key={gw} className="px-1.5 py-1.5 text-center">
-                          <span className={`inline-block w-full min-w-[54px] rounded px-1 py-1 text-[11px] font-semibold whitespace-nowrap ${start ? 'ring-2 ring-accent ring-offset-1 ring-offset-surface-1' : 'opacity-70'}`} style={{ background: bg, color: fg }} title={`${c.f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(c.f.opponent)} — difficulty ${c.diff.toFixed(1)}${start ? ' · START' : ''}`}>
-                            {c.f.opponent} <span className="font-medium">({c.f.venue})</span>
+                          <span className={`inline-block w-full min-w-[54px] rounded px-1 py-1 text-[11px] font-semibold whitespace-nowrap ${start ? 'ring-2 ring-accent ring-offset-1 ring-offset-surface-1' : 'opacity-70'}`} style={{ background: bg }} title={`${c.f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(c.f.opponent)} — difficulty ${c.diff.toFixed(1)}${start ? ' · START' : ''}`}>
+                            <span className="block text-[10px] leading-tight text-ink-2">{c.f.opponent} ({c.f.venue})</span>
+                            <span className="font-num block text-[12px] leading-tight font-bold text-ink tabular-nums">{c.diff.toFixed(1)}</span>
                           </span>
                         </td>
                       )
@@ -710,7 +708,7 @@ function RotationPlanner({ ratings: _ratings, fixtureEase, seasonRating }: { rat
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-ink-3">
             <span>Difficulty:</span>
-            {([1, 2, 3, 4, 5] as const).map((d) => { const [bg, fg] = FDR_COLORS[d]; return <span key={d} className="rounded px-1.5 py-0.5 font-semibold" style={{ background: bg, color: fg }}>{d}</span> })}
+            {([1, 2, 3, 4, 5] as const).map((d) => <span key={d} className="rounded px-1.5 py-0.5 font-semibold text-ink-2" style={{ background: diffFill(d) }}>{d}</span>)}
             <span>· ringed = starting that week (the rest are benched)</span>
           </div>
         </>
@@ -751,20 +749,19 @@ function MarketNote({ market }: { market: MarketOdds | null }) {
    lens. Click any GW header (or the Run column) to rank teams by that week; tap a
    team to expand a scouting read of where its upcoming opponents are weak. */
 function FixtureGrid({
-  fixtureEase, windowN, lens, mode, seasonRating, baselines, leagueBase, profiles, league,
+  fixtureEase, windowN, lens, mode, baselines, leagueBase, profiles, league,
 }: {
   fixtureEase: FixtureEaseRow[]
   windowN: number
   lens: Lens
   mode: GridMode
-  seasonRating: Map<string, TeamRatingRow>
   baselines: Map<string, TeamBase>
   leagueBase: TeamBase
   profiles: Map<string, Profile>
   league: Profile
 }) {
   const market = useMarketOdds()
-  const rank = useMemo(() => buildRanker(seasonRating.values()), [seasonRating])
+  const diffScale = useMemo(() => buildDiffScale(fixtureEase, baselines, leagueBase, market), [fixtureEase, baselines, leagueBase, market])
   const [sortKey, setSortKey] = useState<number | 'run'>('run')
   // Difficulty: ascending = easiest first. Projections: descending = most
   // goals / best clean-sheet odds first.
@@ -782,7 +779,7 @@ function FixtureGrid({
   const lamOf = (team: string, f: { gw: number; opponent: string; venue: 'H' | 'A' }) =>
     lambdasFor(baselines.get(team), baselines.get(f.opponent), leagueBase, f.venue, mktOf(market, team, f))
   const diffOf = (team: string, f: FixtureEaseRow) =>
-    analyserDiff(seasonRating.get(f.opponent), lens, f.venue, f.fdr, mktOf(market, team, f), rank, lamOf(team, f))
+    analyserDiff(lens, f.fdr, diffScale, lamOf(team, f))
 
   const rows = useMemo(() => {
     const teams = [...new Set(fixtureEase.map((f) => f.team))]
@@ -815,7 +812,7 @@ function FixtureGrid({
       // expected clean sheets over the window).
       return { team, byGw, opponents, run: count ? (mode === 'diff' ? sum / count : sum) : null, usedFdr }
     })
-  }, [fixtureEase, gwSet, lens, mode, seasonRating, baselines, leagueBase, market])
+  }, [fixtureEase, gwSet, lens, mode, diffScale, baselines, leagueBase, market])
 
   /* ── Projection colour: five bands either side of a normal fixture ─────────
      The old scale was a single gold tint over hard-coded 0.7–2.4 anchors. On
@@ -853,13 +850,7 @@ function FixtureGrid({
       : (scale.mid > scale.lo ? Math.max(-1, (v - scale.mid) / (scale.mid - scale.lo)) : 0)
   }
 
-  const bandFill = (v: number): string => {
-    const t = deviation(v)
-    const [hue, pct] =
-      t <= -0.6 ? ['--bad', 34] : t <= -0.2 ? ['--warn', 26] :
-      t < 0.2 ? ['--warn', 9] : t < 0.6 ? ['--good', 24] : ['--good', 42]
-    return `color-mix(in srgb, var(${hue}) ${pct}%, transparent)`
-  }
+  const bandFill = (v: number): string => bandOf(deviation(v))
 
   // A team's value in one gameweek (blanks → null; doubles → avg diff / summed projection).
   const gwVal = (r: (typeof rows)[number], gw: number): number | null => {
@@ -891,7 +882,7 @@ function FixtureGrid({
     }
     return m
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, gws, mode, lens, seasonRating, baselines, leagueBase, market])
+  }, [rows, gws, mode, lens, baselines, leagueBase, market])
 
   const sorted = useMemo(() => {
     const val = (r: (typeof rows)[number]) => (sortKey === 'run' ? r.run : gwVal(r, sortKey))
@@ -904,7 +895,7 @@ function FixtureGrid({
       return dir === 'asc' ? av - bv : bv - av
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, sortKey, dir, lens, mode, seasonRating])
+  }, [rows, sortKey, dir, lens, mode])
 
   const clickHeader = (key: number | 'run') => {
     if (sortKey === key) setDir((d) => (d === 'asc' ? 'desc' : 'asc'))
@@ -922,7 +913,7 @@ function FixtureGrid({
     <div className="mb-8">
       <div className="mb-2 flex items-center gap-1.5 text-[11px] text-ink-3">
         <span>Tap a gameweek to sort by that week; tap a team for the read on its run.</span>
-        <InfoTip text={MODE_TIP[mode] + (mode === 'diff' ? " Where an opponent has no rating yet (a promoted club, pre-season) we fall back to FPL's FDR and mark the cell with a dot. The Run column is the window average." : ' Promoted opponents have no top-flight baseline yet, so a league-average opponent is assumed and the cell is marked with a dot.')} />
+        <InfoTip text={MODE_TIP[mode] + (mode === 'diff' ? " Where a fixture has no goal expectancy at all we fall back to FPL's FDR and mark the cell with a dot. The Run column is the window average." : ' Promoted opponents have no top-flight baseline yet, so a league-average opponent is assumed and the cell is marked with a dot.')} />
       </div>
       <div className="overflow-x-auto rounded-xl border border-line">
         <table className="w-full border-collapse text-sm">
@@ -954,10 +945,15 @@ function FixtureGrid({
                             {fs.map((f, i) => {
                               if (mode === 'diff') {
                                 const { diff, ours } = diffOf(r.team, f)
-                                const [bg, fg] = FDR_COLORS[Math.max(1, Math.min(5, Math.round(diff)))] || FDR_COLORS[3]
                                 return (
-                                  <span key={i} className="inline-block w-full min-w-[54px] rounded px-1 py-1 text-[11px] font-semibold whitespace-nowrap" style={{ background: bg, color: fg }} title={`GW${gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(f.opponent)} — difficulty ${diff.toFixed(1)}${ours ? '' : ' (FPL FDR — opponent unrated)'}`}>
-                                    {f.opponent} <span className="font-medium">({f.venue})</span>{!ours && <span className="font-medium"> ·</span>}
+                                  <span
+                                    key={i}
+                                    className="inline-block w-full min-w-[54px] rounded px-1 py-0.5 whitespace-nowrap"
+                                    style={{ background: diffFill(diff) }}
+                                    title={`GW${gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(f.opponent)} — difficulty ${diff.toFixed(1)}${ours ? '' : ' (FPL FDR — no goal expectancy for this fixture)'}`}
+                                  >
+                                    <span className="block text-[10px] leading-tight font-semibold text-ink-2">{f.opponent} ({f.venue}){!ours && ' ·'}</span>
+                                    <span className="font-num block text-[12px] leading-tight font-bold text-ink tabular-nums">{diff.toFixed(1)}</span>
                                   </span>
                                 )
                               }
@@ -1035,12 +1031,12 @@ function FixtureGrid({
       {/* legend */}
       {mode === 'diff' ? (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-ink-3">
-          <span>Our difficulty:</span>
-          {([1, 2, 3, 4, 5] as const).map((d) => {
-            const [bg, fg] = FDR_COLORS[d]
-            return <span key={d} className="rounded px-1.5 py-0.5 font-semibold" style={{ background: bg, color: fg }}>{d}</span>
-          })}
-          <span>1 = easiest, 5 = hardest · “·” = FPL FDR fallback (opponent unrated)</span>
+          <span className="flex overflow-hidden rounded border border-line-mid">
+            {([1, 2, 3, 4, 5] as const).map((d) => (
+              <span key={d} className="grid h-5 w-7 place-items-center font-semibold text-ink-2" style={{ background: diffFill(d) }}>{d}</span>
+            ))}
+          </span>
+          <span>1 = easiest, 5 = hardest · “·” = FPL FDR fallback (no goal expectancy)</span>
         </div>
       ) : (
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] text-ink-3">

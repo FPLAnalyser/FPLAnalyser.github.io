@@ -19,7 +19,7 @@ import { useCore } from '../lib/useData'
 import { tapHaptic, shareImageNative } from '../lib/native'
 import { rasterise } from '../lib/capture'
 import { num } from '../lib/rows'
-import { useAvailability, availBadge, availFor, withLivePrices, SEV_COLOUR, type Availability } from '../lib/availability'
+import { useAvailability, availBadge, availFor, SEV_COLOUR, type Availability } from '../lib/availability'
 import { xpForGw, useXpModel, useMarketOdds } from '../lib/xp'
 import { usePlanner } from '../lib/usePlanner'
 import { CHIP_LABEL, type Chip } from '../lib/planner'
@@ -130,16 +130,13 @@ export default function SquadBuilder() {
   // forward from it. Everything on this page is anchored to that number.
   const buildGw = fixtureEase.length ? Math.min(...fixtureEase.map((f) => f.gw)) : (data?.meta?.next_gw ?? 1)
 
-  // Prices and ownership come from this morning's FPL feed rather than the
-  // season build, so the budget and the template read are never stale.
+  // Prices and ownership arrive live from useCore, so the budget and the
+  // template read are never stale.
   const pool = useMemo(
-    () => withLivePrices(
-      ((data?.ratings ?? []) as RatingRow[]).filter(
-        (r) => r.element != null && r.price != null && ['GKP', 'DEF', 'MID', 'FWD'].includes(String(r.position)),
-      ),
-      avail,
+    () => ((data?.ratings ?? []) as RatingRow[]).filter(
+      (r) => r.element != null && r.price != null && ['GKP', 'DEF', 'MID', 'FWD'].includes(String(r.position)),
     ),
-    [data, avail],
+    [data],
   )
   const byEl = useMemo(() => {
     const m = new Map<number, RatingRow>()
