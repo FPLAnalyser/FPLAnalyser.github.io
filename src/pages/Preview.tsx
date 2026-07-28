@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { PageShell, EmptyState } from '../components/PageShell'
 import { SectionBanner } from '../components/SectionBanner'
 import { TeamBadge } from '../components/badges'
+import { PlayerPhoto } from '../components/PlayerPhoto'
 import { InfoTip } from '../components/InfoTip'
 import { Icon } from '../components/Icon'
 import { PageSkeleton } from '../components/Skeleton'
@@ -63,6 +64,8 @@ export default function Preview() {
   const profiles = useShotProfiles()
   const navigate = useNavigate()
   const [open, setOpen] = useState<string | null>(null)
+  // The featured match opens by default but is a toggle like any other card.
+  const [featOpen, setFeatOpen] = useState(true)
 
   const gw = data?.meta?.next_gw != null ? Number(data.meta.next_gw) : 1
   // FPL team ids are assigned alphabetically — the order of teams.json.
@@ -113,7 +116,7 @@ export default function Preview() {
      fixture. */
   const board = useMemo(() => {
     const fe = data?.fixtureEase ?? []
-    const rows: { r: RatingRow; xp: number; side: Side }[] = []
+    const rows: { r: RatingRow; xp: number; side: Side; own: number }[] = []
     for (const r of ratings) {
       const p = availFor(avail, num(r, 'element'), num(r, 'code'))
       if (p && OUT.has(String(p.status ?? 'a'))) continue
@@ -121,7 +124,9 @@ export default function Preview() {
       if (!side) continue
       const xp = xpForGw(r, gw, fe, avail, model, market, profiles)
       if (xp == null) continue
-      rows.push({ r, xp, side })
+      // Live ownership when the daily feed has it; the ratings build's own
+      // figure is a season snapshot and drifts between refreshes.
+      rows.push({ r, xp, side, own: p?.own ?? num(r, 'selected_by_percent') ?? 0 })
     }
     return rows.sort((a, b) => b.xp - a.xp)
   }, [ratings, avail, sides, data?.fixtureEase, gw, model, market, profiles])
@@ -161,6 +166,9 @@ export default function Preview() {
   }
 
   const ready = matches.length > 0
+  /** The best projection nobody owns — the one thing the captain podium can
+   *  never be, since it ranks the players everybody already has. */
+  const differential = board.filter((b) => b.own <= 5 && b.xp >= 3)[0] ?? null
   const attacks = [...sides.values()].sort((a, b) => b.lam - a.lam)
   const shutouts = [...sides.values()].sort((a, b) => b.cs - a.cs)
   const steps = flagged.filter((f) => f.step)
@@ -178,7 +186,7 @@ export default function Preview() {
    *  and carrying the full read rather than waiting for a tap. */
   const card = (m: Match, feat: boolean) => {
               const id = `${m.h}-${m.a}`
-              const isOpen = feat || open === id
+              const isOpen = feat ? featOpen : open === id
               const derby = derbyName(m.h, m.a)
               const inGame = board.filter((b) => b.side.team === m.h || b.side.team === m.a).slice(0, 5)
               return (
@@ -202,7 +210,11 @@ export default function Preview() {
                       {derby && <span className="rounded bg-gradient-to-r from-accent to-accent-2 px-2 py-1 text-[9px] font-extrabold tracking-[0.1em] text-accent-contrast uppercase">{derby}</span>}
                     </div>
                   )}
-                  <button onClick={() => setOpen(isOpen ? null : id)} className="w-full text-left">
+                  <button
+                    onClick={() => (feat ? setFeatOpen(!featOpen) : setOpen(isOpen ? null : id))}
+                    aria-expanded={isOpen}
+                    className="w-full text-left"
+                  >
                     <div className="flex items-center gap-2.5">
                       <Club team={m.h} rec={avail.table.get(m.hid)} big={feat} />
                       <span className="flex-1 text-center">
@@ -248,8 +260,9 @@ export default function Preview() {
                           <button key={String(b.r.element)} onClick={() => navigate(playerHref(b.r.web_name, num(b.r, 'code')))} className="mb-2.5 block w-full text-left last:mb-0">
                             <div className="flex items-center gap-2 text-[13px]">
                               <span className="w-7 shrink-0 text-[10px] font-extrabold text-ink-3">{b.r.position}</span>
+                              <TeamBadge team={b.side.team} size={18} className="shrink-0" />
                               <b className="font-semibold text-ink">{String(b.r.web_name)}</b>
-                              <span className="text-[11.5px] text-ink-3">{b.side.team} · £{b.r.price}m</span>
+                              <span className="text-[11.5px] text-ink-3">£{b.r.price}m</span>
                               <span className="ml-auto font-num text-[15px] font-extrabold text-accent-2">{b.xp.toFixed(2)}<span className="ml-0.5 text-[9px] font-extrabold tracking-wider text-ink-3">xP</span></span>
                             </div>
                             <div className="mt-1 h-[8px] overflow-hidden rounded-full bg-surface-2">
@@ -286,7 +299,7 @@ export default function Preview() {
                                 const taker = penTaker(team)
                                 const set = sp(team)
                                 const bits = [taker ? `${taker} (pens)` : null, set ? `${set} (set pieces)` : null].filter(Boolean).join(' · ')
-                                return bits ? <Fact key={t} k={`${team} dead balls`} v={<b className="text-ink">{bits}</b>} /> : null
+                                return bits ? <Fact key={t} k={<ClubTag team={team} what="dead balls" />} v={<b className="text-ink">{bits}</b>} /> : null
                               })}
                               {diff && (
                                 <Fact k="Best differential" v={<><b className="text-ink">{String(diff.r.web_name)}</b> <span className="text-ink-3">{owned(diff).toFixed(1)}% owned · {diff.xp.toFixed(2)} xP</span></>} />
@@ -300,7 +313,7 @@ export default function Preview() {
                                 return (
                                   <Fact
                                     key={`miss-${t}`}
-                                    k={`${team} missing`}
+                                    k={<ClubTag team={team} what="missing" />}
                                     v={outs.length
                                       ? <span className="text-warn">{outs.slice(0, 5).map((f) => String(f.r.web_name)).join(', ')}</span>
                                       : <span className="text-ink-3">Nobody flagged</span>}
@@ -341,28 +354,78 @@ export default function Preview() {
       ) : (
         <>
           <Band label="The round at a glance" />
-          <div className="mb-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Tile k="Biggest attack" v={attacks[0].lam.toFixed(2)} s={<><b>{teamLabel(attacks[0].team)}</b> projected goals {attacks[0].venue === 'H' ? 'v' : 'at'} {attacks[0].opp}</>} />
-            <Tile k="Safest clean sheet" v={pc(shutouts[0].cs)} s={<><b>{teamLabel(shutouts[0].team)}</b> — the shutout to buy into</>} />
-            <Tile k="Top expected points" v={board[0] ? board[0].xp.toFixed(1) : '—'} s={board[0] ? <><b>{String(board[0].r.web_name)}</b> {board[0].side.venue === 'H' ? 'v' : 'at'} {board[0].side.opp}</> : null} />
-            <Tile k="Goal-fest" v={matches[0].total.toFixed(2)} s={<><b>{matches[0].h} v {matches[0].a}</b> — most goals expected</>} />
+          {/* Four different answers. An earlier version led with top expected
+              points, which named the same player the captain podium below
+              already leads with; the differential is the thing that block
+              never tells you. */}
+          <div className="mb-7 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Tile
+              k="Biggest attack" v={attacks[0].lam.toFixed(2)}
+              s={<><b>{teamLabel(attacks[0].team)}</b> projected goals {attacks[0].venue === 'H' ? 'v' : 'at'} {teamLabel(attacks[0].opp)}</>}
+              media={<TeamBadge team={attacks[0].team} size={46} />}
+            />
+            <Tile
+              k="Safest clean sheet" v={pc(shutouts[0].cs)}
+              s={<><b>{teamLabel(shutouts[0].team)}</b> — the shutout to buy into</>}
+              media={<TeamBadge team={shutouts[0].team} size={46} />}
+            />
+            <Tile
+              k="Best differential" v={differential ? differential.xp.toFixed(2) : '—'}
+              s={differential
+                ? <><b>{String(differential.r.web_name)}</b> — {differential.own.toFixed(1)}% owned, {differential.side.venue === 'H' ? 'v' : 'at'} {teamLabel(differential.side.opp)}</>
+                : <span className="text-ink-3">Nobody under 5% owned projects a return worth the risk.</span>}
+              media={differential
+                ? <span className="block h-[52px] w-[52px] overflow-hidden rounded-full bg-surface-2">
+                    <PlayerPhoto element={num(differential.r, 'element')} code={num(differential.r, 'code')} placeholder={<TeamBadge team={differential.side.team} size={46} />} className="h-full w-full object-cover object-top" />
+                  </span>
+                : undefined}
+            />
+            <Tile
+              k="Goal-fest" v={matches[0].total.toFixed(2)}
+              s={<><b>{teamLabel(matches[0].h)} v {teamLabel(matches[0].a)}</b> — most goals expected</>}
+              media={<span className="flex items-center -space-x-2"><TeamBadge team={matches[0].h} size={38} /><TeamBadge team={matches[0].a} size={38} /></span>}
+            />
           </div>
 
           <Band label="Captain" tip="Expected points for this gameweek: each player's availability-adjusted baseline scaled by how kind this specific fixture is — attackers by their side's projected goals, defenders and keepers by the clean-sheet odds." />
+          {/* A podium: gold, silver, bronze foil, the same card material the
+              rest of the site uses for rating tiers, so first place looks like
+              first place before a number is read. */}
           <div className="mb-7 grid gap-3 sm:grid-cols-3">
-            {board.slice(0, 3).map((b, i) => (
-              <button
-                key={String(b.r.element)}
-                onClick={() => navigate(playerHref(b.r.web_name, num(b.r, 'code')))}
-                className={`rounded-xl border p-3.5 text-left transition-colors ${i === 0 ? 'border-accent/55 bg-accent-soft/40' : 'border-line bg-surface-1/60 hover:border-line-strong'}`}
-              >
-                <div className="text-[9px] font-extrabold tracking-[0.14em] text-accent uppercase">{i === 0 ? 'The pick' : `Alternative ${i}`}</div>
-                <div className="mt-1 text-[17px] font-extrabold text-ink">{String(b.r.web_name)}</div>
-                <div className="text-[11px] text-ink-3">{b.r.position} · {b.side.team} {b.side.venue === 'H' ? 'v' : 'at'} {b.side.opp} · £{b.r.price}m</div>
-                <div className="mt-2 font-num text-[26px] leading-none font-extrabold text-accent-2">{b.xp.toFixed(2)}</div>
-                <div className="text-[10px] text-ink-3">expected points</div>
-              </button>
-            ))}
+            {board.slice(0, 3).map((b, i) => {
+              const p = PODIUM[i]
+              return (
+                <button
+                  key={String(b.r.element)}
+                  onClick={() => navigate(playerHref(b.r.web_name, num(b.r, 'code')))}
+                  className="relative overflow-hidden rounded-[11px] text-left transition-transform hover:-translate-y-0.5"
+                  style={{ padding: 2, background: p.edge, boxShadow: p.glow }}
+                >
+                  <div className="relative min-h-[132px] overflow-hidden rounded-[9px] p-3.5 pr-[96px]" style={{ background: p.stock }}>
+                    {p.foil && <div className="foil-shine" aria-hidden="true" />}
+                    <PlayerPhoto
+                      element={num(b.r, 'element')}
+                      code={num(b.r, 'code')}
+                      placeholder={null}
+                      className="pointer-events-none absolute right-0 bottom-0 z-[1] h-[126px] w-auto object-contain object-bottom"
+                      style={{ maskImage: 'linear-gradient(90deg, transparent, #000 42%)', WebkitMaskImage: 'linear-gradient(90deg, transparent, #000 42%)' }}
+                    />
+                    <div className="relative z-[2]">
+                      <div className="text-[10px] font-extrabold tracking-[0.16em] uppercase" style={{ color: 'rgba(255,255,255,.6)' }}>{p.label}</div>
+                      <div className="mt-1.5 flex items-center gap-1.5">
+                        <TeamBadge team={b.side.team} size={19} className="shrink-0" />
+                        <b className="text-[18px] leading-tight font-extrabold text-white">{String(b.r.web_name)}</b>
+                      </div>
+                      <div className="mt-0.5 text-[12px]" style={{ color: 'rgba(255,255,255,.6)' }}>
+                        {b.r.position} · {b.side.team} {b.side.venue === 'H' ? 'v' : 'at'} {b.side.opp} · £{b.r.price}m
+                      </div>
+                      <div className="tier-num font-num mt-2.5 text-[34px] leading-none font-extrabold" style={{ backgroundImage: p.num }}>{b.xp.toFixed(2)}</div>
+                      <div className="mt-1 text-[11px]" style={{ color: 'rgba(255,255,255,.55)' }}>expected points</div>
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
           </div>
 
           <Band label="Every fixture" tip="Projected goals for each side and the chance of a clean sheet, both from the bookmakers' prices for these exact games. Ordered by kickoff and grouped by day, because that is how a round is actually lived. Tap a fixture to see the players it should produce." />
@@ -387,7 +450,7 @@ export default function Preview() {
           {/* Three columns rather than two: the top ten was a very wide table
               with a column of dead space beside it, and the two absence lists
               were stacked when they belong side by side. */}
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-4 lg:grid-cols-[0.95fr_1.25fr_0.95fr]">
             <div>
               <Band label="Expected points · top 10" />
               <div className="overflow-hidden rounded-xl border border-line">
@@ -413,18 +476,23 @@ export default function Preview() {
             <div>
               <Band label="Who's missing" tip="A replacement is only named when the missing man was genuinely ahead in the pecking order — otherwise the page would credit a nailed starter with benefiting from a squad player's absence." />
               <div className="overflow-hidden rounded-xl border border-line">
+                {/* Out on the left, the man who benefits on the right: the
+                    row reads as the swap it describes. */}
                 {steps.map((f) => (
-                  <div key={String(f.r.element)} className="border-b border-line px-3 py-2.5 last:border-0">
-                    <div className="flex items-center gap-2">
-                      <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide ${f.status === 'd' ? 'bg-warn/30' : 'bg-bad/30'}`}>{LABEL[f.status] ?? 'OUT'}</span>
-                      <TeamBadge team={String(f.r.team)} size={16} />
-                      <b className="truncate text-[13.5px] text-ink">{String(f.r.web_name)}</b>
+                  <div key={String(f.r.element)} className="flex items-center gap-3 border-b border-line px-3 py-2.5 last:border-0">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide ${f.status === 'd' ? 'bg-warn/30' : 'bg-bad/30'}`}>{LABEL[f.status] ?? 'OUT'}</span>
+                        <TeamBadge team={String(f.r.team)} size={18} className="shrink-0" />
+                        <b className="truncate text-[14px] text-ink">{String(f.r.web_name)}</b>
+                      </div>
+                      <div className="mt-0.5 truncate text-[11.5px] text-ink-3">{f.news}</div>
                     </div>
-                    <div className="mt-0.5 truncate text-[11px] text-ink-3">{f.news}</div>
-                    <div className="mt-1 flex items-baseline gap-1.5">
-                      <span className="text-[9.5px] font-extrabold tracking-[0.1em] text-good uppercase">Steps up</span>
-                      <b className="text-[13px] text-ink">{String(f.step!.web_name)}</b>
-                      <span className="text-[11px] text-ink-3">£{f.step!.price}m</span>
+                    <Icon name="arrow-right" size={14} className="shrink-0 text-ink-3" />
+                    <div className="shrink-0 text-right">
+                      <div className="text-[9.5px] font-extrabold tracking-[0.1em] text-good uppercase">Steps up</div>
+                      <b className="text-[14px] text-ink">{String(f.step!.web_name)}</b>
+                      <div className="text-[11.5px] text-ink-3">£{f.step!.price}m</div>
                     </div>
                   </div>
                 ))}
@@ -458,13 +526,41 @@ export default function Preview() {
 
 const PEN = ['h', 'a'] as const
 
+/** Gold, silver and bronze foil for the captain podium — the same material
+ *  language as the rating cards: a gradient edge, dark stock, and a metal
+ *  numeral. Only first place keeps the live shimmer. */
+const PODIUM = [
+  {
+    label: 'The pick', foil: true,
+    edge: 'linear-gradient(160deg,#5f4d26,#c9a227,#ead188,#50411f)',
+    stock: 'linear-gradient(168deg,#241f16,#141009 56%,#0c0906)',
+    num: 'linear-gradient(180deg,#fffbf0,#f0e0b0 52%,#c9a227)',
+    glow: '0 0 0 1px rgba(255,251,240,.16), 0 0 20px -4px rgba(201,162,39,.55)',
+  },
+  {
+    label: 'Alternative 1',
+    edge: 'linear-gradient(160deg,#5C636B,#C9CFD6,#e8ecf1,#4a5057)',
+    stock: 'linear-gradient(168deg,#1a1d21,#12151a 56%,#0a0c0e)',
+    num: 'linear-gradient(180deg,#f4f7fa,#c9cfd6 52%,#7c838c)',
+    glow: undefined as string | undefined,
+  },
+  {
+    label: 'Alternative 2',
+    edge: 'linear-gradient(160deg,#4a2f1a,#b87333,#e8b98a,#3d2614)',
+    stock: 'linear-gradient(168deg,#221811,#17100b 56%,#0d0806)',
+    num: 'linear-gradient(180deg,#f5d9bc,#d79a5e 52%,#9c5f2c)',
+    glow: undefined as string | undefined,
+  },
+]
+
 /** One side of a fixture: crest, code, league position and last five. */
 function Club({ team, rec, big, right }: { team: string; rec?: TeamRecord; big?: boolean; right?: boolean }) {
   return (
-    <span className={`flex shrink-0 items-center gap-1.5 sm:gap-2 ${big ? 'w-[72px] sm:w-[148px]' : 'w-[72px] sm:w-[124px]'} ${right ? 'flex-row-reverse justify-start' : ''}`}>
-      <TeamBadge team={team} size={big ? 26 : 22} className="shrink-0" />
+    <span className={`flex shrink-0 items-center gap-1.5 sm:gap-2.5 ${big ? 'w-[74px] sm:w-[168px]' : 'w-[74px] sm:w-[142px]'} ${right ? 'flex-row-reverse justify-start' : ''}`}>
+      <TeamBadge team={team} size={big ? 26 : 22} className="shrink-0 sm:hidden" />
+      <TeamBadge team={team} size={big ? 40 : 32} className="hidden shrink-0 sm:block" />
       <span className={`min-w-0 ${right ? 'text-right' : ''}`}>
-        <b className={`block leading-tight font-extrabold text-ink ${big ? 'text-[16px] sm:text-[20px]' : 'text-[14px] sm:text-[15px]'}`}>{team}</b>
+        <b className={`block leading-tight font-extrabold text-ink ${big ? 'text-[16px] sm:text-[24px]' : 'text-[14px] sm:text-[18px]'}`}>{team}</b>
         {rec?.pos ? <em className="text-[10.5px] font-bold text-ink-3 not-italic">{ord(rec.pos)}</em> : null}
       </span>
       <FormDots form={rec?.form} />
@@ -472,12 +568,24 @@ function Club({ team, rec, big, right }: { team: string; rec?: TeamRecord; big?:
   )
 }
 
-function Fact({ k, v }: { k: string; v: React.ReactNode }) {
+function Fact({ k, v }: { k: React.ReactNode; v: React.ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 border-b border-line py-1 last:border-0">
+    <div className="flex items-center justify-between gap-3 border-b border-line py-1.5 last:border-0">
       <span className="shrink-0 text-[11px] tracking-wide text-ink-3 uppercase">{k}</span>
       <span className="text-right text-ink-2">{v}</span>
     </div>
+  )
+}
+
+/** A club label inside the notes: crest plus the full name, big enough to
+ *  read — a three-letter code is fine on a fixture bar and too terse here. */
+function ClubTag({ team, what }: { team: string; what: string }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <TeamBadge team={team} size={20} className="shrink-0" />
+      <span className="text-[13px] font-semibold text-ink normal-case">{teamLabel(team)}</span>
+      <span className="text-[11px] text-ink-3">{what}</span>
+    </span>
   )
 }
 
@@ -492,12 +600,15 @@ function Band({ label, tip }: { label: string; tip?: string }) {
   )
 }
 
-function Tile({ k, v, s }: { k: string; v: string; s: React.ReactNode }) {
+function Tile({ k, v, s, media }: { k: string; v: string; s: React.ReactNode; media?: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-line bg-surface-1/60 p-3">
-      <div className="text-[9px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">{k}</div>
-      <div className="mt-1 font-num text-[23px] leading-none font-extrabold text-accent-2">{v}</div>
-      <div className="mt-1 text-[11.5px] leading-snug text-ink-2">{s}</div>
+    <div className="flex items-center gap-3 rounded-xl border border-line bg-surface-1/60 p-3.5">
+      <div className="min-w-0 flex-1">
+        <div className="text-[10.5px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">{k}</div>
+        <div className="mt-1.5 font-num text-[30px] leading-none font-extrabold text-accent-2">{v}</div>
+        <div className="mt-1.5 text-[13px] leading-snug text-ink-2">{s}</div>
+      </div>
+      {media && <div className="shrink-0">{media}</div>}
     </div>
   )
 }
