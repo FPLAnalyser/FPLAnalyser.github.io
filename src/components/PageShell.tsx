@@ -5,7 +5,11 @@ export function PageShell({ children }: { children: ReactNode }) {
   // components inside stop growing and the page just gains empty margins.
   // The phone gutter is deliberately tight — the pitch is the widest thing
   // on the site and every pixel of it is a legible player card.
-  return <div className="mx-auto w-full max-w-[1500px] px-2.5 py-6 sm:px-4 md:px-6 md:py-8">{children}</div>
+  // Asymmetric on purpose: the banner sits right at the top of every page and
+  // wants to be near the chrome, but the last card on a long page still needs
+  // room to breathe above the mobile nav bar. A single py- gave the banner the
+  // same generous gap as the page footer, which is the wrong trade.
+  return <div className="mx-auto w-full max-w-[1500px] px-2.5 pt-2 pb-6 sm:px-4 md:px-6 md:pt-3 md:pb-8">{children}</div>
 }
 
 export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
