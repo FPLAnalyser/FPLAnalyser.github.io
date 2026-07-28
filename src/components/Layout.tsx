@@ -15,11 +15,12 @@ import type { RatingRow } from '../lib/types'
 
 const LINKS: { to: string; label: string }[] = [
   { to: '/', label: 'Home' },
+  { to: '/preview', label: 'Preview' },
   { to: '/players', label: 'Players' },
   { to: '/teams', label: 'Teams' },
   { to: '/fixtures', label: 'Fixtures' },
   { to: '/scout', label: 'Scouting' },
-  { to: '/squad', label: 'Squad Builder' },
+  { to: '/squad', label: 'Squad' },
   { to: '/loadteam', label: 'My Team' },
 ]
 
@@ -64,7 +65,7 @@ export function Layout() {
                 to={link.to}
                 end={link.to === '/'}
                 className={({ isActive }) =>
-                  `relative flex min-h-11 items-center whitespace-nowrap rounded-md px-2.5 text-sm font-medium transition-colors lg:px-3 ${
+                  `relative flex min-h-11 items-center whitespace-nowrap rounded-md px-2 text-sm font-medium transition-colors lg:px-2.5 xl:px-3 ${
                     isActive ? 'text-accent' : 'text-ink-2 hover:text-ink'
                   }`
                 }
@@ -80,7 +81,7 @@ export function Layout() {
           </div>
 
           {/* Desktop global search (inline at xl+) */}
-          <div className="ml-3 hidden w-60 shrink-0 xl:block">
+          <div className="ml-3 hidden w-44 shrink-0 xl:block 2xl:w-60">
             <GlobalSearch />
           </div>
 

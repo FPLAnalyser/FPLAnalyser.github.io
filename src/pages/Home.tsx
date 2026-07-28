@@ -46,6 +46,7 @@ const IMG_BASE = import.meta.env.BASE_URL
 
 interface HomeWin { key: string; to: string; kicker: string; title: string; desc: string; stat: string; ghost?: { text: string; style: CSSProperties } }
 const WINDOWS: HomeWin[] = [
+  { key: 'fixtures', to: '/preview', kicker: 'This week', title: 'Preview', desc: 'The whole gameweek before the deadline — captain, chips, every fixture and who is missing.', stat: 'Before the deadline' },
   { key: 'players', to: '/players', kicker: 'Explore', title: 'Players', desc: 'Every player rated 0–100 — form, value, fixtures and the editorial player hero.', stat: '600+ rated' },
   { key: 'teams', to: '/teams', kicker: 'Explore', title: 'Teams', desc: 'Attack, defence and set-piece ratings for all 20 clubs, with matchup previews.', stat: '20 clubs' },
   { key: 'fixtures', to: '/fixtures', kicker: 'Plan', title: 'Fixtures', desc: 'Our own fixture rating and rotation planner.', stat: 'Next 6 GWs' },
@@ -137,7 +138,7 @@ export default function Home() {
       <div
         ref={gridRef}
         style={gridH ? { height: gridH } : undefined}
-        className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:flex lg:gap-3.5"
+        className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 lg:gap-3.5"
       >
         {WINDOWS.map((w) => <WindowCard key={w.key} w={w} />)}
       </div>
