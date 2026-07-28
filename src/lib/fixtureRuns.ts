@@ -32,13 +32,13 @@ export type Lens = 'overall' | 'attack' | 'defence'
 export interface TeamBase { xg: number; xgc: number }
 
 export interface DiffScale {
-  attackDiff: (opp: string) => number | null
-  defenceDiff: (opp: string) => number | null
+  /** Venue is an argument, not an afterthought — see buildDiffScale. */
+  attackDiff: (opp: string, venue: 'H' | 'A') => number | null
+  defenceDiff: (opp: string, venue: 'H' | 'A') => number | null
 }
 
 /* ── The difficulty scale ────────────────────────────────────────────────
-   Two goes at this were wrong in opposite directions, and both showed up as
-   a grid you couldn't read.
+   Three goes at this, and each fixed a different way of losing information.
 
    It first ranked the opponent on our 0–100 team ratings — but only over the
    clubs that HAVE a season rating, and the three promoted sides don't.
@@ -48,42 +48,80 @@ export interface DiffScale {
    Rating the whole matchup instead fixed Fulham but swapped one flattening
    for another: difficulty then tracked how good YOU are as much as who you
    play, so Arsenal's next eight ran 1.1 to 1.9 and Hull's 4.2 to 4.9 — a
-   club's entire run in one colour, and Arsenal at Villa indistinguishable
-   from Arsenal against Chelsea.
+   club's entire run in one colour.
 
-   So: the opponent's strength, which is what a fixture ticker means, ranked
-   over a population that finally holds all twenty clubs. The goal baselines
-   cover the promoted sides through the odds layer, which is exactly what the
-   team ratings could not. */
+   Ranking the opponent across all twenty clubs fixed both, and was still
+   wrong in a way that only showed up on a specific fixture: Brentford at home
+   to Sunderland came out at exactly 1.00 in the defence lens, the same as
+   Brentford at home to Hull, even though Hull create 29% fewer goals. Two
+   causes, and they compound. A percentile knows the ORDER of the twenty clubs
+   and nothing about the GAPS between them, so the 0.23 goals/game between
+   Hull and Sunderland and the 0.05 between Sunderland and Spurs both counted
+   as one step. And because the bottom club is pinned at exactly 1.0 by
+   construction, the home nudge had nowhere to go: anything near the floor
+   fell below it and got clamped back on top. 76 of 760 team-fixtures were
+   being flattened onto the two ends.
+
+   So: distance from the league average in standard deviations, squashed
+   through tanh. The gaps are now the thing the scale is made of — a club a
+   long way from average lands a long way from 3, and two clubs a hair apart
+   land a hair apart. tanh compresses the extremes smoothly instead of cutting
+   them off, so nothing needs clamping and no fixture reads as exactly 1.0 or
+   5.0, which is honest: no game is free and none is unwinnable.
+
+   Venue is folded in BEFORE the squash rather than added to the result. Added
+   after, it pushes the extremes off the end of the scale and reintroduces the
+   clamp; folded in, playing the best side in the league away is simply
+   further along the same curve. K is set so the spread matches what the
+   percentile scale produced — the point of this change is accuracy, not a
+   louder grid. */
+
+/** How far the venue is worth, in standard deviations of team strength. */
+const VENUE_SD = 0.42
+/** Standard deviations to the edge of the curve. 1.2 reproduces the spread of
+ *  the old percentile scale (sd 1.08 vs 1.12 across all 380 fixtures) while
+ *  clamping nothing at all. */
+const CURVE_K = 1.2
+
 export function buildDiffScale(baselines: Map<string, TeamBase>): DiffScale | null {
   const clubs = [...baselines.values()]
   if (clubs.length < 8) return null
-  const xg = clubs.map((c) => c.xg).sort((a, b) => a - b)
-  const xgc = clubs.map((c) => c.xgc).sort((a, b) => a - b)
-  const pctIn = (arr: number[]) => (v: number) => {
-    let lo = 0, hi = arr.length
-    while (lo < hi) { const mid = (lo + hi) >> 1; if (arr[mid] < v) lo = mid + 1; else hi = mid }
-    return lo / (arr.length - 1)
-  }
-  const pXg = pctIn(xg)
-  const pXgc = pctIn(xgc)
+  const mean = (xs: number[]) => xs.reduce((s, v) => s + v, 0) / xs.length
+  const sd = (xs: number[], m: number) => Math.sqrt(mean(xs.map((v) => (v - m) ** 2))) || 1
+  const xg = clubs.map((c) => c.xg)
+  const xgc = clubs.map((c) => c.xgc)
+  const mXg = mean(xg), sXg = sd(xg, mXg)
+  const mXgc = mean(xgc), sXgc = sd(xgc, mXgc)
+  const curve = (z: number) => 2 * Math.tanh(z / CURVE_K)
+
   return {
     // Our attack is judged on how freely they concede; our defence on how much
     // they score. Both read off the same twenty-club distribution.
-    attackDiff: (opp) => { const o = baselines.get(opp); return o ? 5 - 4 * pXgc(o.xgc) : null },
-    defenceDiff: (opp) => { const o = baselines.get(opp); return o ? 1 + 4 * pXg(o.xg) : null },
+    attackDiff: (opp, venue) => {
+      const o = baselines.get(opp)
+      if (!o) return null
+      return 3 - curve((o.xgc - mXgc) / sXgc + (venue === 'H' ? VENUE_SD : -VENUE_SD))
+    },
+    defenceDiff: (opp, venue) => {
+      const o = baselines.get(opp)
+      if (!o) return null
+      return 3 + curve((o.xg - mXg) / sXg - (venue === 'H' ? VENUE_SD : -VENUE_SD))
+    },
   }
 }
 
 /** Our own 1 (easy) … 5 (hard) fixture difficulty: how strong the opponent is
- *  at the end of the pitch this lens cares about, plus a venue nudge. Falls
- *  back to FPL's FDR only when we have no baseline for the opponent at all. */
+ *  at the end of the pitch this lens cares about, with the venue already in
+ *  it. Falls back to FPL's FDR only when we have no baseline for the opponent
+ *  at all. */
 export function analyserDiff(opp: string, lens: Lens, venue: 'H' | 'A', fdr: number, scale: DiffScale | null): { diff: number; ours: boolean } {
-  const a = scale?.attackDiff(opp)
-  const d = scale?.defenceDiff(opp)
+  const a = scale?.attackDiff(opp, venue)
+  const d = scale?.defenceDiff(opp, venue)
   if (a == null || d == null) return { diff: fdr, ours: false }
   const base = lens === 'attack' ? a : lens === 'defence' ? d : (a + d) / 2
-  return { diff: Math.max(1, Math.min(5, base + (venue === 'H' ? -0.25 : 0.25))), ours: true }
+  // The curve cannot leave 1–5, so this only guards against a degenerate
+  // baseline set rather than doing any real work.
+  return { diff: Math.max(1, Math.min(5, base)), ours: true }
 }
 
 /** −1 (well under a normal fixture) … +1 (well over) → one of five washes.
