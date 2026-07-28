@@ -8,7 +8,7 @@ import { Icon } from '../components/Icon'
 import { PageSkeleton } from '../components/Skeleton'
 import { useCore } from '../lib/useData'
 import { useAvailability, availFor } from '../lib/availability'
-import { useMarketOdds } from '../lib/xp'
+import { useMarketOdds, useXpModel, useShotProfiles, xpForGw, xpPartsForGw, type XpParts } from '../lib/xp'
 import { num } from '../lib/rows'
 import { teamLabel, playerHref } from '../lib/util'
 import type { RatingRow } from '../lib/types'
@@ -30,6 +30,13 @@ import type { RatingRow } from '../lib/types'
 const OUT = new Set(['i', 's', 'u', 'n'])
 const pc = (x: number) => `${Math.round(x * 100)}%`
 
+/** Clean-sheet odds on the site's five-band language, so a green percentage
+ *  here means what a green cell means on the fixture grid. */
+const csTone = (cs: number) => (cs >= 0.38 ? 'text-good' : cs >= 0.28 ? 'text-good/80' : cs >= 0.20 ? 'text-warn' : 'text-bad')
+/** Within a fixture the favoured attack is gold and the other side cool, so
+ *  which way a game is expected to go is readable without comparing digits. */
+const xgTone = (mine: number, theirs: number) => (mine > theirs ? 'text-accent-2' : 'text-info')
+
 interface Side { team: string; lam: number; against: number; cs: number; opp: string; venue: 'H' | 'A' }
 interface Match { h: string; a: string; lh: number; la: number; csh: number; csa: number; total: number }
 
@@ -37,6 +44,8 @@ export default function Preview() {
   const { data, error } = useCore()
   const market = useMarketOdds()
   const avail = useAvailability()
+  const model = useXpModel()
+  const profiles = useShotProfiles()
   const navigate = useNavigate()
   const [open, setOpen] = useState<string | null>(null)
 
@@ -68,24 +77,28 @@ export default function Preview() {
     return { matches: fixed, sides }
   }, [market, data?.fixtureEase, gw])
 
-  /* Expected points for the round. A player's availability-adjusted baseline,
-     scaled by how this specific fixture compares with an average one —
-     attackers ride their side's goal expectancy, defenders and keepers ride
-     the clean-sheet odds. */
+  /* Expected points for THIS gameweek, from the site's own per-gameweek model:
+     goal, assist, clean sheet, saves, defensive contribution, bonus and
+     appearance, each priced off this fixture's goal expectancies and the
+     player's own rates. An earlier draft scaled a season average by a fixture
+     multiplier and produced numbers around 10 for a single week — roughly
+     double what a gameweek can pay a premium, because a season average is
+     already a per-game figure and multiplying it again double-counts the
+     fixture. */
   const board = useMemo(() => {
-    const rows: { r: RatingRow; xp: number; side: Side }[] = []
+    const fe = data?.fixtureEase ?? []
+    const rows: { r: RatingRow; xp: number; parts: XpParts | null; side: Side }[] = []
     for (const r of ratings) {
       const p = availFor(avail, num(r, 'element'), num(r, 'code'))
       if (p && OUT.has(String(p.status ?? 'a'))) continue
-      const xp = num(r, 'season_xpts_adjusted')
       const side = sides.get(String(r.team))
-      if (xp == null || !side) continue
-      const att = r.position === 'MID' || r.position === 'FWD'
-      const mult = Math.max(0.55, Math.min(1.9, att ? side.lam / 1.45 : side.cs / 0.24))
-      rows.push({ r, xp: xp * mult, side })
+      if (!side) continue
+      const xp = xpForGw(r, gw, fe, avail, model, market, profiles)
+      if (xp == null) continue
+      rows.push({ r, xp, parts: xpPartsForGw(r, gw, fe, avail, model, market, profiles), side })
     }
     return rows.sort((a, b) => b.xp - a.xp)
-  }, [ratings, avail, sides])
+  }, [ratings, avail, sides, data?.fixtureEase, gw, model, market, profiles])
 
   /* Flagged players, and who actually steps up. Only shown when the missing
      man was AHEAD in the pecking order — otherwise the page prints "Bruno
@@ -125,6 +138,15 @@ export default function Preview() {
   const attacks = [...sides.values()].sort((a, b) => b.lam - a.lam)
   const shutouts = [...sides.values()].sort((a, b) => b.cs - a.cs)
   const steps = flagged.filter((f) => f.step)
+  /** The club's first-choice penalty taker, when the live layer knows one. */
+  const penTaker = (team: string): string | null => {
+    for (const r of ratings) {
+      if (r.team !== team) continue
+      const p = availFor(avail, num(r, 'element'), num(r, 'code'))
+      if (p?.pen_order === 1) return String(r.web_name)
+    }
+    return null
+  }
 
   return (
     <PageShell>
@@ -173,9 +195,15 @@ export default function Preview() {
                   <button onClick={() => setOpen(isOpen ? null : id)} className="w-full text-left">
                     <div className="flex items-center gap-2.5">
                       <span className="flex w-16 shrink-0 items-center gap-1.5 text-[13px] font-extrabold text-ink"><TeamBadge team={m.h} size={15} />{m.h}</span>
-                      <span className="flex-1 text-center font-num text-[19px] leading-none font-extrabold text-accent-2">{m.lh.toFixed(2)}</span>
+                      <span className="flex-1 text-center">
+                        <span className={`block font-num text-[19px] leading-none font-extrabold ${xgTone(m.lh, m.la)}`}>{m.lh.toFixed(2)}</span>
+                        <span className="mt-0.5 block text-[8px] font-extrabold tracking-[0.14em] text-ink-3">xG</span>
+                      </span>
                       <span className="text-[10px] text-ink-3">v</span>
-                      <span className="flex-1 text-center font-num text-[19px] leading-none font-extrabold text-accent-2">{m.la.toFixed(2)}</span>
+                      <span className="flex-1 text-center">
+                        <span className={`block font-num text-[19px] leading-none font-extrabold ${xgTone(m.la, m.lh)}`}>{m.la.toFixed(2)}</span>
+                        <span className="mt-0.5 block text-[8px] font-extrabold tracking-[0.14em] text-ink-3">xG</span>
+                      </span>
                       <span className="flex w-16 shrink-0 items-center justify-end gap-1.5 text-[13px] font-extrabold text-ink">{m.a}<TeamBadge team={m.a} size={15} /></span>
                     </div>
                     {/* One bar, split by which side the goals belong to. */}
@@ -183,22 +211,73 @@ export default function Preview() {
                       <span className="block bg-accent" style={{ width: `${(m.lh / m.total) * 100}%` }} />
                     </div>
                     <div className="mt-1.5 flex justify-between text-[10px] text-ink-3">
-                      <span>CS <b className="text-ink">{pc(m.csh)}</b></span>
-                      <span>{m.total.toFixed(2)} goals</span>
-                      <span>CS <b className="text-ink">{pc(m.csa)}</b></span>
+                      <span>clean sheet <b className={csTone(m.csh)}>{pc(m.csh)}</b></span>
+                      <span>{m.total.toFixed(2)} goals expected</span>
+                      <span>clean sheet <b className={csTone(m.csa)}>{pc(m.csa)}</b></span>
                     </div>
                   </button>
                   {isOpen && (
-                    <div className="mt-3 border-t border-line-mid pt-3">
-                      <div className="mb-1.5 text-[9px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Top expected points in this game</div>
-                      {inGame.map((b) => (
-                        <button key={String(b.r.element)} onClick={() => navigate(playerHref(b.r.web_name, num(b.r, 'code')))} className="flex w-full items-center gap-2 py-1 text-left text-[12px] hover:text-accent">
-                          <span className="w-8 shrink-0 text-[9px] font-extrabold text-ink-3">{b.r.position}</span>
-                          <b className="font-semibold text-ink">{String(b.r.web_name)}</b>
-                          <span className="text-[10.5px] text-ink-3">{b.side.team} · £{b.r.price}m</span>
-                          <span className="ml-auto font-num font-extrabold text-accent-2">{b.xp.toFixed(2)}</span>
-                        </button>
-                      ))}
+                    <div className="mt-3 grid gap-4 border-t border-line-mid pt-3 lg:grid-cols-[1.4fr_1fr]">
+                      <div>
+                        <div className="mb-1.5 text-[9px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Where the points come from</div>
+                        {inGame.map((b) => {
+                          const p = b.parts
+                          const seg: [string, number, string][] = p
+                            ? ([
+                                ['Goals', p.goal, 'var(--accent)'],
+                                ['Assists', p.assist, 'var(--chart-4)'],
+                                ['Clean sheet', p.cs, 'var(--good)'],
+                                ['Saves', p.saves, 'var(--info)'],
+                                ['Def con', p.dc, 'var(--chart-3)'],
+                                ['Bonus', p.bonus, 'var(--star-c)'],
+                                ['Appearance', p.appearance, 'var(--ink-3)'],
+                              ] as [string, number, string][]).filter((x) => x[1] > 0.01)
+                            : []
+                          const tot = seg.reduce((t, [, v]) => t + v, 0) || 1
+                          return (
+                            <button key={String(b.r.element)} onClick={() => navigate(playerHref(b.r.web_name, num(b.r, 'code')))} className="mb-2 block w-full text-left last:mb-0">
+                              <div className="flex items-center gap-2 text-[12px]">
+                                <span className="w-7 shrink-0 text-[9px] font-extrabold text-ink-3">{b.r.position}</span>
+                                <b className="font-semibold text-ink">{String(b.r.web_name)}</b>
+                                <span className="text-[10.5px] text-ink-3">{b.side.team} · £{b.r.price}m</span>
+                                <span className="ml-auto font-num font-extrabold text-accent-2">{b.xp.toFixed(2)}<span className="ml-0.5 text-[8px] font-extrabold tracking-wider text-ink-3">xP</span></span>
+                              </div>
+                              {/* The projection split by where it is earned — the
+                                  thing a single number can never tell you, and the
+                                  reason a 4.0 keeper and a 4.0 midfielder are not
+                                  the same bet. */}
+                              <div className="mt-1 flex h-[7px] gap-px overflow-hidden rounded-full">
+                                {seg.map(([label, v, col]) => (
+                                  <span key={label} title={`${label} ${v.toFixed(2)}`} style={{ width: `${(v / tot) * 100}%`, background: col }} />
+                                ))}
+                              </div>
+                            </button>
+                          )
+                        })}
+                        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[9px] text-ink-3">
+                          {[['Goals', 'var(--accent)'], ['Assists', 'var(--chart-4)'], ['Clean sheet', 'var(--good)'], ['Saves', 'var(--info)'], ['Def con', 'var(--chart-3)'], ['Bonus', 'var(--star-c)']].map(([l, c]) => (
+                            <span key={l} className="flex items-center gap-1"><i className="h-2 w-2 rounded-sm" style={{ background: c }} />{l}</span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="text-[11.5px] leading-relaxed">
+                        <div className="mb-1.5 text-[9px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">The matchup</div>
+                        <Fact k="Projected score" v={`${m.h} ${m.lh.toFixed(1)} — ${m.la.toFixed(1)} ${m.a}`} />
+                        <Fact k="Clean sheet" v={<><span className={csTone(m.csh)}>{m.h} {pc(m.csh)}</span> · <span className={csTone(m.csa)}>{m.a} {pc(m.csa)}</span></>} />
+                        <Fact k="Both teams score" v={pc((1 - Math.exp(-m.lh)) * (1 - Math.exp(-m.la)))} />
+                        <Fact k="Over 2.5 goals" v={pc(over25(m.total))} />
+                        {PEN.map((t) => {
+                          const taker = penTaker(t === 'h' ? m.h : m.a)
+                          return taker ? <Fact key={t} k={`${t === 'h' ? m.h : m.a} penalties`} v={<b className="text-ink">{taker}</b>} /> : null
+                        })}
+                        {(() => {
+                          const outs = flagged.filter((f) => f.r.team === m.h || f.r.team === m.a).slice(0, 4)
+                          return outs.length
+                            ? <Fact k="Missing" v={<span className="text-warn">{outs.map((f) => String(f.r.web_name)).join(', ')}</span>} />
+                            : <Fact k="Missing" v={<span className="text-ink-3">Nobody flagged</span>} />
+                        })()}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -258,6 +337,23 @@ export default function Preview() {
         </>
       )}
     </PageShell>
+  )
+}
+
+const PEN = ['h', 'a'] as const
+
+/** P(at least three goals) from the match total, Poisson. */
+function over25(total: number): number {
+  const e = Math.exp(-total)
+  return 1 - e * (1 + total + (total * total) / 2)
+}
+
+function Fact({ k, v }: { k: string; v: React.ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 border-b border-line py-1 last:border-0">
+      <span className="shrink-0 text-[10px] tracking-wide text-ink-3 uppercase">{k}</span>
+      <span className="text-right text-ink-2">{v}</span>
+    </div>
   )
 }
 

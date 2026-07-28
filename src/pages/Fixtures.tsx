@@ -9,7 +9,6 @@ import { InfoTip } from '../components/InfoTip'
 import { Icon } from '../components/Icon'
 import { PageSkeleton } from '../components/Skeleton'
 import { useCore, useLazyTable } from '../lib/useData'
-import { useAvailability } from '../lib/availability'
 import { classifyZone, toPitch } from '../lib/shotzones'
 import { Exportable } from '../components/ExportPanel'
 import { num, str } from '../lib/rows'
@@ -451,8 +450,6 @@ function RunsTimeline({ fixtureEase, runs, gws, lens, scale }: {
   lens: Lens
   scale: DiffScale | null
 }) {
-  const avail = useAvailability()
-
   const byTeam = useMemo(() => {
     const m = new Map<string, Map<number, { opp: string; venue: 'H' | 'A'; diff: number }>>()
     for (const f of fixtureEase) {
@@ -465,21 +462,10 @@ function RunsTimeline({ fixtureEase, runs, gws, lens, scale }: {
     return m
   }, [fixtureEase, lens, scale])
 
-  // Month bands, read off the real deadlines rather than assumed — the run
-  // then has a name you would say out loud ("kind through September") instead
-  // of a number you have to count columns to find.
-  const months = useMemo(() => {
-    const out: { label: string; span: number }[] = []
-    for (const gw of gws) {
-      const d = avail.deadlines.get(gw)
-      const label = d ? d.toLocaleString('en-GB', { month: 'short' }).toUpperCase() : ''
-      const last = out[out.length - 1]
-      if (last && last.label === label) last.span += 1
-      else out.push({ label, span: 1 })
-    }
-    return out.some((m) => m.label) ? out : null
-  }, [gws, avail.deadlines])
-
+  // Alphabetical. Ordering by when the run starts made a tidy diagonal but a
+  // useless index: you arrive at this map knowing which club you want, and
+  // hunting twenty rows for it costs more than the diagonal was worth. The
+  // ranked view already answers "whose run is best".
   const rows = useMemo(() => {
     const m = new Map<string, (SeasonRun & { team: string })[]>()
     for (const r of runs) {
@@ -488,7 +474,7 @@ function RunsTimeline({ fixtureEase, runs, gws, lens, scale }: {
     }
     return [...m.entries()]
       .map(([team, rs]) => ({ team, runs: rs.sort((a, b) => a.from - b.from) }))
-      .sort((a, b) => a.runs[0].from - b.runs[0].from || b.runs[0].advantage - a.runs[0].advantage)
+      .sort((a, b) => a.team.localeCompare(b.team))
   }, [runs])
 
   if (!rows.length) return null
@@ -497,22 +483,6 @@ function RunsTimeline({ fixtureEase, runs, gws, lens, scale }: {
     <div className="overflow-x-auto rounded-xl border border-line">
       <table className="w-full border-separate border-spacing-0 text-[10px]">
         <thead>
-          {months && (
-            <tr>
-              <th className="sticky left-0 z-10 bg-surface-2" />
-              {months.map((m, i) => (
-                <th
-                  key={`${m.label}-${i}`}
-                  colSpan={m.span}
-                  className="border-b border-line-mid bg-surface-2 pt-2.5 pb-1 text-[8px] font-extrabold tracking-[0.13em] text-ink-3"
-                  style={{ borderLeft: i ? '1px solid var(--line-mid)' : undefined }}
-                >
-                  {m.label}
-                </th>
-              ))}
-              <th className="bg-surface-2" />
-            </tr>
-          )}
           <tr>
             <th className="sticky left-0 z-10 bg-surface-2 px-2.5 py-2 text-left text-[8.5px] font-extrabold tracking-[0.11em] text-ink-3 uppercase">Club</th>
             {gws.map((gw) => <th key={gw} className="bg-surface-2 px-1 py-2 text-center text-[9px] font-extrabold text-ink-3">{gw}</th>)}

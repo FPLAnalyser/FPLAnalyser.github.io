@@ -91,3 +91,30 @@ export function DutyBadges({ d, className = '' }: { d: Duties; className?: strin
     </span>
   )
 }
+
+/** A visible key for the badges above.
+ *
+ *  The chips carry `title` tooltips, but a native tooltip needs a mouse, a
+ *  second of patience and the knowledge that there is something to hover over.
+ *  None of those hold on a phone, which is where most of this is read — so the
+ *  meanings are also stated once, in the open, above the list they appear in. */
+export function DutyLegend({ className = '' }: { className?: string }) {
+  const items: [string, string, string][] = [
+    ['P', 'bg-accent/30', 'first-choice penalties'],
+    ['P²', 'bg-accent/16', 'second in line'],
+    ['P', 'bg-good/30', 'on them this week — the man ahead is out'],
+    ['SP', 'bg-info/26', 'corners or free kicks'],
+    ['🔥', 'bg-hot/22', 'scoring above his rate'],
+    ['🧊', 'bg-cold/22', 'scoring below it'],
+  ]
+  return (
+    <div className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] text-ink-3 ${className}`}>
+      {items.map(([glyph, tint, meaning], i) => (
+        <span key={i} className="flex items-center gap-1.5">
+          <span className={`grid h-[15px] min-w-[15px] place-items-center rounded-[4px] px-1 text-[9px] leading-none font-extrabold text-ink ${tint}`}>{glyph}</span>
+          {meaning}
+        </span>
+      ))}
+    </div>
+  )
+}

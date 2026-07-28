@@ -15,7 +15,7 @@ import type { RatingRow } from '../lib/types'
 
 const LINKS: { to: string; label: string }[] = [
   { to: '/', label: 'Home' },
-  { to: '/preview', label: 'Preview' },
+  { to: '/preview', label: 'GW Preview' },
   { to: '/players', label: 'Players' },
   { to: '/teams', label: 'Teams' },
   { to: '/fixtures', label: 'Fixtures' },

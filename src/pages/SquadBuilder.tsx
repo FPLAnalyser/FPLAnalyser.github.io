@@ -13,7 +13,7 @@ import { SquadLab } from '../components/SquadLab'
 import { Icon } from '../components/Icon'
 import { Pitch, PitchCard, BenchSpine, CARD_W } from '../components/Pitch'
 import { PlayerCardSheet } from '../components/PlayerCardSheet'
-import { DutyBadges, dutiesOf } from '../components/DutyBadges'
+import { DutyBadges, DutyLegend, dutiesOf } from '../components/DutyBadges'
 import { SquadRatingSheet, squadNarrative } from '../components/SquadRatingSheet'
 import { useCore } from '../lib/useData'
 import { tapHaptic, shareImageNative } from '../lib/native'
@@ -78,10 +78,10 @@ function MetricChips({ metric, onChange }: { metric: Metric; onChange: (m: Metri
   )
 }
 
-type SortKey = 'rating' | 'price' | 'value' | 'owned'
+type SortKey = 'xp' | 'rating' | 'price' | 'owned'
 const SORT_TABS: TabDef[] = [
+  { id: 'xp', label: 'xP' },
   { id: 'rating', label: 'Rating' },
-  { id: 'value', label: 'Value' },
   { id: 'price', label: 'Price' },
   { id: 'owned', label: 'Owned' },
 ]
@@ -134,7 +134,7 @@ export default function SquadBuilder() {
   const [pickPos, setPickPos] = useState<Pos>('GKP')
   const [metric, setMetric] = useState<Metric>('rating')
   const [sheetFor, setSheetFor] = useState<RatingRow | null>(null)
-  const [sort, setSort] = useState<SortKey>('rating')
+  const [sort, setSort] = useState<SortKey>('xp')
   const [query, setQuery] = useState('')
   const [note, setNote] = useState<string | null>(null)
 
@@ -208,6 +208,8 @@ export default function SquadBuilder() {
   const [pendingIn, setPendingIn] = useState<RatingRow | null>(null)
 
   const avail = useAvailability()
+  const listXpModel = useXpModel()
+  const listMarket = useMarketOdds()
   const fixtureEase = (data?.fixtureEase ?? []) as FixtureEaseRow[]
   // You build for one gameweek — the next one to be played — and then plan
   // forward from it. Everything on this page is anchored to that number.
@@ -295,6 +297,16 @@ export default function SquadBuilder() {
   const liveScore = liveRated.length ? Math.round(liveRated.reduce((a, b) => a + b, 0) / liveRated.length) : null
   const liveBestXI = useMemo(() => bestElevenScore(liveChosen), [liveChosen])
   const liveGw = complete ? planner.gw : buildGw
+
+  /* Expected points for the gameweek you are actually picking. Cached because
+     the market list re-renders on every keystroke in the search box and the
+     projection is not free. */
+  const xpCache = useMemo(() => new Map<number, number | null>(), [liveGw, listXpModel, listMarket, avail])
+  const xpOf = (r: RatingRow): number | null => {
+    const el = Number(r.element)
+    if (!xpCache.has(el)) xpCache.set(el, xpForGw(r, liveGw, fixtureEase, avail, listXpModel, listMarket))
+    return xpCache.get(el) ?? null
+  }
   const unrated = liveChosen.length - liveRated.length
   /** The eleven the lab reads for captaincy — the week's lineup once the
    *  planner is running, and nothing before that. */
@@ -346,7 +358,7 @@ export default function SquadBuilder() {
     const key = (r: RatingRow) => {
       if (sort === 'price') return priceOf(r)
       if (sort === 'owned') return num(r, 'selected_by_percent') ?? 0
-      if (sort === 'value') { const o = ovOf(r); return o == null ? -1 : o / Math.max(priceOf(r), 0.1) }
+      if (sort === 'xp') return xpOf(r) ?? -1
       return ovOf(r) ?? -1
     }
     const sorted = [...rows].sort((a, b) => key(b) - key(a))
@@ -477,6 +489,7 @@ export default function SquadBuilder() {
               <Icon name="target" size={13} /> Filters{activeFilters > 0 ? ` (${activeFilters})` : ''} <span className="text-[10px]">{showFilters ? '▴' : '▾'}</span>
             </button>
           </div>
+          <DutyLegend className="mb-3" />
 
           {showFilters && (
             <div className="mb-3 flex flex-col gap-3 rounded-xl border border-line bg-surface-1/50 p-3.5">
@@ -536,6 +549,10 @@ export default function SquadBuilder() {
                     </button>
                     <div className="mt-1"><FixtureChips fixtureEase={fixtureEase} team={String(r.team)} n={4} fromGw={liveGw} /></div>
                   </div>
+                  <span className="w-11 shrink-0 text-right">
+                    <span className="block font-num text-sm font-extrabold tabular-nums text-accent-2">{xpOf(r)?.toFixed(1) ?? '—'}</span>
+                    <span className="block text-[8px] font-extrabold tracking-[0.1em] text-ink-3">XP</span>
+                  </span>
                   <span className="w-9 shrink-0 text-right font-num text-sm font-semibold tabular-nums text-ink-2">{o ?? '—'}</span>
                   {/* Once he's on the market the sign-him button is dead, and a
                       greyed-out tick just looks broken. The one thing you can
