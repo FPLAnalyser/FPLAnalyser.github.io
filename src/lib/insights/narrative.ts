@@ -162,7 +162,7 @@ function buildPlayerVerdict(bundle: any, data: any): any {
   // Risk: minutes or price
   let hasRisk = false;
   const flags = String(p4 && p4.flags || '');
-  if (flags.includes('Minutes Risk')) {
+  if (flags.includes('Minutes risk')) {
     hasRisk = true;
     bullets.push({
       iconId: 'alert', tone: 'bad',

@@ -205,6 +205,7 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
   }, [r.element, data])
 
   const personas = (p4 && str(p4, 'personas') && str(p4, 'personas') !== 'None') ? String(p4.personas).split(', ') : []
+  const status = p4 && str(p4, 'status') ? String(p4.status).split(', ') : []
   const flags = p4 && str(p4, 'flags') ? String(p4.flags).split(', ') : []
   // Live layer first: set-piece duty changes with transfers and manager whim,
   // so the daily availability refresh outranks the season snapshot.
@@ -228,7 +229,7 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
 
   return (
     <div className="overflow-hidden rounded-xl border border-line bg-surface-1/50">
-      <IdentStrip r={r} peers={peers} personas={personas} flags={flags} isPenTaker={isPenTaker} isSpTaker={isSpTaker} streak={streak} availFlag={availFlag} />
+      <IdentStrip r={r} peers={peers} personas={personas} status={status} flags={flags} isPenTaker={isPenTaker} isSpTaker={isSpTaker} streak={streak} availFlag={availFlag} />
 
       {/* The Brief flow: narrative first, evidence second, receipts folded.
           Unknown players get the honest know/don't-know page instead. */}
@@ -373,10 +374,12 @@ function HeroSilhouette() {
   )
 }
 
-function HeroPill({ children, gold, warn, title }: { children: ReactNode; gold?: boolean; warn?: boolean; title?: string }) {
+function HeroPill({ children, gold, ident, warn, title }: { children: ReactNode; gold?: boolean; ident?: boolean; warn?: boolean; title?: string }) {
   const base = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-semibold'
   if (gold) return <span title={title} className={`${base} text-[#10131b]`} style={{ background: 'linear-gradient(120deg,#ead188,#c9a227)' }}>{children}</span>
-  return <span title={title} className={base} style={{ border: '1px solid rgba(201,162,39,.22)', color: warn ? '#e8b04a' : '#cfc9bb', background: 'rgba(255,255,255,.03)' }}>{children}</span>
+  // Identity is filled and squared off — it is the thing worth reading first.
+  if (ident) return <span title={title} className={`${base} rounded-[7px] font-extrabold`} style={{ background: 'rgba(226,192,106,.2)', color: '#f4efe3' }}>{children}</span>
+  return <span title={title} className={base} style={{ border: '1px dashed rgba(201,162,39,.28)', color: warn ? '#e8b04a' : '#cfc9bb', background: 'transparent' }}>{children}</span>
 }
 
 // Fingerprint dimensions — five per position, the same score fields the
@@ -392,10 +395,11 @@ const FP_DIMS: Record<string, [string, string][]> = {
    and the rating chip is part of the flex row, so long names shrink instead
    of clipping on mobile. */
 
-function IdentStrip({ r, peers, personas, flags, isPenTaker, isSpTaker, streak, availFlag }: {
+function IdentStrip({ r, peers, personas, status, flags, isPenTaker, isSpTaker, streak, availFlag }: {
   r: RatingRow
   peers: RatingRow[]
   personas: string[]
+  status: string[]
   flags: string[]
   isPenTaker: boolean
   isSpTaker: boolean
@@ -434,8 +438,12 @@ function IdentStrip({ r, peers, personas, flags, isPenTaker, isSpTaker, streak, 
             )}
             {isPenTaker && <HeroPill gold title="First-choice penalty taker — extra, high-value goal route.">ⓒ Penalties</HeroPill>}
             {isSpTaker && <HeroPill title="Primary corner / free-kick taker — extra assist and goal routes.">Set pieces</HeroPill>}
-            {personas.slice(0, 2).map((p) => <HeroPill key={p} title={personaTip(p)}>{p}</HeroPill>)}
-            {flags.slice(0, 1).map((fl) => <HeroPill key={fl} warn={!fl.includes('Monster')} title={personaTip(fl)}>{fl}</HeroPill>)}
+            {/* Identity reads solid, status reads quiet. They answer different
+                questions — what kind of player he is, versus what happens to be
+                true this month — and the second must never out-shout the first. */}
+            {personas.slice(0, 2).map((p) => <HeroPill key={p} ident title={personaTip(p)}>{p}</HeroPill>)}
+            {status.slice(0, 2).map((s) => <HeroPill key={s} title={personaTip(s)}>{s}</HeroPill>)}
+            {flags.slice(0, 1).map((fl) => <HeroPill key={fl} warn={fl === 'Minutes risk'} title={personaTip(fl)}>{fl}</HeroPill>)}
           </div>
         </div>
         {rating != null && (

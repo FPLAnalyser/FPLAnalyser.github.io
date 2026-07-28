@@ -298,6 +298,37 @@ def pct_thresholds(frame, wl):
     t["def_headed_p80"] = q(d_head, 0.80)
     return t
 
+# ── Label vocabulary ──────────────────────────────────────────────────────────
+# Two families, and they are not interchangeable.
+#
+# IDENTITY says what KIND of player he is — poacher, playmaker, ball winner.
+# It barely moves from one window to the next, so it can afford a name worth
+# remembering. Where football already has the word we use football's word
+# rather than invent one: eleven of the sixteen are borrowed, which is the
+# point — they need no explaining. Where the game has no word for what the
+# rule finds, "The ___" keeps the coinages on a single shelf so the set still
+# reads as one system.
+#
+# STATUS says what happens to be true THIS window — due a goal, one action
+# short, beating his xG. It changes every few weeks, so it stays deliberately
+# plain. A memorable name for a temporary state is how you end up printing
+# something that reads as a permanent judgement.
+#
+# Three labels were removed rather than renamed. Captaincy King and Bonus
+# Magnet were thresholds on total points and BPS — numbers the overall rating
+# already scores, so they restated it with a cruder rule and disagreed with it
+# often enough to be worse than silent. Budget Enabler is price plus a clean
+# sheet, which the value band does properly, with the price on an axis. The
+# defender branch of Deep Lying Creator went too: for a defender it only ever
+# established that he WON'T score, which is exactly what no label already says.
+
+STATUS_LABELS = {
+    "Beating his xGC", "Conceding above xGC",
+    "Clean sheets earned", "Clean sheets flattered",
+    "Beating his xG", "Due a goal", "Returns overdue",
+    "One action short", "Under-owned",
+}
+
 # ── Persona functions ─────────────────────────────────────────────────────────
 
 def get_starts_mins(row, window):
@@ -313,10 +344,10 @@ def get_flags(starts, mins, window):
         return flags  # minutes flags are rolling-window concepts
     min_starts = 3 if window == 4 else 5
     if starts < min_starts:
-        flags.append("Minutes Risk")
+        flags.append("Minutes risk")
     if (window == 4 and starts >= 4 and mins >= 340) or \
        (window == 6 and starts >= 6 and mins >= 510):
-        flags.append("Minutes Monster")
+        flags.append("Ever-present")
     return flags
 
 def sfx_of(window):
@@ -387,25 +418,25 @@ def assign_gkp_personas(row, window):
         saves = row[f"saves_{sfx}"]
         xgc = row[f"expected_goals_conceded_{sfx}"]
         gc = row[f"goals_conceded_{sfx}"]
-        bps = row[f"bps_{sfx}"]
         avg_saves = row.get(f"avg_saves_per_game_{w}gw", saves / max(row.get("games_played_season", 1), 1) if window == "season" else 0)
 
-        base = {4: {"saves_hi": 9, "xgc_hi": 4, "saves_lo": 7, "xgc_lo": 3, "bps": 58},
-                6: {"saves_hi": 14, "xgc_hi": 7, "saves_lo": 10, "xgc_lo": 5, "bps": 87}}[w]
+        base = {4: {"saves_hi": 9, "xgc_hi": 4, "saves_lo": 7, "xgc_lo": 3},
+                6: {"saves_hi": 14, "xgc_hi": 7, "saves_lo": 10, "xgc_lo": 5}}[w]
         t = {k: v * scale for k, v in base.items()} if window == "season" else base
 
         if saves > t["saves_hi"] and xgc > t["xgc_hi"] and avg_saves >= 3:
-            personas.append("Shot Stopper")
+            personas.append("The Last Line")
         if saves > t["saves_hi"] and xgc <= t["xgc_hi"] and avg_saves >= 3:
-            personas.append("Premium Keeper")
+            personas.append("Complete Keeper")
         if saves <= t["saves_lo"] and xgc <= t["xgc_lo"]:
-            personas.append("Sweeper Keeper")
+            # Not "Sweeper Keeper" — that describes starting position and
+            # distribution, which we don't measure. What the rule finds is a
+            # keeper who faces nothing, and that is about the back four.
+            personas.append("The Spectator")
         if xgc > 0 and round(xgc - gc, 2) >= 1.0 * scale:
-            personas.append("Overperformer")
+            personas.append("Beating his xGC")
         if round(gc - xgc, 2) >= 1.0 * scale:
-            personas.append("Liability")
-        if bps > t["bps"]:
-            personas.append("Bonus Magnet")
+            personas.append("Conceding above xGC")
 
     return personas, flags
 
@@ -429,50 +460,33 @@ def assign_def_personas(row, window, t):
         gc = row[f"goals_conceded_{sfx}"]
         xA = row[f"expected_assists_{sfx}"]
         xG = row[f"expected_goals_{sfx}"]
-        bps = row[f"bps_{sfx}"]
-        cost = row.get("value", 999)
         dc_hits = row.get(f"dc_hits_{sfx}", 0)
         dc_near = row.get(f"dc_near_miss_{sfx}", 0)
 
-        base = {4: {"cs": 2, "xA": 0.40, "xG": 0.40, "bps": 46, "cost": 45},
-                6: {"cs": 3, "xA": 0.60, "xG": 0.60, "bps": 68, "cost": 45}}[w]
-        if window == "season":
-            t_ = {k: (v * scale if k != "cost" else v) for k, v in base.items()}
-        else:
-            t_ = base
+        base = {4: {"cs": 2, "xA": 0.40, "xG": 0.40},
+                6: {"cs": 3, "xA": 0.60, "xG": 0.60}}[w]
+        t_ = {k: v * scale for k, v in base.items()} if window == "season" else base
 
         if cs >= t_["cs"] and gc < xgc:
-            personas.append("Reliable Shieldwall")
+            personas.append("Clean sheets earned")
         if cs >= t_["cs"] and gc >= xgc:
-            personas.append("Flattering Back")
+            personas.append("Clean sheets flattered")
         if xA >= t_["xA"]:
-            personas.append("Attacking Defender")
+            personas.append("The Supply Line")
         if xG >= t_["xG"]:
-            personas.append("Scoring Defender")
+            personas.append("The Raider")
         dc_thr = 2 if w == 4 else 3
         if window == "season":
             dc_thr = max(2, round(0.5 * row.get("games_played_season", 0)))
         if dc_hits >= dc_thr:
-            personas.append("Defensive Workhorse")
+            personas.append("The Enforcer")
         if dc_hits == 0 and dc_near >= (2 * scale if window == "season" else 2):
-            personas.append("Emerging Contributor")
-        if cost <= t_["cost"] and starts >= min_starts and cs >= (1 * scale if window == "season" else 1):
-            personas.append("Budget Enabler")
-        if bps > t_["bps"]:
-            personas.append("Bonus Magnet")
+            personas.append("One action short")
 
-        # NEW: Set Piece Threat (DEF)
         if assign_set_piece_threat(row, t, sfx, is_def=True):
-            personas.append("Set Piece Threat")
-        # NEW: Aerial Threat (DEF) — headed-shot volume vs other defenders
+            personas.append("Set Piece Specialist")
         if assign_aerial_threat(row, t, sfx, window, is_def=True):
             personas.append("Aerial Threat")
-        # NEW: Deep Lying Creator (ball-playing defenders qualify)
-        cd = np.nansum([nn(row, f"us_xg_chain_per90_{sfx}"), nn(row, f"us_xg_buildup_per90_{sfx}")])
-        npxg90 = nn(row, f"us_npxg_per90_{sfx}")
-        if not pd.isna(nn(row, f"us_xg_buildup_per90_{sfx}")) and not pd.isna(npxg90):
-            if cd >= t["creat_depth_p80"] and npxg90 <= t["npxg_p40"]:
-                personas.append("Deep Lying Creator")
 
     return personas, flags
 
@@ -496,7 +510,6 @@ def assign_mf_personas(row, window, t):
         xA = row[f"expected_assists_{sfx}"]
         xGI = row[f"expected_goal_involvements_{sfx}"]
         total_pts = row[f"total_points_{sfx}"]
-        bps = row[f"bps_{sfx}"]
         # FIXED: was row.get("selected_by_percent", 100) against rolling files
         # that never contained the column → Differential never fired.
         selected = nn(row, "selected_by_percent")
@@ -505,10 +518,10 @@ def assign_mf_personas(row, window, t):
         dc_near = row.get(f"dc_near_miss_{sfx}", 0)
 
         base = {4: {"xG": 0.80, "xA": 0.80, "xGI": 1.50, "pts_hi": 16,
-                    "pts_mid": 9, "pts_lo": 7, "bps": 51, "selected": 0.8,
+                    "pts_mid": 9, "pts_lo": 7, "selected": 0.8,
                     "std_lo": 2.5, "std_hi": 4.5, "goals_cf": 2},
                 6: {"xG": 1.20, "xA": 1.20, "xGI": 2.25, "pts_hi": 24,
-                    "pts_mid": 14, "pts_lo": 10, "bps": 77, "selected": 0.8,
+                    "pts_mid": 14, "pts_lo": 10, "selected": 0.8,
                     "std_lo": 2.5, "std_hi": 4.5, "goals_cf": 3}}[w]
         if window == "season":
             no_scale = {"selected", "std_lo", "std_hi"}
@@ -536,33 +549,29 @@ def assign_mf_personas(row, window, t):
                 and npxg90 >= t["npxg_p80"] and box_shots90 >= t["box_shots_p75"]):
             personas.append("Goal Machine")
         if goals >= t_["goals_cf"] and xG > 0 and (goals - xG) >= 1 * scale:
-            personas.append("Clinical Finisher")
+            personas.append("Beating his xG")
         if xG >= t_["xG"] and (xG - goals) >= 1 * scale:
-            personas.append("Wasteful Striker")
-        # ENHANCED: Creative Wizard — xA rule OR chance creation + chain/buildup
+            personas.append("Due a goal")
+        # ENHANCED: Playmaker — xA rule OR chance creation + chain/buildup
         if xA >= t_["xA"] or \
            (not pd.isna(chances90) and not pd.isna(creat_depth)
                 and chances90 >= t["chances_p75"] and creat_depth >= t["creat_depth_p75"]):
-            personas.append("Creative Wizard")
+            personas.append("Playmaker")
         if xGI >= t_["xGI"] and (goals + xA) < xGI:
-            personas.append("xGI Beast")
+            personas.append("Returns overdue")
         dc_thr = 2 if w == 4 else 3
         if window == "season":
             dc_thr = max(2, round(0.5 * row.get("games_played_season", 0)))
         if dc_hits >= dc_thr:
-            personas.append("Defensive Contributor")
+            personas.append("Ball Winner")
         if dc_hits == 0 and dc_near >= (2 * scale if window == "season" else 2):
-            personas.append("Emerging Contributor")
-        if total_pts >= t_["pts_hi"]:
-            personas.append("Captaincy King")
+            personas.append("One action short")
         if total_pts >= t_["pts_mid"] and pts_std <= t_["std_lo"]:
             personas.append("Metronome")
         if total_pts >= t_["pts_lo"] and pts_std >= t_["std_hi"]:
-            personas.append("Chaos Merchant")
+            personas.append("Boom or Bust")
         if not pd.isna(selected) and selected <= t_["selected"] and total_pts >= t_["pts_mid"]:
-            personas.append("Differential")
-        if bps > t_["bps"]:
-            personas.append("Bonus Magnet")
+            personas.append("Under-owned")
 
         # NEW: Volume Shooter — pot-shots from range, poor shot quality
         min_shots = {4: 6, 6: 9}.get(w if window != "season" else None,
@@ -574,7 +583,7 @@ def assign_mf_personas(row, window, t):
             npxg_ps = nn(row, f"us_npxg_{sfx}") / shots if shots > 0 else np.nan
             if not pd.isna(oob_share) and oob_share >= t["oob_share_p75"] \
                     and not pd.isna(npxg_ps) and npxg_ps <= t["npxg_per_shot_p25"]:
-                personas.append("Volume Shooter")
+                personas.append("Shoots On Sight")
 
         # NEW: Poacher — lives in the six-yard box, uninvolved in buildup
         min_shots_p = {4: 4, 6: 6}.get(w if window != "season" else None, 10)
@@ -585,18 +594,18 @@ def assign_mf_personas(row, window, t):
             if not pd.isna(sy_share) and sy_share >= t["sy_share_p80"] and buildup90 <= t["buildup_p25"]:
                 personas.append("Poacher")
 
-        # NEW: Set Piece Threat
         if assign_set_piece_threat(row, t, sfx, is_def=False):
-            personas.append("Set Piece Threat")
+            personas.append("Set Piece Specialist")
 
-        # NEW: Aerial Threat — headed-shot volume vs other attackers
         if assign_aerial_threat(row, t, sfx, window, is_def=False):
             personas.append("Aerial Threat")
 
-        # NEW: Deep Lying Creator — high chain/buildup, low direct goal threat
+        # High chain/buildup, low direct goal threat. Worth saying about a
+        # midfielder — it explains a thin xA on someone plainly involved. It
+        # was dropped for defenders, where it only established he won't score.
         if not pd.isna(creat_depth) and not pd.isna(npxg90):
             if creat_depth >= t["creat_depth_p80"] and npxg90 <= t["npxg_p40"]:
-                personas.append("Deep Lying Creator")
+                personas.append("Deep Lying Playmaker")
 
     return personas, flags
 
@@ -619,6 +628,13 @@ def apply_personas(df, window):
         else:
             personas, flags = [], []
 
+        # Split the one list into the two families. `personas` stays the
+        # identity column so everything downstream — the persona-shift
+        # detector, the two chips on the player page — keeps reading the
+        # thing that's actually stable.
+        identity = [p for p in personas if p not in STATUS_LABELS]
+        status = [p for p in personas if p in STATUS_LABELS]
+
         out = {
             "element": row["element"],
             "web_name": row["web_name"],
@@ -627,9 +643,10 @@ def apply_personas(df, window):
             "gw_from_fixture": row["gw_from_fixture"],
             f"total_points_{sfx}": row.get(f"total_points_{sfx}", 0),
             f"minutes_{sfx}": row.get(f"minutes_{sfx}", row.get("mins_season", 0)),
-            "personas": ", ".join(personas) if personas else "None",
+            "personas": ", ".join(identity) if identity else "None",
+            "status": ", ".join(status),
             "flags": ", ".join(flags) if flags else "",
-            "persona_count": len(personas)
+            "persona_count": len(identity)
         }
         if window != "season":
             out[f"starts_last{window}"] = row.get(f"starts_last{window}", 0)
@@ -663,27 +680,42 @@ print(f"  personas_season.csv — {len(personas_season)} players (NEW)")
 # ── Validation snapshot ───────────────────────────────────────────────────────
 print("\n── VALIDATION SNAPSHOT ──────────────────────────────────────")
 for pos in ["GKP", "DEF", "MID", "FWD"]:
-    print(f"\n{pos} — 4GW personas (top 10 by points):")
+    print(f"\n{pos} — 4GW identity (top 10 by points):")
     subset = personas_4gw[personas_4gw["position"] == pos].sort_values(
         "total_points_4gw", ascending=False).head(10)
     for _, r in subset.iterrows():
-        flags_str = f" [{r['flags']}]" if r['flags'] else ""
-        print(f"  {r['web_name']:<20} {r['personas']}{flags_str}")
+        extra = " · ".join(x for x in [r["status"], r["flags"]] if x)
+        print(f"  {r['web_name']:<20} {r['personas']}" + (f"  [{extra}]" if extra else ""))
 
-print("\n── NEW PERSONA COUNTS (4GW) ────────────────────────────────")
-for p in ["Volume Shooter", "Poacher", "Set Piece Threat", "Aerial Threat", "Deep Lying Creator", "Differential"]:
-    hits = personas_4gw[personas_4gw["personas"].str.contains(p, na=False)]
-    names = ", ".join(hits["web_name"].head(8).tolist())
-    print(f"  {p:<20} {len(hits):>3} players — {names}")
+print("\n── IDENTITY COUNTS (4GW) ───────────────────────────────────")
+IDENTITY = ["The Spectator", "The Last Line", "Complete Keeper",
+            "The Enforcer", "The Supply Line", "The Raider",
+            "Poacher", "Goal Machine", "Playmaker", "Deep Lying Playmaker",
+            "Ball Winner", "Shoots On Sight", "Metronome", "Boom or Bust",
+            "Set Piece Specialist", "Aerial Threat"]
+for p in IDENTITY:
+    hits = personas_4gw[personas_4gw["personas"].str.contains(p, na=False, regex=False)]
+    print(f"  {p:<22} {len(hits):>3} — {', '.join(hits['web_name'].head(6).tolist())}")
 
-print("\n── MINUTES RISK PLAYERS (4GW) ───────────────────────────────")
-risk = personas_4gw[personas_4gw["flags"].str.contains("Minutes Risk", na=False)]
-print(f"  {len(risk)} players flagged as Minutes Risk")
+print("\n── STATUS COUNTS (4GW) ─────────────────────────────────────")
+for p in sorted(STATUS_LABELS):
+    hits = personas_4gw[personas_4gw["status"].str.contains(p, na=False, regex=False)]
+    print(f"  {p:<22} {len(hits):>3}")
 
-print("\n── MINUTES MONSTERS (4GW) ───────────────────────────────────")
-for pos in ["GKP", "DEF", "MID", "FWD"]:
-    monsters = personas_4gw[
-        (personas_4gw["position"] == pos) &
-        (personas_4gw["flags"].str.contains("Minutes Monster", na=False))
-    ]
-    print(f"  {pos}: {len(monsters)} — {', '.join(monsters['web_name'].tolist())}")
+print("\n── MINUTES (4GW) ───────────────────────────────────────────")
+for f in ["Minutes risk", "Ever-present"]:
+    hits = personas_4gw[personas_4gw["flags"].str.contains(f, na=False, regex=False)]
+    print(f"  {f:<22} {len(hits):>3}")
+
+# GATE: nothing may leak across the family boundary — a status label showing up
+# as an identity chip is the exact failure this split exists to prevent.
+leak = [(r["web_name"], lbl) for _, r in personas_4gw.iterrows()
+        for lbl in str(r["personas"]).split(", ") if lbl in STATUS_LABELS]
+if leak:
+    raise RuntimeError(f"GATE FAIL: status labels leaked into identity — {leak[:5]}")
+unknown = sorted({lbl for _, r in personas_4gw.iterrows()
+                  for lbl in str(r["personas"]).split(", ")
+                  if lbl not in IDENTITY and lbl != "None"})
+if unknown:
+    raise RuntimeError(f"GATE FAIL: unrecognised identity labels {unknown}")
+print("\n  Gate passed: identity and status families are clean.")

@@ -63,7 +63,7 @@ export function OnboardingModal({ open, onClose }: Props) {
               </li>
               <li>
                 <strong className="text-ink">Analytics</strong> — every player rated out of 5 within their
-                position, with a plain-language verdict, personas ("Poacher", "Set Piece Threat"), shot maps and
+                position, with a plain-language verdict, personas ("Poacher", "Set Piece Specialist"), shot maps and
                 rankings.
               </li>
               <li>

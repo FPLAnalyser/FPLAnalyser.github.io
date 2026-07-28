@@ -30,6 +30,10 @@ export interface PersonaRow extends Row {
   web_name: string
   team: string
   position: string
+  /** Identity — what kind of player he is. Stable, so it gets a real name.
+   *  Its sibling `status` (what happens to be true this window) isn't declared
+   *  here: the pipeline drops empty strings, so it's absent on most rows and
+   *  reaches the UI through `str(row, 'status')` and the index signature. */
   personas: string
   persona_count: number
   starts_last4: number

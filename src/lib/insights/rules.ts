@@ -131,7 +131,7 @@ const RULES: Array<{ id: string; severity: string; run(ctx: Ctx): any }> = [
     severity: 'act',
     run(ctx: Ctx) {
       const risky = ctx.starters
-        .filter((s: any) => s.r && s.p4 && String(s.p4.flags || '').includes('Minutes Risk'));
+        .filter((s: any) => s.r && s.p4 && String(s.p4.flags || '').includes('Minutes risk'));
       if (!risky.length) return null;
       if (risky.length === 1) {
         const s = risky[0];
@@ -331,11 +331,11 @@ const RULES: Array<{ id: string; severity: string; run(ctx: Ctx): any }> = [
           (starsToNum(s.r.season_goal_score_rating) ?? -Infinity) >= 4 &&
           ((starsToNum(s.r.season_shot_quality_score_rating) != null &&
             starsToNum(s.r.season_shot_quality_score_rating)! <= 2) ||
-           String(s.p4 && s.p4.personas || '').includes('Volume Shooter')))
+           String(s.p4 && s.p4.personas || '').includes('Shoots On Sight')))
         .slice(0, 2)
         .map((s: any) => ({
           headline: `${s.r.web_name}'s goal threat may not stick`,
-          body: `The headline goal-threat rating is strong, but the shot profile behind it is poor quality${String(s.p4 && s.p4.personas || '').includes('Volume Shooter') ? ' — flagged as a Volume Shooter (long-range efforts that rarely convert)' : ''}. Don't pay for the xG without checking where the shots come from.`,
+          body: `The headline goal-threat rating is strong, but the shot profile behind it is poor quality${String(s.p4 && s.p4.personas || '').includes('Shoots On Sight') ? ' — flagged as Shoots On Sight (long-range efforts that rarely convert)' : ''}. Don't pay for the xG without checking where the shots come from.`,
           evidence: `Goal threat ${s.r.season_goal_score_rating} vs shot quality ${s.r.season_shot_quality_score_rating || 'N/A'}`,
         }));
     },
