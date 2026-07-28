@@ -18,7 +18,7 @@ import { PlayerZoneMap } from '../components/ShotMap'
 import { useCore } from '../lib/useData'
 import { useWide } from '../lib/useWide'
 import { num, str, bool } from '../lib/rows'
-import { useAvailability, availFor, availBadge, SEV_COLOUR, type AvailBadgeInfo } from '../lib/availability'
+import { useAvailability, availFor, availBadge, SEV_COLOUR, type AvailBadgeInfo, type AvailPlayer, type Availability } from '../lib/availability'
 import { xpForGw, useXpModel, useMarketOdds, useShotProfiles } from '../lib/xp'
 import { teamFullNames, teamColors, searchText, TOOLTIPS, FDR_COLORS } from '../lib/util'
 import { buildPlayerBundle, buildPlayerVerdict } from '../lib/insights/narrative'
@@ -257,7 +257,10 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
                 <Exportable title={`${r.web_name} — promise vs delivery`}><EvidenceBand r={r} peers={peers} /></Exportable>
                 <Receipts r={r} data={data} name={name} />
               </div>
-              <div className="min-w-0"><Exportable title={`${r.web_name} — the market`}><MarketScatter r={r} peers={peers} /></Exportable></div>
+              <div className="min-w-0">
+                <Exportable title={`${r.web_name} — the market`}><MarketScatter r={r} peers={peers} /></Exportable>
+                <TransferFlow live={live} avail={avail} price={num(r, 'price')} />
+              </div>
             </div>
           </>
         )}
@@ -768,6 +771,87 @@ function ScrollToPlayer({ frac, children }: { frac: number; children: ReactNode 
     if (el && el.scrollWidth > el.clientWidth) el.scrollLeft = Math.max(0, frac * el.scrollWidth - el.clientWidth / 2)
   }, [frac])
   return <div ref={ref} className="overflow-x-auto">{children}</div>
+}
+
+/* ═══ Transfer flow — where the market is moving on him this gameweek ═════ */
+
+/** FPL publishes three numbers per player per gameweek: transfers in,
+ *  transfers out, and the price move those have already caused. It does not
+ *  publish the threshold for the next move, so this block reports what has
+ *  happened and ranks it against the rest of the game — no countdown, no
+ *  "will rise tonight" guess. Renders nothing before the first deadline,
+ *  when every count is still zero. */
+function TransferFlow({ live, avail, price }: { live: AvailPlayer | null; avail: Availability; price: number | null }) {
+  const rank = useMemo(() => {
+    const all = [...avail.byElement.values()]
+    const active = all.filter((p) => (p.tin ?? 0) + (p.tout ?? 0) > 0)
+    if (!active.length || !live) return null
+    const net = (p: AvailPlayer) => (p.tin ?? 0) - (p.tout ?? 0)
+    const mine = net(live)
+    const bought = [...active].sort((a, b) => net(b) - net(a))
+    const sold = [...active].sort((a, b) => net(a) - net(b))
+    const list = mine >= 0 ? bought : sold
+    const i = list.findIndex((p) => p.element === live.element)
+    return i < 0 ? null : { place: i + 1, of: active.length, dir: mine >= 0 ? 'in' as const : 'out' as const }
+  }, [avail, live])
+
+  if (!live) return null
+  const tin = live.tin ?? 0
+  const tout = live.tout ?? 0
+  if (tin + tout === 0) return null
+
+  const net = tin - tout
+  const move = (live.dprice ?? 0) / 10
+  const big = Math.max(tin, tout) || 1
+  const nf = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n)
+
+  return (
+    <div className="mt-4 rounded-xl border border-line bg-surface-1 p-4">
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+        <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Transfer flow this gameweek</div>
+        {rank && (
+          <div className="text-[12px] text-ink-2">
+            <span className="font-num font-bold text-ink">#{rank.place}</span> {rank.dir === 'in' ? 'most bought' : 'most sold'} in FPL
+            <span className="text-ink-3"> · {rank.of} players traded</span>
+          </div>
+        )}
+      </div>
+
+      {/* Two bars off a shared baseline: the gap between them IS the net, and
+          both directions stay visible — a contested player and a consensus
+          buy can share a net figure but never share this shape. */}
+      <div className="space-y-2">
+        {([['In', tin, 'var(--good)'], ['Out', tout, 'var(--bad)']] as [string, number, string][]).map(([label, v, colour]) => (
+          <div key={label} className="flex items-center gap-2.5">
+            <div className="w-7 shrink-0 text-[11px] font-semibold tracking-wide text-ink-2 uppercase">{label}</div>
+            <div className="h-3.5 min-w-0 flex-1 overflow-hidden rounded-full bg-surface-2">
+              <div className="h-full rounded-full" style={{ width: `${Math.max(2, (v / big) * 100)}%`, background: colour }} />
+            </div>
+            <div className="font-num w-14 shrink-0 text-right text-[13px] font-bold tabular-nums text-ink">{nf(v)}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <Tile
+          value={<span className={net > 0 ? 'text-good' : net < 0 ? 'text-bad' : undefined}>{net > 0 ? '+' : net < 0 ? '−' : ''}{nf(Math.abs(net))}</span>}
+          label="Net"
+        />
+        <Tile
+          value={move ? <span className={move > 0 ? 'text-good' : 'text-bad'}>{move > 0 ? '▲' : '▼'} £{Math.abs(move).toFixed(1)}m</span> : <span className="text-ink-3">Held</span>}
+          label="Price move"
+        />
+        <Tile
+          value={live.own != null ? `${live.own.toFixed(1)}%` : price != null ? `£${price.toFixed(1)}m` : '—'}
+          label={live.own != null ? 'Owned' : 'Price'}
+        />
+      </div>
+
+      <p className="mt-2.5 text-[11px] leading-relaxed text-ink-3">
+        Counts are FPL's own, reset at every deadline. The price move is what has already happened this gameweek — FPL does not publish the threshold for the next one.
+      </p>
+    </div>
+  )
 }
 
 function MarketScatter({ r, peers }: { r: RatingRow; peers: RatingRow[] }) {

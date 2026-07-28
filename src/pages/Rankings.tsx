@@ -15,6 +15,7 @@ import { EmptyState } from '../components/PageShell'
 import { PlayerCompare, ViewChips, compareLenses, type CompareLens } from '../components/CompareScatter'
 import { Exportable } from '../components/ExportPanel'
 import { useCore } from '../lib/useData'
+import { useAvailability, availFor } from '../lib/availability'
 import { num, str, bool } from '../lib/rows'
 import { ratingToNum, norm, searchText, TOOLTIPS, playerHref, teamLabel } from '../lib/util'
 import type { RatingRow, Row } from '../lib/types'
@@ -32,6 +33,7 @@ const TABS: TabDef[] = [
   { id: 'def-con', label: 'Def Con', icon: <Icon name="shield" size={13} /> },
   { id: 'value', label: 'Value Picks', icon: <Icon name="coin" size={13} /> },
   { id: 'form', label: 'Form', icon: <span className="text-hot"><Icon name="flame" size={13} solid /></span> },
+  { id: 'transfers', label: 'Transfers', icon: <Icon name="trend-up" size={13} /> },
   { id: 'next4', label: 'Next 4 GWs', icon: <Icon name="calendar" size={13} /> },
   { id: 'totw', label: 'Team of the Week', icon: <Icon name="trophy" size={13} /> },
 ]
@@ -242,6 +244,7 @@ function FilterBar({ teams, priceMin, priceMax, setPriceMin, setPriceMax, teamFi
 
 export default function Rankings() {
   const { data, error: coreError } = useCore()
+  const avail = useAvailability()
   const navigate = useNavigate()
   const [tab, setTab] = useState('top-rated')
   const [pos, setPos] = useState('ALL')
@@ -300,6 +303,17 @@ export default function Rankings() {
   }, [priceMin, priceMax, teamFilter, ownership, nailedOnly])
 
   const filtersOn = priceMin > PRICE_FLOOR || priceMax < PRICE_CEIL || teamFilter !== 'ALL' || ownership !== 'ALL' || nailedOnly
+
+  /* Transfers live in the daily availability feed rather than the ratings
+     build, so they get merged onto the row before ranking. Both directions are
+     kept: net alone hides the story, because a player on +118k in and −42k out
+     is contested while one on +76k in and nothing out is a consensus buy. */
+  const withTransfers = useMemo(() => ratings.map((r) => {
+    const p = availFor(avail, num(r, 'element'), num(r, 'code'))
+    const tin = p?.tin ?? 0
+    const tout = p?.tout ?? 0
+    return { ...r, _tin: tin, _tout: tout, _tnet: tin - tout, _dprice: (p?.dprice ?? 0) / 10, _own: p?.own ?? num(r, 'selected_by_percent') ?? 0 }
+  }), [ratings, avail])
 
   const view: TabView | null = useMemo(() => {
     // Leaderboards rank only players with enough minutes to earn a rating.
@@ -439,6 +453,50 @@ export default function Rankings() {
             numCol('season_total_points', 'Pts', 'Total FPL points scored this season.', 0),
             ppgCol(rows),
             xptsCol,
+          ],
+          rows,
+        }
+      }
+      case 'transfers': {
+        const byEl = new Map(withTransfers.map((r) => [r.element, r]))
+        const merged = applyPos(seasonOk).map((r) => byEl.get(num(r, 'element') ?? -1) ?? r)
+        const rows = rankedPool(merged.filter((r) => (num(r, '_tin') ?? 0) + (num(r, '_tout') ?? 0) > 0), '_tnet', query)
+        if (!rows.length) return null
+        return {
+          columns: [
+            rankCol(),
+            playerCol,
+            posCol,
+            teamCol,
+            priceCol,
+            {
+              key: '_tin', header: 'In', align: 'right', sortValue: (r) => num(r, '_tin') ?? 0,
+              cell: (r) => <span className="font-num font-bold text-good tabular-nums">+{(num(r, '_tin') ?? 0).toLocaleString()}</span>,
+              tip: 'Managers who have brought him in this gameweek.',
+            },
+            {
+              key: '_tout', header: 'Out', align: 'right', sortValue: (r) => num(r, '_tout') ?? 0,
+              cell: (r) => <span className="font-num font-bold text-bad tabular-nums">−{(num(r, '_tout') ?? 0).toLocaleString()}</span>,
+              tip: 'Managers who have sold him this gameweek. Sort by this to find the exodus before it shows up in the price.',
+            },
+            {
+              key: '_tnet', header: 'Net', align: 'right', sortValue: (r) => num(r, '_tnet') ?? 0,
+              cell: (r) => {
+                const v = num(r, '_tnet') ?? 0
+                return <span className={`font-num font-extrabold tabular-nums ${v > 0 ? 'text-good' : v < 0 ? 'text-bad' : 'text-ink-3'}`}>{v > 0 ? '+' : v < 0 ? '−' : ''}{Math.abs(v).toLocaleString()}</span>
+              },
+              tip: 'In minus out. The direction of the market on him this week.',
+            },
+            {
+              key: '_dprice', header: 'Price move', align: 'right', sortValue: (r) => num(r, '_dprice') ?? 0,
+              cell: (r) => {
+                const v = num(r, '_dprice') ?? 0
+                if (!v) return <span className="text-ink-3">—</span>
+                return <span className={`font-num font-bold tabular-nums ${v > 0 ? 'text-good' : 'text-bad'}`}>{v > 0 ? '▲' : '▼'} £{Math.abs(v).toFixed(1)}m</span>
+              },
+              tip: 'How far his price has already moved this gameweek. FPL does not publish the threshold for the next move, so this is what has happened rather than a forecast.',
+            },
+            numCol('_own', 'Owned', "Share of managers who own him, as FPL had it this morning — the base the transfers above are moving.", 1),
           ],
           rows,
         }
@@ -644,7 +702,9 @@ export default function Rankings() {
           <EmptyState icon={<Icon name="search" size={44} />}>
             {query
               ? <>No players match “{query}” in this ranking. Try another tab or clear the search.</>
-              : <>No players match these filters. Try widening the price band or clearing the filters.</>}
+              : tab === 'transfers' && !filtersOn
+                ? <>No transfer activity yet. FPL only publishes transfers in and out once the gameweek opens, so this fills in after the first deadline passes.</>
+                : <>No players match these filters. Try widening the price band or clearing the filters.</>}
           </EmptyState>
         )
       ) : (
