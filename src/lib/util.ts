@@ -31,9 +31,10 @@ export function teamLabel(team: string): string {
 /** Club accent colours for hero glows/highlights — tuned to read on dark. */
 export const teamColors: Record<string, string> = {
   ARS: '#ff5e56', AVL: '#9fc6e8', BOU: '#e8544c', BRE: '#ff6a63', BHA: '#5ba0f0',
-  BUR: '#b06584', CHE: '#5f8fe8', CRY: '#6f8fe0', EVE: '#5d84e6', FUL: '#b9c2cf',
-  LEE: '#ffd75e', LIV: '#ff5e6c', MCI: '#7ad1ff', MUN: '#ff6a5e', NEW: '#8fd6f7',
-  NFO: '#ff6259', SUN: '#ff6272', TOT: '#8ea9d8', WHU: '#c76f83', WOL: '#ffc44d',
+  BUR: '#b06584', CHE: '#5f8fe8', COV: '#7fc4f0', CRY: '#6f8fe0', EVE: '#5d84e6',
+  FUL: '#b9c2cf', HUL: '#ffb347', IPS: '#5b8ff0', LEE: '#ffd75e', LIV: '#ff5e6c',
+  MCI: '#7ad1ff', MUN: '#ff6a5e', NEW: '#8fd6f7', NFO: '#ff6259', SUN: '#ff6272',
+  TOT: '#8ea9d8', WHU: '#c76f83', WOL: '#ffc44d',
 }
 
 /** Accent-insensitive comparison ("Dubravka" matches "Dúbravka"). */

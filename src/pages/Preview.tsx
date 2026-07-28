@@ -8,7 +8,7 @@ import { Icon } from '../components/Icon'
 import { PageSkeleton } from '../components/Skeleton'
 import { useCore } from '../lib/useData'
 import { useAvailability, availFor, type TeamRecord } from '../lib/availability'
-import { useMarketOdds, useXpModel, useShotProfiles, xpForGw, xpPartsForGw, type XpParts } from '../lib/xp'
+import { useMarketOdds, useXpModel, useShotProfiles, xpForGw } from '../lib/xp'
 import { num } from '../lib/rows'
 import { teamLabel, playerHref, derbyName, teamColors } from '../lib/util'
 import type { RatingRow } from '../lib/types'
@@ -113,7 +113,7 @@ export default function Preview() {
      fixture. */
   const board = useMemo(() => {
     const fe = data?.fixtureEase ?? []
-    const rows: { r: RatingRow; xp: number; parts: XpParts | null; side: Side }[] = []
+    const rows: { r: RatingRow; xp: number; side: Side }[] = []
     for (const r of ratings) {
       const p = availFor(avail, num(r, 'element'), num(r, 'code'))
       if (p && OUT.has(String(p.status ?? 'a'))) continue
@@ -121,7 +121,7 @@ export default function Preview() {
       if (!side) continue
       const xp = xpForGw(r, gw, fe, avail, model, market, profiles)
       if (xp == null) continue
-      rows.push({ r, xp, parts: xpPartsForGw(r, gw, fe, avail, model, market, profiles), side })
+      rows.push({ r, xp, side })
     }
     return rows.sort((a, b) => b.xp - a.xp)
   }, [ratings, avail, sides, data?.fixtureEase, gw, model, market, profiles])
@@ -192,86 +192,75 @@ export default function Preview() {
                     background: `radial-gradient(110% ${feat ? 200 : 150}% at 6% 0%, color-mix(in srgb, ${teamColors[m.h] ?? 'var(--accent)'} ${feat ? 26 : 14}%, transparent), transparent 56%), radial-gradient(110% ${feat ? 200 : 150}% at 94% 0%, color-mix(in srgb, ${teamColors[m.a] ?? 'var(--info)'} ${feat ? 26 : 14}%, transparent), transparent 56%), var(--surface-1)`,
                   }}
                 >
-                  {feat && <div className="mb-2.5 inline-block rounded bg-accent px-2 py-1 text-[8.5px] font-extrabold tracking-[0.12em] text-accent-contrast uppercase">Match of the round</div>}
-                  {derby && (
-                    <div className="absolute top-0 right-0 rounded-bl-lg bg-gradient-to-r from-accent to-accent-2 px-2.5 py-1 text-[8.5px] font-extrabold tracking-[0.1em] text-accent-contrast uppercase">{derby}</div>
+                  {/* Both tags ride in the flow above the teams. Pinned to the
+                      top-right corner the derby ribbon sat on top of the away
+                      club's crest, and no amount of padding fixes that on the
+                      narrow cards. */}
+                  {(feat || derby) && (
+                    <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
+                      {feat && <span className="rounded bg-accent px-2 py-1 text-[9px] font-extrabold tracking-[0.12em] text-accent-contrast uppercase">Match of the round</span>}
+                      {derby && <span className="rounded bg-gradient-to-r from-accent to-accent-2 px-2 py-1 text-[9px] font-extrabold tracking-[0.1em] text-accent-contrast uppercase">{derby}</span>}
+                    </div>
                   )}
                   <button onClick={() => setOpen(isOpen ? null : id)} className="w-full text-left">
                     <div className="flex items-center gap-2.5">
                       <Club team={m.h} rec={avail.table.get(m.hid)} big={feat} />
                       <span className="flex-1 text-center">
-                        <span className={`block font-num text-[19px] leading-none font-extrabold ${xgTone(m.lh, m.la)}`}>{m.lh.toFixed(2)}</span>
-                        <span className="mt-0.5 block text-[8px] font-extrabold tracking-[0.14em] text-ink-3">xG</span>
+                        <span className={`block font-num leading-none font-extrabold ${feat ? 'text-[22px] sm:text-[34px]' : 'text-[20px] sm:text-[26px]'} ${xgTone(m.lh, m.la)}`}>{m.lh.toFixed(2)}</span>
+                        <span className="mt-1 block text-[9.5px] font-extrabold tracking-[0.14em] text-ink-3">xG</span>
                       </span>
-                      <span className="rounded bg-black/35 px-2 py-1 text-[10.5px] font-extrabold whitespace-nowrap text-ink-2">
+                      <span className="rounded bg-black/35 px-2 py-1 text-[12px] font-extrabold whitespace-nowrap text-ink-2">
                         {m.k ? TIME.format(new Date(m.k)) : 'v'}
                       </span>
                       <span className="flex-1 text-center">
-                        <span className={`block font-num text-[19px] leading-none font-extrabold ${xgTone(m.la, m.lh)}`}>{m.la.toFixed(2)}</span>
-                        <span className="mt-0.5 block text-[8px] font-extrabold tracking-[0.14em] text-ink-3">xG</span>
+                        <span className={`block font-num leading-none font-extrabold ${feat ? 'text-[22px] sm:text-[34px]' : 'text-[20px] sm:text-[26px]'} ${xgTone(m.la, m.lh)}`}>{m.la.toFixed(2)}</span>
+                        <span className="mt-1 block text-[9.5px] font-extrabold tracking-[0.14em] text-ink-3">xG</span>
                       </span>
                       <Club team={m.a} rec={avail.table.get(m.aid)} big={feat} right />
                     </div>
                     {/* One bar, split by which side the goals belong to. Gold is
                         the favoured attack rather than the home side, so the bar
                         and the two numbers above it always agree about who is
-                        expected to score more. */}
-                    <div className={`mt-2 flex h-[6px] overflow-hidden rounded-full ${m.lh > m.la ? 'bg-info/35' : 'bg-accent/70'}`}>
-                      <span className={`block ${m.lh > m.la ? 'bg-accent' : 'bg-info/35'}`} style={{ width: `${(m.lh / m.total) * 100}%` }} />
+                        expected to score more. Both halves are solid: an earlier
+                        version drew the underdog at 35% opacity, which read as
+                        silver rather than blue and made the bar look like it was
+                        saying something it wasn't. */}
+                    <div className="mt-2.5 flex h-[8px] overflow-hidden rounded-full">
+                      <span className={`block ${m.lh > m.la ? 'bg-accent' : 'bg-info'}`} style={{ width: `${(m.lh / m.total) * 100}%` }} />
+                      <span className={`block flex-1 ${m.lh > m.la ? 'bg-info' : 'bg-accent'}`} />
                     </div>
-                    <div className="mt-2 flex items-baseline justify-between text-[11px] text-ink-3">
-                      <span>Clean sheet <b className={`text-[14px] font-extrabold ${csTone(m.csh)}`}>{pc(m.csh)}</b></span>
-                      <span className="text-[10.5px]">{m.total.toFixed(2)} goals expected</span>
-                      <span>Clean sheet <b className={`text-[14px] font-extrabold ${csTone(m.csa)}`}>{pc(m.csa)}</b></span>
+                    <div className="mt-2.5 flex items-baseline justify-between text-[12.5px] text-ink-3">
+                      <span>Clean Sheet <b className={`text-[17px] font-extrabold ${csTone(m.csh)}`}>{pc(m.csh)}</b></span>
+                      <span className="text-[12px]">{m.total.toFixed(2)} goals expected</span>
+                      <span>Clean Sheet <b className={`text-[17px] font-extrabold ${csTone(m.csa)}`}>{pc(m.csa)}</b></span>
                     </div>
                   </button>
                   {isOpen && (
                     <div className="mt-3 grid gap-4 border-t border-line-mid pt-3 lg:grid-cols-[1.4fr_1fr]">
                       <div>
-                        <div className="mb-1.5 text-[9px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Where the points come from</div>
-                        {inGame.map((b) => {
-                          const p = b.parts
-                          const seg: [string, number, string][] = p
-                            ? ([
-                                ['Goals', p.goal, 'var(--accent)'],
-                                ['Assists', p.assist, 'var(--chart-4)'],
-                                ['Clean sheet', p.cs, 'var(--good)'],
-                                ['Saves', p.saves, 'var(--info)'],
-                                ['Def con', p.dc, 'var(--chart-3)'],
-                                ['Bonus', p.bonus, 'var(--star-c)'],
-                                ['Appearance', p.appearance, 'var(--ink-3)'],
-                              ] as [string, number, string][]).filter((x) => x[1] > 0.01)
-                            : []
-                          const tot = seg.reduce((t, [, v]) => t + v, 0) || 1
-                          return (
-                            <button key={String(b.r.element)} onClick={() => navigate(playerHref(b.r.web_name, num(b.r, 'code')))} className="mb-2 block w-full text-left last:mb-0">
-                              <div className="flex items-center gap-2 text-[12px]">
-                                <span className="w-7 shrink-0 text-[9px] font-extrabold text-ink-3">{b.r.position}</span>
-                                <b className="font-semibold text-ink">{String(b.r.web_name)}</b>
-                                <span className="text-[10.5px] text-ink-3">{b.side.team} · £{b.r.price}m</span>
-                                <span className="ml-auto font-num font-extrabold text-accent-2">{b.xp.toFixed(2)}<span className="ml-0.5 text-[8px] font-extrabold tracking-wider text-ink-3">xP</span></span>
-                              </div>
-                              {/* The projection split by where it is earned — the
-                                  thing a single number can never tell you, and the
-                                  reason a 4.0 keeper and a 4.0 midfielder are not
-                                  the same bet. */}
-                              <div className="mt-1 flex h-[7px] gap-px overflow-hidden rounded-full">
-                                {seg.map(([label, v, col]) => (
-                                  <span key={label} title={`${label} ${v.toFixed(2)}`} style={{ width: `${(v / tot) * 100}%`, background: col }} />
-                                ))}
-                              </div>
-                            </button>
-                          )
-                        })}
-                        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[9px] text-ink-3">
-                          {[['Goals', 'var(--accent)'], ['Assists', 'var(--chart-4)'], ['Clean sheet', 'var(--good)'], ['Saves', 'var(--info)'], ['Def con', 'var(--chart-3)'], ['Bonus', 'var(--star-c)']].map(([l, c]) => (
-                            <span key={l} className="flex items-center gap-1"><i className="h-2 w-2 rounded-sm" style={{ background: c }} />{l}</span>
-                          ))}
-                        </div>
+                        <div className="mb-2 text-[11px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Expected points</div>
+                        {/* One gold bar each, on the same scale, so the gap
+                            between the game's best pick and the rest is the
+                            thing you read. An earlier version split every bar
+                            into seven sources; it was more information than a
+                            fixture card can carry. */}
+                        {inGame.map((b) => (
+                          <button key={String(b.r.element)} onClick={() => navigate(playerHref(b.r.web_name, num(b.r, 'code')))} className="mb-2.5 block w-full text-left last:mb-0">
+                            <div className="flex items-center gap-2 text-[13px]">
+                              <span className="w-7 shrink-0 text-[10px] font-extrabold text-ink-3">{b.r.position}</span>
+                              <b className="font-semibold text-ink">{String(b.r.web_name)}</b>
+                              <span className="text-[11.5px] text-ink-3">{b.side.team} · £{b.r.price}m</span>
+                              <span className="ml-auto font-num text-[15px] font-extrabold text-accent-2">{b.xp.toFixed(2)}<span className="ml-0.5 text-[9px] font-extrabold tracking-wider text-ink-3">xP</span></span>
+                            </div>
+                            <div className="mt-1 h-[8px] overflow-hidden rounded-full bg-surface-2">
+                              <span className="block h-full rounded-full bg-accent" style={{ width: `${(b.xp / (inGame[0]?.xp || 1)) * 100}%` }} />
+                            </div>
+                          </button>
+                        ))}
                       </div>
 
-                      <div className="text-[11.5px] leading-relaxed">
-                        <div className="mb-1.5 text-[9px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">What the card doesn&rsquo;t say</div>
+                      <div className="text-[12.5px] leading-relaxed">
+                        <div className="mb-2 text-[11px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Team notes</div>
                         {/* Projected score and clean-sheet odds are already on the
                             card above, so repeating them here spends the best
                             space on the page saying nothing twice. These are the
@@ -290,9 +279,6 @@ export default function Preview() {
                           }
                           const owned = (x: typeof inGameAll[number]) => num(x.r, 'selected_by_percent') ?? 0
                           const diff = [...inGameAll].filter((x) => owned(x) <= 5 && x.xp >= 3).sort((a, c) => c.xp - a.xp)[0]
-                          const value = [...inGameAll].sort((a, c) => c.xp / Math.max(num(c.r, 'price') ?? 4, 0.1) - a.xp / Math.max(num(a.r, 'price') ?? 4, 0.1))[0]
-                          const bonus = [...inGameAll].sort((a, c) => (c.parts?.bonus ?? 0) - (a.parts?.bonus ?? 0))[0]
-                          const outs = flagged.filter((f) => f.r.team === m.h || f.r.team === m.a)
                           return (
                             <>
                               {PEN.map((t) => {
@@ -305,18 +291,22 @@ export default function Preview() {
                               {diff && (
                                 <Fact k="Best differential" v={<><b className="text-ink">{String(diff.r.web_name)}</b> <span className="text-ink-3">{owned(diff).toFixed(1)}% owned · {diff.xp.toFixed(2)} xP</span></>} />
                               )}
-                              {value && (
-                                <Fact k="Most points per £m" v={<><b className="text-ink">{String(value.r.web_name)}</b> <span className="text-ink-3">£{value.r.price}m · {value.xp.toFixed(2)} xP</span></>} />
-                              )}
-                              {bonus && (bonus.parts?.bonus ?? 0) > 0.2 && (
-                                <Fact k="Most likely bonus" v={<><b className="text-ink">{String(bonus.r.web_name)}</b> <span className="text-ink-3">{bonus.parts!.bonus.toFixed(2)} of his xP</span></>} />
-                              )}
-                              <Fact
-                                k="Missing"
-                                v={outs.length
-                                  ? <span className="text-warn">{outs.slice(0, 5).map((f) => String(f.r.web_name)).join(', ')}</span>
-                                  : <span className="text-ink-3">Nobody flagged</span>}
-                              />
+                              {/* A line per club: a single merged list forces the
+                                  reader to work out which side each name is on,
+                                  which is the only thing they wanted to know. */}
+                              {PEN.map((t) => {
+                                const team = t === 'h' ? m.h : m.a
+                                const outs = flagged.filter((f) => f.r.team === team)
+                                return (
+                                  <Fact
+                                    key={`miss-${t}`}
+                                    k={`${team} missing`}
+                                    v={outs.length
+                                      ? <span className="text-warn">{outs.slice(0, 5).map((f) => String(f.r.web_name)).join(', ')}</span>
+                                      : <span className="text-ink-3">Nobody flagged</span>}
+                                  />
+                                )
+                              })}
                             </>
                           )
                         })()}
@@ -383,23 +373,38 @@ export default function Preview() {
           {feature && <div className="mb-4">{card(feature, true)}</div>}
 
           {byDay.map(([day, list]) => (
-            <div key={day} className="mb-5">
-              <div className="mb-2 border-b border-line pb-1.5 text-[9.5px] font-extrabold tracking-[0.14em] text-ink-3 uppercase">{day}</div>
+            <div key={day} className="mb-6">
+              {/* The matchday is how the round is navigated, so it reads as a
+                  heading rather than a caption. */}
+              <div className="mb-2.5 flex items-center gap-2.5 border-b border-line-mid pb-2">
+                <span className="h-4 w-[3px] shrink-0 rounded-full bg-accent" />
+                <h3 className="text-[15px] font-extrabold tracking-[0.05em] text-ink uppercase">{day}</h3>
+              </div>
               <div className="grid gap-2.5 lg:grid-cols-2">{list.map((m) => card(m, false))}</div>
             </div>
           ))}
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          {/* Three columns rather than two: the top ten was a very wide table
+              with a column of dead space beside it, and the two absence lists
+              were stacked when they belong side by side. */}
+          <div className="grid gap-4 lg:grid-cols-3">
             <div>
               <Band label="Expected points · top 10" />
               <div className="overflow-hidden rounded-xl border border-line">
                 {board.slice(0, 10).map((b, i) => (
-                  <button key={String(b.r.element)} onClick={() => navigate(playerHref(b.r.web_name, num(b.r, 'code')))} className="flex w-full items-center gap-2.5 border-b border-line px-3 py-2 text-left text-[12.5px] transition-colors last:border-0 hover:bg-surface-2/50">
-                    <span className="w-4 shrink-0 text-center font-num text-[11px] font-extrabold text-ink-3">{i + 1}</span>
-                    <b className="font-semibold text-ink">{String(b.r.web_name)}</b>
-                    <span className="text-[10.5px] whitespace-nowrap text-ink-3">{b.r.position} · {b.side.team} {b.side.venue === 'H' ? 'v' : 'at'} {b.side.opp}</span>
-                    <span className="ml-auto shrink-0 text-[10.5px] text-ink-3">£{b.r.price}m</span>
-                    <span className="w-11 shrink-0 text-right font-num font-extrabold text-accent-2">{b.xp.toFixed(2)}</span>
+                  <button key={String(b.r.element)} onClick={() => navigate(playerHref(b.r.web_name, num(b.r, 'code')))} className="block w-full border-b border-line px-3 py-2.5 text-left transition-colors last:border-0 hover:bg-surface-2/50">
+                    <div className="flex items-center gap-2">
+                      <span className="w-4 shrink-0 text-center font-num text-[12px] font-extrabold text-ink-3">{i + 1}</span>
+                      <TeamBadge team={b.side.team} size={17} />
+                      <b className="truncate text-[14px] font-semibold text-ink">{String(b.r.web_name)}</b>
+                      <span className="ml-auto shrink-0 font-num text-[15px] font-extrabold text-accent-2">{b.xp.toFixed(2)}</span>
+                    </div>
+                    <div className="mt-0.5 pl-6 text-[11px] text-ink-3">{b.r.position} · {b.side.team} {b.side.venue === 'H' ? 'v' : 'at'} {b.side.opp} · £{b.r.price}m</div>
+                    {/* Scaled to the round's best pick, so the chart says how
+                        far clear the captain choice actually is. */}
+                    <div className="mt-1.5 ml-6 h-[7px] overflow-hidden rounded-full bg-surface-2">
+                      <span className="block h-full rounded-full bg-accent" style={{ width: `${(b.xp / (board[0]?.xp || 1)) * 100}%` }} />
+                    </div>
                   </button>
                 ))}
               </div>
@@ -407,34 +412,41 @@ export default function Preview() {
 
             <div>
               <Band label="Who's missing" tip="A replacement is only named when the missing man was genuinely ahead in the pecking order — otherwise the page would credit a nailed starter with benefiting from a squad player's absence." />
-              {steps.length > 0 && (
-                <div className="mb-3 overflow-hidden rounded-xl border border-line">
-                  {steps.map((f) => (
-                    <div key={String(f.r.element)} className="flex items-center gap-3 border-b border-line px-3 py-2 last:border-0">
-                      <div className="min-w-0">
-                        <span className={`mr-1.5 rounded px-1.5 py-0.5 text-[8px] font-extrabold tracking-wide ${f.status === 'd' ? 'bg-warn/30' : 'bg-bad/30'}`}>{LABEL[f.status] ?? 'OUT'}</span>
-                        <b className="text-[12.5px] text-ink">{String(f.r.web_name)}</b>
-                        <div className="truncate text-[10.5px] text-ink-3">{f.news}</div>
-                      </div>
-                      <div className="ml-auto shrink-0 text-right">
-                        <div className="text-[8px] font-extrabold tracking-[0.12em] text-good uppercase">Steps up</div>
-                        <b className="text-[12.5px] text-ink">{String(f.step!.web_name)}</b>
-                        <div className="text-[10px] text-ink-3">£{f.step!.price}m</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
               <div className="overflow-hidden rounded-xl border border-line">
-                {flagged.slice(0, 10).map((f) => (
-                  <div key={String(f.r.element)} className="flex items-center gap-2 border-b border-line px-3 py-1.5 text-[12px] last:border-0">
-                    <span className={`shrink-0 rounded px-1.5 py-0.5 text-[8px] font-extrabold tracking-wide ${f.status === 'd' ? 'bg-warn/30' : 'bg-bad/30'}`}>{LABEL[f.status] ?? 'OUT'}</span>
-                    <b className="font-semibold text-ink">{String(f.r.web_name)}</b>
-                    <span className="text-[10.5px] text-ink-3">{f.r.team} {f.r.position}</span>
-                    <span className="ml-auto truncate text-[10.5px] text-ink-3">{f.news}</span>
+                {steps.map((f) => (
+                  <div key={String(f.r.element)} className="border-b border-line px-3 py-2.5 last:border-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide ${f.status === 'd' ? 'bg-warn/30' : 'bg-bad/30'}`}>{LABEL[f.status] ?? 'OUT'}</span>
+                      <TeamBadge team={String(f.r.team)} size={16} />
+                      <b className="truncate text-[13.5px] text-ink">{String(f.r.web_name)}</b>
+                    </div>
+                    <div className="mt-0.5 truncate text-[11px] text-ink-3">{f.news}</div>
+                    <div className="mt-1 flex items-baseline gap-1.5">
+                      <span className="text-[9.5px] font-extrabold tracking-[0.1em] text-good uppercase">Steps up</span>
+                      <b className="text-[13px] text-ink">{String(f.step!.web_name)}</b>
+                      <span className="text-[11px] text-ink-3">£{f.step!.price}m</span>
+                    </div>
                   </div>
                 ))}
-                {!flagged.length && <div className="px-3 py-6 text-center text-sm text-ink-3">Nobody flagged — a clean round.</div>}
+                {!steps.length && <div className="px-3 py-6 text-center text-[13px] text-ink-3">Nobody's absence changes a starting eleven.</div>}
+              </div>
+            </div>
+
+            <div>
+              <Band label="Injury doubts" tip="Every flagged player in the round, most-owned first — FPL's own status and news, refreshed daily." />
+              <div className="overflow-hidden rounded-xl border border-line">
+                {flagged.slice(0, 12).map((f) => (
+                  <div key={String(f.r.element)} className="border-b border-line px-3 py-2 last:border-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide ${f.status === 'd' ? 'bg-warn/30' : 'bg-bad/30'}`}>{LABEL[f.status] ?? 'OUT'}</span>
+                      <TeamBadge team={String(f.r.team)} size={16} />
+                      <b className="truncate text-[13.5px] font-semibold text-ink">{String(f.r.web_name)}</b>
+                      <span className="ml-auto shrink-0 text-[11px] text-ink-3">{f.r.position}</span>
+                    </div>
+                    <div className="mt-0.5 truncate text-[11px] text-ink-3">{f.news}</div>
+                  </div>
+                ))}
+                {!flagged.length && <div className="px-3 py-6 text-center text-[13px] text-ink-3">Nobody flagged — a clean round.</div>}
               </div>
             </div>
           </div>
@@ -449,11 +461,11 @@ const PEN = ['h', 'a'] as const
 /** One side of a fixture: crest, code, league position and last five. */
 function Club({ team, rec, big, right }: { team: string; rec?: TeamRecord; big?: boolean; right?: boolean }) {
   return (
-    <span className={`flex shrink-0 items-center gap-2 ${big ? 'w-[148px]' : 'w-[124px]'} ${right ? 'flex-row-reverse justify-start' : ''}`}>
-      <TeamBadge team={team} size={big ? 32 : 24} />
-      <span className={right ? 'text-right' : ''}>
-        <b className={`block leading-tight font-extrabold text-ink ${big ? 'text-[17px]' : 'text-[13px]'}`}>{team}</b>
-        {rec?.pos ? <em className="text-[9px] font-bold text-ink-3 not-italic">{ord(rec.pos)}</em> : null}
+    <span className={`flex shrink-0 items-center gap-1.5 sm:gap-2 ${big ? 'w-[72px] sm:w-[148px]' : 'w-[72px] sm:w-[124px]'} ${right ? 'flex-row-reverse justify-start' : ''}`}>
+      <TeamBadge team={team} size={big ? 26 : 22} className="shrink-0" />
+      <span className={`min-w-0 ${right ? 'text-right' : ''}`}>
+        <b className={`block leading-tight font-extrabold text-ink ${big ? 'text-[16px] sm:text-[20px]' : 'text-[14px] sm:text-[15px]'}`}>{team}</b>
+        {rec?.pos ? <em className="text-[10.5px] font-bold text-ink-3 not-italic">{ord(rec.pos)}</em> : null}
       </span>
       <FormDots form={rec?.form} />
     </span>
@@ -463,7 +475,7 @@ function Club({ team, rec, big, right }: { team: string; rec?: TeamRecord; big?:
 function Fact({ k, v }: { k: string; v: React.ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-3 border-b border-line py-1 last:border-0">
-      <span className="shrink-0 text-[10px] tracking-wide text-ink-3 uppercase">{k}</span>
+      <span className="shrink-0 text-[11px] tracking-wide text-ink-3 uppercase">{k}</span>
       <span className="text-right text-ink-2">{v}</span>
     </div>
   )
