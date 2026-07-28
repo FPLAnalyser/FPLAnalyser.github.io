@@ -373,7 +373,30 @@ export default function Preview() {
                                 return bits ? <Fact key={t} k={<ClubTag team={team} what="dead balls" />} v={<b className="text-ink">{bits}</b>} /> : null
                               })}
                               {diff && (
-                                <Fact k="Best differential" v={<><b className="text-ink">{String(diff.r.web_name)}</b> <span className="text-ink-3">{owned(diff).toFixed(1)}% owned · {diff.xp.toFixed(2)} xP</span></>} />
+                                <Fact
+                                  k="Best differential"
+                                  v={
+                                    <span className="flex items-center justify-end gap-2">
+                                      {/* The one row in the notes that names a
+                                          player rather than a club, so it gets
+                                          his face and his crest — otherwise it
+                                          reads as another line of club admin. */}
+                                      <span className="flex h-[30px] w-[26px] shrink-0 items-end justify-center overflow-hidden rounded bg-surface-2/70">
+                                        <PlayerPhoto
+                                          element={num(diff.r, 'element')}
+                                          code={num(diff.r, 'code')}
+                                          placeholder={<TeamBadge team={diff.side.team} size={18} className="mb-1.5" />}
+                                          className="h-[34px] w-auto max-w-none object-contain object-bottom"
+                                        />
+                                      </span>
+                                      <TeamBadge team={diff.side.team} size={17} className="shrink-0" />
+                                      <span>
+                                        <b className="text-ink">{String(diff.r.web_name)}</b>{' '}
+                                        <span className="text-ink-3">{owned(diff).toFixed(1)}% owned · {diff.xp.toFixed(2)} xP</span>
+                                      </span>
+                                    </span>
+                                  }
+                                />
                               )}
                               {/* A line per club: a single merged list forces the
                                   reader to work out which side each name is on,
@@ -439,20 +462,12 @@ export default function Preview() {
                   </span>
                 : <span className="text-ink-3">Nobody under 5% owned projects a return worth the risk.</span>}
               media={differential
-                ? (
-                  // A fixed box the photo is anchored inside, rather than an
-                  // image left to size itself: a headshot that 404s, or one
-                  // with a different aspect, then falls back to the crest in
-                  // the same space instead of collapsing the tile.
-                  <span className="relative flex h-[74px] w-[66px] items-end justify-center overflow-hidden rounded-lg bg-surface-2/70">
-                    <PlayerPhoto
-                      element={num(differential.r, 'element')}
-                      code={num(differential.r, 'code')}
-                      placeholder={<TeamBadge team={differential.side.team} size={40} className="mb-4" />}
-                      className="h-[82px] w-auto max-w-none object-contain object-bottom"
-                    />
-                  </span>
-                )
+                ? <PlayerPhoto
+                    element={num(differential.r, 'element')}
+                    code={num(differential.r, 'code')}
+                    placeholder={<TeamBadge team={differential.side.team} size={46} />}
+                    className="h-[68px] w-auto object-contain object-bottom"
+                  />
                 : undefined}
             />
             <Tile
