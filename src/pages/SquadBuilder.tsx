@@ -113,6 +113,28 @@ export default function SquadBuilder() {
   const [sort, setSort] = useState<SortKey>('rating')
   const [query, setQuery] = useState('')
   const [note, setNote] = useState<string | null>(null)
+
+  const marketRef = useRef<HTMLDivElement>(null)
+
+  /* Tapping an empty shirt, or selling someone, switches the picker to that
+     position. On a wide screen the picker is the right-hand column and you see
+     it happen; stacked on a phone it sits below the pitch, so the tap looked
+     like it did nothing. Bring the list to the player — but only when it isn't
+     already on screen, so the desktop layout never jumps. */
+  const focusMarket = (pos: Pos) => {
+    setPickPos(pos)
+    setQuery('')
+    setNote(null)
+    requestAnimationFrame(() => {
+      const el = marketRef.current
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      // "On screen" is generous on purpose: a desktop that can already see the
+      // top of the list should not twitch, only a phone that can't should move.
+      const seen = r.top < window.innerHeight * 0.9 && r.bottom > 80
+      if (!seen) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
   const [maxPrice, setMaxPrice] = useState(PRICE_MAX)
   const [minRating, setMinRating] = useState(0)
   const [minDim, setMinDim] = useState<Record<string, number>>({})
@@ -307,7 +329,7 @@ export default function SquadBuilder() {
             squadScore={liveScore}
             onOpenSquadRating={() => setRatingOpen(true)}
             partialSquad={picked}
-            onPickSlot={(p) => { setPickPos(p as Pos); setQuery(''); setNote(null) }}
+            onPickSlot={(p) => focusMarket(p as Pos)}
             onAutoPick={complete ? planner.autoXI : autoPick}
             read={(
               <>
@@ -336,12 +358,12 @@ export default function SquadBuilder() {
                 {complete && !valid && <span className="text-sm font-medium text-bad">Over budget by £{Math.abs(remaining).toFixed(1)}m</span>}
               </div>
             ) : null}
-            onSold={(el: number) => { setPickPos(String(byEl.get(el)?.position ?? 'MID') as Pos); setQuery(''); setPendingIn(null) }}
+            onSold={(el: number) => { focusMarket(String(byEl.get(el)?.position ?? 'MID') as Pos); setPendingIn(null) }}
           />
         </div>
 
         {/* Player list — always here, whether you're building or transferring */}
-        <div className="mt-8 min-w-0 lg:mt-0 lg:sticky lg:top-20">
+        <div ref={marketRef} className="mt-8 min-w-0 scroll-mt-20 lg:mt-0 lg:sticky lg:top-20">
           <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">
             {complete ? `Transfer market — GW${planner.gw}` : 'Add players'}
           </div>
