@@ -1,23 +1,26 @@
 import { useMemo, useState } from 'react'
-import { TeamBadge } from './badges'
 import { Icon } from './Icon'
-import { Pitch, initialsOf } from './Pitch'
-import { PlayerPhoto } from './PlayerPhoto'
+import { Pitch, PitchCard, CARD_W } from './Pitch'
+import { FixtureNames } from './FixtureChips'
 import { Exportable } from './ExportPanel'
 import { PlayerCardSheet } from './PlayerCardSheet'
 import { ratingTo100 } from './StarRating'
 import { num } from '../lib/rows'
 import { useSeason } from '../lib/season'
 import { useLazyTable } from '../lib/useData'
-import type { FixtureEaseRow, RatingRow, Row, TeamRatingRow } from '../lib/types'
+import type { FixtureEaseRow, RatingRow, Row } from '../lib/types'
 
 /* ════════════════════════════════════════════════════════════════════════
-   Two XIs on one surface:
-     · Team of the Week — what actually happened in the last finished
-       gameweek, per player, from gameweek_stats.json (goals, assists,
-       bonus, xG, xA and the points they returned), with a weekly rating.
-     · Next GW projection — the best £100m XI for the week ahead, built
-       from projected goal involvement and clean-sheet odds.
+   Team of the Week — what actually happened in the last finished gameweek,
+   per player, from gameweek_stats.json (goals, assists, bonus, xG, xA and
+   the points they returned), with a weekly rating, drawn on the Squad
+   Builder's board.
+
+   There used to be a second view here projecting the week ahead within
+   £100m. It was a worse answer to a question three other surfaces answer
+   properly — GW Preview ranks the round's expected points, the Squad
+   Builder builds a real fifteen, and Players now projects four gameweeks —
+   so it has gone rather than been kept for symmetry.
    ════════════════════════════════════════════════════════════════════════ */
 
 const FORMATIONS: [number, number, number][] = [
@@ -25,11 +28,6 @@ const FORMATIONS: [number, number, number][] = [
 ]
 
 interface Pick { r: RatingRow; score: number; gw?: Row }
-
-/** The number in the card's corner: the weekly rating after a gameweek, the
- * season FPL Analyser rating when projecting. */
-const cornerRating = (pick: Pick, projected: boolean) =>
-  projected ? ratingTo100(num(pick.r, 'season_overall_score')) : Math.round(pick.score)
 
 /** Best formation-legal XI by score. When `budget` is set, greedily trims
  * the most expensive picks until the XI fits (FPL's £100m squad rule
@@ -96,61 +94,58 @@ function pickXI(pool: Pick[], budget?: number) {
   return best
 }
 
-/** One card: the week's returns on the front, tappable for the full sheet. */
-function TotwCard({ pick, delay, onClick, projected }: { pick: Pick; delay: number; onClick: () => void; projected?: boolean }) {
-  const { r, gw, score } = pick
+/** One card. Deliberately the Squad Builder's card, in ice rather than gold:
+ *  the two boards used to look like different products, and there was no
+ *  reason for it — a Team of the Week is an eleven on a pitch, which is
+ *  exactly what the builder already draws. The metal is the only thing that
+ *  separates them, because this XI is not yours. */
+function TotwCard({ pick, delay, onClick, fixtureEase }: { pick: Pick; delay: number; onClick: () => void; fixtureEase: FixtureEaseRow[] }) {
+  const { r, gw } = pick
   const pts = gw ? num(gw, 'total_points') : null
-  const goals = gw ? num(gw, 'goals_scored') : null
-  const assists = gw ? num(gw, 'assists') : null
-  const bonus = gw ? num(gw, 'bonus') : null
+  const goals = gw ? num(gw, 'goals_scored') ?? 0 : 0
+  const assists = gw ? num(gw, 'assists') ?? 0 : 0
+  const bonus = gw ? num(gw, 'bonus') ?? 0 : 0
+  const cs = gw ? num(gw, 'clean_sheets') ?? 0 : 0
   const xg = gw ? num(gw, 'expected_goals') : null
   const xa = gw ? num(gw, 'expected_assists') : null
-  const cs = gw ? num(gw, 'clean_sheets') : null
+  const returns = [goals ? `${goals}G` : '', assists ? `${assists}A` : '', cs ? 'CS' : '', bonus ? `+${bonus}B` : ''].filter(Boolean)
 
   return (
-    <button
-      onClick={onClick}
-      // Ice rather than gold: Team of the Week is not your squad, and until now
-      // it read exactly like one. Same card, different metal.
-      className="totw-card tier-ice min-w-0 max-w-[108px] flex-1 basis-0 rounded-lg border text-center transition-transform hover:-translate-y-0.5"
-      style={{
-        animationDelay: `${delay}s`,
-        background: 'linear-gradient(165deg,#132430,#060d12)',
-        borderColor: 'rgba(232,251,255,.42)',
-        boxShadow: '0 0 18px -4px rgba(127,212,245,.5)',
-      }}
-    >
-      <div className="p-1 sm:p-1.5">
-        <div className="flex items-start justify-between">
-          <span className="tier-num font-num text-[14px] leading-none font-extrabold tabular-nums">{cornerRating(pick, Boolean(projected)) ?? '—'}</span>
-          {pts != null && (
-            <span className="rounded px-1 py-0.5 font-num text-[10px] leading-none font-extrabold tabular-nums" style={{ background: '#7fd4f5', color: '#06212e' }}>{pts}</span>
-          )}
-          {projected && score != null && <span className="rounded px-1 py-0.5 font-num text-[10px] font-extrabold tabular-nums" style={{ border: '1px solid rgba(127,212,245,.5)', color: '#a9e4f8' }}>{score.toFixed(1)}</span>}
-        </div>
-        <span className="photo-slot relative mx-auto my-1 block w-8 sm:w-9" style={{ height: 36 }}>
-          <span className="photo-mono absolute inset-0 place-items-center text-[11px] font-extrabold text-white/35">{initialsOf(String(r.web_name))}</span>
-          <PlayerPhoto code={num(r, 'code')} element={num(r, 'element')} className="relative h-full w-full object-contain object-top" placeholder={<span className="grid h-full w-full place-items-center text-[11px] font-extrabold text-white/35">{initialsOf(String(r.web_name))}</span>} />
-        </span>
-        <div className="capture-line truncate text-[10px] leading-tight font-bold text-white sm:text-[10.5px]">{String(r.web_name)}</div>
-        <div className="mt-0.5 hidden items-center justify-center gap-1 text-[10px] text-white/55 sm:flex sm:text-[10px]">
-          <TeamBadge team={String(r.team)} size={9} />{String(r.team)} · £{r.price}m
-        </div>
-        {gw && (
-          <div className="mt-1 border-t border-white/10 pt-1 text-[10px] leading-tight text-white/75">
-            {(goals ?? 0) > 0 && <span className="mr-1">{goals}G</span>}
-            {(assists ?? 0) > 0 && <span className="mr-1">{assists}A</span>}
-            {(cs ?? 0) > 0 && <span className="mr-1">CS</span>}
-            {(bonus ?? 0) > 0 && <span className="mr-1" style={{ color: '#a9e4f8' }}>+{bonus}B</span>}
-            {(goals ?? 0) === 0 && (assists ?? 0) === 0 && (cs ?? 0) === 0 && (bonus ?? 0) === 0 && <span>—</span>}
-            <span className="mt-0.5 block text-white/45">
-              {xg != null ? `${xg.toFixed(2)} xG` : ''}{xg != null && xa != null ? ' · ' : ''}{xa != null ? `${xa.toFixed(2)} xA` : ''}
+    <div className={`totw-card relative ${CARD_W}`} style={{ animationDelay: `${delay}s` }}>
+      <PitchCard
+        tier="ice"
+        rating={Math.round(pick.score)}
+        name={String(r.web_name)}
+        team={String(r.team)}
+        price={num(r, 'price')}
+        code={num(r, 'code')}
+        element={num(r, 'element')}
+        onClick={onClick}
+        // With a gameweek behind it the card reports what he actually did;
+        // pre-season there is nothing to report, so it falls back to the
+        // fixtures the Squad Builder shows rather than a row of dashes.
+        fixtures={gw ? undefined : <FixtureNames fixtureEase={fixtureEase} team={String(r.team)} n={3} />}
+        footer={
+          gw ? (
+            <span className="mt-1 block border-t border-white/10 pt-1 text-[9.5px] leading-tight text-white/75">
+              <span className="block">{returns.length ? returns.join(' · ') : '—'}</span>
+              {(xg != null || xa != null) && (
+                <span className="mt-0.5 block text-white/45">
+                  {xg != null ? `${xg.toFixed(2)} xG` : ''}{xg != null && xa != null ? ' · ' : ''}{xa != null ? `${xa.toFixed(2)} xA` : ''}
+                </span>
+              )}
             </span>
-          </div>
-        )}
-        {projected && <div className="mt-1 border-t border-white/10 pt-1 text-[10px] text-white/70">{score.toFixed(1)} proj pts</div>}
-      </div>
-    </button>
+          ) : undefined
+        }
+      />
+      {pts != null && (
+        <span
+          className="font-num absolute -top-1.5 -right-1.5 z-10 grid size-6 place-items-center rounded-full text-[11px] leading-none font-extrabold tabular-nums shadow-lg sm:-top-2 sm:-right-2 sm:size-7 sm:text-[12px]"
+          style={{ background: '#7fd4f5', color: '#06212e' }}
+          title={`${pts} FPL points in this gameweek`}
+        >{pts}</span>
+      )}
+    </div>
   )
 }
 
@@ -170,19 +165,16 @@ export function TeamOfTheWeek({
   ratings,
   currentGw: _currentGw,
   fixtureEase = [],
-  teamRatings = [],
   onPlayer: _onPlayer,
 }: {
   ratings: RatingRow[]
   currentGw: number | null
   fixtureEase?: FixtureEaseRow[]
-  teamRatings?: TeamRatingRow[]
   onPlayer?: (name: string, code?: number | null) => void
 }) {
   const { info } = useSeason()
   const preseason = Boolean(info?.provisional)
   const gwQ = useLazyTable<Row[]>('gameweek_stats')
-  const [view, setView] = useState<'week' | 'next'>('week')
   const [runId, setRunId] = useState(0)
   const [sheetFor, setSheetFor] = useState<RatingRow | null>(null)
 
@@ -212,33 +204,6 @@ export function TeamOfTheWeek({
     return pickXI(picks)
   }, [gwQ.data, lastGw, byElement])
 
-  // ── the week ahead: projected points within £100m ──
-  const nextXI = useMemo(() => {
-    if (!fixtureEase.length) return null
-    const seasonRating = new Map<string, TeamRatingRow>()
-    for (const t of teamRatings) if (t.window === 'season') seasonRating.set(t.team, t)
-    const nextGw = Math.min(...fixtureEase.map((f) => f.gw))
-    const picks: Pick[] = []
-    for (const r of ratings) {
-      const base = num(r, 'season_xpts_adjusted') ?? num(r, 'season_xpts_per_game')
-      if (base == null) continue
-      const fx = fixtureEase.filter((f) => f.team === String(r.team) && f.gw === nextGw)
-      if (!fx.length) continue // blank gameweek
-      // Fixture multiplier: attackers ride att_ease, defenders/keepers def_ease.
-      const attacking = r.position === 'MID' || r.position === 'FWD'
-      const factor = fx.reduce((s, f) => {
-        const e = attacking ? num(f, 'att_ease') : num(f, 'def_ease')
-        return s + (e ?? (f.fdr ? (6 - f.fdr) / 3 : 1))
-      }, 0) / fx.length
-      picks.push({ r, score: base * factor })
-    }
-    return pickXI(picks, 100)
-  }, [ratings, fixtureEase, teamRatings])
-
-  const nextGwNum = fixtureEase.length ? Math.min(...fixtureEase.map((f) => f.gw)) : null
-  const showWeek = view === 'week'
-  const xi = showWeek ? weekXI : nextXI
-
   // Pre-season with no gameweeks played: fall back to the season XI so the
   // panel still says something true.
   const fallbackXI = useMemo(() => {
@@ -249,63 +214,34 @@ export function TeamOfTheWeek({
     return pickXI(picks)
   }, [ratings, weekXI, preseason])
 
-  const shown = xi ?? (showWeek ? fallbackXI : null)
-
-  // The view switch always renders — an empty state must never strand the
-  // reader on a tab with no way back.
-  const chips = (
-    <div className="mb-3 flex flex-wrap items-center gap-1.5">
-      {([['week', 'Last gameweek'], ['next', 'Next gameweek — projected']] as const).map(([id, label]) => (
-        <button
-          key={id}
-          onClick={() => setView(id)}
-          className={`min-h-9 rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${
-            view === id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
-          }`}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
-  )
+  const shown = weekXI ?? fallbackXI
 
   if (!shown) {
     return (
-      <>
-        {chips}
-        <div className="rounded-xl border border-line bg-surface-1 p-6 text-center text-sm text-ink-3">
-          {showWeek
-            ? 'The Team of the Week appears once a gameweek has been played.'
-            : 'The projected XI appears once next-gameweek fixtures are published — during a finished season there is no week ahead to project.'}
-        </div>
-      </>
+      <div className="rounded-xl border border-line bg-surface-1 p-6 text-center text-sm text-ink-3">
+        The Team of the Week appears once a gameweek has been played.
+      </div>
     )
   }
 
-  const title = showWeek
-    ? (weekXI ? `Team of the Week · GW${lastGw}` : 'Team of the Season so far')
-    : `Projected XI · GW${nextGwNum ?? '—'}`
-  const sub = showWeek
-    ? (weekXI
-        ? 'The best XI on what actually happened last gameweek — points, goals, assists, bonus and the underlying numbers behind them'
-        : `Carried ${info?.ratings_season?.replace('-', '/') ?? 'last season'} ratings until GW1 is played`)
-    : 'The best XI for the week ahead within £100m — expected points scaled by each fixture'
+  const title = weekXI ? `Team of the Week · GW${lastGw}` : 'Team of the Season so far'
+  const sub = weekXI
+    ? 'The best XI on what actually happened last gameweek — points, goals, assists, bonus and the underlying numbers behind them'
+    : `Carried ${info?.ratings_season?.replace('-', '/') ?? 'last season'} ratings until GW1 is played`
   const spend = shown.rows.flat().reduce((s, p) => s + (num(p.r, 'price') ?? 0), 0)
-  const totalPts = showWeek ? shown.rows.flat().reduce((s, p) => s + (p.gw ? num(p.gw, 'total_points') ?? 0 : 0), 0) : null
+  const totalPts = shown.rows.flat().reduce((s, p) => s + (p.gw ? num(p.gw, 'total_points') ?? 0 : 0), 0)
 
   let delay = 0.1
   return (
     <>
-      {chips}
-
       <Exportable title={title}>
-        <Pitch key={`${runId}-${view}`} maxWidth={760} className="totw-pitch">
+        <Pitch key={runId} maxWidth={860} className="totw-pitch">
           <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
             <div className="text-[12px] font-extrabold tracking-[0.2em] text-white uppercase">{title}</div>
             <div className="flex items-center gap-2">
               <span className="rounded-full border border-white/20 bg-black/25 px-2 py-0.5 text-[10px] font-bold text-white/85">{shown.formation}</span>
               <span className="rounded-full border border-white/20 bg-black/25 px-2 py-0.5 text-[10px] font-bold text-white/85">£{spend.toFixed(1)}m</span>
-              {totalPts != null && <span className="rounded-full border border-white/20 bg-black/25 px-2 py-0.5 text-[10px] font-bold text-white/85">{totalPts} pts</span>}
+              {totalPts > 0 && <span className="rounded-full border border-white/20 bg-black/25 px-2 py-0.5 text-[10px] font-bold text-white/85">{totalPts} pts</span>}
               <button
                 onClick={() => setRunId((i) => i + 1)}
                 className="flex items-center gap-1 rounded-full border border-white/20 bg-black/25 px-2 py-0.5 text-[10px] font-bold text-white/85 hover:text-white"
@@ -316,7 +252,8 @@ export function TeamOfTheWeek({
             </div>
           </div>
           <div className="mb-4 max-w-[62ch] text-[11.5px] text-white/70">{sub}</div>
-          <div className="flex flex-col gap-3">
+          {/* The Squad Builder's spacing, so the two boards are the same board. */}
+          <div className="relative flex flex-col gap-2 sm:gap-3 md:gap-4">
             {shown.rows.map((row, i) => (
               <div key={i} className="flex justify-center gap-1 sm:gap-2">
                 {row.map((pick) => {
@@ -326,7 +263,7 @@ export function TeamOfTheWeek({
                       key={String(pick.r.element)}
                       pick={pick}
                       delay={delay}
-                      projected={!showWeek}
+                      fixtureEase={fixtureEase}
                       onClick={() => setSheetFor(pick.r)}
                     />
                   )
