@@ -25,7 +25,7 @@ const POS_ORDER = ['GKP', 'DEF', 'MID', 'FWD'] as const
  * dugout beneath it, and every action on a player one tap away. State lives in
  * usePlanner so the list beside the board can transfer into it.
  */
-export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onSold, squadScore, onOpenSquadRating, partialSquad, onPickSlot, onAutoPick, read, footer }: {
+export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onSold, squadScore, onOpenSquadRating, partialSquad, onPickSlot, onAutoPick, footer }: {
   planner: Planner
   byEl: Map<number, RatingRow>
   pool: RatingRow[]
@@ -46,8 +46,6 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
   onPickSlot?: (pos: 'GKP' | 'DEF' | 'MID' | 'FWD') => void
   /** Auto pick: build the fifteen when short, best XI when complete. */
   onAutoPick?: () => void
-  /** The read on the squad, rendered high on the page where it's seen. */
-  read?: React.ReactNode
   /** Squad-level actions (share, clear) — under the bench rather than in a
    *  band of their own above the board, which spent a whole section on two
    *  buttons you only reach for once the fifteen is built. */
@@ -181,30 +179,6 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
           <Stat label="In the bank" value={`£${(BUDGET - spend).toFixed(1)}m`} tone={spend > BUDGET ? 'bad' : 'ink'} sub={`£${spend.toFixed(1)}m squad`} />
         </div>
 
-        {/* The read on the squad, right under the numbers it explains */}
-        {read}
-
-        {/* Chips */}
-        <div className="mt-2.5 mb-2.5 flex flex-wrap items-center gap-1.5">
-          <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Chip</span>
-          {(Object.keys(CHIP_LABEL) as Chip[]).map((c) => {
-            const spentAt = planner.chipSpent(c)
-            const usedElsewhere = spentAt != null && spentAt !== gw
-            return (
-              <button
-                key={c}
-                disabled={!week || usedElsewhere}
-                onClick={() => planner.setChip(c)}
-                title={usedElsewhere ? `Played in GW${spentAt} — your ${planner.half === 1 ? 'first' : 'second'}-half ${CHIP_LABEL[c]}` : undefined}
-                className={`min-h-8 rounded-full border px-2.5 text-xs font-medium transition-colors ${week?.chip === c ? 'border-accent bg-accent-soft text-accent' : usedElsewhere || !week ? 'border-line text-ink-3 opacity-40' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}
-              >{CHIP_LABEL[c]}</button>
-            )
-          })}
-          <button onClick={() => { tapHaptic('medium'); (onAutoPick ?? planner.autoXI)() }} className="ml-auto inline-flex min-h-8 items-center gap-1.5 rounded-full bg-accent px-3 text-xs font-bold text-accent-contrast transition-colors hover:bg-accent-strong">
-            <Icon name="bolt" size={12} /> Auto pick
-          </button>
-        </div>
-
         {/* Transfers — above the pitch, where you can act on them */}
         <div className="mb-2.5 rounded-2xl border border-line bg-surface-1/60 px-3 py-2.5">
           <div className="flex flex-wrap items-center gap-2">
@@ -271,6 +245,33 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
               ? card(slot.el, true)
               : <EmptySlot key={`be${j}`} pos={slot.pos} onClick={() => onPickSlot?.(slot.pos)} />))}
       </BenchSpine>
+
+      {/* Chips sit under the board, not above it. Everything that used to
+          stack here — the read, the chips — pushed the eleven you are picking
+          about six hundred pixels down a laptop screen, which is the one
+          thing the page exists to show. The chip you play is a decision you
+          make after looking at the team, not before. */}
+      <div className="mx-auto" style={{ maxWidth: BOARD_W }}>
+        <div className="mt-2.5 mb-2.5 flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Chip</span>
+          {(Object.keys(CHIP_LABEL) as Chip[]).map((c) => {
+            const spentAt = planner.chipSpent(c)
+            const usedElsewhere = spentAt != null && spentAt !== gw
+            return (
+              <button
+                key={c}
+                disabled={!week || usedElsewhere}
+                onClick={() => planner.setChip(c)}
+                title={usedElsewhere ? `Played in GW${spentAt} — your ${planner.half === 1 ? 'first' : 'second'}-half ${CHIP_LABEL[c]}` : undefined}
+                className={`min-h-8 rounded-full border px-2.5 text-xs font-medium transition-colors ${week?.chip === c ? 'border-accent bg-accent-soft text-accent' : usedElsewhere || !week ? 'border-line text-ink-3 opacity-40' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}
+              >{CHIP_LABEL[c]}</button>
+            )
+          })}
+          <button onClick={() => { tapHaptic('medium'); (onAutoPick ?? planner.autoXI)() }} className="ml-auto inline-flex min-h-8 items-center gap-1.5 rounded-full bg-accent px-3 text-xs font-bold text-accent-contrast transition-colors hover:bg-accent-strong">
+            <Icon name="bolt" size={12} /> Auto pick
+          </button>
+        </div>
+      </div>
 
       {footer && <div className="mx-auto mt-3" style={{ maxWidth: BOARD_W }}>{footer}</div>}
 

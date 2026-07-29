@@ -412,20 +412,6 @@ export default function SquadBuilder() {
             partialSquad={picked}
             onPickSlot={(p) => focusMarket(p as Pos)}
             onAutoPick={complete ? planner.autoXI : autoPick}
-            read={(
-              <>
-                <SquadRead chosen={liveChosen} fixtureEase={fixtureEase} gw={liveGw} avail={avail} onOpen={() => setRatingOpen(true)} />
-                {complete && (
-                  <SquadLab
-                    squad={liveChosen} xi={liveXI} pool={pool} fixtureEase={fixtureEase} avail={avail}
-                    gw={liveGw} gws={planner.gws} bank={BUDGET - planner.spend} freeTransfers={planner.banked}
-                    unlimitedTransfers={planner.ft === Infinity}
-                    chipSpentAt={planner.chipSpent}
-                    onApplyMove={(outEl, inEl) => { planner.doTransfer(outEl, inEl); setPendingIn(null) }}
-                  />
-                )}
-              </>
-            )}
             footer={total > 0 ? (
               /* Under the board, not above it: you share a squad once you've
                  built one, so these were spending a whole band on nothing. */
@@ -443,8 +429,33 @@ export default function SquadBuilder() {
           />
         </div>
 
-        {/* Player list — always here, whether you're building or transferring */}
-        <div ref={marketRef} className="mt-8 min-w-0 scroll-mt-20 lg:mt-0 lg:sticky lg:top-20">
+        {/* The read on the squad, then the market you act on it with. The read
+            used to sit above the pitch, where it pushed the eleven you are
+            picking a long way down a laptop screen — the one thing the page
+            exists to show. Beside the board it is level with what it
+            describes, and the column below it is where you do something
+            about it.
+
+            The market, not the whole column, is what sticks: on a full squad
+            the read runs about seven hundred pixels, and a sticky element
+            taller than the screen pins at the top with its bottom out of
+            reach. So the read scrolls away and the market pins behind it,
+            which is the behaviour the market had before the read arrived. */}
+        <div ref={marketRef} className="mt-8 min-w-0 scroll-mt-20 lg:mt-0">
+          <div className="mb-4 flex flex-col gap-3">
+            <SquadRead chosen={liveChosen} fixtureEase={fixtureEase} gw={liveGw} avail={avail} onOpen={() => setRatingOpen(true)} />
+            {complete && (
+              <SquadLab
+                squad={liveChosen} xi={liveXI} pool={pool} fixtureEase={fixtureEase} avail={avail}
+                gw={liveGw} gws={planner.gws} bank={BUDGET - planner.spend} freeTransfers={planner.banked}
+                unlimitedTransfers={planner.ft === Infinity}
+                chipSpentAt={planner.chipSpent}
+                onApplyMove={(outEl, inEl) => { planner.doTransfer(outEl, inEl); setPendingIn(null) }}
+              />
+            )}
+          </div>
+          <div className="lg:sticky lg:top-20 lg:flex lg:max-h-[calc(100vh-6rem)] lg:flex-col">
+          <div className="lg:shrink-0">
           <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">
             {complete ? `Transfer market — GW${planner.gw}` : 'Add players'}
           </div>
@@ -505,7 +516,13 @@ export default function SquadBuilder() {
           )}
 
           {note && <div className="mb-2 rounded-lg bg-bad/10 px-3 py-2 text-sm font-medium text-bad">{note}</div>}
-          <div className="overflow-hidden rounded-xl border border-line lg:max-h-[calc(100vh-260px)] lg:overflow-y-auto">
+          </div>
+          {/* The list takes whatever height the controls above it leave, rather
+              than a fixed guess at how tall they are — the guess was 260px and
+              the filters, the legend and the money banner between them run to
+              three hundred, which pushed the bottom of the list off the screen
+              with nothing you could scroll to reach it. */}
+          <div className="overflow-hidden rounded-xl border border-line lg:min-h-48 lg:flex-1 lg:overflow-y-auto">
             {list.map((r) => {
               // A player on the market is still yours until someone replaces
               // him, so the list has to say so rather than showing him as a
@@ -585,6 +602,7 @@ export default function SquadBuilder() {
               )
             })}
             {list.length === 0 && <div className="px-3 py-8 text-center text-sm text-ink-3">No players match these filters.</div>}
+          </div>
           </div>
         </div>
       </div>
