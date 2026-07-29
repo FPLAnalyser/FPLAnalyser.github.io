@@ -4,7 +4,7 @@
  * and source. This is the machine-readable half of the /legal page — adding a
  * photo means adding a row, and the page picks it up.
  *
- * Unsplash does not require attribution; CC BY and CC BY-SA do, and a credit
+ * Unsplash and Pexels do not require attribution; CC BY and CC BY-SA do, and a credit
  * buried in a repo README does not satisfy them because a visitor cannot reach
  * it. That is why this renders as a page rather than living in a comment.
  *
@@ -18,7 +18,7 @@ export interface PhotoCredit {
   /** What it shows, in plain words. */
   subject: string
   author: string
-  licence: 'Unsplash' | 'CC0' | 'Public domain' | 'CC BY 4.0' | 'CC BY-SA 4.0' | 'CC BY-SA 3.0' | 'CC BY 2.0' | 'CC BY-SA 2.0'
+  licence: 'Unsplash' | 'Pexels' | 'CC0' | 'Public domain' | 'CC BY 4.0' | 'CC BY-SA 4.0' | 'CC BY-SA 3.0' | 'CC BY 2.0' | 'CC BY-SA 2.0'
   /** Page the file came from, so a reader can verify the licence themselves. */
   source?: string
 }
@@ -36,6 +36,7 @@ export const LICENCE_URL: Record<string, string> = {
   'CC BY-SA 2.0': 'https://creativecommons.org/licenses/by-sa/2.0/',
   CC0: 'https://creativecommons.org/publicdomain/zero/1.0/',
   Unsplash: 'https://unsplash.com/license',
+  Pexels: 'https://www.pexels.com/license/',
 }
 
 export const PHOTO_CREDITS: PhotoCredit[] = [
@@ -45,6 +46,7 @@ export const PHOTO_CREDITS: PhotoCredit[] = [
   { file: 'stadiums/LIV.jpg', subject: 'Anfield', author: 'Finn', licence: 'Unsplash', source: 'https://unsplash.com/photos/J_R1BJtd_NU' },
   { file: 'stadiums/TOT.jpg', subject: 'Tottenham Hotspur Stadium', author: 'Winston Tjia', licence: 'Unsplash', source: 'https://unsplash.com/photos/3V2SXDm29JY' },
   { file: 'home/scouting.jpg', subject: 'Matchday from the stands', author: 'Gregorio Cavana', licence: 'Unsplash', source: 'https://unsplash.com/photos/viXFnAKwFN8' },
+  { file: 'home/preview.jpg', subject: 'Chess clock and pieces — the decision-against-time motif', author: 'cottonbro studio', licence: 'Pexels', source: 'https://www.pexels.com/photo/8427384/' },
 ]
 
 export interface DataSource {
