@@ -191,6 +191,45 @@ const PRICE_CEIL = 16
 
 /** The filter bar: price band, club, ownership and a nailed-minutes switch.
  *  Applies to the table and the compare chart alike. */
+/** A price box you can actually empty.
+ *
+ *  Binding the input straight to a number meant clearing the field produced
+ *  Number('') === 0, which React immediately painted back as "0" — so the
+ *  zero could never be deleted and typing a price meant selecting it first.
+ *  The raw string is held while the field has focus and only committed when
+ *  it parses; blurring an empty box restores the bound. */
+function PriceInput({ value, onCommit, fallback, label, className }: {
+  value: number
+  onCommit: (v: number) => void
+  fallback: number
+  label: string
+  className?: string
+}) {
+  const [draft, setDraft] = useState<string | null>(null)
+  return (
+    <input
+      type="number"
+      step="0.1"
+      min={PRICE_FLOOR}
+      max={PRICE_CEIL}
+      inputMode="decimal"
+      aria-label={label}
+      className={className}
+      value={draft ?? value}
+      onChange={(e) => {
+        const raw = e.target.value
+        setDraft(raw)
+        const n = Number(raw)
+        if (raw !== '' && Number.isFinite(n)) onCommit(n)
+      }}
+      onBlur={() => {
+        if (draft === '' || (draft != null && !Number.isFinite(Number(draft)))) onCommit(fallback)
+        setDraft(null)
+      }}
+    />
+  )
+}
+
 function FilterBar({ teams, priceMin, priceMax, setPriceMin, setPriceMax, teamFilter, setTeamFilter, ownership, setOwnership, nailedOnly, setNailedOnly, onReset, active }: {
   teams: string[]
   priceMin: number; priceMax: number
@@ -208,9 +247,9 @@ function FilterBar({ teams, priceMin, priceMax, setPriceMin, setPriceMax, teamFi
         <label className="flex flex-col gap-1">
           <span className="text-[10px] font-bold tracking-[0.12em] text-ink-3 uppercase">Price</span>
           <span className="flex items-center gap-1.5">
-            <input type="number" step="0.1" min={PRICE_FLOOR} max={PRICE_CEIL} value={priceMin} onChange={(e) => setPriceMin(Number(e.target.value))} className={`${field} w-[74px]`} aria-label="Minimum price" />
+            <PriceInput value={priceMin} onCommit={setPriceMin} fallback={PRICE_FLOOR} label="Minimum price" className={`${field} w-[74px]`} />
             <span className="text-xs text-ink-3">to</span>
-            <input type="number" step="0.1" min={PRICE_FLOOR} max={PRICE_CEIL} value={priceMax} onChange={(e) => setPriceMax(Number(e.target.value))} className={`${field} w-[74px]`} aria-label="Maximum price" />
+            <PriceInput value={priceMax} onCommit={setPriceMax} fallback={PRICE_CEIL} label="Maximum price" className={`${field} w-[74px]`} />
           </span>
         </label>
         <label className="flex flex-col gap-1">
@@ -255,7 +294,7 @@ export default function Rankings() {
   const [priceMax, setPriceMax] = useState(PRICE_CEIL)
   const [teamFilter, setTeamFilter] = useState('ALL')
   const [ownership, setOwnership] = useState<'ALL' | 'template' | 'differential'>('ALL')
-  const [nailedOnly, setNailedOnly] = useState(false)
+  const [nailedOnly, setNailedOnly] = useState(true)
   const [filtersOpen, setFiltersOpen] = useState(true)
 
   const ratings = (data?.ratings ?? []) as RatingRow[]

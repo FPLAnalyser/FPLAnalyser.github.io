@@ -260,7 +260,7 @@ export default function Preview() {
   if (!data) {
     return (
       <PageShell>
-        <SectionBanner imgKey="preview" title="Preview" subtitle="The whole gameweek on one screen, before the deadline" />
+        <SectionBanner imgKey="preview" title="Preview" subtitle="Everything you need to get ready for the next gameweek" />
         <PageSkeleton error={error} />
       </PageShell>
     )
@@ -272,7 +272,6 @@ export default function Preview() {
   const differential = board.filter((b) => b.own <= 5 && b.xp >= 3)[0] ?? null
   const attacks = [...sides.values()].sort((a, b) => b.lam - a.lam)
   const shutouts = [...sides.values()].sort((a, b) => b.cs - a.cs)
-  const steps = flagged.filter((f) => f.step)
   /** The club's first-choice penalty taker, when the live layer knows one. */
   const penTaker = (team: string): string | null => {
     for (const r of ratings) {
@@ -338,7 +337,7 @@ export default function Preview() {
                       {/* The featured match is lifted out of its day group, so
                           it has to carry its own date — the rest sit under one. */}
                       {feat && m.k && (
-                        <span className="rounded border border-line-mid px-2 py-1 text-[10px] font-extrabold tracking-[0.08em] text-ink-2 uppercase">{DAY.format(new Date(m.k))}</span>
+                        <span className="rounded border border-line-strong bg-surface-2 px-2 py-1 text-[11px] font-extrabold tracking-[0.08em] text-ink uppercase">{DAY.format(new Date(m.k))}</span>
                       )}
                       <span className="ml-auto flex items-center gap-1 text-[10px] font-bold tracking-wide text-ink-3 uppercase">
                         {isOpen ? 'Hide' : 'Detail'}
@@ -489,7 +488,7 @@ export default function Preview() {
 
   return (
     <PageShell>
-      <SectionBanner imgKey="preview" title={`GW${gw} Preview`} subtitle="Captain, chips, the games that produce the points, and who is missing" />
+      <SectionBanner imgKey="preview" title={`GW${gw} Preview`} subtitle="Everything you need to get ready for the next gameweek" />
 
       <DeadlineStrip gw={gw} at={avail.deadlines.get(gw)} />
 
@@ -507,7 +506,7 @@ export default function Preview() {
               never tells you. */}
           <div className="mb-7 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Tile
-              k="Biggest attack" v={attacks[0].lam.toFixed(2)}
+              k="Biggest attack" v={attacks[0].lam.toFixed(2)} unit="xG"
               s={<><b>{teamLabel(attacks[0].team)}</b> projected goals {attacks[0].venue === 'H' ? 'v' : 'at'} {teamLabel(attacks[0].opp)}</>}
               media={<TeamBadge team={attacks[0].team} size={46} />}
             />
@@ -517,7 +516,7 @@ export default function Preview() {
               media={<TeamBadge team={shutouts[0].team} size={46} />}
             />
             <Tile
-              k="Best differential" v={differential ? differential.xp.toFixed(2) : '—'}
+              k="Best differential" v={differential ? differential.xp.toFixed(2) : '—'} unit={differential ? 'xP' : undefined}
               s={differential
                 ? <span className="flex items-center gap-1.5">
                     <TeamBadge team={differential.side.team} size={18} className="shrink-0" />
@@ -534,7 +533,7 @@ export default function Preview() {
                 : undefined}
             />
             <Tile
-              k="Goal-fest" v={matches[0].total.toFixed(2)}
+              k="Goal-fest" v={matches[0].total.toFixed(2)} unit="xG"
               s={<><b>{teamLabel(matches[0].h)} v {teamLabel(matches[0].a)}</b> — most goals expected</>}
               media={<span className="flex items-center -space-x-2"><TeamBadge team={matches[0].h} size={38} /><TeamBadge team={matches[0].a} size={38} /></span>}
             />
@@ -603,7 +602,7 @@ export default function Preview() {
           {/* Three columns rather than two: the top ten was a very wide table
               with a column of dead space beside it, and the two absence lists
               were stacked when they belong side by side. */}
-          <div className="grid gap-4 lg:grid-cols-[0.95fr_1.25fr_0.95fr]">
+          <div className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
             <div>
               <Band label="Expected points · top 10" />
               <div className="overflow-hidden rounded-xl border border-line">
@@ -626,45 +625,32 @@ export default function Preview() {
               </div>
             </div>
 
+            {/* One list, not two. "Who steps up" and "Team news" were the same
+                players sorted differently — the same name appeared in both
+                columns, once with a replacement and once without, which read
+                as two contradictory lists rather than one story. Now every
+                flagged player appears once, and the replacement is simply an
+                extra line on the rows that have one. */}
             <div>
-              <Band label="Who steps up" tip="A replacement is only named when the absent man was genuinely ahead in the pecking order — otherwise the page would credit a nailed starter with benefiting from a squad player's absence." />
+              <Band label="Team news" tip="Every flagged player in the round, most-owned first, from FPL's own status and news. Red is a ruling — injured, suspended, unavailable; amber is a doubt, and most doubts start. A replacement is named only where the absent man was in the first-choice line, so nobody is credited with benefiting from a squad player's absence." />
               <div className="overflow-hidden rounded-xl border border-line">
-                {/* Out on the left, the man who benefits on the right: the
-                    row reads as the swap it describes. */}
-                {steps.map((f) => (
-                  <div key={String(f.r.element)} className="flex items-center gap-2.5 border-b border-line px-3 py-2.5 last:border-0">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide ${f.status === 'd' ? 'bg-warn/30 text-warn' : 'bg-bad/30 text-bad'}`}>{LABEL[f.status] ?? 'OUT'}</span>
-                        <TeamBadge team={String(f.r.team)} size={18} className="shrink-0" />
-                        <b className="truncate text-[14px] text-ink">{String(f.r.web_name)}</b>
-                      </div>
-                      <div className="mt-0.5 truncate text-[11.5px] text-ink-3">{f.news}</div>
-                    </div>
-                    <Icon name="arrow-right" size={14} className="shrink-0 text-ink-3" />
-                    <div className="min-w-0">
-                      <div className="text-[9.5px] font-extrabold tracking-[0.1em] text-good uppercase">Steps up</div>
-                      <b className="text-[14px] text-ink">{String(f.step!.web_name)}</b>
-                      <div className="text-[11.5px] text-ink-3">£{f.step!.price}m</div>
-                    </div>
-                  </div>
-                ))}
-                {!steps.length && <div className="px-3 py-6 text-center text-[13px] text-ink-3">Nobody's absence changes a starting eleven.</div>}
-              </div>
-            </div>
-
-            <div>
-              <Band label="Team news" tip="Every flagged player in the round, most-owned first, from FPL's own status and news. Red is a ruling — injured, suspended, unavailable. Amber is a doubt, and most doubts start." />
-              <div className="overflow-hidden rounded-xl border border-line">
-                {flagged.slice(0, 12).map((f) => (
-                  <div key={String(f.r.element)} className="border-b border-line px-3 py-2 last:border-0">
+                {flagged.slice(0, 14).map((f) => (
+                  <div key={String(f.r.element)} className="border-b border-line px-3 py-2.5 last:border-0">
                     <div className="flex items-center gap-2">
                       <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide ${f.status === 'd' ? 'bg-warn/30 text-warn' : 'bg-bad/30 text-bad'}`}>{LABEL[f.status] ?? 'OUT'}</span>
-                      <TeamBadge team={String(f.r.team)} size={16} />
-                      <b className="truncate text-[13.5px] font-semibold text-ink">{String(f.r.web_name)}</b>
+                      <TeamBadge team={String(f.r.team)} size={18} className="shrink-0" />
+                      <b className="truncate text-[14px] font-semibold text-ink">{String(f.r.web_name)}</b>
                       <span className="ml-auto shrink-0 text-[11px] text-ink-3">{f.r.position}</span>
                     </div>
-                    <div className="mt-0.5 truncate text-[11px] text-ink-3">{f.news}</div>
+                    <div className="mt-0.5 truncate text-[11.5px] text-ink-3">{f.news}</div>
+                    {f.step && (
+                      <div className="mt-1.5 flex items-center gap-1.5 border-t border-line pt-1.5">
+                        <Icon name="arrow-right" size={13} className="shrink-0 text-good" />
+                        <span className="text-[9.5px] font-extrabold tracking-[0.1em] text-good uppercase">Steps up</span>
+                        <b className="text-[13.5px] text-ink">{String(f.step.web_name)}</b>
+                        <span className="text-[11.5px] text-ink-3">£{f.step.price}m</span>
+                      </div>
+                    )}
                   </div>
                 ))}
                 {!flagged.length && <div className="px-3 py-6 text-center text-[13px] text-ink-3">Nobody flagged — a clean round.</div>}
@@ -758,12 +744,16 @@ function Band({ label, tip }: { label: string; tip?: string }) {
   )
 }
 
-function Tile({ k, v, s, media }: { k: string; v: string; s: React.ReactNode; media?: React.ReactNode }) {
+function Tile({ k, v, s, unit, media }: { k: string; v: string; s: React.ReactNode; unit?: string; media?: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-line bg-surface-1/60 p-3.5">
       <div className="min-w-0 flex-1">
         <div className="text-[10.5px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">{k}</div>
-        <div className="mt-1.5 font-num text-[30px] leading-none font-extrabold text-accent-2">{v}</div>
+        {/* A bare 2.38 says nothing. Every figure carries what it is. */}
+        <div className="mt-1.5 font-num text-[30px] leading-none font-extrabold text-accent-2">
+          {v}
+          {unit && <span className="ml-1 text-[13px] font-extrabold tracking-wide text-ink-3">{unit}</span>}
+        </div>
         <div className="mt-1.5 text-[13px] leading-snug text-ink-2">{s}</div>
       </div>
       {media && <div className="shrink-0">{media}</div>}

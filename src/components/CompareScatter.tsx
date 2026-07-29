@@ -87,7 +87,7 @@ const TRIPLE: Record<PosMode, TripleSpec> = {
     y: (r) => num(r, 'season_m_xgc'),
     z: (r) => scale100(num(r, 'season_m_box_faced')),
     fx: d2F, fy: d2F, fz: pctF,
-    quads: { best: 'br', worst: 'tl', labels: { br: 'Busy · mean defence', tl: 'Quiet · leaky defence', tr: 'Busy · leaky', bl: 'Quiet · mean' } },
+    quads: { best: 'br', worst: 'tl', labels: { br: 'Saves behind a tight defence', tl: 'Few saves, leaky defence', tr: 'Saves, but leaky', bl: 'Quiet, tight defence' } },
   },
   ATT: {
     label: 'Three-way — xG × shots on target × shots in the box',
@@ -140,7 +140,7 @@ function quadrantsFor(lens: CompareLens, mode: PosMode): Quadrants | null {
   if (lens === 'roles') {
     if (mode === 'GKP') {
       // x = saves, y = xGC. Low xGC + high saves = busy behind a good defence.
-      return { best: 'br', worst: 'tl', labels: { br: 'Busy · mean defence', tl: 'Quiet · leaky defence', tr: 'Busy · leaky', bl: 'Quiet · mean' } }
+      return { best: 'br', worst: 'tl', labels: { br: 'Saves behind a tight defence', tl: 'Few saves, leaky defence', tr: 'Saves, but leaky', bl: 'Quiet, tight defence' } }
     }
     if (mode === 'DEF') {
       return { best: 'tr', worst: 'bl', labels: { tr: 'Both routes', tl: 'Clean sheets only', br: 'Def Con only', bl: 'Neither' } }
@@ -321,11 +321,16 @@ export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
   // The gold player's name prints beside his dot. Where that lands on top of a
   // quadrant caption, the caption gives way — two labels in the same 20 pixels
   // is worse than one caption missing.
-  const clashes = (q: 'tr' | 'tl' | 'br' | 'bl') => {
-    if (q[1] !== (X(gold.x) > midX ? 'r' : 'l')) return false
+  /* How far a quadrant caption has to move to clear the highlighted player's
+     own name label. It used to return a boolean and the caption was simply
+     dropped — which looked exactly like a missing label, because that is what
+     it is. Now it shifts by a line and stays on screen. */
+  const captionShift = (q: 'tr' | 'tl' | 'br' | 'bl') => {
+    if (q[1] !== (X(gold.x) > midX ? 'r' : 'l')) return 0
     const goldLabelY = Math.max(16, Y(gold.y) - rOf(gold, false) - 6)
     const capY = q[0] === 't' ? PAD.t + 13 : H - PAD.b - 8
-    return Math.abs(goldLabelY - capY) < 18
+    if (Math.abs(goldLabelY - capY) >= 18) return 0
+    return q[0] === 't' ? 15 : -15
   }
 
   // Percent-style lenses print whole numbers; per-90 rates get 2dp. The triple
@@ -408,7 +413,7 @@ export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
                   const lx = xMin + (xMax - xMin) * 0.72
                   return <text x={X(lx)} y={Math.max(PAD.t + 24, Math.min(H - PAD.b - 8, clampY(valueBands!.fy(lx)) + 15))} textAnchor="middle" fontSize="10.5" fontWeight="800" fill="var(--accent)" opacity="0.9" style={{ letterSpacing: '.12em' }}>FAIR PRICE</text>
                 })()}
-                <text x={W - PAD.r - 10} y={H - PAD.b - 10} textAnchor="end" fontSize="10.5" fontWeight="800" fill="var(--bad)" opacity="0.9" style={{ letterSpacing: '.12em' }}>PAYING UP</text>
+                <text x={W - PAD.r - 10} y={H - PAD.b - 10} textAnchor="end" fontSize="10.5" fontWeight="800" fill="var(--bad)" opacity="0.9" style={{ letterSpacing: '.12em' }}>POOR VALUE</text>
               </g>
             )
           })()}
@@ -443,8 +448,9 @@ export function PlayerCompare({ rows, lens, highlightName, onPlayer }: {
                     deliberate division rather than four coincidental washes */}
                 <line x1={midX} y1={PAD.t} x2={midX} y2={H - PAD.b} stroke="var(--line-strong)" strokeWidth="1" strokeDasharray="3 4" />
                 <line x1={PAD.l} y1={midY} x2={W - PAD.r} y2={midY} stroke="var(--line-strong)" strokeWidth="1" strokeDasharray="3 4" />
-                {CORNERS.filter((q) => quads.labels[q] && !clashes(q)).map((q) => {
+                {CORNERS.filter((q) => quads.labels[q]).map((q) => {
                   const a = anchor(q)
+                  a.y += captionShift(q)
                   return (
                     <text key={q} x={a.x} y={a.y} textAnchor={a.anchor} fontSize="10" fontWeight="800" fill={toneOf(q)} opacity="0.95" style={{ textTransform: 'uppercase', letterSpacing: '.1em' }}>
                       {quads.labels[q]}
