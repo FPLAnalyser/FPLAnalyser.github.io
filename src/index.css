@@ -550,7 +550,9 @@ body {
 /* The monogram leads the reveal, fading up just ahead of the wordmark. */
 .intro-title {
   font-family: 'Montserrat', 'Manrope', system-ui, sans-serif; font-weight: 400; color: #f4f2ea;
-  text-transform: uppercase; font-size: clamp(34px,8.4vw,82px); line-height: 1;
+  /* Floor at 30px, not 34: at 34 the wordmark measured 290px inside a 288px
+     box on a 320-wide phone and pushed the scene off its own edge. */
+  text-transform: uppercase; font-size: clamp(30px,8.4vw,82px); line-height: 1;
   letter-spacing: .07em; white-space: nowrap; text-shadow: 0 2px 26px rgba(0,0,0,.65);
 }
 .intro-title .intro-gold {
@@ -566,21 +568,39 @@ body {
 
 .intro-tagwrap { margin-top: 3.2vh; display: flex; align-items: center; justify-content: center; gap: 14px; }
 .intro-rule {
-  height: 1px; width: min(11vw,74px);
+  height: 1px; flex: 0 1 min(11vw,74px); min-width: 0;
   background: linear-gradient(90deg,transparent,rgba(233,240,228,.6));
   transform: scaleX(0); animation: intro-rule .7s ease-out 1.7s forwards;
 }
 .intro-rule-r { background: linear-gradient(270deg,transparent,rgba(233,240,228,.6)); transform-origin: left; }
 .intro-rule-l { transform-origin: right; }
 @keyframes intro-rule { to { transform: scaleX(1); } }
+/* One line, always.
+ *
+ * "DATA. INSIGHT. POINTS." is 22 characters and half an em of tracking adds
+ * 110px to it, so on a phone the line ran wider than the screen and wrapped —
+ * and because the tracking is animated from wide to final, it wrapped a second
+ * into the reveal rather than on load: the tagline appeared, then broke, and
+ * "POINTS." dropped onto a line of its own between two rules that stayed put.
+ *
+ * So the tracking scales with the viewport instead of being a flat .5em. The
+ * clamp keeps it at .5em from about 750px up, where it always fitted, and eases
+ * down to .2em on the narrowest phones. Both ends of the animation are derived
+ * from the same custom property, so the widest frame is in budget too — a
+ * separate literal in the keyframe is exactly how this broke. */
 .intro-tag {
+  --tag-ls: clamp(.2em, 1vw, .5em);
   font-family: 'Montserrat', 'Manrope', system-ui, sans-serif; font-weight: 500;
-  font-size: clamp(10px,2.2vw,15px); letter-spacing: .5em; text-indent: .5em;
+  font-size: clamp(10px,2.2vw,15px);
+  letter-spacing: var(--tag-ls); text-indent: var(--tag-ls); white-space: nowrap;
   color: #cfd6c9; text-transform: uppercase; opacity: 0;
   animation: intro-tag 1s ease-out 1.85s forwards;
 }
 .intro-tag b { color: #ead188; font-weight: 600; }
-@keyframes intro-tag { from { opacity: 0; letter-spacing: .8em; } to { opacity: 1; letter-spacing: .5em; } }
+@keyframes intro-tag {
+  from { opacity: 0; letter-spacing: calc(var(--tag-ls) * 1.5); }
+  to { opacity: 1; letter-spacing: var(--tag-ls); }
+}
 
 .intro-streak {
   position: absolute; top: -20%; bottom: -20%; left: -30%; width: 26%; z-index: 9; pointer-events: none;
