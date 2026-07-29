@@ -1,0 +1,181 @@
+import type { Mode } from './theme'
+
+/* Club kit colours, and the rules for painting an xG bar in them.
+ *
+ * The point of colouring the bar by kit rather than by "favoured / not" is that
+ * you recognise the game without reading it. That only works if a striped club
+ * looks striped, so the patterns below are chosen for what survives in a 12px
+ * bar — not for fidelity to the shirt. A detail that would read as noise at that
+ * size is deliberately left out: Arsenal's white sleeves and Man City's fade to
+ * white at the hem are both real and both absent, because the segment stands for
+ * the body of the shirt, not the whole thing.
+ *
+ * Away kits are only listed where the 26/27 shirt has actually been seen. Where
+ * one hasn't, the club wears its home colours and the UI can say so — a made-up
+ * away colour is worse than an honest stand-in, because nobody can tell it's
+ * made up. */
+
+/** How a segment is painted. Each one reads at 12px; nothing else does. */
+export type Pattern =
+  | 'solid'      // flat
+  | 'stripes'    // bold diagonal, base and second in equal measure
+  | 'pinstripe'  // wide base, thin second
+  | 'tricolour'  // base plus two diagonal accents
+  | 'yoke'       // second across the top third
+  | 'trim'       // second as a band top and bottom — a plain shirt with contrast edges
+  | 'panel'      // second as a wedge at the trailing edge
+
+export interface Kit {
+  base: string
+  second: string
+  /** Only for shirts carrying two accents — Palace's sash, Leeds' hoops. */
+  third?: string
+  pattern: Pattern
+}
+
+interface ClubKits {
+  home: Kit
+  /** Absent until the real 26/27 away shirt has been seen. */
+  away?: Kit
+}
+
+const K: Record<string, ClubKits> = {
+  ARS: { home: { base: '#e2231a', second: '#ffffff', pattern: 'solid' },
+         away: { base: '#1e2a52', second: '#f2c744', pattern: 'trim' } },
+  AVL: { home: { base: '#670e36', second: '#95bfe5', pattern: 'trim' } },
+  BOU: { home: { base: '#d71920', second: '#000000', pattern: 'stripes' } },
+  BRE: { home: { base: '#e30613', second: '#ffffff', pattern: 'stripes' },
+         away: { base: '#15161a', second: '#e8e4d8', pattern: 'pinstripe' } },
+  BHA: { home: { base: '#0b5cc4', second: '#ffffff', pattern: 'pinstripe' },
+         away: { base: '#f4f4f2', second: '#1a63d0', pattern: 'pinstripe' } },
+  CHE: { home: { base: '#0a3fae', second: '#f2d24b', pattern: 'trim' },
+         away: { base: '#131313', second: '#f5d130', pattern: 'trim' } },
+  COV: { home: { base: '#3aa3e0', second: '#ffffff', pattern: 'stripes' },
+         away: { base: '#efe7d6', second: '#e0492f', pattern: 'panel' } },
+  CRY: { home: { base: '#f3f4f6', second: '#c4122e', third: '#1b458f', pattern: 'tricolour' },
+         away: { base: '#141519', second: '#c4122e', pattern: 'trim' } },
+  EVE: { home: { base: '#003399', second: '#ffffff', pattern: 'solid' },
+         away: { base: '#f6f6f4', second: '#14224a', third: '#e0a83c', pattern: 'tricolour' } },
+  FUL: { home: { base: '#f5f5f5', second: '#141414', pattern: 'trim' } },
+  HUL: { home: { base: '#f5a12d', second: '#000000', pattern: 'stripes' },
+         away: { base: '#f5f5f2', second: '#f5a12d', pattern: 'yoke' } },
+  IPS: { home: { base: '#1f4fc4', second: '#ffffff', pattern: 'solid' },
+         away: { base: '#f0e7cd', second: '#1a1a1a', pattern: 'pinstripe' } },
+  LEE: { home: { base: '#f5f5f5', second: '#1d4ed8', third: '#f5c518', pattern: 'tricolour' },
+         away: { base: '#f5c518', second: '#14224a', pattern: 'trim' } },
+  LIV: { home: { base: '#c8102e', second: '#ffffff', pattern: 'solid' },
+         away: { base: '#f7f7f7', second: '#c8102e', pattern: 'trim' } },
+  MCI: { home: { base: '#6cabdd', second: '#ffffff', pattern: 'solid' } },
+  MUN: { home: { base: '#d71920', second: '#000000', pattern: 'solid' },
+         away: { base: '#2b5fd0', second: '#d71920', pattern: 'trim' } },
+  NEW: { home: { base: '#241f20', second: '#ffffff', pattern: 'stripes' },
+         away: { base: '#2b3a5c', second: '#35a3a3', pattern: 'trim' } },
+  NFO: { home: { base: '#dd0000', second: '#ffffff', pattern: 'solid' } },
+  SUN: { home: { base: '#eb172b', second: '#ffffff', pattern: 'stripes' },
+         away: { base: '#e79aac', second: '#141414', pattern: 'yoke' } },
+  TOT: { home: { base: '#f5f5f5', second: '#132257', pattern: 'solid' },
+         away: { base: '#1b2a55', second: '#f0603c', pattern: 'stripes' } },
+}
+
+/** Clubs whose 26/27 away shirt we have. Everyone else stands in at home. */
+export const hasAwayKit = (team: string): boolean => Boolean(K[team]?.away)
+
+const rgb = (h: string): [number, number, number] => {
+  const s = h.replace('#', '')
+  return [parseInt(s.slice(0, 2), 16), parseInt(s.slice(2, 4), 16), parseInt(s.slice(4, 6), 16)]
+}
+
+/** Relative luminance, for deciding whether a shirt vanishes into the card. */
+function lum(hex: string): number {
+  const f = (c: number) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }
+  const [r, g, b] = rgb(hex)
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+}
+
+/** Weighted RGB distance — crude, but it answers the only question asked of it:
+ *  would a person glancing at a 12px bar tell these two shirts apart. */
+function dist(a: string, b: string): number {
+  const [ar, ag, ab] = rgb(a)
+  const [br, bg, bb] = rgb(b)
+  const rm = (ar + br) / 2
+  return Math.sqrt((2 + rm / 256) * (ar - br) ** 2 + 4 * (ag - bg) ** 2 + (2 + (255 - rm) / 256) * (ab - bb) ** 2)
+}
+
+/** Below this the two shirts read as the same colour and the away side changes. */
+const CLASH = 120
+
+function mix(a: string, b: string, t: number): string {
+  const [ar, ag, ab] = rgb(a)
+  const [br, bg, bb] = rgb(b)
+  const h = (x: number, y: number) => Math.round(x + (y - x) * t).toString(16).padStart(2, '0')
+  return `#${h(ar, br)}${h(ag, bg)}${h(ab, bb)}`
+}
+
+export interface ResolvedFixture {
+  home: Kit
+  away: Kit
+  /** Set when the clash rule changed the away side, phrased for a tooltip. */
+  clash: string | null
+  /** False when the away club's real 26/27 shirt hasn't been sourced yet. */
+  awaySourced: boolean
+}
+
+/** Who wears what, for one fixture.
+ *
+ *  The home side wears home. The away side wears away — unless that would read
+ *  as the same colour as the home shirt, in which case it falls back to its own
+ *  home colours, and if those clash too, to its second colour. Which is roughly
+ *  what a kit manager does, and it means the rule needs no per-fixture list. */
+export function resolveFixture(homeTeam: string, awayTeam: string, label: (t: string) => string): ResolvedFixture {
+  const h = K[homeTeam]?.home
+  const a0 = K[awayTeam]
+  if (!h || !a0) {
+    // A club we have no colours for at all — the caller falls back to its own
+    // default bar rather than being handed a made-up shirt.
+    return { home: h ?? { base: 'var(--accent)', second: 'var(--accent)', pattern: 'solid' },
+             away: a0?.home ?? { base: 'var(--info)', second: 'var(--info)', pattern: 'solid' },
+             clash: null, awaySourced: false }
+  }
+  const sourced = Boolean(a0.away)
+  let away = a0.away ?? a0.home
+  let clash: string | null = null
+  if (dist(h.base, away.base) < CLASH) {
+    if (dist(h.base, a0.home.base) >= CLASH) {
+      clash = `${label(awayTeam)} would clash with ${label(homeTeam)} — shown in their home colours`
+      away = a0.home
+    } else {
+      clash = `Both shirts read the same — ${label(awayTeam)} shown in their second colour`
+      away = { base: away.second, second: away.base, pattern: 'solid' }
+    }
+  }
+  return { home: h, away, clash, awaySourced: sourced }
+}
+
+/** The CSS background for one segment of the bar.
+ *
+ *  `mode` matters for one reason: a shirt the same tone as the card it sits on
+ *  has no shape. Chelsea, Palace and Brentford all travel in black, and on the
+ *  dark card the body of the bar disappeared and left the trim floating as two
+ *  thin lines. An outline can't fix that — it lands exactly where the trim
+ *  already is — so the tone is lifted toward the card's ink instead. Pale shirts
+ *  on the white card get the outline treatment instead, via `kitOutline`. */
+export function kitBackground(kit: Kit, mode: Mode): string {
+  const b = mode === 'dark' && lum(kit.base) < 0.055 ? mix(kit.base, '#f4efe3', 0.26) : kit.base
+  const s = kit.second
+  const t = kit.third ?? s
+  switch (kit.pattern) {
+    case 'stripes':   return `repeating-linear-gradient(115deg,${b} 0 6px,${s} 6px 11px)`
+    case 'pinstripe': return `repeating-linear-gradient(115deg,${b} 0 9px,${s} 9px 11px)`
+    case 'tricolour': return `repeating-linear-gradient(115deg,${b} 0 9px,${s} 9px 13px,${t} 13px 17px)`
+    case 'yoke':      return `linear-gradient(180deg,${s} 0 34%,${b} 34% 100%)`
+    case 'trim':      return `linear-gradient(180deg,${s} 0 2px,${b} 2px calc(100% - 2px),${s} calc(100% - 2px) 100%)`
+    case 'panel':     return `linear-gradient(90deg,${b} 0 76%,${s} 76% 100%)`
+    default:          return b
+  }
+}
+
+/** A white or cream shirt on the light card needs an edge or it isn't there at
+ *  all — Fulham, Leeds and Spurs at home, Liverpool, Hull and Brighton away. */
+export function kitOutline(kit: Kit, mode: Mode): string | undefined {
+  return mode === 'light' && lum(kit.base) > 0.62 ? '1px solid rgba(0,0,0,.24)' : undefined
+}

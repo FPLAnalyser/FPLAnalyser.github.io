@@ -12,6 +12,8 @@ import { useAvailability, availFor, type TeamRecord } from '../lib/availability'
 import { useMarketOdds, useXpModel, useShotProfiles, xpForGw } from '../lib/xp'
 import { num } from '../lib/rows'
 import { teamLabel, playerHref, derbyName, teamColors } from '../lib/util'
+import { resolveFixture, kitBackground, kitOutline } from '../lib/kits'
+import { useTheme } from '../lib/theme'
 import type { RatingRow } from '../lib/types'
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -47,7 +49,14 @@ const pc = (x: number) => `${Math.round(x * 100)}%`
 const csTone = (cs: number) => (cs >= 0.38 ? 'text-good' : cs >= 0.28 ? 'text-good/80' : cs >= 0.20 ? 'text-warn' : 'text-bad')
 /** Within a fixture the favoured attack is gold and the other side cool, so
  *  which way a game is expected to go is readable without comparing digits. */
-const xgTone = (mine: number, theirs: number) => (mine > theirs ? 'text-accent-2' : 'text-info')
+/* Gold for the side expected to score more, neutral for the other.
+ *
+ * This used to be gold against blue, which paired with a gold-and-blue bar
+ * underneath. The bar now wears the clubs' own colours, so a blue number is a
+ * third colour competing with two shirts for no reason — and worse, it reads as
+ * a category rather than a ranking. Gold against ink says the same thing and
+ * leaves the bar to do the identifying. */
+const xgTone = (mine: number, theirs: number) => (mine > theirs ? 'text-accent-2' : 'text-ink-2')
 const ord = (n: number) => `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'}`
 const DAY = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 const TIME = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' })
@@ -110,6 +119,9 @@ export default function Preview() {
   const avail = useAvailability()
   const model = useXpModel()
   const profiles = useShotProfiles()
+  // The kit bars are painted differently per mode — a black shirt on the dark
+  // card and a white one on the light card both need help to have a shape.
+  const { mode } = useTheme()
   const navigate = useNavigate()
   const [open, setOpen] = useState<string | null>(null)
   // The featured match opens by default but is a toggle like any other card.
@@ -289,6 +301,7 @@ export default function Preview() {
               const isOpen = feat ? featOpen : open === id
               const derby = derbyName(m.h, m.a)
               const inGame = board.filter((b) => b.side.team === m.h || b.side.team === m.a).slice(0, 5)
+              const kits = resolveFixture(m.h, m.a, teamLabel)
               return (
                 <div
                   key={id}
@@ -364,16 +377,43 @@ export default function Preview() {
                       </span>
                       <Club team={m.a} rec={avail.table.get(m.aid)} big={feat} right />
                     </div>
-                    {/* One bar, split by which side the goals belong to. Gold is
-                        the favoured attack rather than the home side, so the bar
-                        and the two numbers above it always agree about who is
-                        expected to score more. Both halves are solid: an earlier
-                        version drew the underdog at 35% opacity, which read as
-                        silver rather than blue and made the bar look like it was
-                        saying something it wasn't. */}
-                    <div className="mt-2.5 flex h-[8px] overflow-hidden rounded-full">
-                      <span className={`block ${m.lh > m.la ? 'bg-accent' : 'bg-info'}`} style={{ width: `${(m.lh / m.total) * 100}%` }} />
-                      <span className={`block flex-1 ${m.lh > m.la ? 'bg-info' : 'bg-accent'}`} />
+                    {/* One bar, split by which side the goals belong to, each
+                        half in that club's shirt for this fixture: home in home
+                        colours, away in its away kit, and the away side changed
+                        where the two would read as the same colour.
+
+                        This gives up something and it is worth being clear about
+                        it. The bar used to be gold for the favoured attack and
+                        blue for the other, so the bar itself said who was
+                        expected to score more. In kit colours it says who is who
+                        — the favoured side's xG number carries the judgement
+                        instead, at full strength against the other dimmed. What
+                        you get back is that you recognise the game without
+                        reading it, which a two-colour bar can never do.
+
+                        12px rather than 8: a striped shirt needs the height, and
+                        a shirt with contrast trim needs it twice over. */}
+                    <div
+                      className="mt-2.5 flex h-[12px] overflow-hidden rounded-full"
+                      title={kits.clash ?? undefined}
+                    >
+                      <span
+                        className="block"
+                        style={{
+                          width: `${(m.lh / m.total) * 100}%`,
+                          background: kitBackground(kits.home, mode),
+                          outline: kitOutline(kits.home, mode),
+                          outlineOffset: '-1px',
+                        }}
+                      />
+                      <span
+                        className="block flex-1"
+                        style={{
+                          background: kitBackground(kits.away, mode),
+                          outline: kitOutline(kits.away, mode),
+                          outlineOffset: '-1px',
+                        }}
+                      />
                     </div>
                     <div className="mt-2.5 flex items-baseline justify-between text-[12.5px] text-ink-3">
                       <span>Clean Sheet <b className={`text-[17px] font-extrabold ${csTone(m.csh)}`}>{pc(m.csh)}</b></span>
