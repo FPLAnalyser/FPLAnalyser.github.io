@@ -15,20 +15,23 @@ import type { FixtureEaseRow, TeamRatingRow } from '../lib/types'
 // explicit light-on-dark value. The accent is safe because it is gold in
 // either theme.
 
-/* The number takes the colour of the position it holds in the league: gold
- * for first, silver for second, bronze for third, and the house gold below
- * that. Twenty clubs all printing the same gold said nothing; a podium colour
- * says "this is the best attack in the division" before you have read the
- * rank underneath it.
+/* A medal only where a medal is earned: gold for first in the division, silver
+ * for second, bronze for third. Everyone else gets plain bone.
+ *
+ * The fourth-placed attack was still printing in gold, which took the meaning
+ * straight back out of the colour — if seventeen of twenty clubs wear the
+ * medal it is not a medal, it is the house style. The neutral has to be
+ * clearly not-metal rather than a dimmer gold, or fourth just reads as a
+ * tarnished first.
  *
  * Fixed values rather than the --podium tokens: this card is a hardcoded dark
  * gradient in both themes, and the tokens step per mode for their own surface.
  * These are the dark steps, which is what this card always is. */
 const MEDAL: Record<number, string> = { 1: '#e6c04f', 2: '#c6ccd4', 3: '#c07a3c' }
-const HOUSE = '#b08c26'
+const NO_MEDAL = 'rgba(244,239,227,.88)'
 
 function StatBlock({ v, rank, label }: { v: number | null; rank: number | null; label: string }) {
-  const colour = rank != null ? (MEDAL[rank] ?? HOUSE) : HOUSE
+  const colour = rank != null ? (MEDAL[rank] ?? NO_MEDAL) : NO_MEDAL
   return (
     <div className="flex-1 rounded-xl border border-white/8 py-2.5 text-center">
       <div className="font-display text-[30px] leading-none tabular-nums" style={{ color: colour }}>{v ?? '—'}</div>
