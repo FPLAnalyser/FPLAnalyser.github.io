@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react'
+import { Fragment, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PageShell, EmptyState } from '../components/PageShell'
 import { SectionBanner } from '../components/SectionBanner'
@@ -416,27 +416,31 @@ export default function Fixtures() {
         )
       ) : view === 'runs' ? (
         hasFixtures ? (
-          <>
-            {/* The lens matters more here than anywhere: a run that's kind to
-                a striker is not the same run that's kind to a keeper. */}
-            <div className="mb-4 flex items-center gap-1.5">
-              <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Rate for</span>
-              {LENS_TABS.map((l) => (
-                <span key={l.id} className="flex items-center gap-1">
-                  <button
-                    onClick={() => setLens(l.id as Lens)}
-                    className={`min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${
-                      lens === l.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
-                    }`}
-                  >
-                    {l.label}
-                  </button>
-                  <InfoTip text={LENS_TIP[l.id as Lens]} />
-                </span>
-              ))}
-            </div>
-            <SeasonRunsBoard fixtureEase={fixtureEase} lens={lens} baselines={baselines} />
-          </>
+          <SeasonRunsBoard
+            fixtureEase={fixtureEase}
+            lens={lens}
+            baselines={baselines}
+            lensControl={
+              /* The lens matters more here than anywhere: a run that's kind to
+                 a striker is not the same run that's kind to a keeper. */
+              <div className="flex items-center gap-1.5">
+                <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Rate for</span>
+                {LENS_TABS.map((l) => (
+                  <span key={l.id} className="flex items-center gap-1">
+                    <button
+                      onClick={() => setLens(l.id as Lens)}
+                      className={`min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${
+                        lens === l.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+                      }`}
+                    >
+                      {l.label}
+                    </button>
+                    <InfoTip text={LENS_TIP[l.id as Lens]} />
+                  </span>
+                ))}
+              </div>
+            }
+          />
         ) : (
           <EmptyState icon={<Icon name="calendar" size={44} />}>Best runs switch on when the fixtures are published.</EmptyState>
         )
@@ -477,10 +481,14 @@ export default function Fixtures() {
    which is what you plan a wildcard or a bench slot around. Sorted by club
    name so you can find one, rather than by quality, which would make it a
    second leaderboard of the same twenty teams. */
-function SeasonRunsBoard({ fixtureEase, lens, baselines }: {
+function SeasonRunsBoard({ fixtureEase, lens, baselines, lensControl }: {
   fixtureEase: FixtureEaseRow[]
   lens: Lens
   baselines: Map<string, TeamBase>
+  /** The page's "Rate for" pills, rendered inline with this board's own
+   *  filters. They belong on one line — all three change what the same table
+   *  shows, and stacking them cost three bands of height above it. */
+  lensControl?: ReactNode
 }) {
   const scale = useMemo(() => buildDiffScale(baselines), [baselines])
   const [half, setHalf] = useState<'all' | 1 | 2>('all')
@@ -561,34 +569,38 @@ function SeasonRunsBoard({ fixtureEase, lens, baselines }: {
           : 'Every gameweek, with only each club\u2019s best run lit — read down the page to see when to get on and when to get off.'}
         {spansSeason ? ' Every club gets its best run in each half.' : ' The kindest stretch left in the season.'}
       </p>
-      <div className="mb-3 flex items-center gap-1.5">
-        {([['ranked', 'Ranked'], ['map', 'Season map']] as const).map(([id, label]) => (
-          <button
-            key={id}
-            onClick={() => setView(id)}
-            className={`min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${
-              view === id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      {spansSeason && (
-        <div className="mb-3 flex items-center gap-1.5">
-          {HALVES.map(([id, label]) => (
+      {/* One filter row: what to rate for, which view, which half. */}
+      <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+        {lensControl}
+        <div className="flex items-center gap-1.5">
+          {([['ranked', 'Ranked'], ['map', 'Season map']] as const).map(([id, label]) => (
             <button
-              key={String(id)}
-              onClick={() => setHalf(id)}
+              key={id}
+              onClick={() => setView(id)}
               className={`min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${
-                half === id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+                view === id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
               }`}
             >
               {label}
             </button>
           ))}
         </div>
-      )}
+        {spansSeason && (
+          <div className="flex items-center gap-1.5">
+            {HALVES.map(([id, label]) => (
+              <button
+                key={String(id)}
+                onClick={() => setHalf(id)}
+                className={`min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${
+                  half === id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       {view === 'ranked' ? (
         <SortableTable
           rows={ranked}
