@@ -69,13 +69,21 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
   const toggle = (k: Key) => { tapHaptic('select'); setOpen((o) => (o === k ? null : k)) }
 
   return (
-    <div className="mt-2.5 rounded-2xl border border-line bg-surface-1/60 p-3">
+    <div className="@container mt-2.5 rounded-2xl border border-line bg-surface-1/60 p-3">
       <div className="mb-2 flex items-center gap-2">
         <span className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Squad lab</span>
         <span className="text-[11px] text-ink-3">Tap a tile</span>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+      {/* Five across only when five across actually fit.
+          These used to be viewport breakpoints, which is the wrong question:
+          the lab does not live in the viewport, it lives in a column that is
+          400px on one screen and 660 on another. On a 1024 laptop the viewport
+          said "large, go to five" and the column handed each tile 70px, so the
+          numbers the lab exists to state were the first thing cut. Measured off
+          the container instead, three roomy tiles over two rows beat five
+          truncated ones on a single line. */}
+      <div className="grid grid-cols-2 gap-2 @[440px]:grid-cols-3 @[560px]:grid-cols-5">
         <Tile
           label="Template" open={open === 'template'} onClick={() => toggle('template')}
           value={`${template.counts.template} of ${template.rows.length}`}
@@ -135,7 +143,7 @@ function Tile({ label, value, sub, tone, open, onClick }: {
     <button
       onClick={onClick}
       aria-expanded={open}
-      className={`rounded-xl border p-2.5 text-left transition-colors ${
+      className={`rounded-xl border p-2 text-left transition-colors ${
         open ? 'border-accent bg-accent-soft/40' : 'border-line bg-surface-1/60 hover:border-line-strong'
       }`}
     >
@@ -147,7 +155,11 @@ function Tile({ label, value, sub, tone, open, onClick }: {
           className={`ml-auto shrink-0 text-ink-3 transition-transform ${open ? 'rotate-90' : ''}`}
         />
       </div>
-      <div className={`font-display mt-1 truncate text-base leading-none ${c}`}>{value}</div>
+      {/* The value drops to 15px in the five-across layout. The longest thing
+          a tile ever states is a captain's name, and "B.Fernandes" measured
+          101px against 98px of tile — three pixels from readable, which
+          truncate resolves by cutting the name rather than the number. */}
+      <div className={`font-display mt-1 truncate text-base leading-none @[560px]:text-[15px] ${c}`}>{value}</div>
       <div className="mt-1 line-clamp-2 text-[10.5px] leading-tight text-ink-3">{sub}</div>
     </button>
   )

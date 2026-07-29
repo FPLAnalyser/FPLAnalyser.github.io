@@ -16,8 +16,15 @@ import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
 const BUDGET = 100
 /** How wide the board runs. The pitch and everything stacked above and
- *  below it share this, so they line up as one column. */
-const BOARD_W = 860
+ *  below it share this, so they line up as one column.
+ *
+ *  680, not 860. The player cards cap at 136px and stop growing, so five
+ *  across an 860px board were sitting in 172px of space and using 136 of it —
+ *  the rest was green. That width was worth more to the Squad Lab beside it,
+ *  which was dividing a 440px column five ways and truncating its own headline
+ *  numbers to "7 of…" and "B.F…". At 680 the cards land on 128px, eight inside
+ *  their cap, and the column they paid for goes to 660. */
+const BOARD_W = 680
 const POS_ORDER = ['GKP', 'DEF', 'MID', 'FWD'] as const
 
 /**
@@ -377,7 +384,10 @@ function Stat({ label, value, tone, sub, onClick }: { label: string; value: stri
     <>
       <div className={`font-display text-lg leading-none tabular-nums ${c}`}>{value}</div>
       <div className="mt-1 text-[10px] font-semibold tracking-[0.1em] text-ink-2 uppercase">{label}</div>
-      {sub && <div className="mt-0.5 truncate text-[10px] text-ink-3">{sub}</div>}
+      {/* Wraps rather than truncates. A narrower board means narrower stat
+          boxes, and "what this XI should score" cut to "what this XI should
+          sc…" — a caption that no longer says anything, to save a line. */}
+      {sub && <div className="mt-0.5 text-[10px] leading-tight text-ink-3">{sub}</div>}
     </>
   )
   const cls = 'w-full rounded-xl border border-line bg-surface-1/60 p-2.5 text-center'

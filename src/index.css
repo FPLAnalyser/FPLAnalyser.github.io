@@ -146,6 +146,15 @@
 
 /* ── Tailwind token mapping: utilities (bg-surface-1, text-accent, …) ── */
 @theme {
+  /* A real breakpoint at 1400px, and in rem rather than px.
+     Two traps here, both of which put the rule in the stylesheet where it never
+     applied. An arbitrary min-[1400px] variant is emitted ahead of the named
+     screens, so xl: (80rem) came later and won at 1440 despite being narrower.
+     Naming it fixes nothing on its own: the screens sort by raw value, and a
+     px length can't be compared against the rem defaults, so it still landed
+     first. 87.5rem is 1400px and sorts where it belongs — between xl and 2xl. */
+  --breakpoint-wide: 87.5rem;
+
   --color-*: initial;
   --color-bg-0: var(--bg-0);
   --color-bg-1: var(--bg-1);

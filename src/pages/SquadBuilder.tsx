@@ -396,7 +396,14 @@ export default function SquadBuilder() {
       <SectionBanner imgKey="squad" title="Squad Builder" subtitle={`Pick your Gameweek ${buildGw} fifteen within £100m, then step forward week by week — transfers, captain and chips`} />
 
       <>
-      <div className="no-anchor grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_440px] lg:items-start">
+      {/* The right-hand column is the Squad Lab's column, and it is sized for
+          the lab rather than for whatever the pitch left over. It steps up with
+          the screen: 400 on a small laptop, where 680 of board plus 680 of
+          column simply does not fit; 520 from 1280; 680 from 1400, which is
+          where a 1440 screen lands and where the lab's five tiles reach 124px
+          each — enough for the longest thing one ever says, a captain's name,
+          which needed 103px of the 98 it had. */}
+      <div className="no-anchor grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_520px] wide:grid-cols-[minmax(0,1fr)_680px] lg:items-start">
         {/* The board — the same object from an empty squad to a full one:
             unfilled places are just empty slots you tap to fill. */}
         <div className="min-w-0">
