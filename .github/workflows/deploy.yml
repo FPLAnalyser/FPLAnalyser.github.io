@@ -42,6 +42,8 @@ jobs:
           # Set as a repository variable; while it is empty the app falls back to
           # the public CORS relays and the privacy notice says so.
           VITE_FPL_PROXY: ${{ vars.VITE_FPL_PROXY }}
+          # Ko-fi / Buy Me a Coffee page. Unset means no link renders at all.
+          VITE_SUPPORT_URL: ${{ vars.VITE_SUPPORT_URL }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

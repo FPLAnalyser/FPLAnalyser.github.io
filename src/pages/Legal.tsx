@@ -276,6 +276,15 @@ function Privacy() {
         address]. You can complain to the Information Commissioner’s Office at ico.org.uk.
       </P>
 
+      <H>If you support the site</H>
+      <P>
+        The site is free. If there is a tip link, it is an ordinary link to a
+        payment provider — there is no widget, script or tracker from them on any page
+        here, so nothing about you reaches them unless you choose to click through. From
+        that point their own privacy policy applies, and we never see your card details.
+        We do not receive, store or match your name or email to anything on this site.
+      </P>
+
       <H>Children</H>
       <P>
         The site is aimed at adults playing Fantasy Premier League. It collects nothing that would

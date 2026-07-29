@@ -7,6 +7,7 @@ import { SeasonSwitcher } from './SeasonSwitcher'
 import { PreseasonBanner } from './PreseasonBanner'
 import { GlobalSearch, SearchSheet } from './GlobalSearch'
 import { BottomNav } from './BottomNav'
+import { SUPPORT_URL, SUPPORT_LABEL } from '../lib/support'
 import { PullToRefresh } from './PullToRefresh'
 import { AppOnboarding } from './AppOnboarding'
 import { useCore } from '../lib/useData'
@@ -125,6 +126,19 @@ export function Layout() {
               <NavLink to="/legal" className="text-accent underline underline-offset-2 hover:text-accent-2">
                 Data, credits &amp; privacy
               </NavLink>
+              {/* The whole site is free. One quiet link, in the least intrusive
+                  place on the page — a tip jar that interrupts reads as a
+                  paywall in waiting, which is exactly what it isn't. */}
+              {SUPPORT_URL && (
+                <a
+                  href={SUPPORT_URL}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="text-accent underline underline-offset-2 hover:text-accent-2"
+                >
+                  {SUPPORT_LABEL}
+                </a>
+              )}
             </div>
           </footer>
         </main>

@@ -169,6 +169,65 @@ precomputed. That is the one to replace with your own Worker.
 
 ---
 
+## B2. Positioning and money
+
+### Free, with a tip jar
+
+The right call for season one. It removes every objection at the moment you
+have no reputation, and it tells you something a business plan cannot: whether
+anyone values this enough to pay before you build billing.
+
+Set expectations on the number, though. Tip jars convert at roughly **0.1–1% of
+engaged users**, at a few pounds each. A thousand regulars might produce £20–60
+a month. That covers a domain and hosting; it does not fund your time. Its real
+value is as a signal, not as revenue.
+
+Practical choices:
+
+- **Ko-fi over Buy Me a Coffee.** Ko-fi takes 0% on donations (BMC takes 5%),
+  and it can host memberships later if the model shifts.
+- **Link out, never embed.** Their widget scripts are third-party trackers on
+  every page, which drags in PECR consent and a cookie banner — for a button.
+  `src/lib/support.ts` renders a plain link for exactly this reason.
+- **One quiet placement.** The footer link is enough while the site is free. If
+  you want a second, put it after a moment of delivered value — the export of a
+  share card — never on arrival, and never in a modal.
+- **Tax.** Tips for a service you provide are generally trading income, not
+  gifts. HMRC's £1,000 trading allowance covers a first season for most people;
+  above that it needs declaring. Worth knowing before it arrives.
+
+### On undercutting Fantasy Football Scout and FPL Hub
+
+Price is the weakest ground a new entrant can pick, for three reasons:
+
+1. **It is the easiest thing for them to match.** An incumbent with a decade of
+   brand can halve its price for one season and absorb it. You cannot.
+2. **Their moat is not the tools.** It is the writers, the podcast, the
+   community, the years of being the default. You cannot undercut a
+   personality.
+3. **The audience is not price-sensitive in that way.** Someone spending hours a
+   week on FPL is not blocked by £30 a season. They are blocked by not trusting
+   the source, or not understanding where the number came from.
+
+**Compete on transparency instead.** The genuine difference is already built:
+this site shows its working. The Preview page states the model, the ratings
+decompose into dimensions you can inspect, fixture difficulty explains its own
+scale, and "who steps up" names the promotion rule rather than asserting a team
+sheet. The established sites sell *opinion from named experts*. That is a good
+product and you will not beat it at its own game. What they mostly do not sell
+is *a model you can audit* — and the numerate half of the FPL audience has grown
+a lot.
+
+The sharpest version of that positioning: **publish the misses.** "The model
+said X, it got Y, here is why" is the most trust-building post in this niche and
+almost nobody does it, because it is uncomfortable for a site selling certainty.
+It costs you nothing, because you are not selling certainty.
+
+So: free, transparent, and different — then charge later for personalisation
+(your team, your plan, your alerts), which is the part nobody can screenshot and
+share anyway. Being cheaper is a fine tiebreaker once someone is choosing
+between you and Scout. It is a poor reason for them to look in the first place.
+
 ## C. Release plan
 
 ### Before you post anything
