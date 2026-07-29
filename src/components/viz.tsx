@@ -5,6 +5,12 @@ import { ordinal } from '../lib/util'
 /** Shared categorical palette (maps to the --chart-* tokens). */
 export const CHART_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)']
 
+/** Fills for an ordered top-five: gold, silver, bronze, then two rich hues.
+ *  For share bars whose slots mean RANK rather than category — a squad's five
+ *  biggest scorers, not five unrelated series. See the note on --podium-* in
+ *  index.css for why the first three are metal sweeps rather than flat colour. */
+export const PODIUM_COLORS = ['var(--podium-1)', 'var(--podium-2)', 'var(--podium-3)', 'var(--podium-4)', 'var(--podium-5)']
+
 export type Tone = 'good' | 'warn' | 'bad' | 'info' | 'accent'
 
 const TONE_COLOR: Record<Tone, string> = {
@@ -342,7 +348,14 @@ export function ConcentrationBar({
         {parts.map((s, i) => (
           <div
             key={i}
-            style={{ width: `${(s.value / total) * 100}%`, background: s.color }}
+            // A hairline of the page surface between segments. At sixteen
+            // pixels tall two adjacent metals otherwise pour into each other
+            // and the boundary — the whole quantity being shown — disappears.
+            style={{
+              width: `${(s.value / total) * 100}%`,
+              background: s.color,
+              boxShadow: i ? 'inset 2px 0 0 var(--surface-1)' : undefined,
+            }}
             title={`${s.label} — ${Math.round((s.value / total) * 100)}% of team points`}
           />
         ))}
@@ -356,7 +369,9 @@ export function ConcentrationBar({
       <ul className="mt-2.5 space-y-1">
         {parts.map((s, i) => (
           <li key={i} className="flex items-center gap-2 text-xs">
-            <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: s.color }} />
+            {/* Bigger than the donut's dot, with a hairline ring: a metal
+                sweep needs a few pixels before it reads as metal at all. */}
+            <span className="h-3.5 w-3.5 shrink-0 rounded-[3px] ring-1 ring-line-mid" style={{ background: s.color }} />
             <span className="w-4 text-ink-3">{i + 1}</span>
             <span className="min-w-0 flex-1 truncate text-ink-2">{s.label}</span>
             <span className="font-num tabular-nums text-ink">{Math.round((s.value / total) * 100)}%</span>

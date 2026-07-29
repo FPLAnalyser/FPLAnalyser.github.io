@@ -11,7 +11,7 @@ import { ClubCard, TeamMatchup } from '../components/ClubCard'
 import { TeamMap, ViewChips } from '../components/CompareScatter'
 import { StarRating } from '../components/StarRating'
 import { AnimatedCounter } from '../components/AnimatedCounter'
-import { Donut, CHART_COLORS, RatingNumber, ConcentrationBar, scoreTone, SCORE_TEXT } from '../components/viz'
+import { Donut, CHART_COLORS, PODIUM_COLORS, RatingNumber, ConcentrationBar, scoreTone, SCORE_TEXT } from '../components/viz'
 import { TeamBadge } from '../components/badges'
 import { PlayerNameCell, PosBadge } from '../components/cells'
 import { FixtureChips } from '../components/FixtureChips'
@@ -406,7 +406,9 @@ function PointsReliance({ team, ratings, metrics }: { team: string; ratings: Rat
     }
     const ranked = players.map((p) => ({ label: String(p.web_name), value: estPts(p) })).filter((p) => p.value > 0).sort((a, b) => b.value - a.value)
     const total = ranked.reduce((s, p) => s + p.value, 0)
-    const top5 = ranked.slice(0, 5)
+    // Podium fills: these five slots are a ranking, so they are coloured as
+    // one — first, second, third, then the two behind them.
+    const top5 = ranked.slice(0, 5).map((p, i) => ({ ...p, color: PODIUM_COLORS[i] }))
     return { segments: top5, rest: total - top5.reduce((s, p) => s + p.value, 0), hasData: total > 0, share: total ? top5.reduce((s, p) => s + p.value, 0) / total : 0 }
   }, [ratings, team])
 
