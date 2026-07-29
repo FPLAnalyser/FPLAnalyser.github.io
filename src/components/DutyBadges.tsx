@@ -87,7 +87,7 @@ export function DutyBadges({ d, className = '' }: { d: Duties; className?: strin
       ) : null}
       {setPiece && <span className={`${CHIP} bg-info/26`} title={`Set pieces — ${spTitle}`}>SP</span>}
       {d.streak === 'hot' && <span className={`${CHIP} bg-hot/22`} title="Hot streak — scoring above his season rate">🔥</span>}
-      {d.streak === 'cold' && <span className={`${CHIP} bg-cold/22`} title="Cold streak — scoring below his season rate">🧊</span>}
+      {d.streak === 'cold' && <span className={`${CHIP} bg-cold/22`} title="Cold streak — scoring below his season rate">❄️</span>}
     </span>
   )
 }
@@ -105,7 +105,7 @@ export function DutyLegend({ className = '' }: { className?: string }) {
     ['P', 'bg-good/30', 'on them this week — the man ahead is out'],
     ['SP', 'bg-info/26', 'corners or free kicks'],
     ['🔥', 'bg-hot/22', 'scoring above his rate'],
-    ['🧊', 'bg-cold/22', 'scoring below it'],
+    ['❄️', 'bg-cold/22', 'scoring below it'],
   ]
   return (
     <div className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] text-ink-3 ${className}`}>

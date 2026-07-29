@@ -35,8 +35,13 @@ export function Tabs({
             role="tab"
             aria-selected={isActive}
             onClick={() => onChange(tab.id)}
-            className={`relative flex min-h-11 shrink-0 items-center gap-1.5 px-3 text-sm font-medium whitespace-nowrap transition-colors ${
-              isActive ? 'text-accent' : 'text-ink-2 hover:text-ink'
+            /* The active label takes the ink colour, not the accent: white on
+               dark, near-black on light. Gold text on a dark surface is dimmer
+               than the inactive labels beside it, so the selected tab was the
+               hardest one to read. The gold underline still marks it — the
+               colour moves to the indicator, where it costs no legibility. */
+            className={`relative flex min-h-11 shrink-0 items-center gap-1.5 px-3 text-sm whitespace-nowrap transition-colors ${
+              isActive ? 'font-semibold text-ink' : 'font-medium text-ink-2 hover:text-ink'
             }`}
           >
             {tab.icon}

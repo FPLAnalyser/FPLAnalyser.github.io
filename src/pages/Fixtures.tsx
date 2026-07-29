@@ -453,7 +453,7 @@ export default function Fixtures() {
           <EmptyState icon={<Icon name="calendar" size={44} />}>The rotation planner switches on when the fixtures are published.</EmptyState>
         )
       ) : (
-        <MatchupExplorer ratings={data.ratings as RatingRow[]} />
+        <MatchupExplorer ratings={data.ratings as RatingRow[]} league={(data.teams ?? []).map((t) => String(t.short_name))} />
       )}
     </PageShell>
   )
@@ -1347,14 +1347,30 @@ function runColor(fdr: number): string {
 
 
 /* ── Matchup explorer: opponent weaknesses × player shot profiles ── */
-function MatchupExplorer({ ratings }: { ratings: RatingRow[] }) {
+function MatchupExplorer({ ratings, league }: { ratings: RatingRow[]; league: string[] }) {
   const navigate = useNavigate()
   const concededQ = useLazyTable<Record<string, Row[]>>('shots_conceded')
   const playerShotsQ = useLazyTable<Record<string, Row[]>>('player_shots')
   const scoutQ = useLazyTable<Row[]>('scouting')
   const [opp, setOpp] = useState('')
 
-  const teams = useMemo(() => Object.keys(concededQ.data ?? {}).sort(), [concededQ.data])
+  /* Only clubs actually in this season's league.
+     The shot data is last season's — that is the point of it, it is the
+     evidence — but its twenty keys are last season's twenty. Left unfiltered
+     the picker offered Burnley, West Ham and Wolves, none of whom are in the
+     division, and the reader had no way of knowing the list was stale. */
+  const inLeague = useMemo(() => new Set(league), [league])
+  const available = useMemo(
+    () => Object.keys(concededQ.data ?? {}).filter((t) => inLeague.has(t)).sort(),
+    [concededQ.data, inLeague],
+  )
+  /* Promoted clubs have no Premier League shots to profile. Naming them is
+     better than a silently short list. */
+  const missing = useMemo(
+    () => league.filter((t) => !(t in (concededQ.data ?? {}))).sort(),
+    [league, concededQ.data],
+  )
+  const teams = available
 
   // Opponent + league concession profiles (xG-weighted, penalties excluded).
   const { teamProfiles, leagueProfile } = useMemo(() => {
@@ -1444,6 +1460,11 @@ function MatchupExplorer({ ratings }: { ratings: RatingRow[] }) {
         <EmptyState icon={<Icon name="target" size={40} />}>Shot data isn’t available for this season yet.</EmptyState>
       ) : (
         <>
+          {missing.length > 0 && (
+            <p className="mb-2 text-xs text-ink-3">
+              No Premier League shot data yet for {missing.map((t) => teamLabel(t)).join(', ')} — they appear once they have played.
+            </p>
+          )}
           <div className="mb-4 flex flex-wrap gap-1.5">
             {teams.map((t) => (
               <button

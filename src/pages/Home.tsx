@@ -2,9 +2,7 @@ import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { flushSync } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../components/Icon'
-import { GameweekCover } from '../components/GameweekCover'
 import { useSeason } from '../lib/season'
-import { useCore } from '../lib/useData'
 
 function Hero() {
   const { info } = useSeason()
@@ -108,7 +106,6 @@ function WindowCard({ w }: { w: HomeWin }) {
 }
 
 export default function Home() {
-  const { data } = useCore()
   const rootRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   // On desktop, size the grid so the six equal windows fill the viewport with
@@ -133,7 +130,6 @@ export default function Home() {
 
   return (
     <div ref={rootRef} className="mx-auto w-full max-w-[1760px] px-4 pt-5 pb-6 md:px-6 md:pt-6 lg:pb-0">
-      {data && <GameweekCover data={data} />}
       <Hero />
       <div
         ref={gridRef}

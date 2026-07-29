@@ -28,7 +28,10 @@ import type { FixtureEaseRow, TeamRatingRow } from '../lib/types'
  * gradient in both themes, and the tokens step per mode for their own surface.
  * These are the dark steps, which is what this card always is. */
 const MEDAL: Record<number, string> = { 1: '#e6c04f', 2: '#c6ccd4', 3: '#c07a3c' }
-const NO_MEDAL = 'rgba(244,239,227,.88)'
+// Warm mid-grey, not a bright bone: bone sat within a few points of the
+// silver and fourth kept reading as second at a glance. This is darker and
+// browner than any of the three metals, so it reads as "unplaced".
+const NO_MEDAL = '#8d857a'
 
 function StatBlock({ v, rank, label }: { v: number | null; rank: number | null; label: string }) {
   const colour = rank != null ? (MEDAL[rank] ?? NO_MEDAL) : NO_MEDAL

@@ -192,7 +192,11 @@ export function RotationPartners({ fixtureEase, team, scale, fromGw, className =
       </p>
       <div className="grid gap-2.5 lg:grid-cols-3">
         {partners.map((p, i) => (
-          <div key={p.team} className="rounded-xl border border-line bg-surface-1 p-3">
+          /* min-w-0 so the grid item can shrink below the width of its own
+             run strip — without it the eight fixture cells set the card's
+             minimum size, the card grew past the viewport, and the inner
+             scroller never got the chance to scroll. */
+          <div key={p.team} className="min-w-0 rounded-xl border border-line bg-surface-1 p-3">
             <div className="flex items-center gap-2">
               <span className="grid size-5 shrink-0 place-items-center rounded-md bg-surface-3 text-[10px] font-bold text-ink-2">{i + 1}</span>
               <TeamBadge team={p.team} size={18} />

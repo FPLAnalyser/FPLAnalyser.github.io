@@ -765,7 +765,14 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, ca
   const pick = (els: number[]) => els.map((e) => byEl.get(e)).filter(Boolean) as RatingRow[]
   const useGiven = !!lineup && lineup.xi.length === 11
   const xi = useGiven ? pick(lineup!.xi) : derived.xi
-  const bench = useGiven ? pick(lineup!.bench) : derived.bench
+  /* Keeper first, always. pickEleven orders its own bench that way, but a
+     lineup handed in from the planner arrives in whatever order the user's
+     substitutions left it — which is how the share image ended up with the
+     goalkeeper on the right-hand end of the bench. FPL puts him first and so
+     does every reader's expectation. */
+  const bench = useGiven
+    ? pick(lineup!.bench).sort((a, b) => Number(b.position === 'GKP') - Number(a.position === 'GKP'))
+    : derived.bench
   const form = useGiven
     ? { GKP: 1, DEF: xi.filter((r) => r.position === 'DEF').length, MID: xi.filter((r) => r.position === 'MID').length, FWD: xi.filter((r) => r.position === 'FWD').length }
     : derived.form

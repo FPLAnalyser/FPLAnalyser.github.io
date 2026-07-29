@@ -93,7 +93,11 @@ export function RunsTimeline({ fixtureEase, runs, gws, lens, scale }: {
   if (!rows.length) return null
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-line">
+    /* Full-bleed on a wide screen. Thirty-eight gameweek columns across twenty
+       clubs is the widest thing on the site, and holding it inside the page's
+       1500px measure meant scrolling sideways through a table with empty
+       margins either side of it. Below lg it stays in the normal column. */
+    <div className="overflow-x-auto rounded-xl border border-line lg:mx-[calc(50%-50vw)] lg:w-screen lg:rounded-none lg:border-x-0 xl:px-6">
       <table className="w-full border-separate border-spacing-0 text-[10px]">
         <thead>
           <tr>

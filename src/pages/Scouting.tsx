@@ -277,25 +277,47 @@ export default function Scouting() {
 
       <div className="mb-4"><Tabs tabs={MODE_TABS} active={mode} onChange={(id) => setMode(id as ScoutMode)} layoutId="scout-mode" /></div>
 
-      <div className="mb-3"><Tabs tabs={WIN_TABS} active={win} onChange={(id) => setWin(id as ScoutWin)} layoutId="scout-win" /></div>
-      {/* Peer group as pills, each with its own explainer. */}
-      <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
-        {([
-          ['pooled', 'MID + FWD pooled', 'Ranks every midfielder and forward together in one attacking pool — good for comparing a winger against a striker on the same scale.'],
-          ['position', 'By position', 'Ranks each player only against others in their exact position (GKP / DEF / MID / FWD) — good for judging how a player stacks up in their own role.'],
-        ] as [ScoutPeer, string, string][]).map(([id, label, tip]) => (
-          <span key={id} className="flex items-center gap-1.5">
-            <button
-              onClick={() => setPeer(id)}
-              className={`min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${
-                peer === id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
-              }`}
-            >
-              {label}
-            </button>
-            <InfoTip text={tip} />
-          </span>
-        ))}
+      {/* One control row on desktop: window, peer group and — in compare mode —
+          the player search. These were three stacked bands pushing the actual
+          comparison below the fold on a laptop, for three controls that fit
+          side by side with room to spare. They stack again below lg. */}
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-5">
+        <Tabs tabs={WIN_TABS} active={win} onChange={(id) => setWin(id as ScoutWin)} layoutId="scout-win" />
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          {([
+            ['pooled', 'MID + FWD pooled', 'Ranks every midfielder and forward together in one attacking pool — good for comparing a winger against a striker on the same scale.'],
+            ['position', 'By position', 'Ranks each player only against others in their exact position (GKP / DEF / MID / FWD) — good for judging how a player stacks up in their own role.'],
+          ] as [ScoutPeer, string, string][]).map(([id, label, tip]) => (
+            <span key={id} className="flex items-center gap-1.5">
+              <button
+                onClick={() => setPeer(id)}
+                className={`min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${
+                  peer === id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+                }`}
+              >
+                {label}
+              </button>
+              <InfoTip text={tip} />
+            </span>
+          ))}
+        </div>
+        {mode === 'compare' && (
+          <div className="min-w-0 lg:ml-auto lg:w-[360px]">
+            <SearchBox
+              items={pool.filter((p) => !selected.some((s) => s.element === p.element))}
+              getLabel={(p) => p.web_name}
+              renderItem={(p) => (
+                <span className="flex w-full items-center justify-between gap-2">
+                  <span>{p.web_name}</span>
+                  <span className="flex items-center gap-1.5 text-xs text-ink-3"><TeamBadge team={p.team} size={12} />{p.team}<MovedChip from={p.movedFrom} /> · {p.position}</span>
+                </span>
+              )}
+              onSelect={(p) => setSelected((s) => (s.length >= SCOUT_MAX ? s : [...s, p]))}
+              placeholder={pool.length ? `Search ${pool.length} players… (up to 4)` : 'Search player… (up to 4)'}
+              clearOnSelect
+            />
+          </div>
+        )}
       </div>
 
       {mode === 'discover' ? (
@@ -308,22 +330,6 @@ export default function Scouting() {
         )
       ) : (
       <>
-      <div className="mb-4">
-        <SearchBox
-          items={pool.filter((p) => !selected.some((s) => s.element === p.element))}
-          getLabel={(p) => p.web_name}
-          renderItem={(p) => (
-            <span className="flex w-full items-center justify-between gap-2">
-              <span>{p.web_name}</span>
-              <span className="flex items-center gap-1.5 text-xs text-ink-3"><TeamBadge team={p.team} size={12} />{p.team}<MovedChip from={p.movedFrom} /> · {p.position}</span>
-            </span>
-          )}
-          onSelect={(p) => setSelected((s) => (s.length >= SCOUT_MAX ? s : [...s, p]))}
-          placeholder={pool.length ? `Search ${pool.length} eligible players… (up to 4)` : 'Search player… (up to 4)'}
-          clearOnSelect
-        />
-      </div>
-
       {selected.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">
           {selected.map((p, i) => (

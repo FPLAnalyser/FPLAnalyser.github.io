@@ -624,8 +624,14 @@ function AllTeamsTable({
     { key: 'xa', header: 'xA/game', tip: TOOLTIPS.team_xa as string, sortValue: (r) => perGame(r, 'team_xa'), cell: (r) => <span className="font-num tabular-nums">{fx(perGame(r, 'team_xa'), 2)}</span> },
     { key: 'finish', header: 'Finish Δ', tip: TOOLTIPS.finish_delta as string, sortValue: (r) => { const v = rt(r)?.finish_delta; return v == null ? -999 : v - meanFinish }, cell: (r) => { const v = rt(r)?.finish_delta; return <DeltaCell value={v == null ? null : v - meanFinish} /> } },
     { key: 'box', header: 'Box %', tip: TOOLTIPS.box_share as string, sortValue: (r) => rt(r)?.box_share ?? -1, cell: (r) => { const v = rt(r)?.box_share; return <span className="font-num tabular-nums">{v == null ? 'N/A' : `${Math.round(v * 100)}%`}</span> } },
-    { key: 'sp', header: 'Set-piece', tip: TOOLTIPS.set_piece_share as string, sortValue: (r) => rt(r)?.set_piece_share ?? -1, cell: (r) => { const rr = rt(r); if (!rr || rr.set_piece_share == null) return <span className="text-ink-3">—</span>; return <span className={`font-num tabular-nums ${rr.set_piece_threat ? 'font-semibold text-warn' : 'text-ink-2'}`}>{Math.round(rr.set_piece_share * 100)}%</span> } },
-    { key: 'pen', header: 'Penalty', tip: TOOLTIPS.pen_share as string, sortValue: (r) => rt(r)?.pen_share ?? -1, cell: (r) => { const rr = rt(r); if (!rr || rr.pen_share == null) return <span className="text-ink-3">—</span>; return <span className="font-num tabular-nums text-ink-2">{Math.round(rr.pen_share * 100)}%</span> } },
+    /* Set-piece and penalty read like Box % because they are the same kind of
+       number: a share of this club's xG, sortable, with no verdict attached.
+       Set-piece used to gild whichever clubs cleared the threat flag, which
+       put a highlight on four rows of a sortable column — the sort already
+       ranks them, and the colour only made the eye stop somewhere the data
+       had not asked it to. */
+    { key: 'sp', header: 'Set-piece', tip: TOOLTIPS.set_piece_share as string, sortValue: (r) => rt(r)?.set_piece_share ?? -1, cell: (r) => { const v = rt(r)?.set_piece_share; return v == null ? <span className="text-ink-3">—</span> : <span className="font-num tabular-nums">{Math.round(v * 100)}%</span> } },
+    { key: 'pen', header: 'Penalty', tip: TOOLTIPS.pen_share as string, sortValue: (r) => rt(r)?.pen_share ?? -1, cell: (r) => { const v = rt(r)?.pen_share; return v == null ? <span className="text-ink-3">—</span> : <span className="font-num tabular-nums">{Math.round(v * 100)}%</span> } },
   ]
 
   const defenceCols: Column<Row>[] = [
