@@ -6,13 +6,20 @@ import type { FixtureEaseRow, TeamRatingRow } from '../lib/types'
 
 // Club rating card built from our own Attack / Defence team ratings — the
 // same visual language as the player cards, applied to the 20 clubs.
+//
+// The surface is a hardcoded dark gradient in BOTH themes, so nothing inside
+// it may use the ink tokens: those flip with the theme, and in light mode
+// --ink is #1b1712 against a #211d16 card — the club's own name was rendering
+// at about 1.05:1, which is to say invisible. Everything here is therefore an
+// explicit light-on-dark value. The accent is safe because it is gold in
+// either theme.
 
 function StatBlock({ v, rank, label }: { v: number | null; rank: number | null; label: string }) {
   return (
     <div className="flex-1 rounded-xl border border-white/8 py-2.5 text-center">
-      <div className="font-display text-[30px] leading-none text-accent tabular-nums">{v ?? '—'}</div>
-      <div className="mt-1 text-[10px] font-semibold tracking-[0.1em] text-ink-2 uppercase">{label}</div>
-      {rank != null && <div className="text-[10px] text-ink-3">{ordinal(rank)}</div>}
+      <div className="font-display text-[30px] leading-none tabular-nums" style={{ color: '#e7c877' }}>{v ?? '—'}</div>
+      <div className="mt-1 text-[10px] font-semibold tracking-[0.1em] text-white/65 uppercase">{label}</div>
+      {rank != null && <div className="text-[10px] text-white/45">{ordinal(rank)}</div>}
     </div>
   )
 }
@@ -49,8 +56,8 @@ export function ClubCard({
       <div className="flex items-center gap-3">
         <TeamBadge team={team} size={40} />
         <div className="min-w-0">
-          <div className="truncate font-display text-[19px] leading-none text-ink uppercase">{teamLabel(team)}</div>
-          <div className="mt-1 text-[10px] font-semibold tracking-[0.1em] text-ink-3 uppercase">Premier League</div>
+          <div className="truncate font-display text-[19px] leading-none text-white uppercase">{teamLabel(team)}</div>
+          <div className="mt-1 text-[10px] font-semibold tracking-[0.1em] text-white/45 uppercase">Premier League</div>
         </div>
       </div>
 
@@ -60,19 +67,27 @@ export function ClubCard({
       </div>
 
       <div className="mt-3.5 flex flex-col gap-2">
-        <div className="flex items-center justify-between text-[11px]">
-          <span className="font-semibold tracking-[0.08em] text-ink-2 uppercase">Set-piece threat</span>
-          <span className="font-display text-sm" style={{ color: setPiece ? 'var(--accent)' : 'var(--ink-3)' }}>{setPiece ? 'High' : 'Low'}</span>
-        </div>
+        {/* A promoted club has no season for us to rate. "Set-piece threat:
+            Low" would be a claim about a side we have never measured, so the
+            card says what is true instead and leaves the fixtures to do the
+            work until GW1. */}
+        {season ? (
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="font-semibold tracking-[0.08em] text-white/65 uppercase">Set-piece threat</span>
+            <span className="font-display text-sm" style={{ color: setPiece ? '#e7c877' : 'rgba(255,255,255,.45)' }}>{setPiece ? 'High' : 'Low'}</span>
+          </div>
+        ) : (
+          <div className="text-[11px] text-white/50">No Premier League season to rate yet — ratings arrive once GW1 is played.</div>
+        )}
         {form != null && (
           <div className="flex items-center justify-between text-[11px]">
-            <span className="font-semibold tracking-[0.08em] text-ink-2 uppercase">Form · last 4</span>
-            <span className="font-display text-sm text-accent tabular-nums">{form}</span>
+            <span className="font-semibold tracking-[0.08em] text-white/65 uppercase">Form · last 4</span>
+            <span className="font-display text-sm tabular-nums" style={{ color: '#e7c877' }}>{form}</span>
           </div>
         )}
         {hasFix && (
           <div className="flex items-center justify-between gap-2 text-[11px]">
-            <span className="shrink-0 font-semibold tracking-[0.08em] text-ink-2 uppercase">Next</span>
+            <span className="shrink-0 font-semibold tracking-[0.08em] text-white/65 uppercase">Next</span>
             <FixtureChips fixtureEase={fixtureEase ?? []} team={team} n={4} />
           </div>
         )}

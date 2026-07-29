@@ -18,11 +18,11 @@ import { FixtureChips } from '../components/FixtureChips'
 import { TeamShotMap } from '../components/ShotMap'
 import { PageSkeleton } from '../components/Skeleton'
 import { Icon } from '../components/Icon'
-import { BestRuns } from '../components/BestRuns'
+import { BestRuns, RunsTimeline } from '../components/BestRuns'
 import { useCore } from '../lib/useData'
 import { bestRuns, useDiffScale } from '../lib/fixtureRuns'
 import { num, str, bool } from '../lib/rows'
-import { teamFullNames, teamLabel, TOOLTIPS } from '../lib/util'
+import { teamLabel, TOOLTIPS } from '../lib/util'
 import type { CoreData, FixtureEaseRow, RatingRow, Row, TeamRatingRow } from '../lib/types'
 
 function Tile({ value, label }: { value: ReactNode; label: string }) {
@@ -60,7 +60,11 @@ export default function Teams() {
   const { data, error: coreError } = useCore()
   const [params, setParams] = useSearchParams()
   const selected = params.get('team')
-  const [listView, setListView] = useState<'list' | 'map'>('list')
+  /* Cards, table and map are three views of the same twenty clubs, so only
+     one shows at a time. The page used to stack the card grid and the table
+     on top of each other, which meant scrolling past every club to reach a
+     list of every club. */
+  const [listView, setListView] = useState<'cards' | 'table' | 'map'>('cards')
 
   const teamMetrics = data?.teamMetrics ?? []
   const teamRatings = (data?.teamRatings ?? []) as TeamRatingRow[]
@@ -83,10 +87,22 @@ export default function Teams() {
     for (const r of teamRatings) if (r.window === '4gw') m.set(r.team, r)
     return m
   }, [teamRatings])
-  const clubOrder = useMemo(
-    () => [...ratingByTeam.values()].sort((a, b) => ((num(b, 'attack') ?? 0) + (num(b, 'defence') ?? 0)) - ((num(a, 'attack') ?? 0) + (num(a, 'defence') ?? 0))).map((r) => r.team),
-    [ratingByTeam],
-  )
+  /* Rated clubs first, best combined rating down; then anyone the ratings
+     build has nothing for. Promoted sides have no season to rate, and leaving
+     them out meant "All clubs" listed seventeen — a reader looking for
+     Coventry would conclude the site did not cover them. They appear with an
+     honest N/A and their fixtures instead. */
+  const clubOrder = useMemo(() => {
+    const rated = [...ratingByTeam.values()]
+      .sort((a, b) => ((num(b, 'attack') ?? 0) + (num(b, 'defence') ?? 0)) - ((num(a, 'attack') ?? 0) + (num(a, 'defence') ?? 0)))
+      .map((r) => r.team)
+    const seen = new Set(rated)
+    const rest = (data?.teams ?? [])
+      .map((t) => String(t.short_name))
+      .filter((t) => !seen.has(t))
+      .sort((a, b) => teamLabel(a).localeCompare(teamLabel(b)))
+    return [...rated, ...rest]
+  }, [ratingByTeam, data?.teams])
 
   const selectTeam = (team: string) => {
     setParams(team ? { team } : {})
@@ -104,7 +120,7 @@ export default function Teams() {
 
   const searchItems = seasonRows
     .map((r) => String(r.team))
-    .sort((a, b) => (teamFullNames[a] || a).localeCompare(teamFullNames[b] || b))
+    .sort((a, b) => teamLabel(a).localeCompare(teamLabel(b)))
 
   return (
     <PageShell>
@@ -128,27 +144,25 @@ export default function Teams() {
       <div className="mb-6">
         <SearchBox
           items={searchItems}
-          getLabel={(t) => teamFullNames[t] || t}
+          getLabel={(t) => teamLabel(t)}
           renderItem={(t) => (
             <span className="flex items-center gap-2">
               <TeamBadge team={t} size={18} />
-              {teamFullNames[t] || t}
+              {teamLabel(t)}
             </span>
           )}
           onSelect={selectTeam}
           placeholder="Search team name…"
-          initialValue={selected ? teamFullNames[selected] || selected : ''}
+          initialValue={selected ? teamLabel(selected) : ''}
         />
       </div>
 
       {selected && seasonByTeam.has(selected) ? (
         <div className="flex flex-col gap-4">
           <Exportable title={`${teamLabel(selected)} — the brief`}><TeamStory team={selected} data={data} /></Exportable>
-          <TeamReceipts
+          <ClubPage
             team={selected}
             data={data}
-            season={ratingByTeam.get(selected)}
-            gw4={gw4ByTeam.get(selected)}
             ratingByTeam={ratingByTeam}
             metricRows={teamMetrics.filter((t) => String(t.team) === selected)}
             ratingRows={teamRatings.filter((t) => t.team === selected)}
@@ -172,29 +186,46 @@ export default function Teams() {
             </p>
           </div>
           {fixtureEase.some((f) => f.team === selected) && (
-            <div className="rounded-2xl border border-line bg-surface-1/60 p-4">
-              <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Next fixtures</div>
-              <FixtureChips fixtureEase={fixtureEase} team={selected} n={6} />
-            </div>
+            <>
+              <div className="rounded-2xl border border-line bg-surface-1/60 p-4">
+                <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Next fixtures</div>
+                <FixtureChips fixtureEase={fixtureEase} team={selected} n={6} />
+              </div>
+              {/* The fixture list is published for every club, rated or not, so
+                  a promoted side still gets the part of the page that is real. */}
+              <SeasonRuns team={selected} data={data} fixtureEase={fixtureEase} />
+            </>
           )}
         </div>
       ) : (
         <>
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">All clubs</div>
-            <ViewChips options={[{ id: 'list', label: 'List' }, { id: 'map', label: 'Map' }]} active={listView} onChange={setListView} />
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">All clubs</div>
+              <p className="mt-0.5 text-xs text-ink-3">
+                {listView === 'cards'
+                  ? 'Ranked by Attack plus Defence. Tap a club for its brief, its season and its squad.'
+                  : listView === 'table'
+                    ? 'Every club on the numbers behind the ratings — sort any column.'
+                    : 'Attack against defence: the top right is a complete side, the bottom left a club with a problem at both ends.'}
+              </p>
+            </div>
+            <ViewChips
+              options={[{ id: 'cards', label: 'Cards' }, { id: 'table', label: 'Table' }, { id: 'map', label: 'Map' }]}
+              active={listView}
+              onChange={setListView}
+            />
           </div>
           {listView === 'map' ? (
             <TeamMap ratingByTeam={ratingByTeam} onTeam={selectTeam} />
+          ) : listView === 'table' ? (
+            <AllTeamsTable rows={seasonRows} ratingByTeam={ratingByTeam} onSelect={selectTeam} />
           ) : (
-            <>
-              <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {clubOrder.map((t) => (
-                  <ClubCard key={t} team={t} season={ratingByTeam.get(t)} gw4={gw4ByTeam.get(t)} fixtureEase={fixtureEase} onClick={() => selectTeam(t)} />
-                ))}
-              </div>
-              <AllTeamsTable rows={seasonRows} ratingByTeam={ratingByTeam} onSelect={selectTeam} />
-            </>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {clubOrder.map((t) => (
+                <ClubCard key={t} team={t} season={ratingByTeam.get(t)} gw4={gw4ByTeam.get(t)} fixtureEase={fixtureEase} onClick={() => selectTeam(t)} />
+              ))}
+            </div>
           )}
         </>
       )}
@@ -202,52 +233,40 @@ export default function Teams() {
   )
 }
 
-/** The folded receipts: the club dashboard and squad tables, stated once
- * behind tabs so the brief above stays the page. */
-function TeamReceipts({ team, data, season, gw4, ratingByTeam, metricRows, ratingRows, ratings, fixtureEase }: {
+/** Everything below the brief.
+ *
+ *  This used to open on a "Club dashboard" tab whose first element was a
+ *  ClubCard of the club you had just clicked into — Attack, Defence and
+ *  set-piece threat, all three of which the stadium banner states in its top
+ *  corner and the brief states again in its first sentence. Four statements of
+ *  the same three numbers is what made the page feel like a repeat, so the
+ *  card and the tabs are gone. What is left is the three things the page
+ *  alone can say: the next match, the whole season's fixtures, and the squad.
+ */
+function ClubPage({ team, data, ratingByTeam, metricRows, ratingRows, ratings, fixtureEase }: {
   team: string
   data: CoreData
-  season: TeamRatingRow | undefined
-  gw4: TeamRatingRow | undefined
   ratingByTeam: Map<string, TeamRatingRow>
   metricRows: Row[]
   ratingRows: TeamRatingRow[]
   ratings: RatingRow[]
   fixtureEase: FixtureEaseRow[]
 }) {
-  const [tab, setTab] = useState<'dashboard' | 'squad'>('dashboard')
   return (
-    <div>
-      <div className="mb-1 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Receipts</div>
-      <div className="mb-3 flex flex-wrap gap-1.5">
-        {([['dashboard', 'Club dashboard'], ['squad', 'Squad & tables']] as const).map(([id, label]) => (
-          <button
-            key={id}
-            onClick={() => setTab(id)}
-            className={`min-h-9 rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${
-              tab === id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+    <div className="flex flex-col gap-5">
+      <div className="grid items-start gap-3 md:grid-cols-2">
+        <TeamMatchup team={team} ratingByTeam={ratingByTeam} fixtureEase={fixtureEase} />
+        <PointsMix team={team} data={data} />
       </div>
-      <Exportable title={`${teamLabel(team)} — ${tab === 'dashboard' ? 'club dashboard' : 'squad'}`}>
-      {tab === 'dashboard' ? (
-        <div className="grid items-start gap-3 md:grid-cols-2">
-          <ClubCard team={team} season={season} gw4={gw4} fixtureEase={fixtureEase} />
-          <div className="flex flex-col gap-3">
-            <TeamMatchup team={team} ratingByTeam={ratingByTeam} fixtureEase={fixtureEase} />
-            {/* When this club's good weeks actually fall — the half of the
-                fixture question a next-six ticker structurally cannot answer. */}
-            <SeasonRuns team={team} data={data} fixtureEase={fixtureEase} />
-            <PointsMix team={team} data={data} />
-          </div>
-        </div>
-      ) : (
-        <TeamCard team={team} metricRows={metricRows} ratingRows={ratingRows} ratings={ratings} fixtureEase={fixtureEase} />
-      )}
-      </Exportable>
+
+      <SeasonRuns team={team} data={data} fixtureEase={fixtureEase} />
+
+      <div>
+        <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Squad &amp; tables</div>
+        <Exportable title={`${teamLabel(team)} — squad`}>
+          <TeamCard team={team} metricRows={metricRows} ratingRows={ratingRows} ratings={ratings} />
+        </Exportable>
+      </div>
     </div>
   )
 }
@@ -259,11 +278,27 @@ function TeamReceipts({ team, data, season, gw4, ratingByTeam, metricRows, ratin
    favour. */
 function SeasonRuns({ team, data, fixtureEase }: { team: string; data: CoreData; fixtureEase: FixtureEaseRow[] }) {
   const scale = useDiffScale(data)
-  const runs = useMemo(() => bestRuns(fixtureEase, team, 'overall', scale), [fixtureEase, team, scale])
+  const mine = useMemo(() => fixtureEase.filter((f) => String(f.team) === team), [fixtureEase, team])
+  const runs = useMemo(() => bestRuns(mine, team, 'overall', scale), [mine, team, scale])
+  const gws = useMemo(() => [...new Set(mine.map((f) => f.gw))].sort((a, b) => a - b), [mine])
   if (!runs.length) return null
   return (
-    <Section title="Best Runs of the Season" hint={runs.length > 1 ? 'One each half' : 'Rest of season'}>
-      <BestRuns runs={runs} />
+    <Section
+      title="The season ahead"
+      hint={runs.length > 1 ? 'Best run in each half' : 'The kindest stretch left'}
+    >
+      {/* The same strip the Fixtures page draws for all twenty clubs, for one
+          of them. The old version here showed only the highlighted weeks,
+          which answered "when is the run" without ever showing what it is a
+          run against — you could not see that GW11 is the wall it ends at. */}
+      <RunsTimeline
+        fixtureEase={mine}
+        runs={runs.map((r) => ({ team, ...r }))}
+        gws={gws}
+        lens="overall"
+        scale={scale}
+      />
+      <div className="mt-3"><BestRuns runs={runs} /></div>
     </Section>
   )
 }
@@ -290,10 +325,10 @@ const TEAM_LIST_TABS: TabDef[] = [
 const teamCell = (r: Row): ReactNode => (
   <span className="flex items-center gap-2 font-medium text-ink">
     <TeamBadge team={String(r.team)} size={20} />
-    {teamFullNames[String(r.team)] || String(r.team)}
+    {teamLabel(String(r.team))}
   </span>
 )
-const teamSort = (r: Row) => teamFullNames[String(r.team)] || String(r.team)
+const teamSort = (r: Row) => teamLabel(String(r.team))
 const fx = (v: number | null, d = 1) => (v == null ? 'N/A' : Number(v).toFixed(d))
 
 function AllTeamsTable({
@@ -389,13 +424,11 @@ function TeamCard({
   metricRows,
   ratingRows,
   ratings,
-  fixtureEase,
 }: {
   team: string
   metricRows: Row[]
   ratingRows: TeamRatingRow[]
   ratings: RatingRow[]
-  fixtureEase: FixtureEaseRow[]
 }) {
   const [win, setWin] = useState<WinId>('season')
 
@@ -436,14 +469,12 @@ function TeamCard({
     return { segments: top5.map((p) => ({ label: p.name, value: p.pts })), rest, hasData: total > 0 }
   }, [teamPlayers])
 
-  const upcoming = fixtureEase.filter((f) => f.team === team)
-
   return (
     <div className="rounded-xl border border-line bg-surface-1/50 p-5 md:p-6">
       {/* Header */}
       <div className="mb-5 flex flex-wrap items-center gap-4">
         <TeamBadge team={team} size={56} />
-        <div className="text-2xl font-extrabold tracking-tight text-ink">{teamFullNames[team] || team}</div>
+        <div className="text-2xl font-extrabold tracking-tight text-ink">{teamLabel(team)}</div>
         {rating?.set_piece_threat && (
           <span
             className="inline-flex items-center gap-1.5 rounded-full border border-warn/40 bg-warn/10 px-2.5 py-1 text-xs font-semibold text-warn"
@@ -531,17 +562,6 @@ function TeamCard({
           />
         </Section>
       </div>
-
-      {/* Upcoming fixtures with a graceful empty state */}
-      <Section title="Upcoming Fixtures">
-        {upcoming.length ? (
-          <FixtureChips fixtureEase={fixtureEase} team={team} n={6} />
-        ) : (
-          <div className="rounded-lg border border-dashed border-line bg-surface-1 px-3 py-3 text-sm text-ink-3">
-            No upcoming fixtures yet — the next fixture list populates when the new season schedule lands.
-          </div>
-        )}
-      </Section>
 
       {/* Squad */}
       <Section title="Squad">
