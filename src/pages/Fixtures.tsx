@@ -1,5 +1,5 @@
 import { Fragment, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PageShell, EmptyState } from '../components/PageShell'
 import { SectionBanner } from '../components/SectionBanner'
 import { Tabs, type TabDef } from '../components/Tabs'
@@ -253,7 +253,19 @@ function profileOf(shots: Row[], withHead: boolean): Profile {
 
 export default function Fixtures() {
   const { data, error: coreError } = useCore()
-  const [view, setView] = useState<View>('difficulty')
+  /* The tab and the rotation pair live in the URL so another page can send you
+     straight to a working planner. Teams' rotation-partner cards link here
+     with both clubs already picked, which is the difference between naming a
+     partner and letting you see the rotation. */
+  const [params, setParams] = useSearchParams()
+  const view = (params.get('view') as View) || 'difficulty'
+  const setView = (v: View) => {
+    const next = new URLSearchParams(params)
+    if (v === 'difficulty') next.delete('view')
+    else next.set('view', v)
+    if (v !== 'rotation') next.delete('rot')
+    setParams(next, { replace: true })
+  }
   // Six on every screen. The grid scrolls sideways on a phone, which is a
   // smaller cost than opening two different people on two different windows
   // and having them compare notes.
@@ -430,7 +442,13 @@ export default function Fixtures() {
         )
       ) : view === 'rotation' ? (
         hasFixtures ? (
-          <RotationPlanner ratings={data.ratings as RatingRow[]} fixtureEase={fixtureEase} baselines={baselines} leagueBase={leagueBase} />
+          <RotationPlanner
+            ratings={data.ratings as RatingRow[]}
+            fixtureEase={fixtureEase}
+            baselines={baselines}
+            leagueBase={leagueBase}
+            initialTeams={(params.get('rot') ?? '').split(',').filter(Boolean)}
+          />
         ) : (
           <EmptyState icon={<Icon name="calendar" size={44} />}>The rotation planner switches on when the fixtures are published.</EmptyState>
         )
@@ -611,10 +629,17 @@ const mean = (ds: number[]) => (ds.length ? ds.reduce((a, b) => a + b, 0) / ds.l
    chosen lens. You set how many teams are in the rotation (N) and how many you
    actually start each week (K) — every gameweek we start the K with the kindest
    fixtures. With nothing picked we surface the best-rotating groups of size N. */
-function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase }: { ratings: RatingRow[]; fixtureEase: FixtureEaseRow[]; baselines: Map<string, TeamBase>; leagueBase: TeamBase }) {
+function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialTeams = [] }: {
+  ratings: RatingRow[]
+  fixtureEase: FixtureEaseRow[]
+  baselines: Map<string, TeamBase>
+  leagueBase: TeamBase
+  /** Clubs to open with, from ?rot= — a deep link from a club's page. */
+  initialTeams?: string[]
+}) {
   const market = useMarketOdds()
   const diffScale = useMemo(() => buildDiffScale(baselines), [baselines])
-  const [teams, setTeams] = useState<string[]>([])
+  const [teams, setTeams] = useState<string[]>(initialTeams)
   // Ruled out entirely. Separate from "not picked": a club you already own a
   // player from, or one you refuse to buy into, should never be offered as
   // half of a suggested pair.

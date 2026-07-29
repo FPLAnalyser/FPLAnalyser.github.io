@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { TeamBadge } from './badges'
+import { Icon } from './Icon'
 import { analyserDiff, diffFill, type DiffScale, type SeasonRun } from '../lib/fixtureRuns'
 import { num } from '../lib/rows'
 import { teamLabel } from '../lib/util'
@@ -71,15 +73,27 @@ export function BestRunCards({ runs, className = '' }: { runs: SeasonRun[]; clas
   )
 }
 
+/** One gameweek of the pair, already decided: who you start and against whom. */
+export interface RotWeek {
+  gw: number
+  /** The club whose fixture is kinder this week. */
+  start: string
+  opponent: string
+  venue: 'H' | 'A'
+  diff: number
+  /** True where this is one of the base club's awkward weeks. */
+  rescued: boolean
+}
+
 export interface Partner {
   team: string
   /** Total difficulty removed across this club's hard weeks. */
   cover: number
   /** How many of the hard weeks the partner is genuinely easier in. */
   weeks: number
-  /** The hard gameweeks it covers, for the chips. */
-  gws: number[]
   hard: number
+  /** The rotation itself, week by week — the thing you actually act on. */
+  run: RotWeek[]
 }
 
 const HARD = 3.2   // above this on the 1–5 scale, a week is worth covering
@@ -111,25 +125,49 @@ export function rotationPartners(
     m.set(f.gw, Math.min(m.get(f.gw) ?? Infinity, d))
   }
 
+  // The opponent and venue of each club's kindest fixture in a week, so the
+  // run can name the game rather than only score it.
+  const meta = new Map<string, Map<number, { opp: string; venue: 'H' | 'A' }>>()
+  for (const f of fixtureEase) {
+    const t = String(f.team)
+    const d = diffOf(f)
+    if ((byTeam.get(t)?.get(f.gw) ?? Infinity) !== d) continue
+    if (!meta.has(t)) meta.set(t, new Map())
+    meta.get(t)!.set(f.gw, { opp: String(f.opponent), venue: String(f.venue) === 'H' ? 'H' : 'A' })
+  }
+
   const mine = byTeam.get(team)
   if (!mine) return []
   const gws = [...mine.keys()].filter((g) => g >= fromGw).sort((a, b) => a - b).slice(0, HORIZON)
   // A blank counts as maximally hard: no fixture is the worst fixture.
-  const hardGws = gws.filter((g) => (mine.get(g) ?? 5) >= HARD)
-  if (!hardGws.length) return []
+  const hardSet = new Set(gws.filter((g) => (mine.get(g) ?? 5) >= HARD))
+  if (!hardSet.size) return []
 
   const out: Partner[] = []
   for (const [other, theirs] of byTeam) {
     if (other === team) continue
     let cover = 0
-    const covered: number[] = []
-    for (const g of hardGws) {
+    let weeks = 0
+    const run: RotWeek[] = []
+    for (const g of gws) {
       const mineD = mine.get(g) ?? 5
       const theirD = theirs.get(g) ?? 5
-      const gain = mineD - theirD
-      if (gain > 0.3) { cover += gain; covered.push(g) }
+      const rescued = hardSet.has(g) && mineD - theirD > 0.3
+      if (rescued) { cover += mineD - theirD; weeks++ }
+      // Start whichever has the kinder game — the rotation, decided.
+      const startTheirs = theirD < mineD
+      const club = startTheirs ? other : team
+      const m = meta.get(club)?.get(g)
+      run.push({
+        gw: g,
+        start: club,
+        opponent: m?.opp ?? '—',
+        venue: m?.venue ?? 'H',
+        diff: startTheirs ? theirD : mineD,
+        rescued,
+      })
     }
-    if (covered.length) out.push({ team: other, cover, weeks: covered.length, gws: covered, hard: hardGws.length })
+    if (weeks) out.push({ team: other, cover, weeks, hard: hardSet.size, run })
   }
   return out.sort((a, b) => b.cover - a.cover).slice(0, 3)
 }
@@ -149,10 +187,10 @@ export function RotationPartners({ fixtureEase, team, scale, fromGw, className =
     <div className={className}>
       <p className="mb-2.5 max-w-[80ch] text-sm text-ink-2">
         {teamLabel(team)} have <b className="text-ink">{hard}</b> awkward {hard === 1 ? 'week' : 'weeks'} in the next {HORIZON}.
-        These three clubs are the kindest across exactly those weeks — pair one with a {teamLabel(team)} player and start
-        whichever has the better game.
+        These three clubs are the kindest across exactly those weeks. Each card shows the rotation itself — who you start
+        each gameweek and against whom.
       </p>
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid gap-2.5 lg:grid-cols-3">
         {partners.map((p, i) => (
           <div key={p.team} className="rounded-xl border border-line bg-surface-1 p-3">
             <div className="flex items-center gap-2">
@@ -163,11 +201,34 @@ export function RotationPartners({ fixtureEase, team, scale, fromGw, className =
             <div className="mt-1.5 text-[12px] text-ink-2">
               Covers <b className="text-ink">{p.weeks}</b> of {p.hard} · <b className="text-ink">{p.cover.toFixed(1)}</b> difficulty removed
             </div>
-            <div className="mt-1.5 flex flex-wrap gap-1">
-              {p.gws.map((g) => (
-                <span key={g} className="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-bold text-ink-2">GW{g}</span>
-              ))}
+
+            {/* The run, decided week by week. Naming a partner without showing
+                the weeks leaves the reader to do the pairing by hand, which is
+                the work they came here to have done. A ring marks the weeks
+                where the partner is the reason the rotation is worth owning. */}
+            <div className="mt-2.5 overflow-x-auto">
+              <div className="flex gap-1">
+                {p.run.map((w) => (
+                  <div
+                    key={w.gw}
+                    title={`GW${w.gw} · start ${teamLabel(w.start)} ${w.venue === 'H' ? 'at home to' : 'away at'} ${w.opponent} · difficulty ${w.diff.toFixed(1)}`}
+                    className={`min-w-[42px] flex-1 rounded-md px-1 py-1 text-center ${w.rescued ? 'ring-1 ring-accent' : ''}`}
+                    style={{ background: diffFill(w.diff) }}
+                  >
+                    <span className="block text-[8.5px] leading-none font-bold text-ink-2">GW{w.gw}</span>
+                    <span className="mt-0.5 block text-[10px] leading-none font-extrabold text-ink">{w.start}</span>
+                    <span className="mt-0.5 block text-[8.5px] leading-none text-ink-2">{w.opponent}{w.venue === 'H' ? '' : ' (a)'}</span>
+                  </div>
+                ))}
+              </div>
             </div>
+
+            <Link
+              to={`/fixtures?view=rotation&rot=${team},${p.team}`}
+              className="mt-2.5 inline-flex min-h-8 items-center gap-1 text-[12px] font-semibold text-accent hover:underline"
+            >
+              Open in the rotation planner <Icon name="chevron-right" size={13} />
+            </Link>
           </div>
         ))}
       </div>

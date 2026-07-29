@@ -13,6 +13,11 @@ export interface Column<T> {
   align?: 'left' | 'right' | 'center'
   /** Sticky first column on mobile (defaults true for the first column). */
   sticky?: boolean
+  /** Squeeze the horizontal padding and hide the tooltip on a phone.
+   *  For columns whose content is one or two characters — a rank number was
+   *  taking 61px of a 390px screen because the header carried an info icon
+   *  and a sort arrow at full padding. */
+  narrow?: boolean
 }
 
 interface Props<T> {
@@ -75,7 +80,7 @@ export function SortableTable<T>({ rows, columns, initialSort, initialDir = 'des
                 <th
                   key={col.key}
                   onClick={() => onHeaderClick(col)}
-                  className={`px-2.5 py-3 text-[10px] font-semibold tracking-[0.08em] whitespace-nowrap text-ink-3 uppercase md:px-4 md:py-3.5 md:text-[11px] md:tracking-[0.1em] ${alignClass[col.align ?? (i === 0 ? 'left' : 'right')]} ${
+                  className={`${col.narrow ? 'px-1' : 'px-2.5'} py-3 text-[10px] font-semibold tracking-[0.08em] whitespace-nowrap text-ink-3 uppercase md:px-4 md:py-3.5 md:text-[11px] md:tracking-[0.1em] ${alignClass[col.align ?? (i === 0 ? 'left' : 'right')]} ${
                     col.sortValue ? 'cursor-pointer select-none hover:text-ink-2' : ''
                   } ${isSticky ? 'sticky left-0 z-10 bg-surface-1' : ''}`}
                 >
@@ -85,7 +90,7 @@ export function SortableTable<T>({ rows, columns, initialSort, initialDir = 'des
                     }`}
                   >
                     {col.header}
-                    {col.tip && <InfoTip text={col.tip} />}
+                    {col.tip && <span className={col.narrow ? 'hidden md:inline-flex' : 'inline-flex'}><InfoTip text={col.tip} /></span>}
                     {active && <span className="text-accent">{dir === 'asc' ? '▲' : '▼'}</span>}
                   </span>
                 </th>
@@ -109,7 +114,7 @@ export function SortableTable<T>({ rows, columns, initialSort, initialDir = 'des
                   return (
                     <td
                       key={col.key}
-                      className={`px-2.5 py-3 md:px-4 md:py-4 ${alignClass[col.align ?? (i === 0 ? 'left' : 'right')]} ${
+                      className={`${col.narrow ? 'px-1' : 'px-2.5'} py-3 md:px-4 md:py-4 ${alignClass[col.align ?? (i === 0 ? 'left' : 'right')]} ${
                         isSticky ? 'sticky left-0 z-10 bg-bg-0' : ''
                       } ${isLeader && i === 0 ? 'shadow-[inset_2px_0_0_var(--accent)]' : ''}`}
                     >

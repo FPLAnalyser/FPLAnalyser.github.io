@@ -56,6 +56,7 @@ function rankCol(): Column<Row> {
     key: 'rank',
     header: '#',
     align: 'left',
+    narrow: true,
     tip: "Position in this ranking, ordered by the tab's headline metric.",
     sortValue: (r) => num(r, '_rank'),
     cell: (r) => <span className="font-num text-ink-3 tabular-nums">{num(r, '_rank')}</span>,

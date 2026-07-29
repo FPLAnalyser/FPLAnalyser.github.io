@@ -346,16 +346,21 @@ export default function Preview() {
                     </div>
                     <div className="flex items-center gap-2.5">
                       <Club team={m.h} rec={avail.table.get(m.hid)} big={feat} />
-                      <span className="flex-1 text-center">
-                        <span className={`block font-num leading-none font-extrabold ${feat ? 'text-[22px] sm:text-[34px]' : 'text-[20px] sm:text-[26px]'} ${xgTone(m.lh, m.la)}`}>{m.lh.toFixed(2)}</span>
-                        <span className="mt-1 block text-[9.5px] font-extrabold tracking-[0.14em] text-ink-3">xG</span>
+                      {/* The unit sits on the baseline beside the number, as
+                          it does on the captain podium — a whole line of card
+                          height for two characters is a poor trade, and it
+                          buys back the vertical room the card needs on a
+                          phone. */}
+                      <span className="flex flex-1 items-baseline justify-center gap-1">
+                        <span className={`font-num leading-none font-extrabold ${feat ? 'text-[22px] sm:text-[34px]' : 'text-[20px] sm:text-[26px]'} ${xgTone(m.lh, m.la)}`}>{m.lh.toFixed(2)}</span>
+                        <span className="text-[9.5px] font-extrabold tracking-[0.14em] text-ink-3">xG</span>
                       </span>
                       <span className="rounded bg-black/35 px-2 py-1 text-[12px] font-extrabold whitespace-nowrap text-ink-2">
                         {m.k ? TIME.format(new Date(m.k)) : 'v'}
                       </span>
-                      <span className="flex-1 text-center">
-                        <span className={`block font-num leading-none font-extrabold ${feat ? 'text-[22px] sm:text-[34px]' : 'text-[20px] sm:text-[26px]'} ${xgTone(m.la, m.lh)}`}>{m.la.toFixed(2)}</span>
-                        <span className="mt-1 block text-[9.5px] font-extrabold tracking-[0.14em] text-ink-3">xG</span>
+                      <span className="flex flex-1 items-baseline justify-center gap-1">
+                        <span className={`font-num leading-none font-extrabold ${feat ? 'text-[22px] sm:text-[34px]' : 'text-[20px] sm:text-[26px]'} ${xgTone(m.la, m.lh)}`}>{m.la.toFixed(2)}</span>
+                        <span className="text-[9.5px] font-extrabold tracking-[0.14em] text-ink-3">xG</span>
                       </span>
                       <Club team={m.a} rec={avail.table.get(m.aid)} big={feat} right />
                     </div>
