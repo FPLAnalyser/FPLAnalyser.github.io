@@ -10,7 +10,12 @@ import { useSeason } from '../lib/season'
 import { useLazyTable } from '../lib/useData'
 import type { FixtureEaseRow, RatingRow, Row } from '../lib/types'
 
-/* ════════════════════════════════════════════════════════════════════════
+/* PARKED, not dead: nothing imports this yet. It came off the Players page
+   because it reports on a gameweek that has been played, which is a different
+   job from the leaderboards it sat among. It is waiting for the gameweek
+   review to be built, which is where it belongs.
+
+   ════════════════════════════════════════════════════════════════════════
    Team of the Week — what actually happened in the last finished gameweek,
    per player, from gameweek_stats.json (goals, assists, bonus, xG, xA and
    the points they returned), with a weekly rating, drawn on the Squad

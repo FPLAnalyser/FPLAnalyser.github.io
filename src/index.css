@@ -42,20 +42,20 @@
      values are darker than instinct suggests — a lighter gold sails past the
      top of the dark band and starts to glare. */
   --series-1: #a8801a; --series-2: #2f6fe0;   /* light-mode default */
-  /* Podium: the top three of an ordered share bar.
-     These three are metals, not hues, and that is deliberate. As flat fills a
-     gold and a silver sit about 13.7 apart in OKLab on the dark surface —
-     under the 15 floor, which means "hard to tell apart even with full colour
-     vision". There is no way round that in the dark theme's narrow lightness
-     band: gold, silver and bronze are three warm-to-neutral tones in a row
-     with nowhere to spread. So they are given real foil sweeps instead, which
-     the eye separates by sheen and direction the way it separates actual
-     medals, and the bar's legend carries the identity regardless — numbered
-     1–5, named, with the percentage. Slots 4 and 5 ARE flat, and they are
-     validated: 18.6 apart normal, 10.0 under deuteranopia, both over 3:1. */
-  --podium-1: linear-gradient(150deg, #7d6320 0%, #c9a227 38%, #f0dda2 62%, #8a6f22 100%);
-  --podium-2: linear-gradient(150deg, #5e666e 0%, #9aa4b0 38%, #e3e8ee 62%, #6b737c 100%);
-  --podium-3: linear-gradient(150deg, #5e3312 0%, #a05a26 38%, #d9975a 62%, #6b3a15 100%);
+  /* Podium: the slots of an ordered top-five — gold, silver, bronze, then
+     two richer hues, with the rest of the field left on the track colour.
+     Flat fills, deliberately: an earlier pass used foil sweeps because gold
+     and silver as flat colour sit about 14 apart in OKLab on the dark surface,
+     just under the 15 mark where two fills get hard to tell apart even with
+     full colour vision. Flat is the call, and it is a safe one here because
+     colour is never the only channel: the legend is numbered one to five,
+     names each player and states the percentage.
+
+     These are the best-separating flat set found by sweeping candidate golds,
+     silvers, bronzes and accents through the palette checks. Light passes
+     everything bar the chroma floor on silver, which no silver can clear —
+     silver IS grey — and holds 16.5 between its closest pair. */
+  --podium-1: #d9ae2e; --podium-2: #9aa0a6; --podium-3: #8a4418;
   --podium-4: #2563c9; --podium-5: #8e3b86;
   --font-ui: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-num: 'Manrope', system-ui, sans-serif;
@@ -68,7 +68,8 @@
   --bg-0: #000000; --bg-1: #070605;
   --surface-1: #16130e; --surface-2: #201b13; --surface-3: #2a2318;
   --series-1: #b08c26; --series-2: #4f8ce8;   /* validated against #16130e */
-  --podium-4: #3e7bd6; --podium-5: #a24a9a;   /* validated against #16130e */
+  --podium-1: #b08c26; --podium-2: #9aa0a6; --podium-3: #9a4e1c;
+  --podium-4: #3e7bd6; --podium-5: #a24a9a;   /* stepped for #16130e */
   --surface-glass: rgba(16, 13, 9, 0.74);
   /* ink-3 carries most of the site's small print — the uppercase micro-labels
      above every tile, the supporting sentence under every figure. At #6c655a

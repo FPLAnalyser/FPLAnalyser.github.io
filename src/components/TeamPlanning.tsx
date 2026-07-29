@@ -48,7 +48,7 @@ export function BestRunCards({ runs, className = '' }: { runs: SeasonRun[]; clas
               <span className={`text-[11px] font-bold ${tone}`}>{word}</span>
             </div>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="font-display text-[28px] leading-none font-bold text-ink tabular-nums">GW{run.from}–{run.to}</span>
+              <span className="font-display text-[20px] leading-none font-bold text-ink tabular-nums">GW{run.from}–{run.to}</span>
               <span className="text-[12px] text-ink-3">{run.fixtures.length} games</span>
             </div>
             <div className="mt-1.5 text-[12px] text-ink-2">
@@ -59,10 +59,10 @@ export function BestRunCards({ runs, className = '' }: { runs: SeasonRun[]; clas
                 <span
                   key={`${f.gw}-${f.opponent}-${i}`}
                   title={`GW${f.gw} · ${f.venue === 'H' ? 'home to' : 'away at'} ${f.opponent} · difficulty ${f.diff.toFixed(1)}`}
-                  className="rounded-[5px] px-1.5 py-1 text-[10.5px] leading-none font-bold text-ink"
+                  className="rounded-md px-2 py-1.5 text-[13px] leading-none font-bold text-ink"
                   style={{ background: diffFill(f.diff) }}
                 >
-                  {f.opponent}<span className="ml-0.5 text-ink-2">{f.venue}</span>
+                  {f.opponent}<span className="ml-1 text-[11px] text-ink-2">{f.venue}</span>
                 </span>
               ))}
             </div>
@@ -212,12 +212,25 @@ export function RotationPartners({ fixtureEase, team, scale, fromGw, className =
                   <div
                     key={w.gw}
                     title={`GW${w.gw} · start ${teamLabel(w.start)} ${w.venue === 'H' ? 'at home to' : 'away at'} ${w.opponent} · difficulty ${w.diff.toFixed(1)}`}
-                    className={`min-w-[42px] flex-1 rounded-md px-1 py-1 text-center ${w.rescued ? 'ring-1 ring-accent' : ''}`}
+                    className={`min-w-[46px] flex-1 rounded-md px-1 py-1.5 text-center ${w.rescued ? 'ring-1 ring-accent' : ''}`}
                     style={{ background: diffFill(w.diff) }}
                   >
                     <span className="block text-[8.5px] leading-none font-bold text-ink-2">GW{w.gw}</span>
-                    <span className="mt-0.5 block text-[10px] leading-none font-extrabold text-ink">{w.start}</span>
-                    <span className="mt-0.5 block text-[8.5px] leading-none text-ink-2">{w.opponent}{w.venue === 'H' ? '' : ' (a)'}</span>
+                    {/* The opponent is the headline, because the fixture is
+                        what you are judging. Whose fixture it is comes second,
+                        as a crest — you read the badge faster than a code, and
+                        it stops the cell being two three-letter abbreviations
+                        stacked on each other with no way to tell them apart. */}
+                    <span className="mt-1 block text-[12px] leading-none font-extrabold text-ink">
+                      {w.opponent}{w.venue === 'H' ? '' : ' (a)'}
+                    </span>
+                    <span className="mt-1 flex justify-center">
+                      <TeamBadge
+                        team={w.start}
+                        size={15}
+                        fallback={<span className="text-[9px] leading-none font-bold text-ink-2">{w.start}</span>}
+                      />
+                    </span>
                   </div>
                 ))}
               </div>

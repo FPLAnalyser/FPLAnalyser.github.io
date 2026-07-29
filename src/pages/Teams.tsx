@@ -165,7 +165,10 @@ export default function Teams() {
         <SectionBanner imgKey="teams" title="Teams" subtitle="Search for a team to see their metrics and player ratings" />
       )}
 
-      <div className="mb-6">
+      {/* Tight to what follows. Twenty-four pixels under a search box that is
+          itself sixteen from the banner left a band of nothing across the top
+          of every club page. */}
+      <div className="mb-3">
         <SearchBox
           items={searchItems}
           getLabel={(t) => teamLabel(t)}

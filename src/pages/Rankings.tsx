@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
 import { SectionBanner } from '../components/SectionBanner'
-import { TeamOfTheWeek } from '../components/TeamOfTheWeek'
 import { Tabs, PillGroup, type TabDef } from '../components/Tabs'
 import { SortableTable, type Column } from '../components/SortableTable'
 import { StarRating } from '../components/StarRating'
@@ -39,7 +38,9 @@ const TABS: TabDef[] = [
   { id: 'value', label: 'Value Picks', icon: <Icon name="coin" size={13} /> },
   { id: 'form', label: 'Form', icon: <span className="text-hot"><Icon name="flame" size={13} solid /></span> },
   { id: 'transfers', label: 'Transfers', icon: <Icon name="trend-up" size={13} /> },
-  { id: 'totw', label: 'Team of the Week', icon: <Icon name="trophy" size={13} /> },
+  // Team of the Week has left this page. It reports on a gameweek that has
+  // been played, which is a different job from the leaderboards around it —
+  // it belongs in the gameweek review, and will move there when that is built.
 ]
 
 /** Horizons the xPoints board projects over. Four is the transfer question,
@@ -671,8 +672,8 @@ export default function Rankings() {
     )
   }
 
-  const showSearch = tab !== 'form' && tab !== 'totw'
-  const showFilters = tab !== 'totw'
+  const showSearch = tab !== 'form'
+  const showFilters = true
 
   return (
     <PageShell>
@@ -778,7 +779,7 @@ export default function Rankings() {
         />
       )}
 
-      {viewMode === 'compare' && tab !== 'totw' ? (
+      {viewMode === 'compare' ? (
         (() => {
           // Single-position tabs (Goalkeepers, Clean Sheets) imply the
           // position even though their pill filter is hidden.
@@ -815,8 +816,6 @@ export default function Rankings() {
         </>
           )
         })()
-      ) : tab === 'totw' ? (
-        <TeamOfTheWeek ratings={ratings} currentGw={data.meta?.current_gw ?? null} fixtureEase={data.fixtureEase} onPlayer={toPlayer} />
       ) : tab === 'form' ? (
         <FormTables rows={seasonToDate} pos={pos} onPlayer={toPlayer} />
       ) : view ? (

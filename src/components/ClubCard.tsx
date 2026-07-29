@@ -15,12 +15,27 @@ import type { FixtureEaseRow, TeamRatingRow } from '../lib/types'
 // explicit light-on-dark value. The accent is safe because it is gold in
 // either theme.
 
+/* The number takes the colour of the position it holds in the league: gold
+ * for first, silver for second, bronze for third, and the house gold below
+ * that. Twenty clubs all printing the same gold said nothing; a podium colour
+ * says "this is the best attack in the division" before you have read the
+ * rank underneath it.
+ *
+ * Fixed values rather than the --podium tokens: this card is a hardcoded dark
+ * gradient in both themes, and the tokens step per mode for their own surface.
+ * These are the dark steps, which is what this card always is. */
+const MEDAL: Record<number, string> = { 1: '#e6c04f', 2: '#c6ccd4', 3: '#c07a3c' }
+const HOUSE = '#b08c26'
+
 function StatBlock({ v, rank, label }: { v: number | null; rank: number | null; label: string }) {
+  const colour = rank != null ? (MEDAL[rank] ?? HOUSE) : HOUSE
   return (
     <div className="flex-1 rounded-xl border border-white/8 py-2.5 text-center">
-      <div className="font-display text-[30px] leading-none tabular-nums" style={{ color: '#e7c877' }}>{v ?? '—'}</div>
+      <div className="font-display text-[30px] leading-none tabular-nums" style={{ color: colour }}>{v ?? '—'}</div>
       <div className="mt-1 text-[10px] font-semibold tracking-[0.1em] text-white/65 uppercase">{label}</div>
-      {rank != null && <div className="text-[10px] text-white/45">{ordinal(rank)}</div>}
+      {rank != null && (
+        <div className="text-[10px]" style={{ color: rank <= 3 ? colour : 'rgba(255,255,255,.45)' }}>{ordinal(rank)}</div>
+      )}
     </div>
   )
 }
