@@ -18,9 +18,11 @@ import { FixtureChips } from '../components/FixtureChips'
 import { TeamShotMap } from '../components/ShotMap'
 import { PageSkeleton } from '../components/Skeleton'
 import { Icon } from '../components/Icon'
+import { InfoTip } from '../components/InfoTip'
 import { BestRuns, RunsTimeline } from '../components/BestRuns'
-import { useCore } from '../lib/useData'
-import { bestRuns, useDiffScale } from '../lib/fixtureRuns'
+import { TeamFormChart, teamTrend, trendWords } from '../components/TeamFormChart'
+import { useCore, useLazyTable } from '../lib/useData'
+import { bestRuns, useDiffScale, windowGames } from '../lib/fixtureRuns'
 import { num, str, bool } from '../lib/rows'
 import { teamLabel, TOOLTIPS } from '../lib/util'
 import type { CoreData, FixtureEaseRow, RatingRow, Row, TeamRatingRow } from '../lib/types'
@@ -72,6 +74,28 @@ export default function Teams() {
   const fixtureEase = (data?.fixtureEase ?? []) as FixtureEaseRow[]
 
   const seasonRows = useMemo(() => teamMetrics.filter((t) => str(t, 'window') === 'season'), [teamMetrics])
+  /* The all-clubs table used to be handed season rows only, so its Attack and
+     Defence numbers could never answer "who is doing this NOW". Both feeds
+     carry season, 6gw and 4gw, so both get passed through and the table picks
+     a window. */
+  const metricsByWindow = useMemo(() => {
+    const m = new Map<string, Row[]>()
+    for (const r of teamMetrics) {
+      const w = str(r, 'window') ?? 'season'
+      if (!m.has(w)) m.set(w, [])
+      m.get(w)!.push(r)
+    }
+    return m
+  }, [teamMetrics])
+  const ratingsByWindow = useMemo(() => {
+    const m = new Map<string, Map<string, TeamRatingRow>>()
+    for (const r of teamRatings) {
+      const w = String(r.window)
+      if (!m.has(w)) m.set(w, new Map())
+      m.get(w)!.set(r.team, r)
+    }
+    return m
+  }, [teamRatings])
   const seasonByTeam = useMemo(() => {
     const m = new Map<string, Row>()
     for (const r of seasonRows) m.set(String(r.team), r)
@@ -199,6 +223,8 @@ export default function Teams() {
         </div>
       ) : (
         <>
+          <FormWatch data={data} metricsByWindow={metricsByWindow} onSelect={selectTeam} />
+
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">All clubs</div>
@@ -219,7 +245,7 @@ export default function Teams() {
           {listView === 'map' ? (
             <TeamMap ratingByTeam={ratingByTeam} onTeam={selectTeam} />
           ) : listView === 'table' ? (
-            <AllTeamsTable rows={seasonRows} ratingByTeam={ratingByTeam} onSelect={selectTeam} />
+            <AllTeamsTable data={data} metricsByWindow={metricsByWindow} ratingsByWindow={ratingsByWindow} onSelect={selectTeam} />
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {clubOrder.map((t) => (
@@ -230,6 +256,102 @@ export default function Teams() {
         </>
       )}
     </PageShell>
+  )
+}
+
+/* Who has changed, on the way in.
+   The club list answers "who is good". Arriving at it you cannot see who is
+   different from how they were, which is the thing that actually moves a
+   transfer. This compares each club's last four gameweeks against its season
+   and names the clubs that have moved most in either direction.
+
+   Per game on both sides of the comparison, obviously: a four-gameweek total
+   against a season total would rank every club as collapsing. */
+const MOVE_MIN = 0.2   // xG/game. Below this a "shift" is a couple of shots.
+
+function FormWatch({ data, metricsByWindow, onSelect }: {
+  data: CoreData
+  metricsByWindow: Map<string, Row[]>
+  onSelect: (team: string) => void
+}) {
+  const moves = useMemo(() => {
+    const per = (r: Row | undefined, key: string) => {
+      if (!r) return null
+      const v = num(r, key)
+      const g = windowGames(r, data)
+      return v == null || g <= 0 ? null : v / g
+    }
+    const recent = new Map((metricsByWindow.get('4gw') ?? []).map((r) => [String(r.team), r]))
+    const out: { team: string; xg: number | null; xgc: number | null }[] = []
+    for (const r of metricsByWindow.get('season') ?? []) {
+      const team = String(r.team)
+      const now = recent.get(team)
+      if (!now) continue
+      const xgS = per(r, 'team_xg'), xgN = per(now, 'team_xg')
+      const gcS = per(r, 'team_xgc'), gcN = per(now, 'team_xgc')
+      out.push({
+        team,
+        xg: xgS != null && xgN != null ? xgN - xgS : null,
+        // Conceding less is the improvement, so the sign is flipped to make
+        // "up" mean "better" in both columns.
+        xgc: gcS != null && gcN != null ? gcS - gcN : null,
+      })
+    }
+    const pick = (key: 'xg' | 'xgc', dir: 1 | -1) =>
+      out
+        .filter((m) => m[key] != null && Math.abs(m[key] as number) >= MOVE_MIN && Math.sign(m[key] as number) === dir)
+        .sort((a, b) => dir * ((b[key] as number) - (a[key] as number)))
+        .slice(0, 3)
+    return {
+      attackUp: pick('xg', 1), attackDown: pick('xg', -1),
+      defenceUp: pick('xgc', 1), defenceDown: pick('xgc', -1),
+    }
+  }, [metricsByWindow, data])
+
+  const any = moves.attackUp.length || moves.attackDown.length || moves.defenceUp.length || moves.defenceDown.length
+  if (!any) return null
+
+  const Col = ({ title, rows, good }: { title: string; rows: { team: string; xg: number | null; xgc: number | null }[]; good: boolean }) => {
+    if (!rows.length) return null
+    return (
+      <div className="min-w-0 flex-1">
+        <div className="mb-1.5 text-[10px] font-bold tracking-[0.12em] text-ink-3 uppercase">{title}</div>
+        <div className="flex flex-col gap-1">
+          {rows.map((m) => {
+            const v = (title.startsWith('Attack') ? m.xg : m.xgc) as number
+            return (
+              <button
+                key={m.team}
+                onClick={() => onSelect(m.team)}
+                className="flex min-h-8 items-center gap-2 rounded-lg px-1.5 text-left text-[12.5px] transition-colors hover:bg-surface-2"
+              >
+                <TeamBadge team={m.team} size={16} />
+                <span className="min-w-0 flex-1 truncate font-medium text-ink">{teamLabel(m.team)}</span>
+                <span className={`font-num tabular-nums ${good ? 'text-good' : 'text-bad'}`}>
+                  {v > 0 ? '+' : ''}{v.toFixed(2)}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mb-5 rounded-2xl border border-line bg-surface-1/60 p-4">
+      <div className="mb-3 flex items-baseline gap-2">
+        <h2 className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">What has changed</h2>
+        <span className="text-xs text-ink-3">Last 4 gameweeks against the season, per game</span>
+        <InfoTip text="Each club's expected goals and expected goals conceded over its last four gameweeks, compared with its season average, both divided by games played. Only shifts of 0.20 a game or more are listed — anything smaller is a couple of shots, not a change of form. A defence moving up means it is conceding less." />
+      </div>
+      <div className="flex flex-wrap gap-x-6 gap-y-4">
+        <Col title="Attack rising" rows={moves.attackUp} good />
+        <Col title="Attack falling" rows={moves.attackDown} good={false} />
+        <Col title="Defence tightening" rows={moves.defenceUp} good />
+        <Col title="Defence leaking" rows={moves.defenceDown} good={false} />
+      </div>
+    </div>
   )
 }
 
@@ -259,6 +381,8 @@ function ClubPage({ team, data, ratingByTeam, metricRows, ratingRows, ratings, f
         <PointsMix team={team} data={data} />
       </div>
 
+      <TeamForm team={team} />
+
       <SeasonRuns team={team} data={data} fixtureEase={fixtureEase} />
 
       <div>
@@ -268,6 +392,35 @@ function ClubPage({ team, data, ratingByTeam, metricRows, ratingRows, ratings, f
         </Exportable>
       </div>
     </div>
+  )
+}
+
+/* Week by week rather than window by window.
+   Every other team figure on the page is an average over some window, which
+   is the right way to compare clubs and the wrong way to see a club change.
+   This is the same club's xG and xA drawn gameweek by gameweek, with the
+   headline stating whether the recent weeks differ from the earlier ones by
+   enough to be worth a sentence. */
+function TeamForm({ team }: { team: string }) {
+  const q = useLazyTable<Row[]>('gameweek_stats')
+  const trend = useMemo(() => teamTrend(q.data ?? [], team), [q.data, team])
+  const words = trendWords(trend, teamLabel(team))
+
+  // The gameweek feed does not exist until a season has games in it, and it is
+  // fetched lazily, so the section has three honest states and no fourth: a
+  // skeleton while it is coming, nothing at all when there is nothing to draw,
+  // and the chart. It must not sit on a skeleton forever, which is what a
+  // missing file used to produce.
+  if (q.loading) return <Section title="Form, week by week"><div className="h-[210px] animate-pulse rounded-2xl bg-surface-2" /></Section>
+  if (trend.points.length < 2) return null
+
+  return (
+    <Section title="Form, week by week" hint="Expected goals and expected assists per gameweek">
+      {words && <p className="mb-3 max-w-[80ch] text-sm text-ink-2">{words}</p>}
+      <div className="rounded-2xl border border-line bg-surface-1 p-3 sm:p-4">
+        <TeamFormChart team={team} points={trend.points} />
+      </div>
+    </Section>
   )
 }
 
@@ -332,16 +485,32 @@ const teamSort = (r: Row) => teamLabel(String(r.team))
 const fx = (v: number | null, d = 1) => (v == null ? 'N/A' : Number(v).toFixed(d))
 
 function AllTeamsTable({
-  rows,
-  ratingByTeam,
+  data,
+  metricsByWindow,
+  ratingsByWindow,
   onSelect,
 }: {
-  rows: Row[]
-  ratingByTeam: Map<string, TeamRatingRow>
+  data: CoreData
+  metricsByWindow: Map<string, Row[]>
+  ratingsByWindow: Map<string, Map<string, TeamRatingRow>>
   onSelect: (team: string) => void
 }) {
   const [tab, setTab] = useState<'attack' | 'defence'>('attack')
+  const [win, setWin] = useState<WinId>('season')
+
+  const rows = metricsByWindow.get(win) ?? metricsByWindow.get('season') ?? []
+  const ratingByTeam = ratingsByWindow.get(win) ?? ratingsByWindow.get('season') ?? new Map()
   const rt = (r: Row) => ratingByTeam.get(String(r.team))
+
+  /* Per game, not per window. A season xG total and a four-gameweek xG total
+     are both "xG", and putting them under the same header without dividing by
+     games played would make Last 4 look like a collapse for every club in the
+     league. windowGames knows how many games each window actually covers. */
+  const perGame = (r: Row, key: string) => {
+    const v = num(r, key)
+    const g = windowGames(r, data)
+    return v == null || g <= 0 ? null : v / g
+  }
 
   // Finishing / prevention carry a dataset-wide xG↔goal offset, so present them
   // relative to the league mean (centred at 0 = league-average conversion).
@@ -357,8 +526,8 @@ function AllTeamsTable({
   const attackCols: Column<Row>[] = [
     { key: 'team', header: 'Team', align: 'left', sortValue: teamSort, cell: teamCell },
     { key: 'att', header: 'ATT', tip: TOOLTIPS.attack as string, sortValue: (r) => rt(r)?.attack ?? -1, cell: (r) => <RatingCell score={rt(r)?.attack ?? null} /> },
-    { key: 'xg', header: 'xG', tip: TOOLTIPS.team_xg as string, sortValue: (r) => num(r, 'team_xg'), cell: (r) => <span className="font-num tabular-nums">{fx(num(r, 'team_xg'))}</span> },
-    { key: 'xa', header: 'xA', tip: TOOLTIPS.team_xa as string, sortValue: (r) => num(r, 'team_xa'), cell: (r) => <span className="font-num tabular-nums">{fx(num(r, 'team_xa'))}</span> },
+    { key: 'xg', header: 'xG/game', tip: TOOLTIPS.team_xg as string, sortValue: (r) => perGame(r, 'team_xg'), cell: (r) => <span className="font-num tabular-nums">{fx(perGame(r, 'team_xg'), 2)}</span> },
+    { key: 'xa', header: 'xA/game', tip: TOOLTIPS.team_xa as string, sortValue: (r) => perGame(r, 'team_xa'), cell: (r) => <span className="font-num tabular-nums">{fx(perGame(r, 'team_xa'), 2)}</span> },
     { key: 'finish', header: 'Finish Δ', tip: TOOLTIPS.finish_delta as string, sortValue: (r) => { const v = rt(r)?.finish_delta; return v == null ? -999 : v - meanFinish }, cell: (r) => { const v = rt(r)?.finish_delta; return <DeltaCell value={v == null ? null : v - meanFinish} /> } },
     { key: 'box', header: 'Box %', tip: TOOLTIPS.box_share as string, sortValue: (r) => rt(r)?.box_share ?? -1, cell: (r) => { const v = rt(r)?.box_share; return <span className="font-num tabular-nums">{v == null ? 'N/A' : `${Math.round(v * 100)}%`}</span> } },
     { key: 'sp', header: 'Set-piece', tip: TOOLTIPS.set_piece_share as string, sortValue: (r) => rt(r)?.set_piece_share ?? -1, cell: (r) => { const rr = rt(r); if (!rr || rr.set_piece_share == null) return <span className="text-ink-3">—</span>; return <span className={`font-num tabular-nums ${rr.set_piece_threat ? 'font-semibold text-warn' : 'text-ink-2'}`}>{Math.round(rr.set_piece_share * 100)}%</span> } },
@@ -368,7 +537,7 @@ function AllTeamsTable({
   const defenceCols: Column<Row>[] = [
     { key: 'team', header: 'Team', align: 'left', sortValue: teamSort, cell: teamCell },
     { key: 'def', header: 'DEF', tip: TOOLTIPS.defence as string, sortValue: (r) => rt(r)?.defence ?? -1, cell: (r) => <RatingCell score={rt(r)?.defence ?? null} /> },
-    { key: 'xgc', header: 'xGC', tip: TOOLTIPS.team_xgc as string, sortValue: (r) => num(r, 'team_xgc'), cell: (r) => <span className="font-num tabular-nums">{fx(num(r, 'team_xgc'))}</span> },
+    { key: 'xgc', header: 'xGC/game', tip: TOOLTIPS.team_xgc as string, sortValue: (r) => perGame(r, 'team_xgc'), cell: (r) => <span className="font-num tabular-nums">{fx(perGame(r, 'team_xgc'), 2)}</span> },
     { key: 'cs', header: 'CS %', tip: TOOLTIPS.cs as string, sortValue: (r) => num(r, 'cs_rate'), cell: (r) => <span className="font-num tabular-nums">{pct(num(r, 'cs_rate'))}</span> },
     { key: 'prevent', header: 'Prevent Δ', tip: TOOLTIPS.prevent_delta as string, sortValue: (r) => { const v = rt(r)?.xgc_prevented; return v == null ? -999 : v - meanPrevent }, cell: (r) => { const v = rt(r)?.xgc_prevented; return <DeltaCell value={v == null ? null : v - meanPrevent} /> } },
     { key: 'boxc', header: 'Box % Con', tip: TOOLTIPS.box_share_conceded as string, sortValue: (r) => rt(r)?.box_share_conceded ?? -1, cell: (r) => { const v = rt(r)?.box_share_conceded; return <span className="font-num tabular-nums">{v == null ? 'N/A' : `${Math.round(v * 100)}%`}</span> } },
@@ -377,12 +546,27 @@ function AllTeamsTable({
   const isAttack = tab === 'attack'
   return (
     <>
-      <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-semibold tracking-wide text-ink-2 uppercase">All Teams</h2>
-        <Tabs tabs={TEAM_LIST_TABS} active={tab} onChange={(id) => setTab(id as 'attack' | 'defence')} layoutId="team-list" />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            {WINDOWS.map((w) => (
+              <button
+                key={w.id}
+                onClick={() => setWin(w.id)}
+                className={`min-h-9 rounded-full border px-3 text-[13px] font-medium transition-colors ${
+                  win === w.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+                }`}
+              >
+                {w.label}
+              </button>
+            ))}
+          </div>
+          <Tabs tabs={TEAM_LIST_TABS} active={tab} onChange={(id) => setTab(id as 'attack' | 'defence')} layoutId="team-list" />
+        </div>
       </div>
       <SortableTable
-        key={tab}
+        key={`${tab}-${win}`}
         rows={rows}
         columns={isAttack ? attackCols : defenceCols}
         initialSort={isAttack ? 'att' : 'def'}

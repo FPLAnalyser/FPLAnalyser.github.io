@@ -33,6 +33,15 @@
   --good: #3ddc7a; --warn: #e8b04a; --bad: #f0736f; --info: #6ea8ff;
   --hot: #ff5a3c; --cold: #4ea3ff;   /* hot streak = fiery red · cold streak = frost blue */
   --chart-1: #c9a227; --chart-2: #6ea8ff; --chart-3: #57c993; --chart-4: #e2649b; --chart-5: #b79bf0;
+  /* Line-series pair, picked per mode rather than flipped.
+     The donut palette above is tuned for filled areas on either surface; a 2px
+     stroke is a much smaller target and needs its own steps. These two were
+     chosen so that, on their own mode's surface, both sit inside the OKLCH
+     lightness band, clear the chroma floor, hold ΔE ≥ 8 under protanopia,
+     deuteranopia and tritanopia, and reach 3:1 against the surface. The dark
+     values are darker than instinct suggests — a lighter gold sails past the
+     top of the dark band and starts to glare. */
+  --series-1: #a8801a; --series-2: #2f6fe0;   /* light-mode default */
   --font-ui: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-num: 'Manrope', system-ui, sans-serif;
   --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px; --radius-xl: 20px;
@@ -43,6 +52,7 @@
   color-scheme: dark;
   --bg-0: #000000; --bg-1: #070605;
   --surface-1: #16130e; --surface-2: #201b13; --surface-3: #2a2318;
+  --series-1: #b08c26; --series-2: #4f8ce8;   /* validated against #16130e */
   --surface-glass: rgba(16, 13, 9, 0.74);
   /* ink-3 carries most of the site's small print — the uppercase micro-labels
      above every tile, the supporting sentence under every figure. At #6c655a
