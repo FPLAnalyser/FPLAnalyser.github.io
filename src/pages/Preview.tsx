@@ -572,7 +572,7 @@ export default function Preview() {
                         {b.r.position} · {b.side.team} {b.side.venue === 'H' ? 'v' : 'at'} {b.side.opp} · £{b.r.price}m
                       </div>
                       <div className="tier-num font-num mt-2.5 text-[34px] leading-none font-extrabold" style={{ backgroundImage: p.num }}>{b.xp.toFixed(2)}</div>
-                      <div className="mt-1 text-[11px]" style={{ color: 'rgba(255,255,255,.55)' }}>expected points</div>
+                      <div className="mt-1 text-[11px] font-extrabold tracking-[0.14em]" style={{ color: 'rgba(255,255,255,.55)' }}>xP</div>
                     </div>
                   </div>
                 </button>

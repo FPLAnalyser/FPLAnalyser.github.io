@@ -16,8 +16,9 @@ import { PlayerCompare, ViewChips, compareLenses, type CompareLens } from '../co
 import { Exportable } from '../components/ExportPanel'
 import { useCore } from '../lib/useData'
 import { useAvailability, availFor } from '../lib/availability'
+import { useMarketOdds, useXpModel, useShotProfiles, xpForGw } from '../lib/xp'
 import { num, str, bool } from '../lib/rows'
-import { ratingToNum, norm, searchText, TOOLTIPS, playerHref, teamLabel } from '../lib/util'
+import { norm, searchText, TOOLTIPS, playerHref, teamLabel } from '../lib/util'
 import type { RatingRow, Row } from '../lib/types'
 
 // This is the app's "Players" hub: sortable leaderboards across every metric,
@@ -81,14 +82,6 @@ const priceCol: Column<Row> = {
   sortValue: (r) => num(r, 'price'),
   cell: (r) => <span className="font-num tabular-nums">£{num(r, 'price')}m</span>,
 }
-const starCol = (key: string, header: string, tip?: string): Column<Row> => ({
-  key,
-  header,
-  tip,
-  align: 'left',
-  sortValue: (r) => ratingToNum(str(r, key)), // sort by numeric rating; null (N/A) sinks
-  cell: (r) => <StarRating value={str(r, key)} />,
-})
 // Overall ratings render from the continuous 0–5 score for a granular /100 number.
 const scoreCol = (scoreKey: string, header: string, tip?: string): Column<Row> => ({
   key: scoreKey,
@@ -167,11 +160,29 @@ const pctCol = (key: string, header: string, tip: string): Column<Row> => ({
   },
 })
 
+/** Compare two rows on a headline metric, falling through a list of
+ *  tie-breaks. Missing values sink. */
+function byThen(a: Row, b: Row, key: string, tieKeys: string[]): number {
+  for (const k of [key, ...tieKeys]) {
+    const d = (num(b, k) ?? -Infinity) - (num(a, k) ?? -Infinity)
+    if (d !== 0) return d
+  }
+  return 0
+}
+
 /** Sort a pool by a metric, stamp global rank, then either take the top N or
- *  (when searching) keep every name match with its true rank preserved. */
-function rankedPool(rows: Row[], metricKey: string, query: string): Row[] {
+ *  (when searching) keep every name match with its true rank preserved.
+ *
+ *  The dimension scores are percentile-based and top out at 99.0, so the best
+ *  handful of players in a category are routinely all on exactly the same
+ *  number — five defenders and midfielders share the Def Con ceiling. Left to
+ *  the sort's own devices the order of those five is whatever the build
+ *  happened to emit, which is how the lead line came to credit Lacroix for a
+ *  threshold Senesi hits far more often. `tieKey` names the raw metric the
+ *  category is actually about and settles it. */
+function rankedPool(rows: Row[], metricKey: string, query: string, tieKeys: string[] = []): Row[] {
   const sorted: Row[] = [...rows]
-    .sort((a, b) => (num(b, metricKey) ?? -Infinity) - (num(a, metricKey) ?? -Infinity))
+    .sort((a, b) => byThen(a, b, metricKey, tieKeys))
     .map((r, i) => ({ ...r, _rank: i + 1 }))
   if (query) {
     const q = norm(query)
@@ -284,6 +295,9 @@ function FilterBar({ teams, priceMin, priceMax, setPriceMin, setPriceMax, teamFi
 export default function Rankings() {
   const { data, error: coreError } = useCore()
   const avail = useAvailability()
+  const market = useMarketOdds()
+  const model = useXpModel()
+  const profiles = useShotProfiles()
   const navigate = useNavigate()
   const [tab, setTab] = useState('top-rated')
   const [pos, setPos] = useState('ALL')
@@ -300,6 +314,35 @@ export default function Rankings() {
   const ratings = (data?.ratings ?? []) as RatingRow[]
   const metrics = data?.metrics ?? []
   const seasonToDate = data?.seasonToDate ?? []
+
+  /* The next four gameweeks, projected with the site's own per-gameweek model —
+     the same one behind GW Preview and the Squad Builder, so a player's number
+     here is the sum of the four numbers he is given there. The tab previously
+     read a `next4_score` column that the ratings build has never produced, so
+     it rendered nothing at all.
+
+     Availability is applied per gameweek inside the model, which is the point
+     of doing it week by week rather than scaling a season average: a player
+     back in three weeks scores nothing for two of the four, and a blank shows
+     up as a blank rather than being averaged away. */
+  const nextGw = data?.meta?.next_gw != null ? Number(data.meta.next_gw) : 1
+  const next4 = useMemo(() => {
+    const fe = data?.fixtureEase ?? []
+    if (!fe.length) return null
+    const gws = [...new Set(fe.map((f) => f.gw))].sort((a, b) => a - b).filter((g) => g >= nextGw).slice(0, 4)
+    if (!gws.length) return null
+    const byEl = new Map<number, { total: number; per: (number | null)[]; games: number }>()
+    for (const r of ratings) {
+      const el = num(r, 'element')
+      if (el == null) continue
+      const per = gws.map((g) => xpForGw(r, g, fe, avail, model, market, profiles))
+      if (per.every((v) => v == null)) continue
+      const total = per.reduce<number>((a, v) => a + (v ?? 0), 0)
+      const games = gws.filter((g) => fe.some((f) => f.team === r.team && f.gw === g)).length
+      byEl.set(el, { total, per, games })
+    }
+    return { gws, byEl }
+  }, [ratings, data?.fixtureEase, nextGw, avail, model, market, profiles])
 
   const toPlayer = (name: string, code?: number | null) => navigate(playerHref(name, code))
 
@@ -384,7 +427,7 @@ export default function Rankings() {
       case 'goal-threats': {
         const att = seasonOk.filter((p) => p.position === 'MID' || p.position === 'FWD')
         const filtered = pos === 'MID' || pos === 'FWD' ? att.filter((p) => p.position === pos) : att
-        const rows = rankedPool(filtered, 'season_goal_score', query)
+        const rows = rankedPool(filtered, 'season_goal_score', query, ['season_m_npxg'])
         return {
           columns: [
             rankCol(),
@@ -405,7 +448,7 @@ export default function Rankings() {
       case 'creators': {
         const att = seasonOk.filter((p) => p.position === 'MID' || p.position === 'FWD')
         const filtered = pos === 'MID' || pos === 'FWD' ? att.filter((p) => p.position === pos) : att
-        const rows = rankedPool(filtered, 'season_creative_score', query)
+        const rows = rankedPool(filtered, 'season_creative_score', query, ['season_m_xa'])
         return {
           columns: [
             rankCol(),
@@ -424,7 +467,7 @@ export default function Rankings() {
       }
       case 'clean-sheets': {
         const def = seasonOk.filter((p) => p.position === 'DEF')
-        const rows = rankedPool(def, 'season_cs_score', query)
+        const rows = rankedPool(def, 'season_cs_score', query, ['season_m_cs_rate'])
         return {
           columns: [
             rankCol(),
@@ -463,7 +506,7 @@ export default function Rankings() {
       case 'def-con': {
         const out = seasonOk.filter((p) => p.position === 'DEF' || p.position === 'MID' || p.position === 'FWD')
         const filtered = pos !== 'ALL' && pos !== 'GKP' ? out.filter((p) => p.position === pos) : out
-        const rows = rankedPool(filtered, 'season_dc_score', query)
+        const rows = rankedPool(filtered, 'season_dc_score', query, ['season_m_dc_hit', 'season_m_mins90_rate'])
         return {
           columns: [
             rankCol(),
@@ -541,26 +584,54 @@ export default function Rankings() {
         }
       }
       case 'next4': {
-        const rated = applyPos(seasonOk).filter((p) => num(p, 'next4_score') != null)
-        if (!rated.length) return null
-        const rows = rankedPool(rated, 'next4_score', query)
+        if (!next4) return null
+        // Stamp the projection onto the rows so the table can sort on it.
+        // Rows only carry scalars, so the per-gameweek breakdown stays in the
+        // memo's map and the columns read it back by element.
+        const withXp: Row[] = []
+        for (const r of applyPos(seasonOk)) {
+          const proj = next4.byEl.get(num(r, 'element') ?? -1)
+          if (proj) withXp.push({ ...r, _n4: proj.total, _n4games: proj.games })
+        }
+        if (!withXp.length) return null
+        const rows = rankedPool(withXp, '_n4', query)
+        const perOf = (r: Row, i: number) => next4.byEl.get(num(r, 'element') ?? -1)?.per[i] ?? null
+        const gwCol = (i: number): Column<Row> => ({
+          key: `n4g${i}`,
+          header: `GW${next4.gws[i]}`,
+          tip: `Projected points in gameweek ${next4.gws[i]} alone. A blank week reads 0.00; a double counts both games.`,
+          align: 'right',
+          sortValue: (r) => perOf(r, i),
+          cell: (r) => {
+            const v = perOf(r, i)
+            return v == null ? dash : <span className={`font-num tabular-nums ${v === 0 ? 'text-ink-3' : ''}`}>{v.toFixed(2)}</span>
+          },
+        })
         return {
           columns: [
             rankCol(),
             playerCol,
             posCol,
             teamCol,
-            starCol('next4_overall_rating', 'Next 4GW Rating', TOOLTIPS.next4 as string),
+            priceCol,
             {
-              key: 'ease',
-              header: 'Fixture Ease',
-              tip: 'Opponent-difficulty multiplier over the next 4 gameweeks. Above ×1.00 = an easier-than-average run.',
+              key: '_n4',
+              header: 'xP next 4',
+              tip: 'Projected FPL points across the next four gameweeks, added up from the same per-gameweek model used on GW Preview and the Squad Builder. Availability is applied week by week, so an injury that clears in three weeks costs a player two of the four.',
               align: 'right',
-              sortValue: (r) => num(r, 'next4_fixture_factor'),
+              sortValue: (r) => num(r, '_n4'),
+              cell: (r) => <span className="font-num font-semibold tabular-nums text-accent">{(num(r, '_n4') ?? 0).toFixed(2)}</span>,
+            },
+            ...next4.gws.map((_, i) => gwCol(i)),
+            {
+              key: 'games',
+              header: 'Games',
+              tip: 'How many of the four gameweeks his club actually plays in — blanks and doubles are why two players on the same form project differently.',
+              align: 'right',
+              sortValue: (r) => num(r, '_n4games'),
               cell: (r) => {
-                const f = num(r, 'next4_fixture_factor')
-                if (f == null) return <span className="text-ink-3">N/A</span>
-                return <span className={`font-num tabular-nums ${f >= 1 ? 'text-good' : 'text-bad'}`}>×{f.toFixed(2)}</span>
+                const g = num(r, '_n4games') ?? 0
+                return <span className={`font-num tabular-nums ${g < next4.gws.length ? 'text-warn' : 'text-ink-2'}`}>{g}</span>
               },
             },
             scoreCol('season_overall_score', 'Season Rating', TOOLTIPS.overall as string),
@@ -571,10 +642,13 @@ export default function Rankings() {
       default:
         return null
     }
-  }, [tab, pos, query, ratings])
+    // passesFilters belongs here: it closes over the price band, club,
+    // ownership and nailed switch, so leaving it out froze the table on
+    // whichever filters were set the last time the tab or search changed.
+  }, [tab, pos, query, ratings, passesFilters, withTransfers])
 
   // Per-tab narrative lead line.
-  const narrative = useMemo(() => buildNarrative(tab, ratings, metrics, seasonToDate), [tab, ratings, metrics, seasonToDate])
+  const narrative = useMemo(() => buildNarrative(tab, view?.rows[0] ?? null, metrics, seasonToDate), [tab, view, metrics, seasonToDate])
 
   if (!data) {
     return (
@@ -755,6 +829,11 @@ export default function Rankings() {
   )
 }
 
+/** xGI movement is read on its own merits: green when the underlying numbers
+ *  are rising, red when they are falling, muted when the shift is noise. */
+const xgiTone = (v: number | null) => (v == null || Math.abs(v) < 0.05 ? 'text-ink-3' : v > 0 ? 'text-good' : 'text-bad')
+const fmtDelta = (v: number | null) => (v == null ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(2)}`)
+
 function FormTables({ rows, pos, onPlayer }: { rows: Row[]; pos: string; onPlayer: (n: string, code?: number | null) => void }) {
   const posFilter = (r: Row) => pos === 'ALL' || r.position === pos
   const hot = rows
@@ -788,6 +867,9 @@ function FormTables({ rows, pos, onPlayer }: { rows: Row[]; pos: string; onPlaye
               {th('Season P90', 'Average FPL points per 90 minutes across the whole season.')}
               {th('4GW P90', 'Average FPL points per 90 minutes over the last 4 gameweeks.')}
               {th('Delta', 'Last-4-gameweek points-per-90 minus the season baseline — the size of the streak.')}
+              {th('xGI/90', 'Expected goal involvements per 90 across the season: expected goals plus expected assists. The baseline a streak is measured against.')}
+              {th('4GW xGI', 'Expected goal involvements per 90 over the last 4 gameweeks.')}
+              {th('xGI Δ', 'Last-4-gameweek xGI per 90 minus the season baseline. This is the column that separates a real change from a hot run of finishing: points up and xGI up is a player doing more, points up and xGI flat is variance.')}
             </tr>
           </thead>
           <tbody>
@@ -815,6 +897,18 @@ function FormTables({ rows, pos, onPlayer }: { rows: Row[]; pos: string; onPlaye
                 <td className={`px-2.5 py-2 text-right font-num tabular-nums md:px-3 ${deltaClass}`}>
                   {sign ? '+' : ''}
                   {(num(p, 'pts_delta') ?? 0).toFixed(2)}
+                </td>
+                <td className="px-2.5 py-2 text-right font-num tabular-nums text-ink-2 md:px-3">
+                  {(num(p, 'xgi_per90_season') ?? 0).toFixed(2)}
+                </td>
+                <td className="px-2.5 py-2 text-right font-num tabular-nums text-ink-2 md:px-3">
+                  {(num(p, 'xgi_per90_4gw') ?? 0).toFixed(2)}
+                </td>
+                {/* Coloured on its own sign rather than the streak's: a hot run
+                    with the underlying numbers going the other way is exactly
+                    the thing this column exists to show. */}
+                <td className={`px-2.5 py-2 text-right font-num tabular-nums md:px-3 ${xgiTone(num(p, 'xgi_delta'))}`}>
+                  {fmtDelta(num(p, 'xgi_delta'))}
                 </td>
               </tr>
             ))}
@@ -846,15 +940,20 @@ function FormTables({ rows, pos, onPlayer }: { rows: Row[]; pos: string; onPlaye
   )
 }
 
-function buildNarrative(tab: string, ratings: RatingRow[], metrics: Row[], seasonToDate: Row[]): React.ReactNode {
-  const rated = ratings.filter((p) => bool(p, 'season_ok'))
+/** The lead line above each leaderboard.
+ *
+ *  `p` is the table's own first row rather than a leader re-derived here. That
+ *  is the whole point: the two used to be worked out separately, so a tie at
+ *  the 99.0 ceiling — or simply a filter the reader had set — could leave the
+ *  sentence crediting one player while the table ranked another first. Reading
+ *  row one means the claim can never disagree with what is on screen. */
+function buildNarrative(tab: string, p: Row | null, metrics: Row[], seasonToDate: Row[]): React.ReactNode {
   const lead = (arr: Row[]) => (arr.length ? arr[0] : null)
   const metricOf = (el: number | null | undefined) => metrics.find((x) => num(x, 'element') === el)
   const b = (s: string) => <strong className="text-ink">{s}</strong>
 
   switch (tab) {
     case 'top-rated': {
-      const p = lead([...rated].sort((a, b) => (num(b, 'season_overall_score') ?? 0) - (num(a, 'season_overall_score') ?? 0)))
       if (!p) return null
       const ppg = num(p, 'season_ppg')
       return (
@@ -864,7 +963,6 @@ function buildNarrative(tab: string, ratings: RatingRow[], metrics: Row[], seaso
       )
     }
     case 'goal-threats': {
-      const p = lead(rated.filter((x) => x.position === 'MID' || x.position === 'FWD').sort((a, b) => (num(b, 'season_goal_score') ?? 0) - (num(a, 'season_goal_score') ?? 0)))
       if (!p) return null
       const m = metricOf(num(p, 'element'))
       const share = m && num(m, 'xg_share_season')
@@ -875,7 +973,6 @@ function buildNarrative(tab: string, ratings: RatingRow[], metrics: Row[], seaso
       )
     }
     case 'creators': {
-      const p = lead(rated.filter((x) => x.position === 'MID' || x.position === 'FWD').sort((a, b) => (num(b, 'season_creative_score') ?? 0) - (num(a, 'season_creative_score') ?? 0)))
       if (!p) return null
       const m = metricOf(num(p, 'element'))
       const share = m && num(m, 'xa_share_season')
@@ -886,7 +983,6 @@ function buildNarrative(tab: string, ratings: RatingRow[], metrics: Row[], seaso
       )
     }
     case 'clean-sheets': {
-      const p = lead(rated.filter((x) => x.position === 'DEF').sort((a, b) => (num(b, 'season_cs_score') ?? 0) - (num(a, 'season_cs_score') ?? 0)))
       if (!p) return null
       return (
         <>
@@ -895,7 +991,6 @@ function buildNarrative(tab: string, ratings: RatingRow[], metrics: Row[], seaso
       )
     }
     case 'goalkeepers': {
-      const p = lead(rated.filter((x) => x.position === 'GKP').sort((a, b) => (num(b, 'season_overall_score') ?? 0) - (num(a, 'season_overall_score') ?? 0)))
       if (!p) return null
       return (
         <>
@@ -904,16 +999,15 @@ function buildNarrative(tab: string, ratings: RatingRow[], metrics: Row[], seaso
       )
     }
     case 'def-con': {
-      const p = lead(rated.filter((x) => x.position !== 'GKP').sort((a, b) => (num(b, 'season_dc_score') ?? 0) - (num(a, 'season_dc_score') ?? 0)))
       if (!p) return null
+      const hit = num(p, 'season_m_dc_hit')
       return (
         <>
-          {b(String(p.web_name))} tops the defensive-contribution rating — how reliably a player hits FPL’s DC threshold for the 2-point bonus. Defenders count CBIT (10); midfielders and forwards also count recoveries (12).
+          {b(String(p.web_name))} tops the defensive-contribution rating{hit != null ? <>, hitting the threshold in {b(`${(hit * 100).toFixed(0)}%`)} of his appearances</> : ''} — the 2-point bonus for defensive work. Defenders count CBIT (10); midfielders and forwards also count recoveries (12).
         </>
       )
     }
     case 'value': {
-      const p = lead([...rated].sort((a, b) => (num(b, 'season_value_score') ?? 0) - (num(a, 'season_value_score') ?? 0)))
       if (!p) return null
       return (
         <>
@@ -922,20 +1016,22 @@ function buildNarrative(tab: string, ratings: RatingRow[], metrics: Row[], seaso
       )
     }
     case 'form': {
-      const p = lead(seasonToDate.filter((x) => str(x, 'streak') === '🔥 Hot').sort((a, b) => (num(b, 'pts_delta') ?? 0) - (num(a, 'pts_delta') ?? 0)))
-      if (!p) return null
+      // Form ranks off the season-to-date feed, not the ratings table, so this
+      // one leader really is derived here.
+      const hot = lead(seasonToDate.filter((x) => str(x, 'streak') === '🔥 Hot').sort((a, b) => (num(b, 'pts_delta') ?? 0) - (num(a, 'pts_delta') ?? 0)))
+      if (!hot) return null
       return (
         <>
-          {b(String(p.web_name))} is the hottest player right now — {b(`+${(num(p, 'pts_delta') ?? 0).toFixed(1)} pts/90`)} above their season baseline. Check the xGI before chasing: form backed by underlying numbers sticks.
+          {b(String(hot.web_name))} is the hottest player right now — {b(`+${(num(hot, 'pts_delta') ?? 0).toFixed(1)} pts/90`)} above their season baseline. Check the xGI before chasing: form backed by underlying numbers sticks.
         </>
       )
     }
     case 'next4': {
-      const p = lead(rated.filter((x) => num(x, 'next4_score') != null).sort((a, b) => (num(b, 'next4_score') ?? 0) - (num(a, 'next4_score') ?? 0)))
       if (!p) return null
+      const tot = num(p, '_n4')
       return (
         <>
-          {b(String(p.web_name))} tops the fixture-adjusted model for the next 4 gameweeks — quality and form weighted by how attackable the upcoming opponents are.
+          {b(String(p.web_name))} is projected to score more than anyone over the next four gameweeks{tot != null ? <> — {b(`${tot.toFixed(1)} points`)}</> : ''}. Each week is priced separately from that fixture's goal expectancies and the player's own rates, then added up; blanks and doubles are counted, not averaged away.
         </>
       )
     }

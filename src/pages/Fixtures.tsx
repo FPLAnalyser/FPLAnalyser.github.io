@@ -19,7 +19,12 @@ import { useWide } from '../lib/useWide'
 import type { FixtureEaseRow, RatingRow, Row } from '../lib/types'
 
 
-const WINDOWS = [4, 6, 8] as const
+/* Planning horizons. 38 is the sentinel for "as far as the pipeline goes" —
+   there is never a real 38-gameweek run left, so the grid simply stops at
+   whatever has been published and the button is labelled accordingly. */
+const WINDOWS = [4, 6, 8, 10, 38] as const
+const REST = 38
+const winLabel = (w: number) => (w === REST ? 'Rest of season' : `Next ${w}`)
 
 const VIEW_TABS: TabDef[] = [
   { id: 'difficulty', label: 'Difficulty' },
@@ -338,7 +343,7 @@ export default function Fixtures() {
                       windowN === w ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
                     }`}
                   >
-                    Next {w}
+                    {winLabel(w)}
                   </button>
                 ))}
               </div>
@@ -377,12 +382,14 @@ export default function Fixtures() {
                 </div>
               )}
             </div>
-            {horizon < windowN && (
+            {windowN === REST ? (
+              <p className="mb-3 -mt-1 text-xs text-ink-3">Every gameweek published so far — {horizon} ahead. Scroll the grid sideways.</p>
+            ) : horizon < windowN ? (
               <p className="mb-3 -mt-1 text-xs text-ink-3">The data pipeline currently publishes {horizon} gameweeks ahead — showing all {horizon}.</p>
-            )}
+            ) : null}
             <MarketNote market={marketStrength} />
 
-            <Exportable title={mode === 'diff' ? `Fixture difficulty — next ${windowN}` : mode === 'xg' ? `Projected xG — next ${windowN}` : `Clean sheet odds — next ${windowN}`}>
+            <Exportable title={`${mode === 'diff' ? 'Fixture difficulty' : mode === 'xg' ? 'Projected xG' : 'Clean sheet odds'} — ${winLabel(windowN).toLowerCase()}`}>
             <FixtureGrid key={mode} fixtureEase={fixtureEase} windowN={windowN} lens={lens} mode={mode} baselines={baselines} leagueBase={leagueBase} profiles={profiles} league={league} />
             </Exportable>
           </>
@@ -700,7 +707,7 @@ function combos<T>(arr: T[], k: number): T[][] {
 }
 
 const ROT_SIZES = [2, 3, 4, 5] as const
-const ROT_WINDOWS = [4, 6, 8] as const
+const ROT_WINDOWS = [4, 6, 8, 10] as const
 const LENS_LABEL_ROT: Record<Lens, string> = { overall: 'Overall', attack: 'Attack', defence: 'Defence' }
 const mean = (ds: number[]) => (ds.length ? ds.reduce((a, b) => a + b, 0) / ds.length : null)
 
