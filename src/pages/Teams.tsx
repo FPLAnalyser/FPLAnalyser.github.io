@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PageShell, EmptyState } from '../components/PageShell'
 import { SectionBanner, StadiumBanner } from '../components/SectionBanner'
-import { TeamStory, PointsMix } from '../components/TeamStory'
+import { TeamStory } from '../components/TeamStory'
 import { Exportable } from '../components/ExportPanel'
 import { SortableTable, type Column } from '../components/SortableTable'
 import { SearchBox } from '../components/SearchBox'
@@ -19,7 +19,7 @@ import { TeamShotMap } from '../components/ShotMap'
 import { PageSkeleton } from '../components/Skeleton'
 import { Icon } from '../components/Icon'
 import { InfoTip } from '../components/InfoTip'
-import { BestRuns, RunsTimeline } from '../components/BestRuns'
+import { BestRunCards, RotationPartners } from '../components/TeamPlanning'
 import { TeamFormChart, teamTrend, trendWords } from '../components/TeamFormChart'
 import { useCore, useLazyTable } from '../lib/useData'
 import { bestRuns, useDiffScale, windowGames } from '../lib/fixtureRuns'
@@ -374,24 +374,118 @@ function ClubPage({ team, data, ratingByTeam, metricRows, ratingRows, ratings, f
   ratings: RatingRow[]
   fixtureEase: FixtureEaseRow[]
 }) {
+  const seasonMetrics = metricRows.find((r) => str(r, 'window') === 'season') ?? metricRows[0] ?? {}
   return (
     <div className="flex flex-col gap-5">
+      {/* The next match and who carries the points: the two things a manager
+          decides on, so they sit above everything that explains them. Points
+          reliance was buried at the bottom of a squad card, which is the last
+          place you would look for "is this a one-man team". */}
       <div className="grid items-start gap-3 md:grid-cols-2">
         <TeamMatchup team={team} ratingByTeam={ratingByTeam} fixtureEase={fixtureEase} />
-        <PointsMix team={team} data={data} />
+        <PointsReliance team={team} ratings={ratings} metrics={seasonMetrics} />
       </div>
 
       <TeamForm team={team} />
 
       <SeasonRuns team={team} data={data} fixtureEase={fixtureEase} />
 
-      <div>
-        <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Squad &amp; tables</div>
-        <Exportable title={`${teamLabel(team)} — squad`}>
-          <TeamCard team={team} metricRows={metricRows} ratingRows={ratingRows} ratings={ratings} />
-        </Exportable>
-      </div>
+      <TeamTabs team={team} data={data} metricRows={metricRows} ratingRows={ratingRows} ratings={ratings} />
     </div>
+  )
+}
+
+/** Who carries the points, as a share of the squad. */
+function PointsReliance({ team, ratings, metrics }: { team: string; ratings: RatingRow[]; metrics: Row }) {
+  const conc = useMemo(() => {
+    const players = ratings.filter((p) => p.team === team && bool(p, 'season_ok'))
+    const estPts = (p: Row) => {
+      const ppg = num(p, 'season_ppg')
+      const mins = num(p, 'total_mins')
+      return ppg && mins ? ppg * (mins / 90) : 0
+    }
+    const ranked = players.map((p) => ({ label: String(p.web_name), value: estPts(p) })).filter((p) => p.value > 0).sort((a, b) => b.value - a.value)
+    const total = ranked.reduce((s, p) => s + p.value, 0)
+    const top5 = ranked.slice(0, 5)
+    return { segments: top5, rest: total - top5.reduce((s, p) => s + p.value, 0), hasData: total > 0, share: total ? top5.reduce((s, p) => s + p.value, 0) / total : 0 }
+  }, [ratings, team])
+
+  const top1 = num(metrics, 'top1_share')
+  if (!conc.hasData) return null
+  return (
+    <div className="rounded-2xl border border-line bg-surface-1/60 p-4 md:p-5">
+      <div className="mb-1 flex flex-wrap items-baseline gap-x-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">
+        <span>Points reliance</span>
+        <span className="tracking-normal normal-case">Season · top 5 players</span>
+      </div>
+      <p className="mb-3 text-[12.5px] text-ink-2">
+        The top five take <b className="text-ink">{Math.round(conc.share * 100)}%</b> of this squad&apos;s points
+        {top1 != null ? <> — the leading scorer alone takes <b className="text-ink">{Math.round(top1 * 100)}%</b></> : null}.
+      </p>
+      <ConcentrationBar segments={conc.segments} rest={conc.rest} />
+    </div>
+  )
+}
+
+/** The receipts, split three ways. Squad and shot map are different questions
+ *  and were stacked in one endless card; the club's own numbers are a third. */
+function TeamTabs({ team, data, metricRows, ratingRows, ratings }: {
+  team: string
+  data: CoreData
+  metricRows: Row[]
+  ratingRows: TeamRatingRow[]
+  ratings: RatingRow[]
+}) {
+  const [tab, setTab] = useState<'squad' | 'shots' | 'numbers'>('squad')
+  const LABELS = [['squad', 'Squad'], ['shots', 'Shot map'], ['numbers', 'Club numbers']] as const
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {LABELS.map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            className={`min-h-9 rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${
+              tab === id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <Exportable title={`${teamLabel(team)} — ${tab === 'squad' ? 'squad' : tab === 'shots' ? 'shot map' : 'club numbers'}`}>
+        {tab === 'squad' ? (
+          <SquadTable team={team} ratings={ratings} />
+        ) : tab === 'shots' ? (
+          <TeamShotMap team={team} />
+        ) : (
+          <TeamCard team={team} data={data} metricRows={metricRows} ratingRows={ratingRows} ratings={ratings} />
+        )}
+      </Exportable>
+    </div>
+  )
+}
+
+function SquadTable({ team, ratings }: { team: string; ratings: RatingRow[] }) {
+  const rows = useMemo(
+    () => ratings.filter((p) => p.team === team && bool(p, 'season_ok')).sort((a, b) => (num(b, 'season_overall_score') ?? 0) - (num(a, 'season_overall_score') ?? 0)),
+    [ratings, team],
+  )
+  return (
+    <SortableTable
+      rows={rows}
+      columns={[
+        { key: 'player', header: 'Player', align: 'left', sortValue: (r) => str(r, 'web_name'), cell: (r) => <PlayerNameCell name={String(r.web_name)} code={num(r, 'code')} /> },
+        { key: 'pos', header: 'Pos', align: 'left', sortValue: (r) => str(r, 'position'), cell: (r) => <PosBadge pos={String(r.position)} /> },
+        { key: 'price', header: 'Price', sortValue: (r) => num(r, 'price'), cell: (r) => <span className="font-num tabular-nums">£{num(r, 'price')}m</span> },
+        { key: 'season', header: 'Season Rating', align: 'left', sortValue: (r) => num(r, 'season_overall_score'), cell: (r) => <StarRating value={num(r, 'season_overall_score')} /> },
+        { key: 'gw4', header: '4GW Rating', align: 'left', sortValue: (r) => num(r, 'gw4_overall_score'), cell: (r) => <StarRating value={num(r, 'gw4_overall_score')} /> },
+        { key: 'ppg', header: 'PPG', sortValue: (r) => num(r, 'season_ppg'), cell: (r) => <span className="font-num tabular-nums text-accent">{num(r, 'season_ppg')?.toFixed(1) ?? 'N/A'}</span> },
+      ]}
+      initialSort="season"
+      initialDir="desc"
+      rowKey={(r) => String(r.element)}
+    />
   )
 }
 
@@ -433,25 +527,20 @@ function SeasonRuns({ team, data, fixtureEase }: { team: string; data: CoreData;
   const scale = useDiffScale(data)
   const mine = useMemo(() => fixtureEase.filter((f) => String(f.team) === team), [fixtureEase, team])
   const runs = useMemo(() => bestRuns(mine, team, 'overall', scale), [mine, team, scale])
-  const gws = useMemo(() => [...new Set(mine.map((f) => f.gw))].sort((a, b) => a - b), [mine])
+  const fromGw = useMemo(() => (mine.length ? Math.min(...mine.map((f) => f.gw)) : 1), [mine])
   if (!runs.length) return null
   return (
-    <Section
-      title="The season ahead"
-      hint={runs.length > 1 ? 'Best run in each half' : 'The kindest stretch left'}
-    >
-      {/* The same strip the Fixtures page draws for all twenty clubs, for one
-          of them. The old version here showed only the highlighted weeks,
-          which answered "when is the run" without ever showing what it is a
-          run against — you could not see that GW11 is the wall it ends at. */}
-      <RunsTimeline
-        fixtureEase={mine}
-        runs={runs.map((r) => ({ team, ...r }))}
-        gws={gws}
-        lens="overall"
-        scale={scale}
-      />
-      <div className="mt-3"><BestRuns runs={runs} /></div>
+    <Section title="Planning the run" hint="Our own difficulty ratings">
+      {/* This used to draw all thirty-eight gameweeks in one strip. That is the
+          right picture on the Fixtures page, where twenty rows side by side let
+          you compare clubs — for one club it is a spreadsheet with a single row
+          in it, and the reader has to do the finding. Two questions instead:
+          when are the good weeks, and who covers the bad ones. */}
+      <BestRunCards runs={runs} />
+      <div className="mt-4">
+        <h4 className="mb-1.5 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Rotation partners</h4>
+        <RotationPartners fixtureEase={fixtureEase} team={team} scale={scale} fromGw={fromGw} />
+      </div>
     </Section>
   )
 }
@@ -603,13 +692,17 @@ function HomeAwayBar({ home, away }: { home: number | null; away: number | null 
   )
 }
 
+/** The club's own numbers, windowed. Everything here answers "what kind of
+ *  side is this", as opposed to "who should I buy", which the page above
+ *  answers. No club header: the stadium banner three inches up already said
+ *  whose page this is. */
 function TeamCard({
-  team,
+  team: _team,
   metricRows,
   ratingRows,
-  ratings,
 }: {
   team: string
+  data: CoreData
   metricRows: Row[]
   ratingRows: TeamRatingRow[]
   ratings: RatingRow[]
@@ -631,45 +724,10 @@ function TeamCard({
   const m = metricByWin.get(win) ?? season
   const rating = ratingByWin.get(win) ?? null
   const hasRatings = ratingRows.length > 0
-
-  const teamPlayers = useMemo(
-    () => ratings.filter((p) => p.team === team && bool(p, 'season_ok')).sort((a, b) => (num(b, 'season_overall_score') ?? 0) - (num(a, 'season_overall_score') ?? 0)),
-    [ratings, team],
-  )
-
   const seasonTotalPts = num(season, 'total_pts') ?? 0
 
-  // Points reliance: each player's estimated season points → top-5 + rest tail.
-  const concentration = useMemo(() => {
-    const estPts = (p: Row) => {
-      const ppg = num(p, 'season_ppg')
-      const mins = num(p, 'total_mins')
-      return ppg && mins ? ppg * (mins / 90) : 0
-    }
-    const ranked = [...teamPlayers].map((p) => ({ name: String(p.web_name), pts: estPts(p) })).filter((p) => p.pts > 0).sort((a, b) => b.pts - a.pts)
-    const total = ranked.reduce((s, p) => s + p.pts, 0)
-    const top5 = ranked.slice(0, 5)
-    const rest = total - top5.reduce((s, p) => s + p.pts, 0)
-    return { segments: top5.map((p) => ({ label: p.name, value: p.pts })), rest, hasData: total > 0 }
-  }, [teamPlayers])
-
   return (
-    <div className="rounded-xl border border-line bg-surface-1/50 p-5 md:p-6">
-      {/* Header */}
-      <div className="mb-5 flex flex-wrap items-center gap-4">
-        <TeamBadge team={team} size={56} />
-        <div className="text-2xl font-extrabold tracking-tight text-ink">{teamLabel(team)}</div>
-        {rating?.set_piece_threat && (
-          <span
-            className="inline-flex items-center gap-1.5 rounded-full border border-warn/40 bg-warn/10 px-2.5 py-1 text-xs font-semibold text-warn"
-            title={rating.set_piece_share != null ? `${Math.round(rating.set_piece_share * 100)}% of xG from open-play set pieces (corners & free kicks)` : 'High set-piece threat'}
-          >
-            <Icon name="target" size={13} /> Set-piece threat
-          </span>
-        )}
-      </div>
-
-      {/* Window toggle */}
+    <div className="rounded-2xl border border-line bg-surface-1 p-4 md:p-6">
       <div className="mb-4 inline-flex rounded-lg border border-line bg-surface-1 p-0.5">
         {WINDOWS.map((w) => (
           <button
@@ -684,7 +742,6 @@ function TeamCard({
         ))}
       </div>
 
-      {/* Anchor: our Attack / Defence ratings */}
       <div className="mb-5 flex gap-3">
         {hasRatings ? (
           <>
@@ -698,7 +755,6 @@ function TeamCard({
         )}
       </div>
 
-      {/* Context strip for the active window */}
       <div className="mb-1 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Tile value={fx1(num(m, 'team_xg'))} label={`xG${win === 'season' ? '' : ` (${win})`}`} />
         <Tile value={fx1(num(m, 'team_xgc'))} label="xG Conceded" />
@@ -706,69 +762,35 @@ function TeamCard({
         <Tile value={<span className="text-sm">{str(m, 'form_direction') || '—'}</span>} label="Form" />
       </div>
 
-      {/* Home / Away */}
       <Section title="Home vs Away" hint={win === 'season' ? 'Season' : WINDOWS.find((w) => w.id === win)?.label}>
         <HomeAwayBar home={num(m, 'home_pts_per_gw')} away={num(m, 'away_pts_per_gw')} />
       </Section>
 
-      {/* Points reliance — who carries the team */}
-      <Section title="Points Reliance" hint="Season · top 5 players">
-        {concentration.hasData ? (
-          <ConcentrationBar segments={concentration.segments} rest={concentration.rest} />
-        ) : (
-          <span className="text-sm text-ink-3">No player points recorded.</span>
-        )}
-      </Section>
-
-      {/* Points DNA — the two donuts */}
       <div className="grid gap-4 md:grid-cols-2">
         <Section title="Points Breakdown" hint="Season">
           <Donut
-            segments={[
-              { label: 'Goals', value: (num(season, 'goal_pts_pct') ?? 0) * 100, color: CHART_COLORS[0] },
-              { label: 'Assists', value: (num(season, 'assist_pts_pct') ?? 0) * 100, color: CHART_COLORS[1] },
-              { label: 'Clean Sheets', value: (num(season, 'cs_pts_pct') ?? 0) * 100, color: CHART_COLORS[2] },
-              { label: 'Def Contributions', value: seasonTotalPts ? ((num(season, 'dc_pts') ?? 0) / seasonTotalPts) * 100 : 0, color: CHART_COLORS[3] },
-              { label: 'Bonus', value: (num(season, 'bonus_pts_pct') ?? 0) * 100, color: CHART_COLORS[4] },
-            ]}
             centerValue={<AnimatedCounter value={seasonTotalPts} />}
             centerLabel="Season pts"
+            segments={[
+              { label: 'Goals', value: num(season, 'goal_pts') ?? 0, color: CHART_COLORS[0] },
+              { label: 'Assists', value: num(season, 'assist_pts') ?? 0, color: CHART_COLORS[1] },
+              { label: 'Clean Sheets', value: num(season, 'cs_pts') ?? 0, color: CHART_COLORS[2] },
+              { label: 'Def Contributions', value: num(season, 'dc_pts') ?? 0, color: CHART_COLORS[3] },
+              { label: 'Bonus', value: num(season, 'bonus_pts') ?? 0, color: CHART_COLORS[4] },
+            ]}
           />
         </Section>
         <Section title="Points by Position" hint="Season">
           <Donut
             segments={[
-              { label: 'Goalkeepers', value: (num(season, 'gkp_pct') ?? 0) * 100, color: CHART_COLORS[1] },
-              { label: 'Defenders', value: (num(season, 'def_pct') ?? 0) * 100, color: CHART_COLORS[2] },
-              { label: 'Midfielders', value: (num(season, 'mid_pct') ?? 0) * 100, color: CHART_COLORS[0] },
-              { label: 'Forwards', value: (num(season, 'fwd_pct') ?? 0) * 100, color: CHART_COLORS[3] },
+              { label: 'Goalkeepers', value: num(season, 'gkp_pts') ?? 0, color: CHART_COLORS[1] },
+              { label: 'Defenders', value: num(season, 'def_pts') ?? 0, color: CHART_COLORS[2] },
+              { label: 'Midfielders', value: num(season, 'mid_pts') ?? 0, color: CHART_COLORS[0] },
+              { label: 'Forwards', value: num(season, 'fwd_pts') ?? 0, color: CHART_COLORS[3] },
             ]}
           />
         </Section>
       </div>
-
-      {/* Squad */}
-      <Section title="Squad">
-        <SortableTable
-          rows={teamPlayers}
-          columns={[
-            { key: 'player', header: 'Player', align: 'left', sortValue: (r) => str(r, 'web_name'), cell: (r) => <PlayerNameCell name={String(r.web_name)} code={num(r, 'code')} /> },
-            { key: 'pos', header: 'Pos', align: 'left', sortValue: (r) => str(r, 'position'), cell: (r) => <PosBadge pos={String(r.position)} /> },
-            { key: 'season', header: 'Season Rating', align: 'left', sortValue: (r) => num(r, 'season_overall_score'), cell: (r) => <StarRating value={str(r, 'season_overall_rating')} /> },
-            { key: 'gw4', header: '4GW Rating', align: 'left', sortValue: (r) => str(r, 'gw4_overall_rating'), cell: (r) => <StarRating value={str(r, 'gw4_overall_rating')} /> },
-            { key: 'next4', header: 'Next 4GW', align: 'left', sortValue: (r) => str(r, 'next4_overall_rating'), cell: (r) => <StarRating value={str(r, 'next4_overall_rating')} /> },
-            { key: 'ppg', header: 'PPG', sortValue: (r) => num(r, 'season_ppg'), cell: (r) => <span className="font-num tabular-nums text-accent">{num(r, 'season_ppg')?.toFixed(1) ?? 'N/A'}</span> },
-          ]}
-          initialSort="season"
-          initialDir="desc"
-          rowKey={(r) => String(r.element)}
-        />
-      </Section>
-
-      {/* Shot map */}
-      <Section title="Shot Map">
-        <TeamShotMap team={team} />
-      </Section>
     </div>
   )
 }

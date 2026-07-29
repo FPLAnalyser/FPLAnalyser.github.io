@@ -27,6 +27,10 @@ import type { RatingRow, Row } from '../lib/types'
 
 const TABS: TabDef[] = [
   { id: 'top-rated', label: 'Top Rated', icon: <Icon name="star" size={13} /> },
+  // xPoints sits second because it is the forward-looking answer: Top Rated
+  // says who has been best, this says who is about to score most. Everything
+  // after it explains where those points come from.
+  { id: 'next4', label: 'xPoints', icon: <Icon name="calendar" size={13} /> },
   { id: 'goal-threats', label: 'Goal Threats', icon: <Icon name="target" size={13} /> },
   { id: 'creators', label: 'Creators', icon: <Icon name="bolt" size={13} /> },
   { id: 'clean-sheets', label: 'Clean Sheets', icon: <Icon name="shield" size={13} /> },
@@ -35,9 +39,12 @@ const TABS: TabDef[] = [
   { id: 'value', label: 'Value Picks', icon: <Icon name="coin" size={13} /> },
   { id: 'form', label: 'Form', icon: <span className="text-hot"><Icon name="flame" size={13} solid /></span> },
   { id: 'transfers', label: 'Transfers', icon: <Icon name="trend-up" size={13} /> },
-  { id: 'next4', label: 'Next 4 GWs', icon: <Icon name="calendar" size={13} /> },
   { id: 'totw', label: 'Team of the Week', icon: <Icon name="trophy" size={13} /> },
 ]
+
+/** Horizons the xPoints board projects over. Four is the transfer question,
+ *  six is the wildcard question, and the longer two are for chip planning. */
+const XP_WINDOWS = [4, 6, 8, 10] as const
 
 const TOP_N = 30
 const SEARCH_CAP = 60
@@ -310,6 +317,7 @@ export default function Rankings() {
   const [ownership, setOwnership] = useState<'ALL' | 'template' | 'differential'>('ALL')
   const [nailedOnly, setNailedOnly] = useState(true)
   const [filtersOpen, setFiltersOpen] = useState(true)
+  const [xpWindow, setXpWindow] = useState<(typeof XP_WINDOWS)[number]>(4)
 
   const ratings = (data?.ratings ?? []) as RatingRow[]
   const metrics = data?.metrics ?? []
@@ -329,7 +337,7 @@ export default function Rankings() {
   const next4 = useMemo(() => {
     const fe = data?.fixtureEase ?? []
     if (!fe.length) return null
-    const gws = [...new Set(fe.map((f) => f.gw))].sort((a, b) => a - b).filter((g) => g >= nextGw).slice(0, 4)
+    const gws = [...new Set(fe.map((f) => f.gw))].sort((a, b) => a - b).filter((g) => g >= nextGw).slice(0, xpWindow)
     if (!gws.length) return null
     const byEl = new Map<number, { total: number; per: (number | null)[]; games: number }>()
     for (const r of ratings) {
@@ -342,7 +350,7 @@ export default function Rankings() {
       byEl.set(el, { total, per, games })
     }
     return { gws, byEl }
-  }, [ratings, data?.fixtureEase, nextGw, avail, model, market, profiles])
+  }, [ratings, data?.fixtureEase, nextGw, xpWindow, avail, model, market, profiles])
 
   const toPlayer = (name: string, code?: number | null) => navigate(playerHref(name, code))
 
@@ -591,7 +599,7 @@ export default function Rankings() {
         const withXp: Row[] = []
         for (const r of applyPos(seasonOk)) {
           const proj = next4.byEl.get(num(r, 'element') ?? -1)
-          if (proj) withXp.push({ ...r, _n4: proj.total, _n4games: proj.games })
+          if (proj) withXp.push({ ...r, _n4: proj.total, _n4games: proj.games, _n4span: next4.gws.length })
         }
         if (!withXp.length) return null
         const rows = rankedPool(withXp, '_n4', query)
@@ -616,8 +624,8 @@ export default function Rankings() {
             priceCol,
             {
               key: '_n4',
-              header: 'xP next 4',
-              tip: 'Projected FPL points across the next four gameweeks, added up from the same per-gameweek model used on GW Preview and the Squad Builder. Availability is applied week by week, so an injury that clears in three weeks costs a player two of the four.',
+              header: `xP next ${next4.gws.length}`,
+              tip: `Projected FPL points across the next ${next4.gws.length} gameweeks, added up from the same per-gameweek model used on GW Preview and the Squad Builder. Availability is applied week by week, so an injury that clears in three weeks costs a player three of them.`,
               align: 'right',
               sortValue: (r) => num(r, '_n4'),
               cell: (r) => <span className="font-num font-semibold tabular-nums text-accent">{(num(r, '_n4') ?? 0).toFixed(2)}</span>,
@@ -626,7 +634,7 @@ export default function Rankings() {
             {
               key: 'games',
               header: 'Games',
-              tip: 'How many of the four gameweeks his club actually plays in — blanks and doubles are why two players on the same form project differently.',
+              tip: 'How many of these gameweeks his club actually plays in — blanks and doubles are why two players on the same form project differently.',
               align: 'right',
               sortValue: (r) => num(r, '_n4games'),
               cell: (r) => {
@@ -642,10 +650,13 @@ export default function Rankings() {
       default:
         return null
     }
-    // passesFilters belongs here: it closes over the price band, club,
-    // ownership and nailed switch, so leaving it out froze the table on
-    // whichever filters were set the last time the tab or search changed.
-  }, [tab, pos, query, ratings, passesFilters, withTransfers])
+    // Everything the switch statement closes over has to be listed, not just
+    // the obvious inputs. passesFilters carries the price band, club,
+    // ownership and nailed switch; next4 carries the projection horizon.
+    // Leaving either out freezes the table on whatever was set the last time
+    // the tab or the search changed — which is exactly how the filter bar and
+    // then the xPoints horizon each came to be visibly inert.
+  }, [tab, pos, query, ratings, passesFilters, withTransfers, next4])
 
   // Per-tab narrative lead line.
   const narrative = useMemo(() => buildNarrative(tab, view?.rows[0] ?? null, metrics, seasonToDate), [tab, view, metrics, seasonToDate])
@@ -701,6 +712,15 @@ export default function Rankings() {
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           {posOptions.length > 1 ? <PillGroup options={posOptions} active={pos} onChange={setPos} /> : null}
+          {/* The horizon belongs to the xPoints board alone — every other tab
+              is measuring what has already happened. */}
+          {tab === 'next4' && (
+            <PillGroup
+              options={XP_WINDOWS.map((w) => ({ id: String(w), label: `Next ${w}` }))}
+              active={String(xpWindow)}
+              onChange={(id) => setXpWindow(Number(id) as (typeof XP_WINDOWS)[number])}
+            />
+          )}
           <ViewChips options={[{ id: 'table', label: 'Table' }, { id: 'compare', label: 'Chart' }]} active={viewMode} onChange={setViewMode} />
           <button
             onClick={() => setFiltersOpen((o) => !o)}
@@ -1029,9 +1049,10 @@ function buildNarrative(tab: string, p: Row | null, metrics: Row[], seasonToDate
     case 'next4': {
       if (!p) return null
       const tot = num(p, '_n4')
+      const span = num(p, '_n4span') ?? 4
       return (
         <>
-          {b(String(p.web_name))} is projected to score more than anyone over the next four gameweeks{tot != null ? <> — {b(`${tot.toFixed(1)} points`)}</> : ''}. Each week is priced separately from that fixture's goal expectancies and the player's own rates, then added up; blanks and doubles are counted, not averaged away.
+          {b(String(p.web_name))} is projected to score more than anyone over the next {span} {span === 1 ? 'gameweek' : 'gameweeks'}{tot != null ? <> — {b(`${tot.toFixed(1)} points`)}</> : ''}. Each week is priced separately from that fixture's goal expectancies and the player's own rates, then added up; blanks and doubles are counted, not averaged away.
         </>
       )
     }

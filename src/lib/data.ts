@@ -49,6 +49,16 @@ const cache = new Map<string, Promise<unknown>>()
 
 // Fetch a table, trying the local copy then the published main branch, with a
 // few retries to ride out flaky mobile networks / a racing service worker.
+/** The table is not published for this season. Distinct from a network
+ *  failure, because it is not worth retrying and it is not worth an error
+ *  banner — an archive season legitimately has fewer feeds than a live one. */
+export class TableAbsent extends Error {
+  constructor(name: string) {
+    super(`table not published: ${name}`)
+    this.name = 'TableAbsent'
+  }
+}
+
 async function fetchTable<T>(name: string): Promise<T> {
   // Use the download index.html already started, if there is one — it began
   // during HTML parse, long before this module was even downloaded.
@@ -74,14 +84,28 @@ async function fetchTable<T>(name: string): Promise<T> {
         // Default HTTP caching: the service worker (stale-while-revalidate)
         // owns freshness; forcing revalidation here made mobile loads crawl.
         const r = await fetch(url)
-        if (r.ok) return (await r.json()) as T
+        if (!r.ok) continue
+        try {
+          return (await r.json()) as T
+        } catch {
+          // A 200 that is not JSON means the single-page fallback answered:
+          // the file is not there, and no amount of asking again will make it
+          // appear. Retrying it cost eight seconds of skeleton for every
+          // optional table a season happens not to publish, and on the
+          // seasons missing a REQUIRED table it took the whole site down —
+          // every page blank, because a rejection that never resolved kept
+          // the core load pending. Fail once, loudly, and let the caller
+          // decide whether the table was optional.
+          throw new TableAbsent(name)
+        }
       } catch (e) {
+        if (e instanceof TableAbsent) throw e
         lastErr = e
       }
     }
     if (attempt < 2) await new Promise((res) => setTimeout(res, 350 * (attempt + 1)))
   }
-  throw lastErr ?? new Error(`no source for table ${name}`)
+  throw lastErr ?? new TableAbsent(name)
 }
 
 export function loadTable<T = Row[]>(name: string): Promise<T> {

@@ -571,8 +571,13 @@ export default function Preview() {
                       <div className="mt-0.5 text-[12px]" style={{ color: 'rgba(255,255,255,.6)' }}>
                         {b.r.position} · {b.side.team} {b.side.venue === 'H' ? 'v' : 'at'} {b.side.opp} · £{b.r.price}m
                       </div>
-                      <div className="tier-num font-num mt-2.5 text-[34px] leading-none font-extrabold" style={{ backgroundImage: p.num }}>{b.xp.toFixed(2)}</div>
-                      <div className="mt-1 text-[11px] font-extrabold tracking-[0.14em]" style={{ color: 'rgba(255,255,255,.55)' }}>xP</div>
+                      {/* The unit rides on the baseline beside the number
+                          rather than under it — a whole line of card height
+                          for two characters was never a good trade. */}
+                      <div className="mt-2.5 flex items-baseline gap-1.5">
+                        <span className="tier-num font-num text-[34px] leading-none font-extrabold" style={{ backgroundImage: p.num }}>{b.xp.toFixed(2)}</span>
+                        <span className="text-[11px] font-extrabold tracking-[0.14em]" style={{ color: 'rgba(255,255,255,.55)' }}>xP</span>
+                      </div>
                     </div>
                   </div>
                 </button>

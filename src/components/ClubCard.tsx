@@ -1,4 +1,5 @@
 import { TeamBadge } from './badges'
+import { useMarketOdds } from '../lib/xp'
 import { FixtureChips } from './FixtureChips'
 import { num } from '../lib/rows'
 import { teamLabel, ordinal } from '../lib/util'
@@ -96,8 +97,17 @@ export function ClubCard({
   )
 }
 
-/** Projected xG for the two sides of a fixture, from our attack/defence ratings.
- *  Renders nothing until a next fixture is known for the team. */
+/** Projected xG for the two sides of a club's next fixture.
+ *
+ *  Where the bookmakers have priced the game, this uses their goal
+ *  expectancies — the same source GW Preview reads, so the two pages state the
+ *  same number for the same match. They did not: this panel used to run its
+ *  own attack-vs-defence formula off the season ratings and put Manchester
+ *  City at 2.2 for a game the Preview had at 2.38, which is the sort of
+ *  disagreement that costs a site its credibility whatever the model says.
+ *
+ *  The ratings formula survives only as the fallback for a fixture the market
+ *  has not priced yet, and the panel says which one it is showing. */
 export function TeamMatchup({
   team,
   ratingByTeam,
@@ -107,41 +117,52 @@ export function TeamMatchup({
   ratingByTeam: Map<string, TeamRatingRow>
   fixtureEase: FixtureEaseRow[]
 }) {
+  const market = useMarketOdds()
   const next = (fixtureEase || []).filter((f) => f.team === team).sort((a, b) => a.gw - b.gw)[0]
   if (!next) return null
   const opp = next.opponent
-  const a = ratingByTeam.get(team)
-  const b = ratingByTeam.get(opp)
-  if (!a || !b) return null
-
-  // Simple model: league-average xG (~1.45) scaled by attack vs opponent defence
-  // (ratings are 0–100, 50 = average) with a small home bump.
-  const BASE = 1.45
-  const proj = (attk?: TeamRatingRow, defd?: TeamRatingRow, home?: boolean) => {
-    const at = num(attk ?? {}, 'attack') ?? 50
-    const df = num(defd ?? {}, 'defence') ?? 50
-    const x = BASE * (0.5 + at / 100) * (1.5 - df / 100) * (home ? 1.1 : 0.92)
-    return Math.max(0.2, x)
-  }
   const home = next.venue === 'H'
-  const xgFor = proj(a, b, home)
-  const xgAgainst = proj(b, a, !home)
+
+  const priced = market?.byKey.get(`${team}:${next.gw}:${opp}`) ?? null
+  let xgFor: number
+  let xgAgainst: number
+  if (priced) {
+    xgFor = priced.for
+    xgAgainst = priced.against
+  } else {
+    const a = ratingByTeam.get(team)
+    const b = ratingByTeam.get(opp)
+    if (!a || !b) return null
+    // League-average xG (~1.45) scaled by attack against opponent defence
+    // (ratings are 0–100, 50 = average) with a small home bump.
+    const BASE = 1.45
+    const proj = (attk?: TeamRatingRow, defd?: TeamRatingRow, atHome?: boolean) => {
+      const at = num(attk ?? {}, 'attack') ?? 50
+      const df = num(defd ?? {}, 'defence') ?? 50
+      return Math.max(0.2, BASE * (0.5 + at / 100) * (1.5 - df / 100) * (atHome ? 1.1 : 0.92))
+    }
+    xgFor = proj(a, b, home)
+    xgAgainst = proj(b, a, !home)
+  }
   const csPct = Math.round(Math.exp(-xgAgainst) * 100)
 
   return (
     <div className="rounded-2xl border border-line bg-surface-1/60 p-4 md:p-5">
-      <div className="mb-4 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Gameweek {next.gw} · Matchup</div>
+      <div className="mb-4 flex flex-wrap items-baseline gap-x-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">
+        <span>Gameweek {next.gw} · Matchup</span>
+        <span className="tracking-normal normal-case">{priced ? "from the bookmakers' prices" : 'from season ratings — this game is not priced yet'}</span>
+      </div>
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-1 flex-col items-center gap-1.5 text-center">
           <TeamBadge team={team} size={34} />
           <div className="text-sm font-semibold text-ink">{teamLabel(team)}</div>
         </div>
         <div className="text-center">
-          <div className="font-display text-[30px] leading-none text-accent tabular-nums">{xgFor.toFixed(1)}</div>
+          <div className="font-display text-[30px] leading-none text-accent tabular-nums">{xgFor.toFixed(2)}</div>
           <div className="text-[10px] tracking-[0.12em] text-ink-3 uppercase">proj xG</div>
         </div>
         <div className="text-center text-ink-3">
-          <div className="font-display text-[30px] leading-none tabular-nums text-ink-2">{xgAgainst.toFixed(1)}</div>
+          <div className="font-display text-[30px] leading-none tabular-nums text-ink-2">{xgAgainst.toFixed(2)}</div>
           <div className="text-[10px] tracking-[0.12em] text-ink-3 uppercase">proj xG</div>
         </div>
         <div className="flex flex-1 flex-col items-center gap-1.5 text-center">

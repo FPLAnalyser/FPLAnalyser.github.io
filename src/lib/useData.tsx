@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { loadCore, loadTable } from './data'
+import { loadCore, loadTable, TableAbsent } from './data'
 import type { CoreData, RatingRow } from './types'
 
 interface CoreState {
@@ -105,7 +105,10 @@ export function useLazyTable<T = unknown>(name: string | null): LazyState<T> {
         .catch((error) => {
           if (!alive) return
           attempts++
-          if (attempts < 4) setTimeout(attempt, 600 * attempts)
+          // An absent table is an answer, not a failure — retrying it just
+          // holds the caller on a skeleton for several seconds before
+          // arriving at the same place.
+          if (!(error instanceof TableAbsent) && attempts < 4) setTimeout(attempt, 600 * attempts)
           else setState({ data: null, loading: false, error })
         })
     }

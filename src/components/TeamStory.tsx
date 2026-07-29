@@ -5,7 +5,7 @@ import { PlayerPhoto } from './PlayerPhoto'
 import { num, str } from '../lib/rows'
 import { windowGames } from '../lib/fixtureRuns'
 import { playerHref } from '../lib/util'
-import type { CoreData, FixtureEaseRow, RatingRow, Row, TeamRatingRow } from '../lib/types'
+import type { CoreData, RatingRow, Row, TeamRatingRow } from '../lib/types'
 
 /* ════════════════════════════════════════════════════════════════════════
    Team story layer: verdict → decision row → modules → "the route in".
@@ -53,12 +53,6 @@ function DCell({ label, word, tone, sub }: { label: string; word: ReactNode; ton
   )
 }
 
-function fixtureSummary(fixtureEase: FixtureEaseRow[], team: string, n = 6) {
-  const up = fixtureEase.filter((fx) => fx.team === team).sort((a, b) => a.gw - b.gw).slice(0, n)
-  if (!up.length) return null
-  const avgFdr = up.reduce((s, fx) => s + (fx.fdr || 3), 0) / up.length
-  return Math.round(((5 - avgFdr) / 4) * 100)
-}
 
 /* ── route-in rows ── */
 
@@ -95,8 +89,14 @@ export function TeamStory({ team, data }: { team: string; data: CoreData }) {
   const navigate = useNavigate()
   const rating = (data.teamRatings as TeamRatingRow[]).find((t) => t.team === team && str(t, 'window') === 'season') ?? null
   const metrics = (data.teamMetrics as Row[]).find((t) => String(t.team) === team && str(t, 'window') === 'season') ?? null
-  const ease6 = fixtureSummary(data.fixtureEase, team)
   const hasFix = data.fixtureEase.some((fx) => fx.team === team)
+
+  /* The third decision cell, in priority order: a real set-piece engine, a
+     genuine one-man dependency, then the home/away split. The last of those
+     replaced a "no single dependency" shrug — the split is never absent and
+     never the same for two clubs, so the cell always earns its width. */
+  const homePpg = metrics ? num(metrics, 'home_pts_per_gw') : null
+  const awayPpg = metrics ? num(metrics, 'away_pts_per_gw') : null
 
   const players = (data.ratings as RatingRow[]).filter((p) => String(p.team) === team && num(p, 'season_overall_score') != null)
   const rated = (p: RatingRow) => (num(p, 'season_overall_score') ?? 0) * 20
@@ -180,6 +180,22 @@ export function TeamStory({ team, data }: { team: string; data: CoreData }) {
   // survive; outfield defenders bought for clean sheets are the trap.
   const showTopDef = topDefOrGk != null && (!defTrap || topDefOrGk.position === 'GKP')
 
+  const swing = homePpg != null && awayPpg != null ? homePpg - awayPpg : null
+  const sig = spThreat
+    ? { label: 'Signature', word: 'Set pieces', tone: 'metallic-num', sub: spShare != null ? `${pct(spShare)} of xG from corners & free kicks` : 'A real dead-ball threat' }
+    : top1Share != null && top1Share >= 0.22
+      ? { label: 'Signature', word: 'One-man team', tone: 'text-warn', sub: `${top1 ?? 'One player'} takes ${pct(top1Share)} of the points` }
+      : swing != null && Math.abs(swing) >= 0.4
+        ? {
+            label: 'Home & away',
+            word: swing > 0 ? 'Home side' : 'Travels well',
+            tone: swing > 0 ? 'text-good' : 'text-info',
+            sub: `${Math.abs(swing).toFixed(1)} points a game ${swing > 0 ? 'better at home' : 'better away'} — ${homePpg!.toFixed(1)} H · ${awayPpg!.toFixed(1)} A`,
+          }
+        : swing != null
+          ? { label: 'Home & away', word: 'Same anywhere', tone: 'text-ink', sub: `${homePpg!.toFixed(1)} at home · ${awayPpg!.toFixed(1)} away — venue is not the story` }
+          : { label: 'Signature', word: 'Appears after GW1', tone: 'text-ink-3', sub: 'Needs a played season to describe' }
+
   return (
     <div className="mb-5 grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-start">
       <div className="flex flex-col gap-4">
@@ -198,22 +214,21 @@ export function TeamStory({ team, data }: { team: string; data: CoreData }) {
         )}
       </div>
 
-      {/* the one decision band — these facts appear nowhere else */}
-      <div className={`grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 ${hasFix ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+      {/* the one decision band — these facts appear nowhere else.
+
+          The third cell used to fall back to "Spread threat · No single
+          dependency", which is a shrug: it fired for most of the league and
+          told a reader nothing they could act on. It now falls back to the
+          home-and-away split, which is always true, always different between
+          clubs, and decides which of two similar players to start.
+
+          The Next 6 chips have gone with the fourth cell — the fixtures are
+          laid out properly further down the page, and there is no reason for
+          this page to list them twice. */}
+      <div className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
         <DCell label="Attack" word={aWord} tone={aTone} sub={aRank != null ? `#${aRank} of 20${xg != null ? ` · ${xg.toFixed(2)} xG/game` : ''}` : 'Appears after GW1'} />
         <DCell label="Clean sheets" word={dWord} tone={dTone} sub={csRate != null ? `CS in ${pct(csRate)}${xgc != null ? ` · ${xgc.toFixed(2)} xGC/game` : ''}` : dRank != null ? `#${dRank} defence` : 'Appears after GW1'} />
-        <DCell
-          label="Signature"
-          word={spThreat ? 'Set pieces' : top1Share != null && top1Share >= 0.22 ? 'One-man team' : 'Spread threat'}
-          tone={spThreat ? 'metallic-num' : top1Share != null && top1Share >= 0.22 ? 'text-warn' : 'text-ink'}
-          sub={spThreat && spShare != null ? `${pct(spShare)} of xG from corners & free kicks` : top1Share != null && top1Share >= 0.22 ? `${top1 ?? 'One player'} takes ${pct(top1Share)} of the points` : 'No single dependency'}
-        />
-        {hasFix && (
-          <div className="bg-bg-1 px-4 py-3">
-            <div className="mb-1 text-[10px] font-extrabold tracking-[0.16em] text-ink-3 uppercase">Next 6{ease6 != null ? ` · ease ${ease6}` : ''}</div>
-            <div className="mt-1.5"><FixtureChips fixtureEase={data.fixtureEase} team={team} n={6} /></div>
-          </div>
-        )}
+        <DCell label={sig.label} word={sig.word} tone={sig.tone} sub={sig.sub} />
       </div>
       </div>
 

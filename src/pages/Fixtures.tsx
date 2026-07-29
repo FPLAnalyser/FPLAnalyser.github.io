@@ -16,16 +16,19 @@ import { useMarketOdds, type MarketOdds } from '../lib/xp'
 import { teamLabel, playerHref } from '../lib/util'
 import { analyserDiff, bandOf, bestRuns, buildDiffScale, diffFill, windowGames, type Lens, type TeamBase } from '../lib/fixtureRuns'
 import { RunsTimeline } from '../components/BestRuns'
-import { useWide } from '../lib/useWide'
 import type { FixtureEaseRow, RatingRow, Row } from '../lib/types'
 
 
-/* Planning horizons. 38 is the sentinel for "as far as the pipeline goes" —
-   there is never a real 38-gameweek run left, so the grid simply stops at
-   whatever has been published and the button is labelled accordingly. */
-const WINDOWS = [4, 6, 8, 10, 38] as const
-const REST = 38
-const winLabel = (w: number) => (w === REST ? 'Rest of season' : `Next ${w}`)
+/* Planning horizons. Six is where a transfer decision actually lives, so the
+   grid opens there; four came off the list because it never told you anything
+   six did not, only sooner.
+
+   19 is the sentinel for "to the halfway point". Rest of season replaced it
+   and drew thirty-eight columns, which is a spreadsheet rather than a read —
+   the half is the unit people plan chips and wildcards around. */
+const WINDOWS = [6, 8, 10, 19] as const
+const HALF = 19
+const winLabel = (w: number) => (w === HALF ? 'To GW19' : `Next ${w}`)
 
 const VIEW_TABS: TabDef[] = [
   { id: 'difficulty', label: 'Difficulty' },
@@ -251,13 +254,10 @@ function profileOf(shots: Row[], withHead: boolean): Profile {
 export default function Fixtures() {
   const { data, error: coreError } = useCore()
   const [view, setView] = useState<View>('difficulty')
-  // Six is the right first look on a desktop — the grid has the width for it
-  // and six weeks is the horizon people actually plan a transfer over. On a
-  // phone six columns of opponent codes is a squeeze, so it opens on four.
-  // Read once at mount: rotating a phone should not overrule a choice already
-  // made.
-  const wide = useWide()
-  const [windowN, setWindowN] = useState<(typeof WINDOWS)[number]>(() => (wide ? 6 : 4))
+  // Six on every screen. The grid scrolls sideways on a phone, which is a
+  // smaller cost than opening two different people on two different windows
+  // and having them compare notes.
+  const [windowN, setWindowN] = useState<(typeof WINDOWS)[number]>(6)
   const [lens, setLens] = useState<Lens>('overall')
   const [mode, setMode] = useState<GridMode>('diff')
 
@@ -385,8 +385,8 @@ export default function Fixtures() {
                 </div>
               )}
             </div>
-            {windowN === REST ? (
-              <p className="mb-3 -mt-1 text-xs text-ink-3">Every gameweek published so far — {horizon} ahead. Scroll the grid sideways.</p>
+            {windowN === HALF ? (
+              <p className="mb-3 -mt-1 text-xs text-ink-3">Every gameweek to the halfway point of the season. Scroll the grid sideways.</p>
             ) : horizon < windowN ? (
               <p className="mb-3 -mt-1 text-xs text-ink-3">The data pipeline currently publishes {horizon} gameweeks ahead — showing all {horizon}.</p>
             ) : null}
@@ -973,7 +973,12 @@ function FixtureGrid({
   const [open, setOpen] = useState<string | null>(null)
 
   const gws = useMemo(
-    () => [...new Set(fixtureEase.map((f) => f.gw))].sort((a, b) => a - b).slice(0, windowN),
+    // "To GW19" is a destination, not a count: mid-season it must still stop at
+    // the halfway point rather than draw nineteen weeks from wherever you are.
+    () => {
+      const all = [...new Set(fixtureEase.map((f) => f.gw))].sort((a, b) => a - b)
+      return windowN === HALF ? all.filter((g) => g <= HALF) : all.slice(0, windowN)
+    },
     [fixtureEase, windowN],
   )
   const gwSet = useMemo(() => new Set(gws), [gws])
