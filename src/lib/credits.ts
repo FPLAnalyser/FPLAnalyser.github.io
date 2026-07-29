@@ -64,7 +64,7 @@ export const DATA_SOURCES: DataSource[] = [
   },
   {
     name: 'Fantasy Premier League — your team',
-    what: 'Only when you enter an FPL team ID on My Team. That request goes to the FPL API through a public CORS relay, because the FPL API cannot be called from a browser directly. Your team ID and the squad it returns pass through that relay.',
+    what: 'Only when you enter an FPL team ID on My Team. The FPL API cannot be called from a browser directly, so the request is relayed. See the Privacy tab for who runs that relay.',
     sendsVisitorData: true,
     url: 'https://fantasy.premierleague.com/',
   },

@@ -4,6 +4,7 @@ import { SectionBanner } from '../components/SectionBanner'
 import { Tabs, type TabDef } from '../components/Tabs'
 import { Icon } from '../components/Icon'
 import { PHOTO_CREDITS, DATA_SOURCES, LICENCE_URL, NEEDS_ATTRIBUTION, SHARE_ALIKE } from '../lib/credits'
+import { usesOwnRelay } from '../lib/api'
 
 /* ════════════════════════════════════════════════════════════════════════
    LEGAL — credits, data sources, terms and privacy on one page.
@@ -241,13 +242,25 @@ function Privacy() {
       <P>
         Two things reach a third party, and only these:
       </P>
-      <P>
-        <b className="text-ink">Your FPL team ID</b>, if you enter one on My Team. The Fantasy Premier
-        League API cannot be called from a web page directly, so the request is relayed through a
-        public CORS service. Your team ID, and the squad, manager name and league names that come
-        back, pass through that relay. If you would rather that did not happen, do not use My Team —
-        the rest of the site works without it.
-      </P>
+      {/* The wording follows the build: once VITE_FPL_PROXY points at our own
+          Worker there is no third party to disclose, and claiming otherwise
+          would be as wrong as hiding it. */}
+      {usesOwnRelay ? (
+        <P>
+          <b className="text-ink">Your FPL team ID</b>, if you enter one on My Team. The Fantasy
+          Premier League API cannot be called from a web page directly, so the request goes through
+          a relay we run ourselves. It passes the request straight to FPL and hands back the answer;
+          it keeps no record of who asked. No other company is involved.
+        </P>
+      ) : (
+        <P>
+          <b className="text-ink">Your FPL team ID</b>, if you enter one on My Team. The Fantasy
+          Premier League API cannot be called from a web page directly, so the request is relayed
+          through a public CORS service. Your team ID, and the squad, manager name and league names
+          that come back, pass through that relay. If you would rather that did not happen, do not
+          use My Team — the rest of the site works without it.
+        </P>
+      )}
       <P>
         <b className="text-ink">Your IP address</b>, to the Premier League’s image servers, because
         your browser loads club crests and player headshots from them, and to GitHub Pages, which

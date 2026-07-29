@@ -37,6 +37,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          # Our own Cloudflare Worker relay for live FPL calls (worker/README.md).
+          # Set as a repository variable; while it is empty the app falls back to
+          # the public CORS relays and the privacy notice says so.
+          VITE_FPL_PROXY: ${{ vars.VITE_FPL_PROXY }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

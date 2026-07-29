@@ -4,11 +4,25 @@ import { isNative } from './native';
 // ── Load Your Team ───────────────────────────────────────────────────────────
 let bootstrapCache: any = null;
 
-// The FPL API doesn't send CORS headers for cross-origin browser requests,
-// so calls are routed through a public CORS proxy, with a fallback if the
-// first one is down.
+// The FPL API doesn't send CORS headers for cross-origin browser requests, so
+// the call has to be relayed by something that isn't a browser.
+//
+// Preferred: our own Cloudflare Worker (worker/fpl-proxy.js), set at build time
+// via VITE_FPL_PROXY. It only relays a fixed list of FPL paths, only answers our
+// own origins, and — the point — keeps visitors' team IDs and manager names out
+// of a stranger's server.
+//
+// The public relays below remain as a backstop for the case where the Worker is
+// not configured or is down. They are a fallback, not the plan: they see every
+// request, rate-limit hard, and can disappear without notice. While the site
+// depends on them the privacy notice has to say so.
+const OWN_PROXY = (import.meta.env.VITE_FPL_PROXY as string | undefined)?.replace(/\/$/, '');
 const CORS_PROXY_PRIMARY = 'https://corsproxy.io/?';
 const CORS_PROXY_FALLBACK = 'https://api.allorigins.win/raw?url=';
+
+/** True when live FPL calls go through infrastructure we own — the /legal page
+ *  reads this so the privacy notice describes what is actually happening. */
+export const usesOwnRelay = !!OWN_PROXY;
 
 async function fplFetch(url: string): Promise<Response> {
   // In the native app CapacitorHttp routes fetch through the OS stack, which is
@@ -19,6 +33,15 @@ async function fplFetch(url: string): Promise<Response> {
       if (res.ok) return res;
     } catch {
       /* fall through to the proxy chain as a backstop */
+    }
+  }
+  if (OWN_PROXY) {
+    try {
+      // The Worker is called with the same path as the FPL API.
+      const res = await fetch(OWN_PROXY + new URL(url).pathname);
+      if (res.ok) return res;
+    } catch {
+      /* fall through to the public relays */
     }
   }
   let primaryError: string;
