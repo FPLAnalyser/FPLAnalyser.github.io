@@ -116,6 +116,17 @@ export function Layout() {
       <PullToRefresh>
         <main className="pb-[calc(env(safe-area-inset-bottom)+76px)] md:pb-[env(safe-area-inset-bottom)]">
           <Outlet />
+          {/* Attribution licences require the credit to be reachable by anyone
+              who sees the image, so the link has to be on every page rather
+              than tucked inside a menu. */}
+          <footer className="mx-auto max-w-[1400px] px-2.5 pt-2 pb-8 text-[12px] text-ink-3 sm:px-4 md:px-6">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line pt-4">
+              <span>FPL Analyser — independent, and not affiliated with the Premier League or Fantasy Premier League.</span>
+              <NavLink to="/legal" className="text-accent underline underline-offset-2 hover:text-accent-2">
+                Data, credits &amp; privacy
+              </NavLink>
+            </div>
+          </footer>
         </main>
       </PullToRefresh>
 

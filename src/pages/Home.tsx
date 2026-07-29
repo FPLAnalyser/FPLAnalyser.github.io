@@ -96,7 +96,7 @@ function WindowCard({ w }: { w: HomeWin }) {
       <div className="hw-grain" />
       <div className="hw-body">
         <span className="mb-1 inline-flex items-center gap-1.5 text-[0.58rem] font-extrabold tracking-[0.16em] text-accent-2 uppercase">◆ {w.kicker}</span>
-        <h3 className="font-display text-lg leading-[0.95] text-white uppercase md:text-xl">{w.title}</h3>
+        <h2 className="font-display text-lg leading-[0.95] text-white uppercase md:text-xl">{w.title}</h2>
         <div className="mt-2 mb-2.5 h-0.5 w-7 rounded-full" style={{ background: 'linear-gradient(90deg, var(--accent-2), var(--accent-strong))' }} />
         <div className="flex items-center justify-between gap-1.5">
           <span className="truncate text-[11px] font-bold text-[#e9e4d8]">{w.stat}</span>

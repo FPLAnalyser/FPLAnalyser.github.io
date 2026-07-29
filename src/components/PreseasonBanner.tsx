@@ -26,7 +26,8 @@ export function PreseasonBanner() {
           <b className="text-ink">Pre-season {info.label}.</b> Fixtures, squads and prices are live — player ratings are carried over from{' '}
           <b className="text-ink">{short(info.ratings_season)}</b> until games are played. New signings and promoted clubs show N/A for now.
         </span>
-        <button onClick={dismiss} aria-label="Dismiss" className="ml-auto shrink-0 px-1 text-lg leading-none text-ink-3 hover:text-ink">×</button>
+        {/* Sized to WCAG 2.2 AA's 24px minimum — it was 17×18. */}
+        <button onClick={dismiss} aria-label="Dismiss" className="ml-auto grid size-6 shrink-0 place-items-center text-lg leading-none text-ink-3 hover:text-ink">×</button>
       </div>
     </div>
   )

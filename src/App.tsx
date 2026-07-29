@@ -32,6 +32,7 @@ const PAGE_LOADERS = {
   rankings: () => import('./pages/Rankings'),
   myteam: () => import('./pages/MyTeam'),
   preview: () => import('./pages/Preview'),
+  legal: () => import('./pages/Legal'),
   scouting: () => import('./pages/Scouting'),
   fixtures: () => import('./pages/Fixtures'),
   compare: () => import('./pages/Compare'),
@@ -44,6 +45,7 @@ const Teams = lazyRetry(PAGE_LOADERS.teams)
 const Rankings = lazyRetry(PAGE_LOADERS.rankings)
 const MyTeam = lazyRetry(PAGE_LOADERS.myteam)
 const Preview = lazyRetry(PAGE_LOADERS.preview)
+const Legal = lazyRetry(PAGE_LOADERS.legal)
 const Scouting = lazyRetry(PAGE_LOADERS.scouting)
 const Fixtures = lazyRetry(PAGE_LOADERS.fixtures)
 const Compare = lazyRetry(PAGE_LOADERS.compare)
@@ -75,6 +77,7 @@ const router = createHashRouter([
       { path: 'squad', element: page(<SquadBuilder />) },
       { path: 'loadteam', element: page(<MyTeam />) },
       { path: 'preview', element: page(<Preview />) },
+      { path: 'legal', element: page(<Legal />) },
       { path: 'scout', element: page(<Scouting />) },
       { path: 'debug', element: page(<Debug />) },
       { path: '*', element: <Navigate to="/" replace /> },

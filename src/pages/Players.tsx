@@ -424,7 +424,7 @@ function IdentStrip({ r, peers, personas, status, flags, isPenTaker, isSpTaker, 
           <PhotoImg hero code={r.code} element={r.element} className="h-[64px] w-auto object-contain md:h-[76px]" style={{ filter: 'drop-shadow(0 8px 16px rgba(0,0,0,.55))' }} placeholder={<div className="flex h-[64px] w-[46px] items-end justify-center md:h-[76px]"><HeroSilhouette /></div>} />
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="leading-[1.05] font-extrabold tracking-[-.02em]" style={{ fontSize: 'clamp(20px,4.4vw,32px)', overflowWrap: 'anywhere', color: '#f5f2ea' }}>{name}</h1>
+          <h2 className="leading-[1.05] font-extrabold tracking-[-.02em]" style={{ fontSize: 'clamp(20px,4.4vw,32px)', overflowWrap: 'anywhere', color: '#f5f2ea' }}>{name}</h2>
           <div className="mt-1 text-[13px] font-medium" style={{ color: '#a9a294' }}>
             {POS_LABEL[pos] ?? pos} · <b className="font-semibold" style={{ color: tc }}>{teamFullNames[team] || team}</b> · £{r.price}m · {r.selected_by_percent}% owned
             {streak === '🔥 Hot' && <span className="ml-2 inline-flex items-center gap-1 text-hot"><Icon name="flame" size={12} solid /> Hot</span>}

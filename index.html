@@ -100,17 +100,27 @@
 <link rel="icon" type="image/png" sizes="48x48" href="icons/favicon-48.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 
+<meta name="description" content="Every Premier League player rated 0–100 on the numbers that predict Fantasy Premier League returns — expected goals, minutes, form and fixtures — then turned into transfer calls for your own team.">
+
 <!-- Link preview. The full lockup is the card: when someone posts the site
-     itself rather than an exported panel, this is the image that travels. -->
+     itself rather than an exported panel, this is the image that travels.
+     og:image and og:url MUST be absolute — every scraper (X, Facebook,
+     WhatsApp, iMessage, Slack) fetches the page without a document base and
+     silently drops a relative path, so a relative one means no preview image
+     at all. Everything else on the site uses a relative base for the Pages
+     sub-path; these two are the deliberate exception. -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FPL Analyser">
+<meta property="og:url" content="https://stefcourt2004-png.github.io/fpl-analyser/">
 <meta property="og:title" content="FPL Analyser — Data. Insight. Points.">
 <meta property="og:description" content="Every Premier League player rated on the numbers that predict returns — then turned into transfer calls for your own team.">
-<meta property="og:image" content="brand/lockup.jpg">
+<meta property="og:image" content="https://stefcourt2004-png.github.io/fpl-analyser/brand/lockup.jpg">
+<meta property="og:image:alt" content="FPL Analyser — Data. Insight. Points.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@FPLAnalyser">
 <meta name="twitter:title" content="FPL Analyser — Data. Insight. Points.">
-<meta name="twitter:image" content="brand/lockup.jpg">
+<meta name="twitter:description" content="Every Premier League player rated on the numbers that predict returns — then turned into transfer calls for your own team.">
+<meta name="twitter:image" content="https://stefcourt2004-png.github.io/fpl-analyser/brand/lockup.jpg">
 </head>
 <body>
 

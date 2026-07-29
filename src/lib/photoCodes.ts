@@ -2,17 +2,24 @@
 //
 // The pipeline's stored `code` per player is a point-in-time snapshot and can
 // be stale for recently-transferred or newly-added players (wrong kit, or no
-// image at that code) — while the live FPL API always has the current code.
-// We fetch bootstrap-static once (best effort, on the user's device where the
-// FPL API is reachable) and map element id -> current code.
+// image at that code), so we need the current code.
 //
-// SAFETY: our data is an end-of-season snapshot; the live API could already be
-// on a new season with reassigned element ids. So we only trust the live map
-// if it AGREES with our own (element -> code) pairs for most players. High
-// agreement = same element space (the few disagreements are exactly the stale
-// codes we want to fix); low agreement = a different season -> discard.
+// This used to fetch bootstrap-static from the FPL API through a public CORS
+// proxy on EVERY page load — several megabytes, routed through a third party,
+// for a lookup table. The daily availability refresh already reads
+// bootstrap-static server-side and writes element -> code into our own feed,
+// so the same live codes arrive same-origin, cached, and about a thousand
+// times smaller. No third party ever sees a visitor.
+//
+// SAFETY: our ratings are an end-of-season snapshot; the feed could already be
+// on a new season with reassigned element ids. So we only trust the map if it
+// AGREES with our own (element -> code) pairs for most players. High agreement
+// = same element space (the few disagreements are exactly the stale codes we
+// want to fix); low agreement = a different season -> discard.
 
-import { fplFetch } from './api'
+import { loadTable } from './data'
+
+interface AvailFeed { players?: { element?: number; code?: number }[] }
 
 const SS_KEY = 'fpl_live_codes_v1'
 let codes: Map<number, number> | null = null
@@ -42,11 +49,10 @@ export function ensureLiveCodes(ourPairs: [number, number][]) {
 
   ;(async () => {
     try {
-      const res = await fplFetch('https://fantasy.premierleague.com/api/bootstrap-static/')
-      const data = await res.json()
+      const data = await loadTable<AvailFeed>('availability')
       const live = new Map<number, number>()
-      for (const el of data?.elements ?? []) {
-        if (el?.id != null && el?.code != null) live.set(Number(el.id), Number(el.code))
+      for (const el of data?.players ?? []) {
+        if (el?.element != null && el?.code != null) live.set(Number(el.element), Number(el.code))
       }
       if (live.size < 50) return
 

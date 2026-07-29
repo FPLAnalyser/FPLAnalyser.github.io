@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The app is a hash router, so every route lives under one crawlable URL.
+     Search engines index the root; the hash fragments are listed for
+     completeness and are followed by crawlers that execute JavaScript. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://stefcourt2004-png.github.io/fpl-analyser/</loc><priority>1.0</priority><changefreq>daily</changefreq></url>
+  <url><loc>https://stefcourt2004-png.github.io/fpl-analyser/#/preview</loc><priority>0.9</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://stefcourt2004-png.github.io/fpl-analyser/#/players</loc><priority>0.9</priority><changefreq>daily</changefreq></url>
+  <url><loc>https://stefcourt2004-png.github.io/fpl-analyser/#/teams</loc><priority>0.8</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://stefcourt2004-png.github.io/fpl-analyser/#/fixtures</loc><priority>0.8</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://stefcourt2004-png.github.io/fpl-analyser/#/scout</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://stefcourt2004-png.github.io/fpl-analyser/#/squad</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://stefcourt2004-png.github.io/fpl-analyser/#/legal</loc><priority>0.3</priority><changefreq>yearly</changefreq></url>
+</urlset>

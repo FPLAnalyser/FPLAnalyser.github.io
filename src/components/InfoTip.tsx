@@ -46,7 +46,11 @@ export function InfoTip({ text, children, size = 14 }: { text: ReactNode; childr
         ref={anchorRef}
         type="button"
         aria-label="More info"
-        className="inline-grid size-4 place-items-center rounded-full border border-line-mid text-[10px] font-bold text-ink-2 transition-colors hover:border-accent hover:text-accent"
+        /* The ring stays 16px so it doesn't shout next to a heading, but the
+           hit area is padded out past 24px — WCAG 2.2 AA's minimum target size —
+           with a negative margin so the layout is unchanged. Before this the
+           tap target was 14px, which is a miss on a phone. */
+        className="relative inline-grid size-4 place-items-center rounded-full border border-line-mid text-[10px] font-bold text-ink-2 transition-colors before:absolute before:-inset-1.5 before:content-[''] hover:border-accent hover:text-accent"
         style={{ width: size, height: size }}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
