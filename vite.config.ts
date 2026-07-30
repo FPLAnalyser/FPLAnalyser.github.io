@@ -73,7 +73,11 @@ export default defineConfig({
             urlPattern: /\/img\/(players|badges)\/.*\.webp$/,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'club-and-player-images',
+              // -v2: the first mirror shipped archive photos under these exact
+              // filenames, and CacheFirst had already put them on readers'
+              // devices for sixty days. The name change orphans that cache so
+              // the corrected images are actually fetched.
+              cacheName: 'club-and-player-images-v2',
               expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 60 },
             },
           },

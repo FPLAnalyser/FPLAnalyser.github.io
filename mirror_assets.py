@@ -53,6 +53,10 @@ CDN = "https://resources.premierleague.com"
 # The bucket is named for the season, so a new one appears each year. Trying
 # the newest first costs a 404 while it doesn't exist yet and picks up this
 # season's photos the day it does.
+# Measured, not guessed (see photo_bucket_check.py): premierleague25 carries
+# the newest headshots that exist — shot August 2025 — and the unversioned
+# legacy path is a year older than that. There is no 26/27 bucket yet; it is
+# listed first so the mirror picks those photos up on the day it appears.
 SEASON_BUCKETS = ("premierleague26", "premierleague25")
 SEASON_SIZES = ("440x700", "250x250", "110x140")
 LEGACY_SIZES = ("250x250", "110x140")
@@ -105,7 +109,12 @@ def fetch(url: str) -> bytes | None:
         with urllib.request.urlopen(req, timeout=30) as r:
             return r.read()
     except urllib.error.HTTPError as e:
-        if e.code != 404:
+        # 403 and 404 both mean "no image here, try the next rung". The host
+        # answers 403 for a size a bucket doesn't carry — premierleague25 does
+        # it for every 250x250 — and treating that as a block is what sent the
+        # mirror down to the archive and put two-season-old photos on the site.
+        # Only a 5xx or a dead connection is worth calling blocked.
+        if e.code >= 500:
             blocked += 1
         return None
     except (urllib.error.URLError, TimeoutError, OSError):

@@ -1,20 +1,28 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react'
 import { liveCodeFor, liveCodesVersion, subscribeLiveCodes } from '../lib/photoCodes'
 
-// The Premier League moved current-season headshots to a season-versioned
-// bucket with the bare code as the filename:
-//   .../premierleague26/photos/players/<size>/<code>.png
-// while the legacy bucket (…/premierleague/…/p<code>.png) still holds the OLD
-// photo — a transferred player in his previous club's kit. So every size in
-// every season bucket, newest first, and only then the legacy one.
+// Headshots live in a season-versioned bucket with the bare code as the
+// filename:
+//   .../premierleague25/photos/players/<size>/<code>.png
+// and the unversioned legacy path (…/premierleague/…/p<code>.png) holds an
+// older set. Measured rather than assumed — see photo_bucket_check.py, which
+// asks the host directly and reads Last-Modified back:
 //
-// The bucket is named for the season, so a new one appears each year and the
-// old one keeps last season's pictures. Asking for the newest first costs a
-// 404 while it doesn't exist yet and picks up the new photos the day it does;
-// leaving a stale name at the front of the list is how a site quietly serves
-// last year's squad photos all season.
+//   premierleague25  250x250  403   (the bucket does not carry that size)
+//   premierleague25  110x140  200   shot August 2025  <- newest that exists
+//   premierleague    250x250  200   shot August 2024
+//
+// Two things follow. Every SIZE in the versioned bucket has to be tried before
+// the legacy path, because the first one 403s and stopping there drops you a
+// whole season. And a 403 is not a failure here, it is "not at this address" —
+// reading it as one is what put 2024 photos on the site.
 const CDN = 'https://resources.premierleague.com'
-const SEASON_BUCKETS = ['premierleague26', 'premierleague25'] as const
+// Only the bucket that actually answers. premierleague26/27 return 502 — they
+// don't exist yet — and putting a 502 in front of every visitor's headshot
+// buys a stalled round-trip for nothing. The nightly mirror carries the
+// forward-looking guess instead, where one slow request a day costs no one
+// anything; when this season's photos appear they arrive via the mirror.
+const SEASON_BUCKETS = ['premierleague25'] as const
 const PHOTO_SIZES = ['250x250', '110x140'] as const
 
 /** Candidate headshot URLs.
