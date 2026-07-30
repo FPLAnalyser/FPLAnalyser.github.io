@@ -28,7 +28,7 @@ export function teamBadgeUrls(team: string): string[] {
   const code = teamCodeFor(team) ?? teamCodes[team]
   if (!code) return []
   return [
-    `${import.meta.env.BASE_URL}img/badges/t${code}.png`,
+    `${import.meta.env.BASE_URL}img/badges/t${code}.webp`,
     `https://resources.premierleague.com/premierleague/badges/t${code}.png`,
   ]
 }

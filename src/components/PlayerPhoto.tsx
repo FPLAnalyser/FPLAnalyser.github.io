@@ -23,7 +23,7 @@ const PHOTO_SIZES = ['250x250', '110x140'] as const
  *  straight away and joins the mirror overnight. */
 function photoUrls(code: number, sizes: readonly string[], ver?: string): string[] {
   const bust = ver ? `?v=${ver}` : ''
-  const out: string[] = [`${import.meta.env.BASE_URL}img/players/${code}.png`]
+  const out: string[] = [`${import.meta.env.BASE_URL}img/players/${code}.webp`]
   for (const s of sizes) out.push(`${CDN}/premierleague25/photos/players/${s}/${code}.png${bust}`)
   for (const s of sizes) out.push(`${CDN}/premierleague/photos/players/${s}/p${code}.png${bust}`)
   return out

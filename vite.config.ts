@@ -70,7 +70,7 @@ export default defineConfig({
           {
             // Crests and headshots never change under the same filename — the
             // code IS the identity — so cache-first, and let them age out.
-            urlPattern: /\/img\/(players|badges)\/.*\.png$/,
+            urlPattern: /\/img\/(players|badges)\/.*\.webp$/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'club-and-player-images',

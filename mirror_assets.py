@@ -16,19 +16,23 @@ the question: a same-origin image is always readable. It also drops a
 third-party request from every page load, which is faster and one less place a
 visitor is observed.
 
-250x250 is the only size mirrored, because nothing on the site draws a headshot
-taller than 150px — so it is already twice the largest render, which is what a
-retina screen and the 2x export both want.
+Stored as WebP at 300px. The source is a 500x500 PNG of about 350KB, and 357
+of those is 115MB of repository for images that are never drawn above 150px —
+300px is twice the largest render, which is what a retina screen and the 2x
+export both want, and WebP with transparency gets each one to roughly 13KB.
 
 Idempotent: a file that already exists is left alone, so the daily run costs
 one HEAD-shaped GET per new player rather than re-fetching the league. Run from
 the repo root.
 """
+import io
 import json
 import os
 import sys
 import urllib.error
 import urllib.request
+
+from PIL import Image
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(ROOT, "site_data")
@@ -81,14 +85,32 @@ def fetch(url: str) -> bytes | None:
         return None
 
 
-def save(path: str, data: bytes) -> None:
+# Twice the tallest thing the site draws a headshot at (150px). Anything more
+# is bytes a phone downloads and throws away.
+MAX_PX = 300
+
+
+def save(path: str, data: bytes) -> bool:
+    """Downscale, convert to WebP, write atomically. False if it isn't an image.
+
+    Atomic because an interrupted run must not leave a half-written file that
+    the next run would mistake for one already mirrored."""
+    try:
+        im = Image.open(io.BytesIO(data))
+        im.load()
+    except Exception:
+        return False
+    # RGBA throughout: these are cut-outs, and a flattened background would put
+    # a white box behind every player on a dark card.
+    if im.mode != "RGBA":
+        im = im.convert("RGBA")
+    if max(im.size) > MAX_PX:
+        im.thumbnail((MAX_PX, MAX_PX), Image.LANCZOS)
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    # Write beside the target and move, so an interrupted run never leaves a
-    # half-written PNG that the next run would treat as already mirrored.
     tmp = path + ".part"
-    with open(tmp, "wb") as f:
-        f.write(data)
+    im.save(tmp, "WEBP", quality=82, method=6)
     os.replace(tmp, path)
+    return True
 
 
 with open(os.path.join(DATA, "seasons.json"), encoding="utf-8") as f:
@@ -107,12 +129,11 @@ for t in teams:
     code = t.get("code")
     if code is None:
         continue
-    path = os.path.join(OUT, "badges", f"t{code}.png")
+    path = os.path.join(OUT, "badges", f"t{code}.webp")
     if os.path.exists(path):
         continue
     body = fetch(BADGE_URL.format(code=code))
-    if body:
-        save(path, body)
+    if body and save(path, body):
         new_badges += 1
     else:
         missing += 1
@@ -124,7 +145,7 @@ for p in players:
     code = p.get("code")
     if code is None:
         continue
-    path = os.path.join(OUT, "players", f"{code}.png")
+    path = os.path.join(OUT, "players", f"{code}.webp")
     if os.path.exists(path):
         continue
     body = None
@@ -132,8 +153,7 @@ for p in players:
         body = fetch(url.format(code=code))
         if body:
             break
-    if body:
-        save(path, body)
+    if body and save(path, body):
         new_photos += 1
     else:
         # Not an error: FPL lists players before the photo exists, and the
@@ -144,7 +164,7 @@ def usage(sub: str) -> tuple[int, int]:
     d = os.path.join(OUT, sub)
     if not os.path.isdir(d):
         return 0, 0
-    files = [os.path.join(d, f) for f in os.listdir(d) if f.endswith(".png")]
+    files = [os.path.join(d, f) for f in os.listdir(d) if f.endswith(".webp")]
     return len(files), sum(os.path.getsize(f) for f in files)
 
 bn, bb = usage("badges")
