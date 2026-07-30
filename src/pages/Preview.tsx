@@ -688,12 +688,12 @@ export default function Preview() {
                       style={{ maskImage: 'linear-gradient(90deg, transparent, #000 42%)', WebkitMaskImage: 'linear-gradient(90deg, transparent, #000 42%)' }}
                     />
                     <div className="relative z-[2]">
-                      <div className="text-[10px] font-extrabold tracking-[0.16em] uppercase" style={{ color: 'rgba(255,255,255,.6)' }}>{p.label}</div>
+                      <div className="capture-flush text-[10px] font-extrabold tracking-[0.16em] uppercase" style={{ color: 'rgba(255,255,255,.6)' }}>{p.label}</div>
                       <div className="mt-1.5 flex items-center gap-1.5">
-                        <TeamBadge team={b.side.team} size={19} className="shrink-0" />
-                        <b className="text-[18px] leading-tight font-extrabold text-white">{String(b.r.web_name)}</b>
+                        <TeamBadge team={b.side.team} size={19} className="capture-sink shrink-0" />
+                        <b className="capture-flush text-[18px] leading-tight font-extrabold text-white">{String(b.r.web_name)}</b>
                       </div>
-                      <div className="mt-0.5 text-[12px]" style={{ color: 'rgba(255,255,255,.6)' }}>
+                      <div className="capture-flush mt-0.5 text-[12px]" style={{ color: 'rgba(255,255,255,.6)' }}>
                         {b.r.position} · {b.side.team} {b.side.venue === 'H' ? 'v' : 'at'} {b.side.opp} · £{b.r.price}m
                       </div>
                       {/* The unit rides on the baseline beside the number

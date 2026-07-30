@@ -259,6 +259,55 @@ body {
 .photo-mono { display: none; }
 .photo-slot[data-nophoto] .photo-mono { display: grid; }
 
+/* ── Text that has to stay level with something that isn't text ──────────
+   The rasteriser drops a glyph to the BOTTOM of its line box where the
+   browser centres it, so every line of text lands about half its leading too
+   low — and an image has no leading, so it does not move with it.
+
+   Measured on the captain card at 2x: the eyebrow 12px low, the name 18px
+   low, the club crest beside that name not low at all. On screen the crest
+   and the name are dead level; in an export the crest floated nine CSS pixels
+   above the name it belongs to. The same drift, accumulating down the card,
+   is why the exported card came out 13 CSS pixels taller than the real one.
+
+   `capture-flush` removes the slack the glyph is falling through: with the
+   line box the same height as the type there is nowhere lower for it to go,
+   so text and boxes stay where the browser put them. Only for lines that sit
+   beside something rigid, or whose position is load-bearing.
+
+   Distinct from `.capture-line`, which goes the other way and ADDS leading —
+   that one is for truncating text being sliced by a box too short for it. The
+   two are opposite corrections for opposite failures; do not merge them. */
+[data-capturing] .capture-flush {
+  line-height: 1 !important;
+}
+
+/* The other half of it: the glyphs are drawn about half an em too low, and
+   nothing about the box fixes it.
+
+   Measured across five type sizes — 11px to 34px — the drop is a constant
+   fraction of the font size, 0.48em to 0.59em. Not the leading, not the line
+   box, not anything layout controls: flex centring, inline-block with
+   vertical-align middle, a baseline offset and tighter leading all landed
+   within a pixel of each other. On screen the club crest and the player's name
+   are dead level; in an export the crest floated nine and a half CSS pixels
+   above the name it belongs to.
+
+   Moving the text back up does not work either — the rasteriser ignores
+   `position: relative` on a text element. It honours it on a replaced element,
+   exactly, so the image is what moves. Measured at 0.35em, 0.5em, 0.6em and a
+   flat 9px: 0.6em lands on zero.
+
+   Which makes this an empirical constant, not a principle, and it is only
+   correct where the inherited font size is the usual 16px — the offset is
+   really half the height of the type it sits beside. If it is ever used
+   somewhere the surrounding size differs, measure it again rather than
+   assuming this number carries. */
+[data-capturing] .capture-sink {
+  position: relative;
+  top: 0.6em;
+}
+
 /* Flat ink while capturing.
  *
  * `background-clip: text` is what paints the gradient through the digits, and
