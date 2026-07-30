@@ -124,7 +124,7 @@ function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: 
   return out
 }
 
-export function Exportable({ title, filename, children, className, toolbar }: {
+export function Exportable({ title, filename, children, className, toolbar, variant = 'row' }: {
   title: string
   filename?: string
   children: ReactNode
@@ -133,6 +133,11 @@ export function Exportable({ title, filename, children, className, toolbar }: {
    *  button gets a row of its own, which on a crowded panel is a whole line
    *  of height spent on one small control. */
   toolbar?: ReactNode
+  /** `corner` puts the trigger inside the panel's top-right instead of on a
+   *  row above it, and floats the format chooser over the panel rather than
+   *  pushing it down. For a grid of small cards — a round of fixtures — a row
+   *  per card is a row of chrome per card, and the layout is the content. */
+  variant?: 'row' | 'corner'
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
@@ -184,57 +189,89 @@ export function Exportable({ title, filename, children, className, toolbar }: {
     }
   }
 
+  /* The chooser is the same in both variants; only where it sits changes. */
+  const chooser = (
+    <>
+      <div className="mb-2 flex flex-wrap gap-1.5">
+        {FORMATS.map((f) => (
+          <button
+            key={f.id}
+            onClick={() => setFmt(f.id)}
+            className={`min-h-8 rounded-full border px-3 text-[12px] font-semibold transition-colors ${
+              fmt === f.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong'
+            }`}
+          >
+            {f.label} <span className="font-normal">{f.hint}</span>
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => run('share')}
+          disabled={busy}
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-accent bg-accent-soft px-3.5 text-[13px] font-semibold text-accent disabled:opacity-60"
+        >
+          <Icon name="users" size={13} /> {busy ? 'Rendering…' : 'Share image'}
+        </button>
+        <button
+          onClick={() => run('download')}
+          disabled={busy}
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-line-mid px-3.5 text-[13px] font-semibold text-ink-2 disabled:opacity-60"
+        >
+          <Icon name="check" size={13} /> Download PNG
+        </button>
+      </div>
+      {msg && <p className="mt-2 text-xs text-warn">{msg}</p>}
+    </>
+  )
+
+  if (variant === 'corner') {
+    return (
+      <div className={`relative ${className ?? ''}`}>
+        {/* data-no-capture on both, or the picture of the panel has the
+            control that made it sitting in the corner. */}
+        <button
+          data-no-capture
+          onClick={() => setOpen((o) => !o)}
+          // 32px square: the smallest thing a thumb can reliably find, and the
+          // most a fixture card's corner can give up.
+          className={`absolute top-2 right-2 z-[4] inline-flex h-8 w-8 items-center justify-center rounded-lg border transition-colors ${
+            open ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid bg-surface-1/80 text-ink-3 hover:border-line-strong hover:text-ink'
+          }`}
+          aria-expanded={open}
+          aria-label={`Share ${title}`}
+          title={`Share ${title}`}
+        >
+          <Icon name="users" size={13} />
+        </button>
+        {open && (
+          <div data-no-capture className="absolute top-11 right-2 z-[5] w-[248px] rounded-xl border border-line bg-surface-1 p-3 shadow-xl">
+            {chooser}
+          </div>
+        )}
+        <div ref={ref}>{children}</div>
+      </div>
+    )
+  }
+
   return (
     <div className={`relative ${className ?? ''}`}>
       {/* No wrapping: the point of the toolbar is to save a row, and a row
           that wraps costs the one it was meant to save. On a phone the word
           "Share" drops and the icon carries it. */}
-      <div className="mb-1.5 flex items-center gap-1.5">
+      <div data-no-capture className="mb-1.5 flex items-center gap-1.5">
         {toolbar}
         <button
           onClick={() => setOpen((o) => !o)}
           className="ml-auto inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg border border-line-mid px-2.5 text-[12px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
           aria-expanded={open}
-          aria-label="Share"
+          aria-label={`Share ${title}`}
         >
           <Icon name="users" size={13} /> <span className="hidden min-[360px]:inline">Share</span>
         </button>
       </div>
 
-      {open && (
-        <div className="mb-3 rounded-xl border border-line bg-surface-1 p-3">
-          <div className="mb-2 flex flex-wrap gap-1.5">
-            {FORMATS.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setFmt(f.id)}
-                className={`min-h-8 rounded-full border px-3 text-[12px] font-semibold transition-colors ${
-                  fmt === f.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong'
-                }`}
-              >
-                {f.label} <span className="font-normal">{f.hint}</span>
-              </button>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => run('share')}
-              disabled={busy}
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-accent bg-accent-soft px-3.5 text-[13px] font-semibold text-accent disabled:opacity-60"
-            >
-              <Icon name="users" size={13} /> {busy ? 'Rendering…' : 'Share image'}
-            </button>
-            <button
-              onClick={() => run('download')}
-              disabled={busy}
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-line-mid px-3.5 text-[13px] font-semibold text-ink-2 disabled:opacity-60"
-            >
-              <Icon name="check" size={13} /> Download PNG
-            </button>
-          </div>
-          {msg && <p className="mt-2 text-xs text-warn">{msg}</p>}
-        </div>
-      )}
+      {open && <div data-no-capture className="mb-3 rounded-xl border border-line bg-surface-1 p-3">{chooser}</div>}
 
       <div ref={ref}>{children}</div>
     </div>

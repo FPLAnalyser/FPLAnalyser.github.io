@@ -7,6 +7,7 @@ import { PlayerPhoto } from '../components/PlayerPhoto'
 import { InfoTip } from '../components/InfoTip'
 import { Icon } from '../components/Icon'
 import { PageSkeleton } from '../components/Skeleton'
+import { Exportable } from '../components/ExportPanel'
 import { useCore } from '../lib/useData'
 import { useAvailability, availFor, type TeamRecord } from '../lib/availability'
 import { useMarketOdds, useXpModel, useShotProfiles, xpForGw } from '../lib/xp'
@@ -303,9 +304,24 @@ export default function Preview() {
               const inGame = board.filter((b) => b.side.team === m.h || b.side.team === m.a).slice(0, 5)
               const kits = resolveFixture(m.h, m.a, teamLabel)
               return (
-                <div
+                // The column span lives on the wrapper, not the card: an
+                // opening card widens by becoming a two-column grid item, and
+                // the grid item is now the Exportable around it.
+                //
+                // min-w-0 for the same reason. A grid item's automatic minimum
+                // is its content, unless it clips — the card does clip, so it
+                // used to shrink to the column and cut the overhang. The
+                // wrapper doesn't clip (the format menu hangs out of it), so
+                // without this the phone got a card wider than the screen.
+                <Exportable
                   key={id}
-                  className={`relative overflow-hidden rounded-xl border bg-surface-1 transition-colors ${feat ? 'border-accent/45 p-4 pt-[1.15rem]' : 'p-3 pt-[0.95rem]'} ${isOpen && !feat ? 'border-accent/45 lg:col-span-2' : feat ? '' : 'border-line'}`}
+                  variant="corner"
+                  title={`GW${gw} — ${teamLabel(m.h)} v ${teamLabel(m.a)}`}
+                  filename={`gw${gw}-${m.h.toLowerCase()}-${m.a.toLowerCase()}`}
+                  className={`min-w-0 ${feat ? 'mb-4' : isOpen ? 'lg:col-span-2' : ''}`}
+                >
+                <div
+                  className={`relative overflow-hidden rounded-xl border bg-surface-1 transition-colors ${feat ? 'border-accent/45 p-4 pt-[1.15rem]' : 'p-3 pt-[0.95rem]'} ${isOpen && !feat ? 'border-accent/45' : feat ? '' : 'border-line'}`}
                 >
                   {/* A stub of club colour over each club, and nothing across
                       the middle. Corner-to-corner radial washes carried no
@@ -343,8 +359,11 @@ export default function Preview() {
                         toggle. Pinned to the top-right corner the derby ribbon
                         sat on the away club's crest; left outside the button
                         they were a dead strip across the top of the card that
-                        swallowed clicks. */}
-                    <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
+                        swallowed clicks. The right padding is the share button,
+                        which floats over this corner from outside the toggle —
+                        nested buttons aren't legal, and the alternative was a
+                        whole row of chrome above every card in the round. */}
+                    <div className="mb-2.5 flex flex-wrap items-center gap-1.5 pr-11">
                       {feat && <span className="rounded bg-accent px-2 py-1 text-[9px] font-extrabold tracking-[0.12em] text-accent-contrast uppercase">Match of the round</span>}
                       {derby && <span className="rounded bg-gradient-to-r from-accent to-accent-2 px-2 py-1 text-[9px] font-extrabold tracking-[0.1em] text-accent-contrast uppercase">{derby}</span>}
                       {/* The featured match is lifted out of its day group, so
@@ -352,7 +371,10 @@ export default function Preview() {
                       {feat && m.k && (
                         <span className="rounded border border-line-strong bg-surface-2 px-2 py-1 text-[11px] font-extrabold tracking-[0.08em] text-ink uppercase">{DAY.format(new Date(m.k))}</span>
                       )}
-                      <span className="ml-auto flex items-center gap-1 text-[10px] font-bold tracking-wide text-ink-3 uppercase">
+                      {/* An instruction to the reader of the page, not part of
+                          the fixture — a picture of the card shouldn't tell
+                          whoever it reaches to tap something. */}
+                      <span data-no-capture className="ml-auto flex items-center gap-1 text-[10px] font-bold tracking-wide text-ink-3 uppercase">
                         {isOpen ? 'Hide' : 'Detail'}
                         <Icon name="chevron-right" size={13} className={`transition-transform ${isOpen ? '-rotate-90' : 'rotate-90'}`} />
                       </span>
@@ -528,6 +550,7 @@ export default function Preview() {
                     </div>
                   )}
                 </div>
+                </Exportable>
               )
   }
 
@@ -544,12 +567,12 @@ export default function Preview() {
         </EmptyState>
       ) : (
         <>
-          <Band label="The round at a glance" />
           {/* Four different answers. An earlier version led with top expected
               points, which named the same player the captain podium below
               already leads with; the differential is the thing that block
               never tells you. */}
-          <div className="mb-7 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Section gw={gw} label="The round at a glance" name="at-a-glance">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Tile
               k="Biggest attack" v={attacks[0].lam.toFixed(2)} unit="xG"
               s={<><b>{teamLabel(attacks[0].team)}</b> projected goals {attacks[0].venue === 'H' ? 'v' : 'at'} {teamLabel(attacks[0].opp)}</>}
@@ -583,12 +606,13 @@ export default function Preview() {
               media={<span className="flex items-center -space-x-2"><TeamBadge team={matches[0].h} size={38} /><TeamBadge team={matches[0].a} size={38} /></span>}
             />
           </div>
+          </Section>
 
-          <Band label="Captain" tip="Expected points for this gameweek: each player's availability-adjusted baseline scaled by how kind this specific fixture is — attackers by their side's projected goals, defenders and keepers by the clean-sheet odds." />
           {/* A podium: gold, silver, bronze foil, the same card material the
               rest of the site uses for rating tiers, so first place looks like
               first place before a number is read. */}
-          <div className="mb-7 grid gap-3 sm:grid-cols-3">
+          <Section gw={gw} label="Captain" name="captain" tip="Expected points for this gameweek: each player's availability-adjusted baseline scaled by how kind this specific fixture is — attackers by their side's projected goals, defenders and keepers by the clean-sheet odds.">
+          <div className="grid gap-3 sm:grid-cols-3">
             {board.slice(0, 3).map((b, i) => {
               const p = PODIUM[i]
               return (
@@ -620,7 +644,7 @@ export default function Preview() {
                           rather than under it — a whole line of card height
                           for two characters was never a good trade. */}
                       <div className="mt-2.5 flex items-baseline gap-1.5">
-                        <span className="tier-num font-num text-[34px] leading-none font-extrabold" style={{ backgroundImage: p.num }}>{b.xp.toFixed(2)}</span>
+                        <span className="tier-num font-num text-[34px] leading-none font-extrabold" style={{ backgroundImage: p.num, '--tier-capture': p.flat } as React.CSSProperties}>{b.xp.toFixed(2)}</span>
                         <span className="text-[11px] font-extrabold tracking-[0.14em]" style={{ color: 'rgba(255,255,255,.55)' }}>xP</span>
                       </div>
                     </div>
@@ -629,13 +653,18 @@ export default function Preview() {
               )
             })}
           </div>
+          </Section>
 
-          <Band label="Every fixture" tip="Projected goals for each side and the chance of a clean sheet, both from the bookmakers' prices for these exact games. Ordered by kickoff and grouped by day, because that is how a round is actually lived. Tap a fixture to see the players it should produce." />
-
+          {/* Two levels of sharing here, and they answer different questions.
+              The section export is the whole round — the picture you post on a
+              Friday night. Each card carries its own share button so a single
+              game can travel on its own, which is the one people actually
+              send each other. */}
+          <Section gw={gw} label="Every fixture" name="fixtures" className="mb-2" tip="Projected goals for each side and the chance of a clean sheet, both from the bookmakers' prices for these exact games. Ordered by kickoff and grouped by day, because that is how a round is actually lived. Tap a fixture to see the players it should produce.">
           {/* One featured match — the round's biggest game, opened by default
               and given the room to carry the full read. Everything else stays
               in kickoff order underneath it. */}
-          {feature && <div className="mb-4">{card(feature, true)}</div>}
+          {feature && card(feature, true)}
 
           {byDay.map(([day, list]) => (
             <div key={day} className="mb-6">
@@ -648,20 +677,20 @@ export default function Preview() {
               <div className="grid gap-2.5 lg:grid-cols-2">{list.map((m) => card(m, false))}</div>
             </div>
           ))}
+          </Section>
 
           {/* Three columns rather than two: the top ten was a very wide table
               with a column of dead space beside it, and the two absence lists
               were stacked when they belong side by side. */}
           <div className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
-            <div>
-              <Band label="Expected points · top 10" />
+            <Section gw={gw} label="Expected points · top 10" name="top-10" className="">
               <div className="overflow-hidden rounded-xl border border-line">
                 {board.slice(0, 10).map((b, i) => (
                   <button key={String(b.r.element)} onClick={() => navigate(playerHref(b.r.web_name, num(b.r, 'code')))} className="block w-full border-b border-line px-3 py-2.5 text-left transition-colors last:border-0 hover:bg-surface-2/50">
                     <div className="flex items-center gap-2">
                       <span className="w-4 shrink-0 text-center font-num text-[12px] font-extrabold text-ink-3">{i + 1}</span>
                       <TeamBadge team={b.side.team} size={17} />
-                      <b className="truncate text-[14px] font-semibold text-ink">{String(b.r.web_name)}</b>
+                      <b className="capture-line truncate text-[14px] font-semibold text-ink">{String(b.r.web_name)}</b>
                       <span className="ml-auto shrink-0 font-num text-[15px] font-extrabold text-accent-2">{b.xp.toFixed(2)}</span>
                     </div>
                     <div className="mt-0.5 pl-6 text-[11px] text-ink-3">{b.r.position} · {b.side.team} {b.side.venue === 'H' ? 'v' : 'at'} {b.side.opp} · £{b.r.price}m</div>
@@ -673,7 +702,7 @@ export default function Preview() {
                   </button>
                 ))}
               </div>
-            </div>
+            </Section>
 
             {/* One list, not two. "Who steps up" and "Team news" were the same
                 players sorted differently — the same name appeared in both
@@ -681,18 +710,21 @@ export default function Preview() {
                 as two contradictory lists rather than one story. Now every
                 flagged player appears once, and the replacement is simply an
                 extra line on the rows that have one. */}
-            <div>
-              <Band label="Team news" tip="Every flagged player in the round, most-owned first, from FPL's own status and news. Red is a ruling — injured, suspended, unavailable; amber is a doubt, and most doubts start. A replacement is named only where the absent man was in the first-choice line, so nobody is credited with benefiting from a squad player's absence." />
+            <Section gw={gw} label="Team news" name="team-news" className="" tip="Every flagged player in the round, most-owned first, from FPL's own status and news. Red is a ruling — injured, suspended, unavailable; amber is a doubt, and most doubts start. A replacement is named only where the absent man was in the first-choice line, so nobody is credited with benefiting from a squad player's absence.">
               <div className="overflow-hidden rounded-xl border border-line">
                 {flagged.slice(0, 14).map((f) => (
                   <div key={String(f.r.element)} className="border-b border-line px-3 py-2.5 last:border-0">
                     <div className="flex items-center gap-2">
                       <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide ${f.status === 'd' ? 'bg-warn/30 text-warn' : 'bg-bad/30 text-bad'}`}>{LABEL[f.status] ?? 'OUT'}</span>
                       <TeamBadge team={String(f.r.team)} size={18} className="shrink-0" />
-                      <b className="truncate text-[14px] font-semibold text-ink">{String(f.r.web_name)}</b>
+                      <b className="capture-line truncate text-[14px] font-semibold text-ink">{String(f.r.web_name)}</b>
                       <span className="ml-auto shrink-0 text-[11px] text-ink-3">{f.r.position}</span>
                     </div>
-                    <div className="mt-0.5 truncate text-[11.5px] text-ink-3">{f.news}</div>
+                    {/* capture-line: the rasteriser measures a truncating line
+                        into a box a few pixels short and slices the glyphs
+                        through the middle — "Groin injury" exported with its
+                        descenders cut off. */}
+                    <div className="capture-line mt-0.5 truncate text-[11.5px] text-ink-3">{f.news}</div>
                     {f.step && (
                       <div className="mt-1.5 flex items-center gap-1.5 border-t border-line pt-1.5">
                         <Icon name="arrow-right" size={13} className="shrink-0 text-good" />
@@ -705,7 +737,7 @@ export default function Preview() {
                 ))}
                 {!flagged.length && <div className="px-3 py-6 text-center text-[13px] text-ink-3">Nobody flagged — a clean round.</div>}
               </div>
-            </div>
+            </Section>
           </div>
         </>
       )}
@@ -717,13 +749,18 @@ const PEN = ['h', 'a'] as const
 
 /** Gold, silver and bronze foil for the captain podium — the same material
  *  language as the rating cards: a gradient edge, dark stock, and a metal
- *  numeral. Only first place keeps the live shimmer. */
+ *  numeral. Only first place keeps the live shimmer.
+ *
+ *  `flat` is the same metal as a flat colour, for the share image: the numeral
+ *  is a gradient clipped to the glyphs, which the rasteriser can't draw, so in
+ *  capture mode it needs a colour or it exports as an empty space. */
 const PODIUM = [
   {
     label: 'The pick', foil: true,
     edge: 'linear-gradient(160deg,#5f4d26,#c9a227,#ead188,#50411f)',
     stock: 'linear-gradient(168deg,#241f16,#141009 56%,#0c0906)',
     num: 'linear-gradient(180deg,#fffbf0,#f0e0b0 52%,#c9a227)',
+    flat: '#ead188',
     glow: '0 0 0 1px rgba(255,251,240,.16), 0 0 20px -4px rgba(201,162,39,.55)',
   },
   {
@@ -731,6 +768,7 @@ const PODIUM = [
     edge: 'linear-gradient(160deg,#5C636B,#C9CFD6,#e8ecf1,#4a5057)',
     stock: 'linear-gradient(168deg,#1a1d21,#12151a 56%,#0a0c0e)',
     num: 'linear-gradient(180deg,#f4f7fa,#c9cfd6 52%,#7c838c)',
+    flat: '#dfe4ea',
     glow: undefined as string | undefined,
   },
   {
@@ -738,6 +776,7 @@ const PODIUM = [
     edge: 'linear-gradient(160deg,#4a2f1a,#b87333,#e8b98a,#3d2614)',
     stock: 'linear-gradient(168deg,#221811,#17100b 56%,#0d0806)',
     num: 'linear-gradient(180deg,#f5d9bc,#d79a5e 52%,#9c5f2c)',
+    flat: '#e8b98a',
     glow: undefined as string | undefined,
   },
 ]
@@ -785,12 +824,34 @@ const LABEL: Record<string, string> = { i: 'OUT', s: 'SUSP', d: 'DOUBT', u: 'OUT
  *  he is not playing; amber means nobody knows yet, including the club. */
 const outTone = (status: string) => (status === 'd' ? 'text-warn' : 'text-bad')
 
-function Band({ label, tip }: { label: string; tip?: string }) {
+/** A titled block of the page that can be lifted out of it as a picture.
+ *
+ *  The heading rides in the share button's own row rather than above it, so
+ *  making a section shareable costs no height — and the export is the block
+ *  itself, headed and footed by the exporter, not a screenshot of the page
+ *  around it. */
+function Section({ gw, label, tip, name, className, children }: {
+  gw: number
+  label: string
+  tip?: string
+  name: string
+  className?: string
+  children: React.ReactNode
+}) {
   return (
-    <div className="mb-2.5 flex items-center gap-1.5">
-      <h2 className="text-sm font-semibold tracking-wide text-ink uppercase">{label}</h2>
-      {tip && <InfoTip text={tip} />}
-    </div>
+    <Exportable
+      title={`GW${gw} — ${label}`}
+      filename={`gw${gw}-${name}`}
+      className={className ?? 'mb-7'}
+      toolbar={
+        <>
+          <h2 className="text-sm font-semibold tracking-wide text-ink uppercase">{label}</h2>
+          {tip && <InfoTip text={tip} />}
+        </>
+      }
+    >
+      {children}
+    </Exportable>
   )
 }
 
@@ -804,7 +865,12 @@ function Tile({ k, v, s, unit, media }: { k: string; v: string; s: React.ReactNo
           {v}
           {unit && <span className="ml-1 text-[13px] font-extrabold tracking-wide text-ink-3">{unit}</span>}
         </div>
-        <div className="mt-1.5 text-[13px] leading-snug text-ink-2">{s}</div>
+        {/* The subject of the tile — Gakpo, Arsenal, City v Bournemouth — at
+            full ink strength while the sentence around it stays one step back.
+            Every tile leads with a number, and the number is meaningless until
+            you know who it belongs to; that name should be the second thing
+            read, not something found by reading the whole line. */}
+        <div className="mt-1.5 text-[13px] leading-snug text-ink-2 [&_b]:font-extrabold [&_b]:text-ink">{s}</div>
       </div>
       {media && <div className="shrink-0">{media}</div>}
     </div>

@@ -51,7 +51,10 @@ const K: Record<string, ClubKits> = {
   CHE: { home: { base: '#0a3fae', second: '#f2d24b', pattern: 'trim' },
          away: { base: '#131313', second: '#f5d130', pattern: 'trim' } },
   COV: { home: { base: '#3aa3e0', second: '#ffffff', pattern: 'stripes' },
-         away: { base: '#efe7d6', second: '#e0492f', pattern: 'panel' } },
+         // One colour, no wedge. `second` is their sky, which the shirt carries
+         // on the badge and the trim — it is never painted here, but the clash
+         // rule falls back to it, so it has to be a colour they'd actually wear.
+         away: { base: '#efe7d6', second: '#3aa3e0', pattern: 'solid' } },
   CRY: { home: { base: '#f3f4f6', second: '#c4122e', third: '#1b458f', pattern: 'tricolour' },
          away: { base: '#141519', second: '#c4122e', pattern: 'trim' } },
   EVE: { home: { base: '#003399', second: '#ffffff', pattern: 'solid' },
@@ -74,7 +77,10 @@ const K: Record<string, ClubKits> = {
   SUN: { home: { base: '#eb172b', second: '#ffffff', pattern: 'stripes' },
          away: { base: '#e79aac', second: '#141414', pattern: 'yoke' } },
   TOT: { home: { base: '#f5f5f5', second: '#132257', pattern: 'solid' },
-         away: { base: '#1b2a55', second: '#f0603c', pattern: 'stripes' } },
+         // Deep blue-purple carrying the shirt, orange as an accent rather than
+         // half of it — bold stripes made this read as an orange kit, which it
+         // isn't.
+         away: { base: '#2c2559', second: '#ea6a2b', pattern: 'pinstripe' } },
 }
 
 /** Clubs whose 26/27 away shirt we have. Everyone else stands in at home. */
@@ -83,13 +89,6 @@ export const hasAwayKit = (team: string): boolean => Boolean(K[team]?.away)
 const rgb = (h: string): [number, number, number] => {
   const s = h.replace('#', '')
   return [parseInt(s.slice(0, 2), 16), parseInt(s.slice(2, 4), 16), parseInt(s.slice(4, 6), 16)]
-}
-
-/** Relative luminance, for deciding whether a shirt vanishes into the card. */
-function lum(hex: string): number {
-  const f = (c: number) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }
-  const [r, g, b] = rgb(hex)
-  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
 }
 
 /** Weighted RGB distance — crude, but it answers the only question asked of it:
@@ -101,8 +100,19 @@ function dist(a: string, b: string): number {
   return Math.sqrt((2 + rm / 256) * (ar - br) ** 2 + 4 * (ag - bg) ** 2 + (2 + (255 - rm) / 256) * (ab - bb) ** 2)
 }
 
-/** Below this the two shirts read as the same colour and the away side changes. */
-const CLASH = 120
+/** Below this, two colours read as one at 12px.
+ *
+ *  Used for two questions that are really the same question: do these two
+ *  shirts clash, and does this shirt clash with the card it is painted on. */
+const SAME = 120
+
+/** The card each mode paints the bar onto — `surface-1` from the stylesheet.
+ *  A bar that vanishes does so against the card, not against the page. */
+const CARD = { dark: '#16130e', light: '#ffffff' } as const
+/** Dark mode's `ink-1`, which a black shirt is lifted toward. There is no
+ *  light-mode equivalent: a shirt that vanishes into the white card gets a
+ *  rim rather than a tint, because darkening a white shirt makes it grey. */
+const DARK_INK = '#f4efe3'
 
 function mix(a: string, b: string, t: number): string {
   const [ar, ag, ab] = rgb(a)
@@ -139,8 +149,8 @@ export function resolveFixture(homeTeam: string, awayTeam: string, label: (t: st
   const sourced = Boolean(a0.away)
   let away = a0.away ?? a0.home
   let clash: string | null = null
-  if (dist(h.base, away.base) < CLASH) {
-    if (dist(h.base, a0.home.base) >= CLASH) {
+  if (dist(h.base, away.base) < SAME) {
+    if (dist(h.base, a0.home.base) >= SAME) {
       clash = `${label(awayTeam)} would clash with ${label(homeTeam)} — shown in their home colours`
       away = a0.home
     } else {
@@ -153,14 +163,23 @@ export function resolveFixture(homeTeam: string, awayTeam: string, label: (t: st
 
 /** The CSS background for one segment of the bar.
  *
- *  `mode` matters for one reason: a shirt the same tone as the card it sits on
- *  has no shape. Chelsea, Palace and Brentford all travel in black, and on the
- *  dark card the body of the bar disappeared and left the trim floating as two
- *  thin lines. An outline can't fix that — it lands exactly where the trim
- *  already is — so the tone is lifted toward the card's ink instead. Pale shirts
- *  on the white card get the outline treatment instead, via `kitOutline`. */
+ *  `mode` matters for one reason: a shirt the same colour as the card it sits
+ *  on has no shape. Chelsea, Palace and Brentford all travel in black, and on
+ *  the dark card the body of the bar disappeared and left the trim floating as
+ *  two thin lines. An outline can't fix that — it lands exactly where the trim
+ *  already is — so the tone is lifted toward the card's ink instead. Pale
+ *  shirts on the white card get the outline treatment instead, via
+ *  `kitOutline`.
+ *
+ *  The test is colour distance from the card, not brightness. Brightness was
+ *  the wrong question and it cost real kits: Everton's royal blue, Villa's
+ *  claret, Arsenal's navy and Spurs' purple are all dark by luminance and none
+ *  of them is remotely hard to see against a near-black card, but every one of
+ *  them was being mixed halfway to cream and coming out the same grey. What
+ *  actually needs rescuing is a shirt with no colour to tell it apart from the
+ *  card — black, and only black. */
 export function kitBackground(kit: Kit, mode: Mode): string {
-  const b = mode === 'dark' && lum(kit.base) < 0.055 ? mix(kit.base, '#f4efe3', 0.26) : kit.base
+  const b = mode === 'dark' && dist(kit.base, CARD.dark) < SAME ? mix(kit.base, DARK_INK, 0.26) : kit.base
   const s = kit.second
   const t = kit.third ?? s
   switch (kit.pattern) {
@@ -168,14 +187,44 @@ export function kitBackground(kit: Kit, mode: Mode): string {
     case 'pinstripe': return `repeating-linear-gradient(115deg,${b} 0 9px,${s} 9px 11px)`
     case 'tricolour': return `repeating-linear-gradient(115deg,${b} 0 9px,${s} 9px 13px,${t} 13px 17px)`
     case 'yoke':      return `linear-gradient(180deg,${s} 0 34%,${b} 34% 100%)`
-    case 'trim':      return `linear-gradient(180deg,${s} 0 2px,${b} 2px calc(100% - 2px),${s} calc(100% - 2px) 100%)`
+    // 16.7% is 2px of the 12px bar, stated as a fraction rather than as
+    // `calc(100% - 2px)`: the rasteriser can't resolve a calc in a colour stop
+    // and interpolates between the two instead, so Fulham exported as a white
+    // bar fading to grey rather than a white bar with black edges.
+    case 'trim':      return `linear-gradient(180deg,${s} 0 16.7%,${b} 16.7% 83.3%,${s} 83.3% 100%)`
     case 'panel':     return `linear-gradient(90deg,${b} 0 76%,${s} 76% 100%)`
     default:          return b
   }
 }
 
-/** A white or cream shirt on the light card needs an edge or it isn't there at
- *  all — Fulham, Leeds and Spurs at home, Liverpool, Hull and Brighton away. */
+/** Patterns that paint the second colour along an outer edge of the segment: a
+ *  band top and bottom, a yoke across the top, a wedge at the trailing side.
+ *  The diagonals are deliberately not here — a dark stripe reaches the edge
+ *  too, but the light stripes either side of it still say where the bar ends. */
+const EDGED: ReadonlySet<Pattern> = new Set<Pattern>(['trim', 'yoke', 'panel'])
+
+/** A rim, when the shirt would otherwise have no boundary against the card.
+ *
+ *  Both modes, and for the same reason. On the light card a white or cream
+ *  shirt has no edge — Fulham, Leeds and Spurs at home, Liverpool, Hull and
+ *  Brighton away. On the dark card the mirror image was still broken: a shirt
+ *  whose BODY is black gets lifted by `kitBackground`, but a shirt with black
+ *  along its edge does not, so Fulham's black trim, Leeds' navy trim and the
+ *  black yoke on Sunderland's away shirt were all being drawn into a card of
+ *  the same tone and disappearing. The bar looked as though it stopped short.
+ *
+ *  A rim fixes exactly that case and nothing else: the trim is then held
+ *  between the rim and the body of the shirt, so it reads as trim again rather
+ *  than as empty space. It is not applied to a black BODY on the dark card,
+ *  because `kitBackground` has already lifted that and a rim on top would be
+ *  a line around a shirt that no longer needs one. */
 export function kitOutline(kit: Kit, mode: Mode): string | undefined {
-  return mode === 'light' && lum(kit.base) > 0.62 ? '1px solid rgba(0,0,0,.24)' : undefined
+  const edged = EDGED.has(kit.pattern)
+  const gone = (c: string) => dist(c, CARD[mode]) < SAME
+  if (mode === 'light') {
+    return gone(kit.base) || (edged && gone(kit.second)) ? '1px solid rgba(0,0,0,.24)' : undefined
+  }
+  // The base is already lifted by `kitBackground` where it needed it, so on the
+  // dark card only an edge in the second colour is still at risk.
+  return edged && gone(kit.second) ? '1px solid rgba(244,239,227,.34)' : undefined
 }

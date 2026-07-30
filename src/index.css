@@ -265,9 +265,13 @@ body {
   -webkit-background-clip: border-box !important;
   background-clip: border-box !important;
   line-height: 1.4 !important;
+  /* On screen the numeral is transparent so the gradient shows through it; in
+     capture the gradient is gone, so without a colour the number exports as
+     nothing at all — which is what the captain podium did the moment it became
+     shareable. Gold covers elite and gold; anything carrying its own metal
+     (the podium's silver and bronze) names it in --tier-capture. */
+  color: var(--tier-capture, #ead188) !important;
 }
-[data-capturing] .tier-elite .tier-num,
-[data-capturing] .tier-gold  .tier-num { color: #ead188 !important; }
 [data-capturing] .tier-steel .tier-num { color: #dfe4ea !important; }
 [data-capturing] .tier-graphite .tier-num { color: #b9b6ae !important; }
 [data-capturing] .tier-ice .tier-num { color: #c6ecfa !important; }
@@ -317,6 +321,13 @@ body {
    export, so it can sit where it belongs in the flow. */
 [data-capturing] .sticky {
   position: static !important;
+}
+/* Controls that live inside the thing being captured — the share button in a
+   fixture card's corner. They belong to the page, not to the picture, and an
+   exported card with a share button drawn on it looks like a screenshot rather
+   than a card. */
+[data-capturing] [data-no-capture] {
+  display: none !important;
 }
 /* Anything the page hides behind a scrollbar has to be visible to be
    captured; otherwise the export ends at the edge of the viewport. */
