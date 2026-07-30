@@ -7,6 +7,15 @@
    ════════════════════════════════════════════════════════════════════════ */
 
 export const BRAND = 'FPL Analyser'
+/** Where the picture came from, without the scheme — nobody types https://,
+ *  and every character spent on it is a character not spent on the name.
+ *
+ *  This is the one thing on the footer that has a job to do. A handle asks
+ *  someone to follow an account; the address is how a person who liked the
+ *  picture actually arrives at the thing that made it, and most of them will
+ *  read it and type it rather than tap anything. So it sits under the brand at
+ *  full strength, not tucked in with the accounts. */
+export const SITE_URL = 'fplanalyser.co.uk'
 export const X_HANDLE = '@FPLAnalyser'
 export const IG_HANDLE = 'fpl_analyser'
 

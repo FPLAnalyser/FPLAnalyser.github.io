@@ -1,4 +1,4 @@
-import { BRAND, X_HANDLE, IG_HANDLE, X_MARK_PATH } from '../lib/social'
+import { BRAND, SITE_URL, X_HANDLE, IG_HANDLE, X_MARK_PATH } from '../lib/social'
 
 // Brand watermark baked into every shared image — each share is a tiny bit of
 // marketing.
@@ -33,20 +33,27 @@ function InstagramMark({ size = 15 }: { size?: number }) {
  *  "who made this and where do I find more" on its own. */
 export function ShareFooter() {
   return (
-    <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 rounded-b-2xl bg-[#0c0b09] px-3 py-3">
-      <span className="flex items-center gap-2">
+    <div className="mt-2 flex flex-col items-center gap-1 rounded-b-2xl bg-[#0c0b09] px-3 py-3">
+      {/* The name and the address on one line, because they are one thought:
+          who made this, and where it lives. The address gets the same weight
+          as the wordmark — it is the only thing here that turns a picture
+          into a visit. */}
+      <span className="flex flex-wrap items-baseline justify-center gap-x-2.5 gap-y-0.5">
         <span className="capture-line font-brand text-[17px] font-normal tracking-[0.08em] text-white">
           FPL <span style={{ color: '#c9a227' }}>Analyser</span>
         </span>
+        <span className="capture-line text-[15px] font-bold tracking-[0.02em] text-white">{SITE_URL}</span>
       </span>
       {/* capture-line, because the rasteriser sets text lower in a tight line
           box than the browser does — without it the handle sits below its
           icon instead of beside it. */}
-      <span className="capture-line flex items-center gap-1.5 text-[15px] font-bold text-white">
-        <XMark size={17} /> {X_HANDLE}
-      </span>
-      <span className="capture-line flex items-center gap-1.5 text-[15px] font-bold text-white">
-        <InstagramMark size={17} /> {IG_HANDLE}
+      <span className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+        <span className="capture-line flex items-center gap-1.5 text-[14px] font-bold text-white/85">
+          <XMark size={15} /> {X_HANDLE}
+        </span>
+        <span className="capture-line flex items-center gap-1.5 text-[14px] font-bold text-white/85">
+          <InstagramMark size={15} /> {IG_HANDLE}
+        </span>
       </span>
     </div>
   )

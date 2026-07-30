@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Icon } from './Icon'
 import { shareImageNative } from '../lib/native'
 import { rasterise } from '../lib/capture'
-import { BRAND, X_HANDLE, IG_HANDLE, drawXMark, drawInstagramMark } from '../lib/social'
+import { BRAND, SITE_URL, X_HANDLE, IG_HANDLE, drawXMark, drawInstagramMark } from '../lib/social'
 
 /* ════════════════════════════════════════════════════════════════════════
    Share anything: wrap a table or chart in <Exportable> and it gains a
@@ -97,11 +97,21 @@ function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: 
   const gap = Math.round(out.width * 0.009)   // icon to its handle
   const between = Math.round(out.width * 0.028) // one account to the next
 
-  ctx.font = `400 ${Math.round(out.width * 0.027)}px Montserrat, ui-sans-serif, system-ui, sans-serif`
-  ctx.fillStyle = '#c9a227'
+  // Wordmark and address stacked on the left. The address is the only thing
+  // in this footer with a job beyond credit: a handle asks for a follow, an
+  // address is how someone who liked the picture reaches the thing that made
+  // it — and most people read it off the image and type it rather than
+  // tapping anything. So it gets its own line at full ink, not a slot in
+  // among the accounts.
+  const lead = Math.round(out.width * 0.017)
   ctx.textBaseline = 'middle'
   ctx.textAlign = 'left'
-  ctx.fillText(SITE_NAME, pad, mid)
+  ctx.font = `400 ${Math.round(out.width * 0.027)}px Montserrat, ui-sans-serif, system-ui, sans-serif`
+  ctx.fillStyle = '#c9a227'
+  ctx.fillText(SITE_NAME, pad, mid - lead)
+  ctx.font = `700 ${Math.round(out.width * 0.023)}px ui-sans-serif, system-ui, sans-serif`
+  ctx.fillStyle = ink
+  ctx.fillText(SITE_URL, pad, mid + lead)
 
   // Measured, then laid out right-to-left, so both accounts sit against the
   // right margin however wide the frame is.
