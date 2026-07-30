@@ -1,0 +1,21 @@
+name: Probe photo buckets
+
+# Diagnostic only, run by hand. The Premier League image host is unreachable
+# from the dev sandbox, so which bucket holds the current season's headshots
+# has been guesswork — and guessing wrong put last season's pictures on the
+# site. This asks the host directly and prints Last-Modified for every
+# candidate. Delete once the answer is settled.
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python probe_photo_buckets.py
