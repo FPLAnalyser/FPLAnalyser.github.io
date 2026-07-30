@@ -7,16 +7,22 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0c0b09">
 <script>
-  // Apply the saved (or system-preferred) theme before first paint to avoid a flash.
+  // Apply the saved theme before first paint to avoid a flash.
+  //
+  // Must stay in step with src/lib/theme.tsx — if this picks a different
+  // starting theme from the one React settles on, the page paints one and
+  // then snaps to the other, which is worse than no script at all.
+  //
+  // Dark is the default, and the OS preference is deliberately not consulted:
+  // the gold reads on dark the way the site was designed, and it is the theme
+  // every shared image and screenshot is in. A visitor arriving from one of
+  // those should see the thing they clicked. Light stays one tap away.
   (function () {
     try {
       var root = document.documentElement;
-      var accent = localStorage.getItem('fpl_accent');
-      if (accent !== 'aurum' && accent !== 'frost' && accent !== 'verdant') accent = 'aurum';
+      var accent = 'aurum';
       var mode = localStorage.getItem('fpl_mode');
-      if (mode !== 'light' && mode !== 'dark') {
-        mode = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-      }
+      if (mode !== 'light' && mode !== 'dark') mode = 'dark';
       root.dataset.accent = accent;
       root.dataset.mode = mode;
     } catch (e) {

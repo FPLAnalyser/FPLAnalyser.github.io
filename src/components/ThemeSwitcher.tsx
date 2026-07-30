@@ -19,6 +19,12 @@ export function ThemeSwitcher() {
 
   const current = ACCENTS.find((a) => a.id === accent)!
 
+  // A picker offering one colour is a control that does nothing — it invites a
+  // tap and spends the visitor's attention to tell them there is no choice.
+  // While only Aurum is offered the swatch goes away entirely and the header
+  // is the light/dark toggle alone. Re-widen ACCENTS and it comes back.
+  const pickable = ACCENTS.length > 1
+
   return (
     <div className="flex items-center gap-1">
       <button
@@ -34,6 +40,7 @@ export function ThemeSwitcher() {
       {/* The accent picker is a preference, not a tool — on a phone the header
           has room for the controls people actually reach for, so it waits
           until there's width for it. */}
+      {pickable && (
       <div ref={wrapRef} className="relative hidden sm:block">
         <button
           type="button"
@@ -76,6 +83,7 @@ export function ThemeSwitcher() {
             </div>
         )}
       </div>
+      )}
     </div>
   )
 }

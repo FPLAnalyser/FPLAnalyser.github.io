@@ -3,11 +3,24 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 export type Accent = 'aurum' | 'frost' | 'verdant'
 export type Mode = 'light' | 'dark'
 
-export const ACCENTS: { id: Accent; label: string; swatch: string }[] = [
+const ALL_ACCENTS: { id: Accent; label: string; swatch: string }[] = [
   { id: 'aurum', label: 'Aurum', swatch: '#d9b45c' },
   { id: 'frost', label: 'Frost', swatch: '#7fb0ff' },
   { id: 'verdant', label: 'Verdant', swatch: '#3ea87a' },
 ]
+
+/** The accents a visitor can actually pick.
+ *
+ *  Gold is the brand: it is what every share image, the wordmark and the
+ *  screenshots are in, so letting a visitor turn the site blue makes the
+ *  product look unlike the thing that brought them to it. Frost and Verdant
+ *  stay defined — the CSS token layer in index.css still carries them and
+ *  nothing has been deleted — they are simply not offered.
+ *
+ *  Widen this array to bring them back; the picker reappears on its own. */
+export const ACCENTS = ALL_ACCENTS.filter((a) => a.id === 'aurum')
+
+const ACCENT_IDS = ACCENTS.map((a) => a.id)
 
 const ACCENT_KEY = 'fpl_accent'
 const MODE_KEY = 'fpl_mode'
@@ -23,15 +36,27 @@ function readStored<T extends string>(key: string, allowed: readonly T[], fallba
   return fallback
 }
 
-/** Resolve the initial mode: stored choice, else the OS preference. */
+/** Resolve the initial mode: the visitor's stored choice, else dark.
+ *
+ *  The OS preference is deliberately ignored. It is the usual default and it
+ *  is the wrong one here: the site is designed in dark, every share image and
+ *  screenshot that brings somebody to it is in dark, and a first impression
+ *  that does not look like the thing they clicked is a worse outcome than
+ *  overriding a system setting they can undo in one tap.
+ *
+ *  Once they do tap, the stored choice wins forever — this only decides what
+ *  a first-time visitor sees.
+ *
+ *  Kept in step with the pre-paint script in index.html; changing one without
+ *  the other produces a flash of the wrong theme on every cold load. */
 function initialMode(): Mode {
   try {
     const v = localStorage.getItem(MODE_KEY)
     if (v === 'light' || v === 'dark') return v
   } catch {
-    /* ignore */
+    /* private mode */
   }
-  return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+  return 'dark'
 }
 
 interface ThemeState {
@@ -45,7 +70,10 @@ interface ThemeState {
 const ThemeContext = createContext<ThemeState | null>(null)
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [accent, setAccentState] = useState<Accent>(() => readStored(ACCENT_KEY, ['aurum', 'frost', 'verdant'], DEFAULT_ACCENT))
+  // Checked against the *visible* accents, not every accent that exists: a
+  // returning visitor who picked Frost before it was withdrawn would otherwise
+  // stay on it with no control left to change it back.
+  const [accent, setAccentState] = useState<Accent>(() => readStored(ACCENT_KEY, ACCENT_IDS, DEFAULT_ACCENT))
   const [mode, setModeState] = useState<Mode>(initialMode)
 
   // Reflect state onto <html> so the CSS token layer applies, and persist it.
