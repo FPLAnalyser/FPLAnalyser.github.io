@@ -259,7 +259,24 @@ body {
 .photo-mono { display: none; }
 .photo-slot[data-nophoto] .photo-mono { display: grid; }
 
-/* Same rasteriser limit as .metallic-num — flat ink while capturing. */
+/* ── The foil, rebuilt out of the one thing the rasteriser can draw ──────
+   `background-clip: text` is still unsupported (measured against
+   html2canvas-pro 2.3.1: the gradient fills the whole box and the digits
+   never appear), so the gradient has to go. It used to be replaced by a flat
+   colour, and a flat colour is what a share image looked like — the number
+   sat on the card instead of standing off it, and the difference between the
+   site and a picture of the site was the first thing you noticed.
+
+   `text-shadow` IS drawn, and drawn well — measured the same way. So the foil
+   is rebuilt from shadows: a light face, one hairline of the metal's own
+   colour directly beneath it, a darker line under that, a soft drop to lift
+   the digits off the card, and a coloured glow. Four layers, no gradient, and
+   it reads as the same material.
+
+   Each tier names its own metal. The face is the gradient's midpoint and the
+   two edge colours are its lower stops, so a capture is the same alloy as the
+   screen rather than an approximation of it. Screen rendering is untouched —
+   every rule here is behind `data-capturing`. */
 [data-capturing] .tier-num {
   background-image: none !important;
   -webkit-background-clip: border-box !important;
@@ -271,16 +288,40 @@ body {
      shareable. Gold covers elite and gold; anything carrying its own metal
      (the podium's silver and bronze) names it in --tier-capture. */
   color: var(--tier-capture, #ead188) !important;
+  text-shadow:
+    0 1px 0 var(--foil-edge, #dcc07a),
+    0 2px 1px var(--foil-deep, #b8951f),
+    0 5px 10px rgba(0, 0, 0, 0.5),
+    0 0 20px var(--foil-glow, rgba(201, 162, 39, 0.38)) !important;
 }
-[data-capturing] .tier-steel .tier-num { color: #dfe4ea !important; }
-[data-capturing] .tier-graphite .tier-num { color: #b9b6ae !important; }
-[data-capturing] .tier-ice .tier-num { color: #c6ecfa !important; }
+[data-capturing] .tier-elite .tier-num {
+  --foil-edge: #e3cd93; --foil-deep: #c9a227; --foil-glow: rgba(201, 162, 39, 0.46);
+}
+[data-capturing] .tier-gold .tier-num {
+  --foil-edge: #c9a227; --foil-deep: #9a761c; --foil-glow: rgba(201, 162, 39, 0.4);
+}
+[data-capturing] .tier-steel .tier-num {
+  color: #dfe4ea !important;
+  --foil-edge: #aeb4bc; --foil-deep: #7c838c; --foil-glow: rgba(174, 180, 188, 0.34);
+}
+[data-capturing] .tier-graphite .tier-num {
+  color: #b9b6ae !important;
+  --foil-edge: #8e8a80; --foil-deep: #65625b; --foil-glow: rgba(142, 138, 128, 0.3);
+}
+[data-capturing] .tier-ice .tier-num {
+  color: #c6ecfa !important;
+  --foil-edge: #7fd4f5; --foil-deep: #3d8fb4; --foil-glow: rgba(127, 212, 245, 0.4);
+}
 
 [data-capturing] .metallic-num {
   background: none !important;
   -webkit-background-clip: border-box !important;
   background-clip: border-box !important;
   color: var(--accent-2) !important;
+  text-shadow:
+    0 1px 0 var(--accent) ,
+    0 4px 9px rgba(0, 0, 0, 0.45),
+    0 0 18px var(--glow) !important;
 }
 /* Only the lines that were actually being sliced. Applied to every truncating
    element, `overflow: visible` let the fixture pills — which have an explicit
