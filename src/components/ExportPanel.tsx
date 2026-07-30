@@ -17,28 +17,61 @@ import { BRAND, SITE_URL, X_HANDLE, IG_HANDLE, drawXMark, drawInstagramMark } fr
  * A visitor sharing our analysis cannot rewrite the credit, by design. */
 const SITE_NAME = BRAND
 
-type Format = 'auto' | 'wide' | 'square' | 'story'
-const FORMATS: { id: Format; label: string; hint: string; w: number; h: number | null }[] = [
-  // Auto shapes the image to the content — the right default, because a tall
-  // table forced into 16:9 renders as an unreadable stamp in a sea of black.
-  { id: 'auto', label: 'Fit content', hint: 'auto', w: 1600, h: null },
-  { id: 'wide', label: 'Twitter / X', hint: '16:9', w: 1600, h: 900 },
-  { id: 'square', label: 'Instagram', hint: '1:1', w: 1080, h: 1080 },
-  { id: 'story', label: 'Story', hint: '9:16', w: 1080, h: 1920 },
+type Format = 'post' | 'square' | 'wide' | 'story' | 'full'
+
+/** The shapes worth exporting, and the layout width each one is drawn at.
+ *
+ *  `render` is the viewport the panel is laid out in before it is photographed
+ *  (see `stage` in capture.ts). It is the whole reason these look designed
+ *  rather than cropped: a tall frame renders the panel narrow so it stacks and
+ *  fills the height, a wide frame renders it wide so it becomes a row. The site
+ *  is already responsive — the exporter just picks which response it wants.
+ *
+ *  The sizes are what the networks actually accept, which is not what the old
+ *  list claimed. Instagram's feed will not show anything taller than 4:5 and
+ *  crops the rest; X gives a portrait post far more timeline height than a
+ *  16:9 one. So 4:5 is the default — it is the best in-feed size on both, and
+ *  the one picture that can be posted anywhere without being recomposed. */
+const FORMATS: { id: Format; label: string; hint: string; w: number; h: number | null; render: number }[] = [
+  { id: 'post', label: 'Post', hint: '4:5', w: 1080, h: 1350, render: 560 },
+  { id: 'square', label: 'Square', hint: '1:1', w: 1080, h: 1080, render: 700 },
+  { id: 'wide', label: 'Wide', hint: '16:9', w: 1600, h: 900, render: 1200 },
+  { id: 'story', label: 'Story', hint: '9:16', w: 1080, h: 1920, render: 520 },
+  // Height from the content, so nothing is ever shrunk to fit a shape it does
+  // not have. Capped at 9:16 in `brand` — past that a picture stops being
+  // postable anywhere and becomes a screenshot of a screenshot.
+  { id: 'full', label: 'Full', hint: 'tall', w: 1080, h: null, render: 620 },
 ]
+
+/** The hole the panel gets, once the title and the footer have taken theirs.
+ *
+ *  Kept next to `brand`, which does the same arithmetic to place the panel —
+ *  they have to agree, or the exporter lays the content out for a shape it is
+ *  then drawn into at a different one. Null for a format whose height comes
+ *  from the content, since that one fits by construction. */
+function contentAspect(fmt: (typeof FORMATS)[number]): number | undefined {
+  if (fmt.h == null) return undefined
+  const pad = Math.round(fmt.w * 0.045)
+  const top = pad + 34 + Math.round(fmt.w * 0.028)
+  const footH = Math.round(fmt.w * 0.095)
+  return (fmt.w - pad * 2) / (fmt.h - top - footH - pad)
+}
 
 /** Draw the captured panel onto a branded canvas of the chosen aspect. */
 function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: string, dark: boolean): HTMLCanvasElement {
   const out = document.createElement('canvas')
   out.width = fmt.w
-  // Auto: chrome + the panel at full width, so nothing is ever shrunk.
+  // Full: chrome + the panel at full width, so nothing is ever shrunk.
   const autoPad = Math.round(fmt.w * 0.045)
   const autoChrome = autoPad + 34 + Math.round(fmt.w * 0.028) + Math.round(fmt.w * 0.095) + autoPad
   // Ceil, not round. The height reserved for the panel has to be at least the
-  // height the panel will be drawn at; rounding down by half a pixel made the
-  // fit test fail and sent "fit content" into the crop-and-fade branch, which
-  // is how a fixture table lost its legend.
-  out.height = fmt.h ?? Math.ceil((source.height / source.width) * (fmt.w - autoPad * 2)) + autoChrome
+  // height the panel will be drawn at; rounding down by half a pixel used to
+  // make the fit test fail.
+  const wanted = fmt.h ?? Math.ceil((source.height / source.width) * (fmt.w - autoPad * 2)) + autoChrome
+  // 9:16 is the tallest shape any network will show whole. Past it the picture
+  // is not "detailed", it is unpostable, so Full stops there and the content
+  // scales instead.
+  out.height = Math.min(wanted, Math.round(fmt.w * (16 / 9)))
   const ctx = out.getContext('2d')!
   const bg = dark ? '#0c0b09' : '#faf8f3'
   const ink = dark ? '#f4efe3' : '#1b1712'
@@ -64,24 +97,23 @@ function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: 
   const footH = Math.round(out.width * 0.095)
   const availW = out.width - pad * 2
   const availH = out.height - top - footH - pad
-  // Fill the frame's width so the content stays legible. If that makes it
-  // taller than the frame (a long table in a 16:9 crop), show the top of the
-  // panel at full size rather than shrinking the whole thing to a stamp.
-  const scale = availW / source.width
-  const dw = availW
+  // Fit inside the frame on BOTH axes. Never crop.
+  //
+  // This used to fill the width and then, if the result was too tall, draw the
+  // top of the panel at full size and fade the cut. It read as a deliberate
+  // "there's more where this came from" and was in fact a bug that threw the
+  // content away: the captain podium is three players, and every fixed format
+  // exported one of them plus half of Haaland's expected points, the digits
+  // sliced through the middle by a gradient. The fixture card expands itself
+  // before capture precisely so the projected points make the picture — and
+  // then the 16:9 crop removed them again.
+  //
+  // A picture that is smaller than you hoped is a picture. A picture with the
+  // number cut in half is a mistake somebody screenshots and replies to.
+  const scale = Math.min(availW / source.width, availH / source.height)
+  const dw = source.width * scale
   const dh = source.height * scale
-  if (dh <= availH + 1) {
-    ctx.drawImage(source, pad + (availW - dw) / 2, top + (availH - dh) / 2, dw, dh)
-  } else {
-    const srcH = Math.round(availH / scale) // source pixels that fit the frame
-    ctx.drawImage(source, 0, 0, source.width, srcH, pad, top, dw, availH)
-    // Fade the cut edge so it reads as "continues", not "broken".
-    const grad = ctx.createLinearGradient(0, top + availH - 90, 0, top + availH)
-    grad.addColorStop(0, 'rgba(0,0,0,0)')
-    grad.addColorStop(1, bg)
-    ctx.fillStyle = grad
-    ctx.fillRect(pad, top + availH - 90, dw, 90)
-  }
+  ctx.drawImage(source, pad + (availW - dw) / 2, top + (availH - dh) / 2, dw, dh)
 
   // Footer: brand on the left, both accounts on the right, over a hairline.
   ctx.strokeStyle = dark ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.12)'
@@ -161,7 +193,9 @@ export function Exportable({ title, filename, children, className, toolbar, vari
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
-  const [fmt, setFmt] = useState<Format>('auto')
+  // 4:5 by default: the one shape that posts whole to an X timeline and an
+  // Instagram feed without either of them recomposing it.
+  const [fmt, setFmt] = useState<Format>('post')
 
   useEffect(() => {
     if (!open) setMsg('')
@@ -182,8 +216,11 @@ export function Exportable({ title, filename, children, className, toolbar, vari
       // reader in light mode got their pale panel mounted on black with cream
       // titles over it.
       const dark = document.documentElement.dataset.mode !== 'light'
-      const shot = await rasterise(ref.current, dark)
       const spec = FORMATS.find((f) => f.id === fmt)!
+      // Laid out at the format's own width, and captured at a scale that
+      // reaches the frame natively — so the export is the same picture on a
+      // phone and a laptop, and is never a bitmap stretched to fit.
+      const shot = await rasterise(ref.current, dark, spec.render, spec.w, contentAspect(spec))
       const canvas = brand(shot, spec, title, dark)
       const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, 'image/png'))
       if (!blob) throw new Error('render failed')

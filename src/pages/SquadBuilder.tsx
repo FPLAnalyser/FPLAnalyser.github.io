@@ -918,7 +918,10 @@ function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, lineu
     if (!ref.current) return
     setBusy(true); setMsg('')
     try {
-      const canvas = await rasterise(ref.current, true)
+      // Always 560 wide, whatever the phone gave the modal — the card is drawn
+      // for that width, and capturing the 358px a small screen allows meant
+      // exporting a squad at barely 700px across.
+      const canvas = await rasterise(ref.current, true, 560, 1080)
       const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, 'image/png'))
       if (!blob) throw new Error('render failed')
       // Native: hand the PNG to the OS share sheet via Capacitor.
