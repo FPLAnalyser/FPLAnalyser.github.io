@@ -427,7 +427,14 @@ export default function Preview() {
                         <Icon name="chevron-right" size={13} className={`transition-transform ${isOpen ? '-rotate-90' : 'rotate-90'}`} />
                       </span>
                     </div>
-                    <div className="flex items-center gap-2.5">
+                    {/* Tighter gaps on a phone. The row's fixed parts — two
+                        club boxes and the kickoff pill — plus 10px gaps come to
+                        more than a 390px screen leaves, so the away club was
+                        pushed 18px past the card and its crest cut in half by
+                        the card's own clipping. Nothing was visibly broken,
+                        which is why it survived: the card just quietly ate the
+                        right-hand badge. */}
+                    <div className="flex items-center gap-1.5 sm:gap-2.5">
                       <Club team={m.h} rec={avail.table.get(m.hid)} big={feat} />
                       {/* The unit sits on the baseline beside the number, as
                           it does on the captain podium — a whole line of card
@@ -833,14 +840,19 @@ const PODIUM = [
 /** One side of a fixture: crest, code, league position and last five. */
 function Club({ team, rec, big, right }: { team: string; rec?: TeamRecord; big?: boolean; right?: boolean }) {
   return (
-    <span className={`flex shrink-0 items-center gap-1.5 sm:gap-2.5 ${big ? 'w-[74px] sm:w-[168px]' : 'w-[74px] sm:w-[158px]'} ${right ? 'flex-row-reverse justify-start' : ''}`}>
+    <span className={`flex shrink-0 items-center gap-1 sm:gap-2.5 ${big ? 'w-[68px] sm:w-[168px]' : 'w-[68px] sm:w-[158px]'} ${right ? 'flex-row-reverse justify-start' : ''}`}>
       <TeamBadge team={team} size={big ? 26 : 24} className="shrink-0 sm:hidden" />
       <TeamBadge team={team} size={big ? 42 : 38} className="hidden shrink-0 sm:block" />
       <span className={`min-w-0 ${right ? 'text-right' : ''}`}>
         <b className={`block leading-tight font-extrabold text-ink ${big ? 'text-[16px] sm:text-[24px]' : 'text-[14px] sm:text-[22px]'}`}>{team}</b>
         {rec?.pos ? <em className="text-[10.5px] font-bold text-ink-3 not-italic">{ord(rec.pos)}</em> : null}
       </span>
-      <FormDots form={rec?.form} />
+      {/* Desktop only. Five dots need about fifty pixels and the phone box is
+          sixty-eight all in — crest, three-letter code and nothing else fits.
+          In pre-season the dots render empty so this cost nothing and hid
+          nothing; from the first result onward they would have pushed the
+          crest straight off the card. */}
+      <span className="hidden sm:flex"><FormDots form={rec?.form} /></span>
     </span>
   )
 }
