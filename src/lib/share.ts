@@ -17,27 +17,48 @@ import { shareImageNative } from './native'
 export type Delivery =
   /** Handed to the OS share sheet, or to the native app's. */
   | 'shared'
-  /** No share sheet here, so it went to the downloads folder instead. */
+  /** No share sheet, or it refused, so the file was pushed as a download. */
   | 'saved'
   /** The reader opened the sheet and closed it again. Say nothing. */
   | 'cancelled'
+  /** Nothing automatic worked. The caller must PUT THE PICTURE ON SCREEN so it
+   *  can be long-pressed — the only route left on a locked-down iPhone, and the
+   *  one people already know. Never leave this one silent. */
+  | 'needs-longpress'
 
-/** True for the rejection a share sheet throws when it is dismissed.
+/** True only for the reader closing the sheet.
  *
- *  `AbortError` is the specification's answer. Some browsers have historically
- *  sent a bare "Abort due to cancellation of share" instead, so the message is
- *  checked too rather than trusting the name alone. */
+ *  `AbortError` is the specification's answer, and some browsers have
+ *  historically sent a bare "Abort due to cancellation of share" instead, so
+ *  the message is checked too.
+ *
+ *  `NotAllowedError` is deliberately NOT here, and putting it here broke the
+ *  squad export on iOS Safari: from `share()` it means "not triggered by user
+ *  activation", which is what happens when a second or two of rasterising eats
+ *  the gesture that started it. Treating that as a cancel meant saying nothing
+ *  AND returning before the download fallback — so the button did nothing at
+ *  all, which is the worst outcome available. */
 function isDismissal(e: unknown): boolean {
   const name = (e as { name?: string } | null)?.name
-  if (name === 'AbortError' || name === 'NotAllowedError') return true
+  if (name === 'AbortError') return true
+  if (name === 'NotAllowedError') return false
   return /abort|cancel/i.test(String((e as { message?: string } | null)?.message ?? ''))
 }
 
-/** Share the image if the device can, save it if it cannot.
+/** Does this browser honour `<a download>`?
  *
- *  Throws only when something has genuinely gone wrong — a caller can treat a
- *  throw as "tell them it failed" without having to work out whether the
- *  reader simply changed their mind. */
+ *  iOS Safari does not: it navigates to the blob instead, which on a share
+ *  sheet failure would take the reader away from the page and lose their
+ *  squad. Feature-detected rather than sniffed for the browser. */
+function canDownload(): boolean {
+  return 'download' in document.createElement('a') && !/iP(hone|ad|od)/.test(navigator.userAgent)
+}
+
+/** Share the image if the device can, save it if it can, and otherwise say so
+ *  clearly enough that the caller can show the picture instead.
+ *
+ *  The one rule: never return without something having happened. A button that
+ *  does nothing is worse than a button that fails out loud. */
 export async function deliverImage(blob: Blob, filename: string, title: string): Promise<Delivery> {
   // Native: straight to the OS sheet through Capacitor.
   if (await shareImageNative(blob, filename, title)) return 'shared'
@@ -50,10 +71,12 @@ export async function deliverImage(blob: Blob, filename: string, title: string):
       return 'shared'
     } catch (e) {
       if (isDismissal(e)) return 'cancelled'
-      // A real share failure still leaves us holding a good picture, so fall
-      // through and save it rather than losing the render.
+      // A real share failure still leaves us holding a good picture, so carry
+      // on rather than losing the render.
     }
   }
+
+  if (!canDownload()) return 'needs-longpress'
 
   const a = document.createElement('a')
   a.href = URL.createObjectURL(blob)

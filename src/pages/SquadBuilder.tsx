@@ -919,11 +919,13 @@ function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, lineu
   // no network wants, so a squad was the one thing on the site you could not
   // post without cropping it yourself.
   const [fmt, setFmt] = useState<FormatId>('post')
+  /** The finished PNG, shown only when nothing automatic could deliver it. */
+  const [shot, setShot] = useState<string | null>(null)
   if (!open) return null
 
   const save = async () => {
     if (!ref.current) return
-    setBusy(true); setMsg('')
+    setBusy(true); setMsg(''); setShot(null)
     try {
       const spec = SHARE_FORMATS.find((f) => f.id === fmt)!
       // 1080 wide out, whatever width the modal got — the capture scale is
@@ -949,6 +951,13 @@ function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, lineu
       // in the catch below and report that the image could not be rendered,
       // beside an image that had rendered perfectly.
       if (how === 'saved') setMsg('This browser has no share sheet — the image has been saved to your downloads instead.')
+      // Last resort, and the one that always works on an iPhone: put the
+      // finished picture on screen and let them hold it. Anything else here
+      // means the button appears to do nothing, which is exactly what it did.
+      if (how === 'needs-longpress') {
+        setShot(URL.createObjectURL(blob))
+        setMsg('Press and hold the image to save or share it.')
+      }
     } catch {
       setMsg('Could not render the image on this device — try a screenshot instead.')
     } finally {
@@ -985,6 +994,11 @@ function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, lineu
           {unrated > 0 && <div className="mt-2 text-center text-[10px]" style={{ color: '#8a8172' }}>{unrated} player{unrated > 1 ? 's' : ''} new to the league (unrated)</div>}
           <ShareFooter />
         </div>
+        {shot && (
+          <div className="mt-3">
+            <img src={shot} alt="Your squad, ready to save" className="w-full rounded-xl border border-line-mid" />
+          </div>
+        )}
         <div className="mt-3 flex flex-wrap justify-center gap-1.5">
           {SHARE_FORMATS.map((f) => (
             <button

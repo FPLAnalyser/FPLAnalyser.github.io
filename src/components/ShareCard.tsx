@@ -18,6 +18,8 @@ export function ShareCard({ r, fixtureEase }: { r: RatingRow; fixtureEase?: Fixt
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const cardRef = useRef<HTMLDivElement>(null)
+  /** The finished PNG, shown only when nothing automatic could deliver it. */
+  const [shot, setShot] = useState<string | null>(null)
   const url = `${location.origin}${location.pathname}#${playerHref(String(r.web_name), num(r, 'code'))}`
 
   const copy = async () => {
@@ -33,6 +35,7 @@ export function ShareCard({ r, fixtureEase }: { r: RatingRow; fixtureEase?: Fixt
     if (!cardRef.current) return
     setBusy(true)
     setMsg('')
+    setShot(null)
     try {
       // Through `rasterise` like every other export, rather than reaching for
       // the rasteriser directly. Calling html2canvas here meant this card was
@@ -46,7 +49,11 @@ export function ShareCard({ r, fixtureEase }: { r: RatingRow; fixtureEase?: Fixt
       const shareName = `${String(r.web_name).replace(/\s+/g, '-')}-fpl-analyser.png`
       // Closing the share sheet used to land in the catch below and offer the
       // reader a link instead, as though the picture had failed.
-      await deliverImage(blob, shareName, `${r.web_name} — FPL Analyser`)
+      const how = await deliverImage(blob, shareName, `${r.web_name} — FPL Analyser`)
+      if (how === 'needs-longpress') {
+        setShot(URL.createObjectURL(blob))
+        setMsg('Press and hold the image to save or share it.')
+      }
     } catch {
       setMsg('Could not render the image here — copied the link instead.')
       copy()
@@ -90,6 +97,7 @@ export function ShareCard({ r, fixtureEase }: { r: RatingRow; fixtureEase?: Fixt
               <button onClick={copy} className={btn}>⧉ Copy link</button>
               <button onClick={() => setOpen(false)} className={btn}>Close</button>
             </div>
+            {shot && <img src={shot} alt="Ready to save" className="mt-3 w-full rounded-xl border border-line-mid" />}
             {msg && <div className="mt-2 text-center text-xs break-all text-ink-2">{msg}</div>}
           </div>
         </div>

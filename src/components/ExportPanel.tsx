@@ -148,6 +148,8 @@ export function Exportable({ title, filename, children, className, toolbar, vari
   // 4:5 by default: the one shape that posts whole to an X timeline and an
   // Instagram feed without either of them recomposing it.
   const [fmt, setFmt] = useState<FormatId>('post')
+  /** The finished PNG, shown only when nothing automatic could deliver it. */
+  const [shot, setShot] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) setMsg('')
@@ -157,6 +159,7 @@ export function Exportable({ title, filename, children, className, toolbar, vari
     if (!ref.current) return
     setBusy(true)
     setMsg('')
+    setShot(null)
     beforeCapture?.()
     // Two frames: one for React to commit the state the hook just set, one for
     // the browser to lay it out. Without the wait html2canvas measures the card
@@ -184,6 +187,9 @@ export function Exportable({ title, filename, children, className, toolbar, vari
       // reported as "could not render the image" beside an image that had
       // rendered perfectly. Nothing is said now.
       if (how === 'saved') setMsg('This browser has no share sheet — the image has been saved to your downloads instead.')
+      // Nothing automatic worked, so show the picture and let them hold it.
+      // Silence here is the failure mode that reads as a dead button.
+      else if (how === 'needs-longpress') { setShot(URL.createObjectURL(blob)); setMsg('Press and hold the image to save or share it.') }
       else setOpen(false)
     } catch {
       setMsg('Could not render the image on this device — try a screenshot instead.')
@@ -221,6 +227,7 @@ export function Exportable({ title, filename, children, className, toolbar, vari
       >
         <Icon name="users" size={13} /> {busy ? 'Rendering…' : 'Share image'}
       </button>
+      {shot && <img src={shot} alt="Ready to save" className="mt-2 w-full rounded-lg border border-line-mid" />}
       {msg && <p className="mt-2 text-xs text-warn">{msg}</p>}
     </>
   )
