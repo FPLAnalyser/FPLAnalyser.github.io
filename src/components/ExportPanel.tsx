@@ -19,43 +19,28 @@ const SITE_NAME = BRAND
 
 type Format = 'post' | 'square' | 'wide' | 'story' | 'full'
 
-/** The shapes worth exporting, and the layout width each one is drawn at.
+/** The shapes worth exporting.
  *
- *  `render` is the viewport the panel is laid out in before it is photographed
- *  (see `stage` in capture.ts). It is the whole reason these look designed
- *  rather than cropped: a tall frame renders the panel narrow so it stacks and
- *  fills the height, a wide frame renders it wide so it becomes a row. The site
- *  is already responsive — the exporter just picks which response it wants.
+ *  What the networks actually accept, which is not what the old list claimed.
+ *  Instagram's feed will not show anything taller than 4:5 and crops the rest;
+ *  X gives a portrait post far more timeline height than a 16:9 one. So 4:5 is
+ *  the default — the best in-feed size on both, and the one picture that can be
+ *  posted anywhere without being recomposed.
  *
- *  The sizes are what the networks actually accept, which is not what the old
- *  list claimed. Instagram's feed will not show anything taller than 4:5 and
- *  crops the rest; X gives a portrait post far more timeline height than a
- *  16:9 one. So 4:5 is the default — it is the best in-feed size on both, and
- *  the one picture that can be posted anywhere without being recomposed. */
-const FORMATS: { id: Format; label: string; hint: string; w: number; h: number | null; render: number }[] = [
-  { id: 'post', label: 'Post', hint: '4:5', w: 1080, h: 1350, render: 560 },
-  { id: 'square', label: 'Square', hint: '1:1', w: 1080, h: 1080, render: 700 },
-  { id: 'wide', label: 'Wide', hint: '16:9', w: 1600, h: 900, render: 1200 },
-  { id: 'story', label: 'Story', hint: '9:16', w: 1080, h: 1920, render: 520 },
+ *  The panel is photographed as the reader's own screen has laid it out, so on
+ *  a phone a tall frame gets the stacked layout for free and a wide one gets
+ *  the same stack with room either side. Choosing the layout independently of
+ *  the device was tried and reverted — see `rasterise`. */
+const FORMATS: { id: Format; label: string; hint: string; w: number; h: number | null }[] = [
+  { id: 'post', label: 'Post', hint: '4:5', w: 1080, h: 1350 },
+  { id: 'square', label: 'Square', hint: '1:1', w: 1080, h: 1080 },
+  { id: 'wide', label: 'Wide', hint: '16:9', w: 1600, h: 900 },
+  { id: 'story', label: 'Story', hint: '9:16', w: 1080, h: 1920 },
   // Height from the content, so nothing is ever shrunk to fit a shape it does
   // not have. Capped at 9:16 in `brand` — past that a picture stops being
   // postable anywhere and becomes a screenshot of a screenshot.
-  { id: 'full', label: 'Full', hint: 'tall', w: 1080, h: null, render: 620 },
+  { id: 'full', label: 'Full', hint: 'tall', w: 1080, h: null },
 ]
-
-/** The hole the panel gets, once the title and the footer have taken theirs.
- *
- *  Kept next to `brand`, which does the same arithmetic to place the panel —
- *  they have to agree, or the exporter lays the content out for a shape it is
- *  then drawn into at a different one. Null for a format whose height comes
- *  from the content, since that one fits by construction. */
-function contentAspect(fmt: (typeof FORMATS)[number]): number | undefined {
-  if (fmt.h == null) return undefined
-  const pad = Math.round(fmt.w * 0.045)
-  const top = pad + 34 + Math.round(fmt.w * 0.028)
-  const footH = Math.round(fmt.w * 0.095)
-  return (fmt.w - pad * 2) / (fmt.h - top - footH - pad)
-}
 
 /** Draw the captured panel onto a branded canvas of the chosen aspect. */
 function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: string, dark: boolean): HTMLCanvasElement {
@@ -220,7 +205,7 @@ export function Exportable({ title, filename, children, className, toolbar, vari
       // Laid out at the format's own width, and captured at a scale that
       // reaches the frame natively — so the export is the same picture on a
       // phone and a laptop, and is never a bitmap stretched to fit.
-      const shot = await rasterise(ref.current, dark, spec.render, spec.w, contentAspect(spec))
+      const shot = await rasterise(ref.current, dark, spec.w)
       const canvas = brand(shot, spec, title, dark)
       const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, 'image/png'))
       if (!blob) throw new Error('render failed')
