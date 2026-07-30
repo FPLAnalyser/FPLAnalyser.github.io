@@ -52,12 +52,20 @@ https://fpl-analyser-api.<your-subdomain>.workers.dev/api/anything-else/
 
 ## Before you go live
 
-- Add your custom domain to `ORIGINS` in `fpl-proxy.js` and redeploy.
+- `ORIGINS` is already current: `fplanalyser.co.uk`, its `www` form, the
+  `github.io` address it redirects from, and localhost for development. Add to
+  it only if the site gains another address — and redeploy the Worker when you
+  do, because the list lives in the Worker, not in the site.
 - Leave `ALLOW` alone unless you add a new FPL endpoint. It is what stops the
   Worker becoming an open proxy for anyone who finds the URL.
 
 ## Once it is running
 
-The `/legal` privacy notice can drop the paragraph about a public relay, and
-say instead that the request goes through our own server. Shorter notice, and
-true.
+Nothing further to change in the site. `/legal` already branches on whether
+`VITE_FPL_PROXY` is set: with it, the privacy notice says the relay is ours
+and no other company is involved; without it, the notice names the public
+proxy, because a notice that hid it would be false.
+
+That branch doubles as the check that the deploy worked. Open `/legal` →
+Privacy → "When something does leave your browser". If it still names a public
+relay, the build did not pick the variable up.
