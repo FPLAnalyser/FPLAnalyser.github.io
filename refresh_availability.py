@@ -48,15 +48,6 @@ events = [
     for e in boot["events"]
 ]
 
-# Kickoff times matter because FPL's news dates name FIXTURES: "Expected back
-# 22 Aug" means he plays the game ON 22 Aug, so the site must compare return
-# dates against each team's kickoff in a gameweek, not the deadline before it.
-fixtures = [
-    _fixture(f)
-    for f in get(f"{API}/fixtures/")
-    if f.get("event") and f.get("kickoff_time")
-]
-
 def _fixture(f):
     """Kickoff plus, once played, the score.
 
@@ -72,6 +63,21 @@ def _fixture(f):
         row["as"] = f["team_a_score"]
     return row
 
+
+# Kickoff times matter because FPL's news dates name FIXTURES: "Expected back
+# 22 Aug" means he plays the game ON 22 Aug, so the site must compare return
+# dates against each team's kickoff in a gameweek, not the deadline before it.
+#
+# The helper is defined ABOVE this, and has to be: the module runs top to
+# bottom, so a def underneath the comprehension that calls it is a NameError on
+# the first line of real work. That is exactly what happened — the refresh died
+# at 06:00 for two mornings running and the site quietly served the injuries,
+# prices and ownership from the last morning it worked.
+fixtures = [
+    _fixture(f)
+    for f in get(f"{API}/fixtures/")
+    if f.get("event") and f.get("kickoff_time")
+]
 
 players = []
 for el in boot["elements"]:
