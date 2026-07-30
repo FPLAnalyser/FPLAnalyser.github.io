@@ -766,7 +766,7 @@ export default function Preview() {
                 as two contradictory lists rather than one story. Now every
                 flagged player appears once, and the replacement is simply an
                 extra line on the rows that have one. */}
-            <Section gw={gw} label="Team news" name="team-news" className="" tip="Every flagged player in the round, most-owned first, from FPL's own status and news. Red is a ruling — injured, suspended, unavailable; amber is a doubt, and most doubts start. A replacement is named only where the absent man was in the first-choice line, so nobody is credited with benefiting from a squad player's absence.">
+            <Section gw={gw} label="Team news" name="team-news" className="" share={false} tip="Every flagged player in the round, most-owned first, from FPL's own status and news. Red is a ruling — injured, suspended, unavailable; amber is a doubt, and most doubts start. A replacement is named only where the absent man was in the first-choice line, so nobody is credited with benefiting from a squad player's absence.">
               <div className="overflow-hidden rounded-xl border border-line">
                 {flagged.slice(0, 14).map((f) => (
                   <div key={String(f.r.element)} className="border-b border-line px-3 py-2.5 last:border-0">
@@ -891,14 +891,37 @@ const outTone = (status: string) => (status === 'd' ? 'text-warn' : 'text-bad')
  *  making a section shareable costs no height — and the export is the block
  *  itself, headed and footed by the exporter, not a screenshot of the page
  *  around it. */
-function Section({ gw, label, tip, name, className, children }: {
+function Section({ gw, label, tip, name, className, share = true, children }: {
   gw: number
   label: string
   tip?: string
   name: string
   className?: string
+  /** Off for a section that is worth reading here and not worth sending on.
+   *
+   *  Team news is the case: a picture of every flagged player in the round,
+   *  with the replacement named for each, is most of an afternoon's research
+   *  in one image. It is the reason to open the site, so giving it away as a
+   *  file that travels without the site attached is a poor trade. Everything
+   *  else on this page is a headline — a captain, a scoreline, one
+   *  differential — and headlines are what you want reposted. */
+  share?: boolean
   children: React.ReactNode
 }) {
+  const head = (
+    <div className="mb-1.5 flex items-center gap-1.5">
+      <h2 className="text-sm font-semibold tracking-wide text-ink uppercase">{label}</h2>
+      {tip && <InfoTip text={tip} />}
+    </div>
+  )
+  if (!share) {
+    return (
+      <div className={className ?? 'mb-7'}>
+        {head}
+        {children}
+      </div>
+    )
+  }
   return (
     <Exportable
       title={`GW${gw} — ${label}`}
@@ -930,8 +953,16 @@ function Tile({ k, v, s, unit, media }: { k: string; v: string; s: React.ReactNo
             full ink strength while the sentence around it stays one step back.
             Every tile leads with a number, and the number is meaningless until
             you know who it belongs to; that name should be the second thing
-            read, not something found by reading the whole line. */}
-        <div className="mt-1.5 text-[13px] leading-snug text-ink-2 [&_b]:font-extrabold [&_b]:text-ink">{s}</div>
+            read, not something found by reading the whole line.
+
+            The gap is 10px rather than 6 because of the export. On screen 6px
+            cleared the number comfortably; in a share image the club crest on
+            this line rode up into it and the Liverpool bird sat on top of the
+            3.81. The rasteriser does not reproduce `leading-none` exactly, so
+            the number's box is a few pixels off what the browser draws, and at
+            export scale a few pixels is a collision. Four more here costs
+            nothing on screen and puts the clearance beyond the error. */}
+        <div className="mt-2.5 text-[13px] leading-snug text-ink-2 [&_b]:font-extrabold [&_b]:text-ink">{s}</div>
       </div>
       {media && <div className="shrink-0">{media}</div>}
     </div>

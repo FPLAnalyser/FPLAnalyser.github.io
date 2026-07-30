@@ -122,9 +122,20 @@ def fetch(url: str) -> bytes | None:
         return None
 
 
-# Twice the tallest thing the site draws a headshot at (150px). Anything more
-# is bytes a phone downloads and throws away.
-MAX_PX = 300
+# Sized for the share image, not the screen.
+#
+# This was 300 — "twice the tallest thing the site draws a headshot at" — which
+# was right when the only consumer was the page. A share image is a different
+# job: the captain podium draws a headshot about 330px tall in a 4:5 export and
+# taller again in a story, so a 300px cap would have thrown away exactly the
+# resolution the export needs, and every player would have arrived slightly
+# soft the moment a better source existed.
+#
+# Costs nothing today. Every current headshot is 220x280 — the only rung the
+# league's CDN is serving for 2026/27 so far — and `thumbnail` never enlarges,
+# so no file changes size until the bigger photos are published. It means that
+# when they are, the resolution survives instead of being discarded on arrival.
+MAX_PX = 600
 
 
 def save(path: str, data: bytes) -> bool:
@@ -235,6 +246,25 @@ by_bucket: dict[str, int] = {}
 for v in sources.values():
     by_bucket[v] = by_bucket.get(v, 0) + 1
 print("  headshot sources: " + ", ".join(f"{k} {v}" for k, v in sorted(by_bucket.items())))
+
+# Which rung the league is actually serving, stated in pixels.
+#
+# The manifest records the bucket and not the size, so "premierleague25" reads
+# as up to date while every file in it is 220x280 — the smallest rung, at 2x.
+# Working that out meant opening the images and measuring, which is a poor way
+# to learn that share images are soft because the source is 220px wide. The run
+# says it now.
+by_size: dict[str, int] = {}
+for f in os.listdir(os.path.join(OUT, "players")) if os.path.isdir(os.path.join(OUT, "players")) else []:
+    if not f.endswith(".webp"):
+        continue
+    try:
+        with Image.open(os.path.join(OUT, "players", f)) as im:
+            by_size[f"{im.size[0]}x{im.size[1]}"] = by_size.get(f"{im.size[0]}x{im.size[1]}", 0) + 1
+    except Exception:
+        pass
+top = sorted(by_size.items(), key=lambda kv: -kv[1])[:4]
+print("  headshot sizes: " + ", ".join(f"{k} x{v}" for k, v in top) + f" (cap {MAX_PX}px)")
 
 # Loud, but not fatal — the workflow step carries continue-on-error so a
 # blocked host still leaves the availability refresh free to commit. Silence
