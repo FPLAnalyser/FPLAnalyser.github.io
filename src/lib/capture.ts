@@ -1,22 +1,40 @@
 /* ════════════════════════════════════════════════════════════════════════
    Rasterising a piece of the page to a PNG.
 
-   html2canvas re-implements layout and paint from scratch in a cloned
-   document, and a few things this site leans on simply aren't in it. Left
-   alone the export came out wrong in three visible ways:
+   TWO ENGINES, and the difference between them is the difference between a
+   photograph and a copy painted from memory.
 
-     · `background-clip: text` — every rating painted as a solid gold BLOCK
-       where the digits should be, because the gradient is drawn and the
-       transparent text over it never is.
-     · `truncate` (overflow:hidden + ellipsis) — names rendered in a line box
-       an few pixels too short, slicing the glyphs through the middle.
-     · Remote headshots — the Premier League CDN images are drawn from cache
-       for the page but cannot be read back into a canvas unless the response
-       carries CORS headers, so they came out as empty holes.
+   PRIMARY — modern-screenshot. Wraps the panel in an SVG `<foreignObject>`
+   and draws that, so the BROWSER lays it out and paints it. Whatever is on
+   the screen is what lands in the file.
 
-   `rasterise` puts the document into capture mode first (a `data-capturing`
-   attribute the stylesheet answers), settles fonts and images, and always
-   takes the mode back off again.
+   FALLBACK — html2canvas-pro. Re-implements CSS layout and paint from
+   scratch. It was the primary engine for a long time and everything below
+   with `legacy` in its name exists because of what it gets wrong:
+
+     · `background-clip: text` — unsupported, so every rating painted as a
+       solid gold BLOCK where the digits should be, and had to be replaced by
+       a flat colour. The gold, silver and bronze that make a rating look
+       struck rather than typed simply could not survive the trip.
+     · text position — every glyph drawn about half its own font size too
+       low, while boxes stayed exactly where they were. Measured at 0.48em to
+       0.59em across five type sizes. A club crest ended up nine and a half
+       pixels above the name beside it, and cards came out taller than the
+       real ones.
+     · repeating gradients — drawn as their last colour and nothing else, so
+       Bournemouth's stripes exported as solid black.
+     · truncating text — sliced through the middle by a line box a few pixels
+       too short.
+
+   Every one of those is a workaround in this file or in the
+   `[data-capturing="legacy"]` half of index.css, and every one of them is
+   dead weight the moment the primary engine is doing the work. They stay
+   because the fallback has to keep working when it is reached.
+
+   Both put the document into capture mode first — a `data-capturing`
+   attribute the stylesheet answers — and both always take it off again. The
+   unsuffixed rules are the ones true of any picture: no share buttons in it,
+   nothing clipped by a scrollbar, nothing stuck to a viewport it hasn't got.
    ════════════════════════════════════════════════════════════════════════ */
 
 /** Wait for every image in the panel to finish, and stop deferring the ones
@@ -152,14 +170,24 @@ const twoFrames = () =>
  *  chosen so the canvas is at least that wide natively rather than being
  *  enlarged afterwards, which is the one part of the iframe attempt worth
  *  keeping: it is a plain html2canvas option and carries no layout risk. */
-export async function rasterise(node: HTMLElement, dark: boolean, minWidth = 0): Promise<HTMLCanvasElement> {
+/** Capped at 4: beyond that a tall panel on a phone is a canvas big enough to
+ *  be refused outright, and a blank export is worse than a soft one. */
+function captureScale(node: HTMLElement, minWidth: number): number {
+  const live = node.getBoundingClientRect().width || 1
+  return Math.max(2, Math.min(4, Math.ceil((minWidth / live) * 2) / 2))
+}
+
+/** The old engine, kept as the parachute.
+ *
+ *  html2canvas re-implements layout and paint, which is why the workarounds
+ *  above exist and why the `[data-capturing="legacy"]` half of the stylesheet
+ *  exists. Nothing reaches this unless the primary engine throws. */
+async function legacyShot(node: HTMLElement, dark: boolean, minWidth: number): Promise<HTMLCanvasElement> {
   const root = document.documentElement
-  root.setAttribute('data-capturing', '')
+  root.setAttribute('data-capturing', 'legacy')
   let restoreImages = () => {}
   let restoreGradients = () => {}
   try {
-    // Webfonts have to be resolved before html2canvas measures text, or the
-    // fallback's metrics decide the line boxes.
     await document.fonts?.ready
     await settleImages(node)
     restoreImages = hideUnrasterisable(node)
@@ -167,14 +195,10 @@ export async function rasterise(node: HTMLElement, dark: boolean, minWidth = 0):
     // capture mode is the one that gets written out.
     restoreGradients = unrollGradients(node)
     await twoFrames()
-    // Capped at 4: beyond that a tall panel on a phone is a canvas big enough
-    // to be refused outright, and a blank export is worse than a soft one.
-    const live = node.getBoundingClientRect().width || 1
-    const scale = Math.max(2, Math.min(4, Math.ceil((minWidth / live) * 2) / 2))
     const { default: html2canvas } = await import('html2canvas-pro')
     return await html2canvas(node, {
       backgroundColor: dark ? '#0c0b09' : '#ffffff',
-      scale,
+      scale: captureScale(node, minWidth),
       useCORS: true,
       logging: false,
     })
@@ -185,8 +209,64 @@ export async function rasterise(node: HTMLElement, dark: boolean, minWidth = 0):
   }
 }
 
+/** Photograph a panel — actually photograph it, rather than redraw it.
+ *
+ *  The panel is serialised into an SVG `<foreignObject>` and that is drawn to a
+ *  canvas, which means **the browser does the layout and the painting**. Not an
+ *  approximation of the browser: the browser. Whatever it puts on the screen is
+ *  what lands in the file.
+ *
+ *  That distinction is the whole reason for this module's history. The previous
+ *  engine re-implemented CSS from scratch and got two things wrong that no
+ *  amount of patching fixed:
+ *
+ *    · `background-clip: text` — unsupported, so the gold, silver and bronze
+ *      gradients that make a rating look struck rather than typed had to be
+ *      replaced by one flat colour.
+ *    · text position — every glyph drawn about half its own font size too low,
+ *      measured at 0.48em to 0.59em across five sizes, while boxes stayed put.
+ *      So a club crest sat nine and a half pixels above the name beside it, and
+ *      each card came out taller than the real one.
+ *
+ *  Both are simply gone: measured against a browser screenshot of the same
+ *  card, the crest-to-name offset is zero in both, the numeral occupies the
+ *  identical pixel span, and the gradient's colour ramp matches stop for stop.
+ *
+ *  The cost is a different set of requirements — fonts and images have to be
+ *  inlined, which the library does by fetching them. Everything this site draws
+ *  is same-origin, so there is nothing to negotiate. Where it does fail it
+ *  throws, and the old engine catches the fall.
+ *
+ *  `minWidth` is the width the result has to reach; the scale is chosen so the
+ *  canvas is at least that wide natively rather than enlarged afterwards. */
+export async function rasterise(node: HTMLElement, dark: boolean, minWidth = 0): Promise<HTMLCanvasElement> {
+  const root = document.documentElement
+  // No engine suffix: only the rules that are true of any picture — no share
+  // buttons in it, nothing clipped by a scrollbar, nothing stuck to a viewport
+  // that the picture does not have.
+  root.setAttribute('data-capturing', 'dom')
+  let restoreImages = () => {}
+  try {
+    await document.fonts?.ready
+    await settleImages(node)
+    restoreImages = hideUnrasterisable(node)
+    await twoFrames()
+    const { domToCanvas } = await import('modern-screenshot')
+    return await domToCanvas(node, {
+      scale: captureScale(node, minWidth),
+      backgroundColor: dark ? '#0c0b09' : '#ffffff',
+    })
+  } catch {
+    return await legacyShot(node, dark, minWidth)
+  } finally {
+    restoreImages()
+    root.removeAttribute('data-capturing')
+  }
+}
+
 // Local-only test hook, so the screenshot harness can drive the real capture
 // path (and catch regressions in the exported PNG) rather than a copy of it.
 if (import.meta.env.DEV || location.hostname === 'localhost') {
   ;(window as unknown as { __rasterise?: typeof rasterise }).__rasterise = rasterise
 }
+

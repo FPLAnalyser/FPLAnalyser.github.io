@@ -278,7 +278,7 @@ body {
    Distinct from `.capture-line`, which goes the other way and ADDS leading —
    that one is for truncating text being sliced by a box too short for it. The
    two are opposite corrections for opposite failures; do not merge them. */
-[data-capturing] .capture-flush {
+[data-capturing="legacy"] .capture-flush {
   line-height: 1 !important;
 }
 
@@ -303,7 +303,7 @@ body {
    really half the height of the type it sits beside. If it is ever used
    somewhere the surrounding size differs, measure it again rather than
    assuming this number carries. */
-[data-capturing] .capture-sink {
+[data-capturing="legacy"] .capture-sink {
   position: relative;
   top: 0.6em;
 }
@@ -323,7 +323,7 @@ body {
  *
  * Flat is not a compromise to be improved on. It is the closest thing to the
  * screen that can actually be drawn. */
-[data-capturing] .tier-num {
+[data-capturing="legacy"] .tier-num {
   background-image: none !important;
   -webkit-background-clip: border-box !important;
   background-clip: border-box !important;
@@ -335,11 +335,11 @@ body {
      (the podium's silver and bronze) names it in --tier-capture. */
   color: var(--tier-capture, #ead188) !important;
 }
-[data-capturing] .tier-steel .tier-num { color: #dfe4ea !important; }
-[data-capturing] .tier-graphite .tier-num { color: #b9b6ae !important; }
-[data-capturing] .tier-ice .tier-num { color: #c6ecfa !important; }
+[data-capturing="legacy"] .tier-steel .tier-num { color: #dfe4ea !important; }
+[data-capturing="legacy"] .tier-graphite .tier-num { color: #b9b6ae !important; }
+[data-capturing="legacy"] .tier-ice .tier-num { color: #c6ecfa !important; }
 
-[data-capturing] .metallic-num {
+[data-capturing="legacy"] .metallic-num {
   background: none !important;
   -webkit-background-clip: border-box !important;
   background-clip: border-box !important;
@@ -350,15 +350,15 @@ body {
    12px box — paint their glyphs outside it, and the next pill's opaque
    background then covered the overflow. That is why a shared squad had three
    fixture rows sitting on top of each other. */
-[data-capturing] .capture-line {
+[data-capturing="legacy"] .capture-line {
   overflow: visible !important;
   text-overflow: clip !important;
 }
 /* The line-height bump is only for the text that was actually being sliced —
    card names and the big numerals. Applying it to every truncating element
    pushed the fixture pills straight out through the bottom of the card. */
-[data-capturing] .capture-line,
-[data-capturing] .metallic-num {
+[data-capturing="legacy"] .capture-line,
+[data-capturing="legacy"] .metallic-num {
   line-height: 1.4 !important;
 }
 /* Fixture pills sit in an explicit 12px box so the stack can't grow past the
@@ -366,7 +366,7 @@ body {
    browser does, so the glyphs came out under the next pill's background —
    three fixture rows overlapping each other. In an export nothing has to fit
    a fixed height, so the box gives way to the text. */
-[data-capturing] .capture-pill {
+[data-capturing="legacy"] .capture-pill {
   height: auto !important;
   line-height: 2.1 !important;
   padding-block: 1px !important;
@@ -375,7 +375,7 @@ body {
    its caption. The rasteriser puts the glyph lower in that box than the
    browser does, so 30px numbers landed on top of the label beneath them. A
    little leading costs nothing in an image. */
-[data-capturing] .font-display {
+[data-capturing="legacy"] .font-display {
   line-height: 1.25 !important;
 }
 /* A sticky header or first column is pinned to the scroll position, which
