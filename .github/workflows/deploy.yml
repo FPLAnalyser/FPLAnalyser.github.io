@@ -44,6 +44,11 @@ jobs:
           VITE_FPL_PROXY: ${{ vars.VITE_FPL_PROXY }}
           # Ko-fi / Buy Me a Coffee page. Unset means no link renders at all.
           VITE_SUPPORT_URL: ${{ vars.VITE_SUPPORT_URL }}
+          # GoatCounter endpoint, e.g. https://fplanalyser.goatcounter.com/count.
+          # Unset and no counting script is loaded and no request is made — so a
+          # fork, a local build and a preview are all genuinely uncounted, and
+          # the privacy notice says so because it reads the same flag.
+          VITE_GOATCOUNTER: ${{ vars.VITE_GOATCOUNTER }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

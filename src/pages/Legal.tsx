@@ -5,6 +5,7 @@ import { Tabs, type TabDef } from '../components/Tabs'
 import { Icon } from '../components/Icon'
 import { PHOTO_CREDITS, DATA_SOURCES, LICENCE_URL, NEEDS_ATTRIBUTION, SHARE_ALIKE } from '../lib/credits'
 import { usesOwnRelay } from '../lib/api'
+import { countsVisits } from '../lib/analytics'
 
 /* ════════════════════════════════════════════════════════════════════════
    LEGAL — credits, data sources, terms and privacy on one page.
@@ -244,8 +245,11 @@ function Privacy() {
 
       <H>The short version</H>
       <P>
-        There is no account, no login and no advertising. We do not run analytics or tracking. We do
-        not set cookies. We do not sell or share anything about you.
+        There is no account, no login and no advertising. We do not set cookies. We do not sell or
+        share anything about you.{' '}
+        {countsVisits
+          ? 'We count how many people read each page, in a way that cannot tell one reader from another and stores nothing on your device.'
+          : 'We do not run analytics or tracking.'}
       </P>
 
       <H>What is stored on your device</H>
@@ -258,7 +262,7 @@ function Privacy() {
 
       <H>When something does leave your browser</H>
       <P>
-        Two things reach a third party, and only these:
+        {countsVisits ? 'Three things leave your browser, and only these:' : 'Two things reach a third party, and only these:'}
       </P>
       {/* The wording follows the build: once VITE_FPL_PROXY points at our own
           Worker there is no third party to disclose, and claiming otherwise
@@ -284,6 +288,18 @@ function Privacy() {
         your browser loads club crests and player headshots from them, and to GitHub Pages, which
         hosts the site and keeps standard server logs.
       </P>
+      {countsVisits && (
+        <P>
+          <b className="text-ink">Which page you are reading</b>, to{' '}
+          <A href="https://www.goatcounter.com/">GoatCounter</A>, a page-counting service. It
+          receives the page address, the site that linked you here if there was one, your country
+          and your browser type. It sets no cookies and writes nothing to your device. Your IP
+          address reaches it in order to serve the request and is not kept — it is used once, in a
+          form that cannot be reversed, so that reading three pages counts as one visitor rather
+          than three. There is no identifier that follows you between visits, so we cannot tell a
+          returning reader from a new one, and neither can they.
+        </P>
+      )}
 
       <H>Legal basis and your rights</H>
       <P>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Icon } from './Icon'
 import { OnboardingModal } from './OnboardingModal'
 import { ThemeSwitcher } from './ThemeSwitcher'
@@ -8,6 +8,7 @@ import { PreseasonBanner } from './PreseasonBanner'
 import { GlobalSearch, SearchSheet } from './GlobalSearch'
 import { BottomNav } from './BottomNav'
 import { SUPPORT_URL, SUPPORT_LABEL } from '../lib/support'
+import { countPage } from '../lib/analytics'
 import { PullToRefresh } from './PullToRefresh'
 import { AppOnboarding } from './AppOnboarding'
 import { useCore } from '../lib/useData'
@@ -30,6 +31,17 @@ export function Layout() {
   const [helpOpen, setHelpOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const { data } = useCore()
+  const { pathname } = useLocation()
+
+  // Count the page. Here rather than in App because this is inside the router,
+  // which is what makes `pathname` the real page — a hash route is invisible
+  // from outside it, and invisible to anything that counts by URL.
+  //
+  // Fires on every route change including the first, which is what a page view
+  // is. Does nothing at all on a build without VITE_GOATCOUNTER.
+  useEffect(() => {
+    countPage(pathname, document.title)
+  }, [pathname])
 
   // Best-effort: refresh player photo codes from the live FPL API so
   // transferred / newly-added players show the current kit (falls back to the
