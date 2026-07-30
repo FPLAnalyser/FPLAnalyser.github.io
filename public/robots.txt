@@ -4,4 +4,4 @@ Allow: /
 # The data feeds are for the site's own use, not for bulk collection.
 Disallow: /site_data/
 
-Sitemap: https://fplanalyser.github.io/sitemap.xml
+Sitemap: https://fplanalyser.co.uk/sitemap.xml

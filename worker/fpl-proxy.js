@@ -29,6 +29,8 @@ const ALLOW = [
 
 /** Origins allowed to read a response. Add a custom domain here when you have one. */
 const ORIGINS = [
+  'https://fplanalyser.co.uk',
+  'https://www.fplanalyser.co.uk',
   'https://fplanalyser.github.io',
   'http://localhost:4173',
   'http://localhost:4177',

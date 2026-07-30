@@ -3,12 +3,12 @@
      Search engines index the root; the hash fragments are listed for
      completeness and are followed by crawlers that execute JavaScript. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://fplanalyser.github.io/</loc><priority>1.0</priority><changefreq>daily</changefreq></url>
-  <url><loc>https://fplanalyser.github.io/#/preview</loc><priority>0.9</priority><changefreq>weekly</changefreq></url>
-  <url><loc>https://fplanalyser.github.io/#/players</loc><priority>0.9</priority><changefreq>daily</changefreq></url>
-  <url><loc>https://fplanalyser.github.io/#/teams</loc><priority>0.8</priority><changefreq>weekly</changefreq></url>
-  <url><loc>https://fplanalyser.github.io/#/fixtures</loc><priority>0.8</priority><changefreq>weekly</changefreq></url>
-  <url><loc>https://fplanalyser.github.io/#/scout</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>
-  <url><loc>https://fplanalyser.github.io/#/squad</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>
-  <url><loc>https://fplanalyser.github.io/#/legal</loc><priority>0.3</priority><changefreq>yearly</changefreq></url>
+  <url><loc>https://fplanalyser.co.uk/</loc><priority>1.0</priority><changefreq>daily</changefreq></url>
+  <url><loc>https://fplanalyser.co.uk/#/preview</loc><priority>0.9</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://fplanalyser.co.uk/#/players</loc><priority>0.9</priority><changefreq>daily</changefreq></url>
+  <url><loc>https://fplanalyser.co.uk/#/teams</loc><priority>0.8</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://fplanalyser.co.uk/#/fixtures</loc><priority>0.8</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://fplanalyser.co.uk/#/scout</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://fplanalyser.co.uk/#/squad</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://fplanalyser.co.uk/#/legal</loc><priority>0.3</priority><changefreq>yearly</changefreq></url>
 </urlset>
