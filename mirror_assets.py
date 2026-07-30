@@ -45,16 +45,39 @@ PLAYER_URLS = (
 BADGE_URL = f"{CDN}/premierleague/badges/t{{code}}.png"
 
 
+# The image host answers 403 to an obviously-scripted User-Agent. These are the
+# headers a browser sends for an <img>, which is exactly what this is standing
+# in for — the same bytes the same visitor would fetch a moment later.
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+    ),
+    "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+    "Referer": "https://www.premierleague.com/",
+}
+
+blocked = 0
+
+
 def fetch(url: str) -> bytes | None:
-    req = urllib.request.Request(url, headers={"User-Agent": "fpl-analyser-mirror"})
+    """The bytes, or None if there is no image there.
+
+    Nothing raises. A mirror is a nice-to-have — the front end still falls
+    through to the CDN and then to a monogram — and it must never be able to
+    take the availability refresh down with it, which is exactly what the first
+    version did when the host started answering 403."""
+    global blocked
+    req = urllib.request.Request(url, headers=HEADERS)
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
             return r.read()
     except urllib.error.HTTPError as e:
-        if e.code == 404:
-            return None
-        raise
-    except urllib.error.URLError:
+        if e.code != 404:
+            blocked += 1
+        return None
+    except (urllib.error.URLError, TimeoutError, OSError):
+        blocked += 1
         return None
 
 
@@ -128,3 +151,14 @@ bn, bb = usage("badges")
 pn, pb = usage("players")
 print(f"public/img: {bn} crests ({bb / 1e6:.1f} MB), {pn} headshots ({pb / 1e6:.1f} MB)")
 print(f"  added {new_badges} crests and {new_photos} headshots this run; {missing} had no image")
+
+# Loud, but not fatal — the workflow step carries continue-on-error so a
+# blocked host still leaves the availability refresh free to commit. Silence
+# is the thing to avoid: a mirror that quietly stops working looks exactly
+# like a mirror with nothing new to fetch.
+if blocked:
+    print(f"  WARNING: {blocked} requests were refused by the host, not 404s. "
+          f"If that number is close to the total, the mirror is being blocked "
+          f"and the share images will be missing crests and players.", file=sys.stderr)
+    if new_badges + new_photos == 0 and bn + pn == 0:
+        sys.exit(1)

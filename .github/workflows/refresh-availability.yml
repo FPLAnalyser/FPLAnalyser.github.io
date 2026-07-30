@@ -34,7 +34,12 @@ jobs:
       # can only read back a same-origin image, so this is what keeps the
       # players and the badges in the share pictures. Idempotent, so a normal
       # morning fetches nothing.
+      # continue-on-error, and it matters: the mirror is a nice-to-have, and
+      # the first version of this step took the whole job down with it when
+      # the image host answered 403 — losing that morning's injuries and
+      # prices over some missing crests. The refresh commits either way.
       - run: python mirror_assets.py
+        continue-on-error: true
       - name: Commit if changed
         run: |
           git add site_data/*/availability.json public/img
