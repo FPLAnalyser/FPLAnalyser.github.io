@@ -700,7 +700,7 @@ export default function Preview() {
                           rather than under it — a whole line of card height
                           for two characters was never a good trade. */}
                       <div className="mt-2.5 flex items-baseline gap-1.5">
-                        <span className="tier-num font-num text-[34px] leading-none font-extrabold" style={{ backgroundImage: p.num, '--tier-capture': p.flat, '--foil-edge': p.capEdge, '--foil-deep': p.capDeep, '--foil-glow': p.capGlow } as React.CSSProperties}>{b.xp.toFixed(2)}</span>
+                        <span className="tier-num font-num text-[34px] leading-none font-extrabold" style={{ backgroundImage: p.num, '--tier-capture': p.flat } as React.CSSProperties}>{b.xp.toFixed(2)}</span>
                         <span className="text-[11px] font-extrabold tracking-[0.14em]" style={{ color: 'rgba(255,255,255,.55)' }}>xP</span>
                       </div>
                     </div>
@@ -816,11 +816,9 @@ const PODIUM = [
     edge: 'linear-gradient(160deg,#5f4d26,#c9a227,#ead188,#50411f)',
     stock: 'linear-gradient(168deg,#241f16,#141009 56%,#0c0906)',
     num: 'linear-gradient(180deg,#fffbf0,#f0e0b0 52%,#c9a227)',
-    // The same three stops the gradient uses, restated as a face and two edge
-    // colours — a share image cannot draw the gradient (index.css explains
-    // why) and rebuilds the metal out of shadows instead. Kept beside the
-    // gradient so the two cannot drift into different alloys.
-    flat: '#ead188', capEdge: '#e3cd93', capDeep: '#c9a227', capGlow: 'rgba(201,162,39,.46)',
+    // A share image cannot draw the gradient — index.css explains why — so it
+    // falls back to this one colour, taken from the gradient's midpoint.
+    flat: '#ead188',
     glow: '0 0 0 1px rgba(255,251,240,.16), 0 0 20px -4px rgba(201,162,39,.55)',
   },
   {
@@ -828,7 +826,7 @@ const PODIUM = [
     edge: 'linear-gradient(160deg,#5C636B,#C9CFD6,#e8ecf1,#4a5057)',
     stock: 'linear-gradient(168deg,#1a1d21,#12151a 56%,#0a0c0e)',
     num: 'linear-gradient(180deg,#f4f7fa,#c9cfd6 52%,#7c838c)',
-    flat: '#dfe4ea', capEdge: '#c9cfd6', capDeep: '#7c838c', capGlow: 'rgba(201,207,214,.34)',
+    flat: '#dfe4ea',
     glow: undefined as string | undefined,
   },
   {
@@ -836,7 +834,7 @@ const PODIUM = [
     edge: 'linear-gradient(160deg,#4a2f1a,#b87333,#e8b98a,#3d2614)',
     stock: 'linear-gradient(168deg,#221811,#17100b 56%,#0d0806)',
     num: 'linear-gradient(180deg,#f5d9bc,#d79a5e 52%,#9c5f2c)',
-    flat: '#e8b98a', capEdge: '#d79a5e', capDeep: '#9c5f2c', capGlow: 'rgba(215,154,94,.4)',
+    flat: '#e8b98a',
     glow: undefined as string | undefined,
   },
 ]
