@@ -29,6 +29,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      # Pillow does the downscale-and-WebP in mirror_assets.py. Without it the
+      # mirror step dies on the import, which is exactly how it failed the
+      # first time it ran here.
+      - run: pip install --quiet Pillow
       - run: python refresh_availability.py
       # Crests and headshots for anyone new, onto our own origin — a canvas
       # can only read back a same-origin image, so this is what keeps the
@@ -42,7 +46,10 @@ jobs:
         continue-on-error: true
       - name: Commit if changed
         run: |
-          git add site_data/*/availability.json public/img
+          # -A over the two directories: naming public/img explicitly made the
+          # commit step fail outright on any run where the mirror had produced
+          # nothing, taking the availability data down with it.
+          git add -A site_data public
           if git diff --cached --quiet; then
             echo "No changes."
             exit 0
