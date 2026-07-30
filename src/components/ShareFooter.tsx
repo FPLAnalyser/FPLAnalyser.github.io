@@ -1,9 +1,12 @@
 import { BRAND, X_HANDLE, IG_HANDLE, X_MARK_PATH } from '../lib/social'
 
-// Brand watermark baked into every shared/downloaded image — each share is a
-// tiny bit of marketing. Update SHARE_URL to the App Store / custom domain once
-// live.
-export const SHARE_URL = 'fpl-analyser'
+// Brand watermark baked into every shared image — each share is a tiny bit of
+// marketing.
+//
+// There used to be a SHARE_URL constant here holding 'fpl-analyser'. Nothing
+// read it, and it went stale the moment the site moved — a dead string that
+// still claimed to be the address. The footer carries the wordmark and both
+// handles, which is what actually gets someone back here.
 
 /** The X mark and the Instagram glyph, drawn inline so the rasteriser has no
  *  external file to fetch and nothing to fail on. */

@@ -20,7 +20,7 @@ declare global {
   }
 }
 
-const BASE = 'https://raw.githubusercontent.com/stefcourt2004-png/fpl-analyser/main/'
+const BASE = 'https://raw.githubusercontent.com/FPLAnalyser/FPLAnalyser.github.io/main/'
 
 // In the native (Capacitor) app the web assets — and their bundled copy of
 // site_data — are frozen at build time, so we fetch the published data FIRST

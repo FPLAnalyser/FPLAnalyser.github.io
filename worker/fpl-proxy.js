@@ -29,7 +29,7 @@ const ALLOW = [
 
 /** Origins allowed to read a response. Add a custom domain here when you have one. */
 const ORIGINS = [
-  'https://stefcourt2004-png.github.io',
+  'https://fplanalyser.github.io',
   'http://localhost:4173',
   'http://localhost:4177',
   'http://localhost:5173',
