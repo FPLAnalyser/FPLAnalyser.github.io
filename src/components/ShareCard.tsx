@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { RatingCard } from './RatingCard'
 import { ShareFooter } from './ShareFooter'
 import { shareImageNative } from '../lib/native'
+import { rasterise } from '../lib/capture'
 import { playerHref } from '../lib/util'
 import { num } from '../lib/rows'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
@@ -33,8 +34,13 @@ export function ShareCard({ r, fixtureEase }: { r: RatingRow; fixtureEase?: Fixt
     setBusy(true)
     setMsg('')
     try {
-      const { default: html2canvas } = await import('html2canvas-pro')
-      const canvas = await html2canvas(cardRef.current, { backgroundColor: '#0c0b09', scale: 2, useCORS: true, logging: false })
+      // Through `rasterise` like every other export, rather than reaching for
+      // the rasteriser directly. Calling html2canvas here meant this card was
+      // the one picture on the site that never got capture mode — no images
+      // settled, no chrome hidden, and, once the engine changed, still drawn
+      // by the old one. A second copy of a pipeline is a second copy that gets
+      // left behind.
+      const canvas = await rasterise(cardRef.current, true, 1080)
       const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, 'image/png'))
       if (!blob) throw new Error('render failed')
       const shareName = `${String(r.web_name).replace(/\s+/g, '-')}-fpl-analyser.png`
