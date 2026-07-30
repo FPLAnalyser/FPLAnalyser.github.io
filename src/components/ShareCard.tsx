@@ -84,10 +84,13 @@ export function ShareCard({ r, fixtureEase }: { r: RatingRow; fixtureEase?: Fixt
               <ShareFooter />
             </div>
             <div className="mt-3 flex flex-wrap justify-center gap-2">
+              {/* One picture button. `save` already hands the PNG to the OS
+                  share sheet where there is one and downloads it where there
+                  isn't, so "Save" and "Share" were the same action twice. */}
               <button onClick={save} disabled={busy} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent-strong disabled:opacity-60">
-                {busy ? 'Rendering…' : '⭳ Save image'}
+                {busy ? 'Rendering…' : '↗ Share image'}
               </button>
-              <button onClick={shareLink} className={btn}>↗ Share</button>
+              <button onClick={shareLink} className={btn}>↗ Share link</button>
               <button onClick={copy} className={btn}>⧉ Copy link</button>
               <button onClick={() => setOpen(false)} className={btn}>Close</button>
             </div>

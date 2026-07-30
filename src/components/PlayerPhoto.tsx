@@ -10,10 +10,20 @@ import { liveCodeFor, liveCodesVersion, subscribeLiveCodes } from '../lib/photoC
 const CDN = 'https://resources.premierleague.com'
 const PHOTO_SIZES = ['250x250', '110x140'] as const
 
-/** Candidate headshot URLs, current-season bucket first, then legacy. */
+/** Candidate headshot URLs.
+ *
+ *  Our own mirror first (see mirror_assets.py). A same-origin image is the
+ *  only kind a canvas will read back, so this is what puts the players in the
+ *  share images — asking the Premier League's CDN through CORS only works if
+ *  it chooses to send the headers, and it is not our call. The mirror is also
+ *  one fewer third-party request on every page.
+ *
+ *  The CDN chain stays behind it, unchanged, for anyone the nightly mirror
+ *  hasn't picked up yet — a player signed this morning shows on the page
+ *  straight away and joins the mirror overnight. */
 function photoUrls(code: number, sizes: readonly string[], ver?: string): string[] {
   const bust = ver ? `?v=${ver}` : ''
-  const out: string[] = []
+  const out: string[] = [`${import.meta.env.BASE_URL}img/players/${code}.png`]
   for (const s of sizes) out.push(`${CDN}/premierleague25/photos/players/${s}/${code}.png${bust}`)
   for (const s of sizes) out.push(`${CDN}/premierleague/photos/players/${s}/p${code}.png${bust}`)
   return out

@@ -17,10 +17,20 @@ export const teamCodes: Record<string, number> = {
   SUN: 56, TOT: 6, WHU: 21, WOL: 39,
 }
 
-export function teamBadgeUrl(team: string): string | null {
+/** Crest URLs, our own mirror first and the Premier League's CDN behind it.
+ *
+ *  Same reason as the headshots: a canvas can only read back a same-origin
+ *  image, so a crest served from the CDN is dropped from every share image the
+ *  site produces. The CDN entry stays as the fallback for a club the nightly
+ *  mirror hasn't seen — promotion, mostly. */
+export function teamBadgeUrls(team: string): string[] {
   // Prefer the code from loaded data (covers promoted clubs) then the fallback map.
   const code = teamCodeFor(team) ?? teamCodes[team]
-  return code ? `https://resources.premierleague.com/premierleague/badges/t${code}.png` : null
+  if (!code) return []
+  return [
+    `${import.meta.env.BASE_URL}img/badges/t${code}.png`,
+    `https://resources.premierleague.com/premierleague/badges/t${code}.png`,
+  ]
 }
 
 /** Full club name — data first (promoted clubs), then the fallback map, then the code. */

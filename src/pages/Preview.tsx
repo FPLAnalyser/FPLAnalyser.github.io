@@ -98,6 +98,34 @@ function DeadlineStrip({ gw, at }: { gw: number; at?: Date }) {
   )
 }
 
+/** When the team news on this page was last pulled from FPL.
+ *
+ *  Quiet, until it isn't. The refresh runs at 06:00 and the page has no way of
+ *  knowing it failed — a stale feed and a fresh one look identical, which is
+ *  exactly how this page went on calling an injured man Bournemouth's penalty
+ *  taker for two days after the job started crashing. Past a day and a half
+ *  the line turns amber and says so, so the next silent failure announces
+ *  itself to whoever is reading rather than waiting to be noticed. */
+function DataAge({ at }: { at: string | null }) {
+  if (!at) return null
+  const when = new Date(at)
+  if (Number.isNaN(when.getTime())) return null
+  const hours = (Date.now() - when.getTime()) / 3600000
+  // 30 hours: a refresh at 06:00 is a day old by the following mid-morning and
+  // that is fine. Past 30 it has missed a run.
+  const stale = hours > 30
+  const day = hours < 20 ? 'today' : hours < 44 ? 'yesterday' : `${Math.floor(hours / 24)} days ago`
+  return (
+    <div className={`mb-5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px] ${stale ? 'text-warn' : 'text-ink-3'}`}>
+      <Icon name={stale ? 'alert' : 'clock'} size={12} className="shrink-0" />
+      <span>
+        Team news, prices and ownership from FPL, {day} at {TIME.format(when)}
+      </span>
+      {stale && <b className="font-semibold">— the daily refresh hasn’t run since, so treat the flags as out of date.</b>}
+    </div>
+  )
+}
+
 /** Last five results, most recent last. Renders nothing before a ball is
  *  kicked, which is the honest answer in August. */
 function FormDots({ form }: { form?: ('W' | 'D' | 'L')[] }) {
@@ -333,6 +361,12 @@ export default function Preview() {
                   title={`GW${gw} — ${teamLabel(m.h)} v ${teamLabel(m.a)}`}
                   filename={`gw${gw}-${m.h.toLowerCase()}-${m.a.toLowerCase()}`}
                   className={`min-w-0 ${feat ? 'mb-4' : isOpen ? 'lg:col-span-2' : ''}`}
+                  // A collapsed card is a scoreline and two crests; the reason
+                  // to send someone a fixture is the expected points and the
+                  // team news behind the tap. So the card opens itself for the
+                  // picture and goes back to however the reader had it.
+                  beforeCapture={() => { if (feat) setFeatOpen(true); else setOpen(id) }}
+                  afterCapture={() => { if (feat) setFeatOpen(featOpen); else setOpen(open) }}
                 >
                 <div
                   className={`relative overflow-hidden rounded-xl border bg-surface-1 transition-colors ${feat ? 'border-accent/45 p-4 pt-[1.15rem]' : 'p-3 pt-[0.95rem]'} ${isOpen && !feat ? 'border-accent/45' : feat ? '' : 'border-line'}`}
@@ -573,6 +607,7 @@ export default function Preview() {
       <SectionBanner imgKey="preview" title={`GW${gw} Preview`} subtitle="Everything you need to get ready for the next gameweek" />
 
       <DeadlineStrip gw={gw} at={avail.deadlines.get(gw)} />
+      <DataAge at={avail.generatedAt} />
 
       {!ready ? (
         <EmptyState icon={<Icon name="calendar" size={44} />}>

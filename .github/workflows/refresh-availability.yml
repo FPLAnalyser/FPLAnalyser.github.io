@@ -30,14 +30,19 @@ jobs:
         with:
           python-version: '3.12'
       - run: python refresh_availability.py
+      # Crests and headshots for anyone new, onto our own origin — a canvas
+      # can only read back a same-origin image, so this is what keeps the
+      # players and the badges in the share pictures. Idempotent, so a normal
+      # morning fetches nothing.
+      - run: python mirror_assets.py
       - name: Commit if changed
         run: |
-          git add site_data/*/availability.json
+          git add site_data/*/availability.json public/img
           if git diff --cached --quiet; then
             echo "No changes."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Refresh availability data from the FPL API"
+          git commit -m "Refresh availability data and mirror any new club or player images"
           git push

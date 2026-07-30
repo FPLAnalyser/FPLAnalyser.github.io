@@ -407,9 +407,29 @@ export default function SquadBuilder() {
         {/* The board — the same object from an empty squad to a full one:
             unfilled places are just empty slots you tap to fill. */}
         <div className="min-w-0">
+          {/* One control row above the board: what the cards show, and the two
+              things you do to the squad as a whole. Share and Clear used to
+              sit under the pitch on the theory that you share a squad once
+              you've built one — but on a laptop that puts them below the fold
+              of the thing they act on, and on a phone it means scrolling past
+              fifteen cards to start again. Beside the metric chips they are
+              where the eye already is. */}
           <div className="mx-auto mb-2 flex max-w-[860px] flex-wrap items-center gap-2">
             <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Your squad — week by week</div>
-            <div className="ml-auto"><MetricChips metric={metric} onChange={setMetric} /></div>
+            {complete && !valid && <span className="text-[13px] font-semibold text-bad">Over budget by £{Math.abs(remaining).toFixed(1)}m</span>}
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <MetricChips metric={metric} onChange={setMetric} />
+              {total > 0 && (
+                <>
+                  <button onClick={() => setShareOpen(true)} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-line-mid px-3 text-[12px] font-semibold text-ink transition-colors hover:border-line-strong">
+                    <Icon name="users" size={13} /> Share
+                  </button>
+                  <button onClick={clear} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-line-mid px-3 text-[12px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink">
+                    <Icon name="x" size={13} /> Clear
+                  </button>
+                </>
+              )}
+            </div>
           </div>
           <SeasonPlanner
             planner={planner} byEl={byEl} pool={pool} fixtureEase={fixtureEase}
@@ -419,19 +439,9 @@ export default function SquadBuilder() {
             partialSquad={picked}
             onPickSlot={(p) => focusMarket(p as Pos)}
             onAutoPick={complete ? planner.autoXI : autoPick}
-            footer={total > 0 ? (
-              /* Under the board, not above it: you share a squad once you've
-                 built one, so these were spending a whole band on nothing. */
-              <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3">
-                <button onClick={() => setShareOpen(true)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-line-mid px-3.5 text-sm font-medium text-ink transition-colors hover:border-line-strong">
-                  <Icon name="trend-up" size={14} /> Share / download
-                </button>
-                <button onClick={clear} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-line-mid px-3.5 text-sm font-medium text-ink-2 transition-colors hover:border-line-strong hover:text-ink">
-                  <Icon name="x" size={14} /> Clear
-                </button>
-                {complete && !valid && <span className="text-sm font-medium text-bad">Over budget by £{Math.abs(remaining).toFixed(1)}m</span>}
-              </div>
-            ) : null}
+            /* Share, Clear and the budget warning now ride in the control row
+               above the board — see the comment there. */
+            footer={null}
             onSold={(el: number) => { holdPitch(); setPickPos(String(byEl.get(el)?.position ?? 'MID') as Pos); setQuery(''); setPendingIn(null) }}
           />
         </div>
@@ -958,7 +968,7 @@ function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, lineu
           <ShareFooter />
         </div>
         <div className="mt-3 flex flex-wrap justify-center gap-2">
-          <button onClick={save} disabled={busy || total === 0} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent-strong disabled:opacity-60">{busy ? 'Rendering…' : '⭳ Save image'}</button>
+          <button onClick={save} disabled={busy || total === 0} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent-strong disabled:opacity-60">{busy ? 'Rendering…' : '↗ Share image'}</button>
           <button onClick={onClose} className={btn}>Close</button>
         </div>
         {msg && <div className="mt-2 text-center text-xs text-ink-2">{msg}</div>}

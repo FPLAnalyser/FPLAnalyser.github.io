@@ -59,9 +59,24 @@ export default defineConfig({
         // Hashed assets are precached (immutable → effectively self-updating,
         // matching the legacy stale-while-revalidate intent).
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
+        // The mirrored crests and headshots are hundreds of files and tens of
+        // megabytes. Precaching means pushing all of them to a phone on the
+        // first visit for the sake of the handful it will actually draw, so
+        // they are fetched on demand and kept once seen (below) instead.
+        globIgnores: ['**/img/players/**', '**/img/badges/**'],
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,
         runtimeCaching: [
+          {
+            // Crests and headshots never change under the same filename — the
+            // code IS the identity — so cache-first, and let them age out.
+            urlPattern: /\/img\/(players|badges)\/.*\.png$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'club-and-player-images',
+              expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 60 },
+            },
+          },
           {
             // Serve instantly from cache and refresh in the background. The
             // pipeline updates site_data at most daily, and NetworkFirst's

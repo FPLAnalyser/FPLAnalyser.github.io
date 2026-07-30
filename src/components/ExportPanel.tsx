@@ -124,7 +124,7 @@ function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: 
   return out
 }
 
-export function Exportable({ title, filename, children, className, toolbar, variant = 'row' }: {
+export function Exportable({ title, filename, children, className, toolbar, variant = 'row', beforeCapture, afterCapture }: {
   title: string
   filename?: string
   children: ReactNode
@@ -138,6 +138,14 @@ export function Exportable({ title, filename, children, className, toolbar, vari
    *  pushing it down. For a grid of small cards — a round of fixtures — a row
    *  per card is a row of chrome per card, and the layout is the content. */
   variant?: 'row' | 'corner'
+  /** Put the panel into the state worth photographing, and put it back after.
+   *
+   *  A fixture card is collapsed by default, so the obvious implementation
+   *  shared a picture of a header — the projected goals and nothing else,
+   *  while the expected points and the team news that make it worth sending
+   *  sat behind a tap. The panel opens itself for the capture instead. */
+  beforeCapture?: () => void
+  afterCapture?: () => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
@@ -153,6 +161,11 @@ export function Exportable({ title, filename, children, className, toolbar, vari
     if (!ref.current) return
     setBusy(true)
     setMsg('')
+    beforeCapture?.()
+    // Two frames: one for React to commit the state the hook just set, one for
+    // the browser to lay it out. Without the wait html2canvas measures the card
+    // as it was — collapsed — and the expansion never makes the picture.
+    if (beforeCapture) await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())))
     try {
       // The theme lives on data-mode, not a class — checking for a `.light`
       // class that never existed meant every export was framed as dark, so a
@@ -175,7 +188,7 @@ export function Exportable({ title, filename, children, className, toolbar, vari
           setOpen(false)
           return
         }
-        setMsg('Sharing isn’t available in this browser — the image has downloaded instead.')
+        setMsg('This browser has no share sheet — the image has been saved to your downloads instead.')
       }
       const a = document.createElement('a')
       a.href = URL.createObjectURL(blob)
@@ -185,6 +198,7 @@ export function Exportable({ title, filename, children, className, toolbar, vari
     } catch {
       setMsg('Could not render the image on this device — try a screenshot instead.')
     } finally {
+      afterCapture?.()
       setBusy(false)
     }
   }
@@ -205,22 +219,18 @@ export function Exportable({ title, filename, children, className, toolbar, vari
           </button>
         ))}
       </div>
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => run('share')}
-          disabled={busy}
-          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-accent bg-accent-soft px-3.5 text-[13px] font-semibold text-accent disabled:opacity-60"
-        >
-          <Icon name="users" size={13} /> {busy ? 'Rendering…' : 'Share image'}
-        </button>
-        <button
-          onClick={() => run('download')}
-          disabled={busy}
-          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-line-mid px-3.5 text-[13px] font-semibold text-ink-2 disabled:opacity-60"
-        >
-          <Icon name="check" size={13} /> Download PNG
-        </button>
-      </div>
+      {/* One action. "Share" and "Download" were the same picture reached two
+          ways, and on a phone — where almost all of this is read — the share
+          sheet already offers Save Image as one of its options. Where a
+          browser has no share sheet at all the file still downloads; it just
+          isn't a decision the reader has to make first. */}
+      <button
+        onClick={() => run('share')}
+        disabled={busy}
+        className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-accent bg-accent-soft px-3.5 text-[13px] font-semibold text-accent disabled:opacity-60"
+      >
+        <Icon name="users" size={13} /> {busy ? 'Rendering…' : 'Share image'}
+      </button>
       {msg && <p className="mt-2 text-xs text-warn">{msg}</p>}
     </>
   )
