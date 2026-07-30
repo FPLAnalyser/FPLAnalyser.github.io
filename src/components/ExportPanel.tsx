@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Icon } from './Icon'
-import { shareImageNative } from '../lib/native'
+import { deliverImage } from '../lib/share'
 import { rasterise } from '../lib/capture'
+import { SHARE_FORMATS, frameHeight, drawFitted, type ShareFormat, type FormatId } from '../lib/frames'
 import { BRAND, SITE_URL, X_HANDLE, IG_HANDLE, drawXMark, drawInstagramMark } from '../lib/social'
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -17,46 +18,15 @@ import { BRAND, SITE_URL, X_HANDLE, IG_HANDLE, drawXMark, drawInstagramMark } fr
  * A visitor sharing our analysis cannot rewrite the credit, by design. */
 const SITE_NAME = BRAND
 
-type Format = 'post' | 'square' | 'wide' | 'story' | 'full'
-
-/** The shapes worth exporting.
- *
- *  What the networks actually accept, which is not what the old list claimed.
- *  Instagram's feed will not show anything taller than 4:5 and crops the rest;
- *  X gives a portrait post far more timeline height than a 16:9 one. So 4:5 is
- *  the default — the best in-feed size on both, and the one picture that can be
- *  posted anywhere without being recomposed.
- *
- *  The panel is photographed as the reader's own screen has laid it out, so on
- *  a phone a tall frame gets the stacked layout for free and a wide one gets
- *  the same stack with room either side. Choosing the layout independently of
- *  the device was tried and reverted — see `rasterise`. */
-const FORMATS: { id: Format; label: string; hint: string; w: number; h: number | null }[] = [
-  { id: 'post', label: 'Post', hint: '4:5', w: 1080, h: 1350 },
-  { id: 'square', label: 'Square', hint: '1:1', w: 1080, h: 1080 },
-  { id: 'wide', label: 'Wide', hint: '16:9', w: 1600, h: 900 },
-  { id: 'story', label: 'Story', hint: '9:16', w: 1080, h: 1920 },
-  // Height from the content, so nothing is ever shrunk to fit a shape it does
-  // not have. Capped at 9:16 in `brand` — past that a picture stops being
-  // postable anywhere and becomes a screenshot of a screenshot.
-  { id: 'full', label: 'Full', hint: 'tall', w: 1080, h: null },
-]
-
 /** Draw the captured panel onto a branded canvas of the chosen aspect. */
-function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: string, dark: boolean): HTMLCanvasElement {
+function brand(source: HTMLCanvasElement, fmt: ShareFormat, title: string, dark: boolean): HTMLCanvasElement {
   const out = document.createElement('canvas')
   out.width = fmt.w
-  // Full: chrome + the panel at full width, so nothing is ever shrunk.
-  const autoPad = Math.round(fmt.w * 0.045)
-  const autoChrome = autoPad + 34 + Math.round(fmt.w * 0.028) + Math.round(fmt.w * 0.095) + autoPad
-  // Ceil, not round. The height reserved for the panel has to be at least the
-  // height the panel will be drawn at; rounding down by half a pixel used to
-  // make the fit test fail.
-  const wanted = fmt.h ?? Math.ceil((source.height / source.width) * (fmt.w - autoPad * 2)) + autoChrome
-  // 9:16 is the tallest shape any network will show whole. Past it the picture
-  // is not "detailed", it is unpostable, so Full stops there and the content
-  // scales instead.
-  out.height = Math.min(wanted, Math.round(fmt.w * (16 / 9)))
+  const pad0 = Math.round(fmt.w * 0.045)
+  // Title band plus footer band — what Full has to add to the content's own
+  // height, and what a fixed format takes away from it.
+  const chrome = pad0 + 34 + Math.round(fmt.w * 0.028) + Math.round(fmt.w * 0.095) + pad0
+  out.height = frameHeight(fmt, source, chrome, pad0)
   const ctx = out.getContext('2d')!
   const bg = dark ? '#0c0b09' : '#faf8f3'
   const ink = dark ? '#f4efe3' : '#1b1712'
@@ -95,10 +65,7 @@ function brand(source: HTMLCanvasElement, fmt: (typeof FORMATS)[number], title: 
   //
   // A picture that is smaller than you hoped is a picture. A picture with the
   // number cut in half is a mistake somebody screenshots and replies to.
-  const scale = Math.min(availW / source.width, availH / source.height)
-  const dw = source.width * scale
-  const dh = source.height * scale
-  ctx.drawImage(source, pad + (availW - dw) / 2, top + (availH - dh) / 2, dw, dh)
+  drawFitted(ctx, source, { x: pad, y: top, w: availW, h: availH })
 
   // Footer: brand on the left, both accounts on the right, over a hairline.
   ctx.strokeStyle = dark ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.12)'
@@ -180,7 +147,7 @@ export function Exportable({ title, filename, children, className, toolbar, vari
   const [msg, setMsg] = useState('')
   // 4:5 by default: the one shape that posts whole to an X timeline and an
   // Instagram feed without either of them recomposing it.
-  const [fmt, setFmt] = useState<Format>('post')
+  const [fmt, setFmt] = useState<FormatId>('post')
 
   useEffect(() => {
     if (!open) setMsg('')
@@ -201,7 +168,7 @@ export function Exportable({ title, filename, children, className, toolbar, vari
       // reader in light mode got their pale panel mounted on black with cream
       // titles over it.
       const dark = document.documentElement.dataset.mode !== 'light'
-      const spec = FORMATS.find((f) => f.id === fmt)!
+      const spec = SHARE_FORMATS.find((f) => f.id === fmt)!
       // Laid out at the format's own width, and captured at a scale that
       // reaches the frame natively — so the export is the same picture on a
       // phone and a laptop, and is never a bitmap stretched to fit.
@@ -211,22 +178,13 @@ export function Exportable({ title, filename, children, className, toolbar, vari
       if (!blob) throw new Error('render failed')
       const name = `${filename ?? title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${fmt}.png`
 
-      if (mode === 'share') {
-        if (await shareImageNative(blob, name, `${title} — ${SITE_NAME}`)) { setOpen(false); return }
-        const file = new File([blob], name, { type: 'image/png' })
-        const nav = navigator as Navigator & { canShare?: (d: unknown) => boolean }
-        if (nav.canShare?.({ files: [file] }) && navigator.share) {
-          await navigator.share({ files: [file], title: `${title} — ${SITE_NAME}` })
-          setOpen(false)
-          return
-        }
-        setMsg('This browser has no share sheet — the image has been saved to your downloads instead.')
-      }
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(blob)
-      a.download = name
-      a.click()
-      URL.revokeObjectURL(a.href)
+      void mode
+      const how = await deliverImage(blob, name, `${title} — ${SITE_NAME}`)
+      // Closing the share sheet is a decision, not a fault, and it used to be
+      // reported as "could not render the image" beside an image that had
+      // rendered perfectly. Nothing is said now.
+      if (how === 'saved') setMsg('This browser has no share sheet — the image has been saved to your downloads instead.')
+      else setOpen(false)
     } catch {
       setMsg('Could not render the image on this device — try a screenshot instead.')
     } finally {
@@ -239,7 +197,7 @@ export function Exportable({ title, filename, children, className, toolbar, vari
   const chooser = (
     <>
       <div className="mb-2 flex flex-wrap gap-1.5">
-        {FORMATS.map((f) => (
+        {SHARE_FORMATS.map((f) => (
           <button
             key={f.id}
             onClick={() => setFmt(f.id)}

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { RatingCard } from './RatingCard'
 import { ShareFooter } from './ShareFooter'
-import { shareImageNative } from '../lib/native'
+import { deliverImage } from '../lib/share'
 import { rasterise } from '../lib/capture'
 import { playerHref } from '../lib/util'
 import { num } from '../lib/rows'
@@ -44,19 +44,9 @@ export function ShareCard({ r, fixtureEase }: { r: RatingRow; fixtureEase?: Fixt
       const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, 'image/png'))
       if (!blob) throw new Error('render failed')
       const shareName = `${String(r.web_name).replace(/\s+/g, '-')}-fpl-analyser.png`
-      // Native: hand the PNG to the OS share sheet via Capacitor.
-      if (await shareImageNative(blob, shareName, `${r.web_name} — FPL Analyser`)) return
-      const file = new File([blob], shareName, { type: 'image/png' })
-      const nav = navigator as Navigator & { canShare?: (d: unknown) => boolean }
-      if (nav.canShare?.({ files: [file] }) && navigator.share) {
-        await navigator.share({ files: [file], title: `${r.web_name} — FPL Analyser` })
-      } else {
-        const a = document.createElement('a')
-        a.href = URL.createObjectURL(blob)
-        a.download = file.name
-        a.click()
-        URL.revokeObjectURL(a.href)
-      }
+      // Closing the share sheet used to land in the catch below and offer the
+      // reader a link instead, as though the picture had failed.
+      await deliverImage(blob, shareName, `${r.web_name} — FPL Analyser`)
     } catch {
       setMsg('Could not render the image here — copied the link instead.')
       copy()

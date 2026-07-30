@@ -16,8 +16,10 @@ import { PlayerCardSheet } from '../components/PlayerCardSheet'
 import { DutyBadges, DutyLegend, dutiesOf } from '../components/DutyBadges'
 import { SquadRatingSheet, squadNarrative } from '../components/SquadRatingSheet'
 import { useCore } from '../lib/useData'
-import { tapHaptic, shareImageNative } from '../lib/native'
+import { tapHaptic } from '../lib/native'
 import { rasterise } from '../lib/capture'
+import { SHARE_FORMATS, frameHeight, drawFitted, type FormatId } from '../lib/frames'
+import { deliverImage } from '../lib/share'
 import { num } from '../lib/rows'
 import { useAvailability, availBadge, availFor, SEV_COLOUR, type Availability } from '../lib/availability'
 import { xpForGw, useXpModel, useMarketOdds } from '../lib/xp'
@@ -912,28 +914,41 @@ function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, lineu
   const ref = useRef<HTMLDivElement>(null)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
+  // Same shapes as every other export. This modal used to offer none: it wrote
+  // the card out at whatever aspect the card happened to be, which is a shape
+  // no network wants, so a squad was the one thing on the site you could not
+  // post without cropping it yourself.
+  const [fmt, setFmt] = useState<FormatId>('post')
   if (!open) return null
 
   const save = async () => {
     if (!ref.current) return
     setBusy(true); setMsg('')
     try {
+      const spec = SHARE_FORMATS.find((f) => f.id === fmt)!
       // 1080 wide out, whatever width the modal got — the capture scale is
       // raised to reach it rather than the bitmap being enlarged afterwards,
       // which is how a phone used to export a squad barely 700px across.
-      const canvas = await rasterise(ref.current, true, 1080)
-      const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, 'image/png'))
+      const shot = await rasterise(ref.current, true, spec.w)
+      // Framed, not branded. The card already carries the wordmark, the
+      // gameweek, the squad rating and the footer, so all it needs is the right
+      // shape around it — running it through the panel exporter's chrome would
+      // print the brand on it twice.
+      const out = document.createElement('canvas')
+      const pad = Math.round(spec.w * 0.03)
+      out.width = spec.w
+      out.height = frameHeight(spec, shot, pad * 2, pad)
+      const ctx = out.getContext('2d')!
+      ctx.fillStyle = '#0c0b09'
+      ctx.fillRect(0, 0, out.width, out.height)
+      drawFitted(ctx, shot, { x: pad, y: pad, w: out.width - pad * 2, h: out.height - pad * 2 })
+      const blob: Blob | null = await new Promise((res) => out.toBlob(res, 'image/png'))
       if (!blob) throw new Error('render failed')
-      // Native: hand the PNG to the OS share sheet via Capacitor.
-      if (await shareImageNative(blob, 'fpl-analyser-squad.png', 'My FPL squad — FPL Analyser')) return
-      const file = new File([blob], 'fpl-analyser-squad.png', { type: 'image/png' })
-      const nav = navigator as Navigator & { canShare?: (d: unknown) => boolean }
-      if (nav.canShare?.({ files: [file] }) && navigator.share) {
-        await navigator.share({ files: [file], title: 'My FPL squad — FPL Analyser' })
-      } else {
-        const a = document.createElement('a')
-        a.href = URL.createObjectURL(blob); a.download = file.name; a.click(); URL.revokeObjectURL(a.href)
-      }
+      const how = await deliverImage(blob, `fpl-analyser-squad-${fmt}.png`, 'My FPL squad — FPL Analyser')
+      // Dismissing the share sheet is a decision, not a fault. It used to land
+      // in the catch below and report that the image could not be rendered,
+      // beside an image that had rendered perfectly.
+      if (how === 'saved') setMsg('This browser has no share sheet — the image has been saved to your downloads instead.')
     } catch {
       setMsg('Could not render the image on this device — try a screenshot instead.')
     } finally {
@@ -970,7 +985,20 @@ function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, lineu
           {unrated > 0 && <div className="mt-2 text-center text-[10px]" style={{ color: '#8a8172' }}>{unrated} player{unrated > 1 ? 's' : ''} new to the league (unrated)</div>}
           <ShareFooter />
         </div>
-        <div className="mt-3 flex flex-wrap justify-center gap-2">
+        <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+          {SHARE_FORMATS.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setFmt(f.id)}
+              className={`min-h-8 rounded-full border px-3 text-[12px] font-semibold transition-colors ${
+                fmt === f.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong'
+              }`}
+            >
+              {f.label} <span className="font-normal">{f.hint}</span>
+            </button>
+          ))}
+        </div>
+        <div className="mt-2.5 flex flex-wrap justify-center gap-2">
           <button onClick={save} disabled={busy || total === 0} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent-strong disabled:opacity-60">{busy ? 'Rendering…' : '↗ Share image'}</button>
           <button onClick={onClose} className={btn}>Close</button>
         </div>
