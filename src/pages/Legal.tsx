@@ -13,11 +13,13 @@ import { usesOwnRelay } from '../lib/api'
    the image, which a repo README is not. Everything a visitor might need to
    check is therefore here, linked from the footer of every page.
 
-   The Terms and Privacy wording is a starting draft written from what the
-   site actually does — it is not legal advice and should be reviewed before
-   launch. Where the site does something with a legal consequence (an FPL
-   team ID leaving the browser, preferences stored on device) the text says
-   so plainly rather than hiding behind boilerplate.
+   The Terms and Privacy wording is written from what the site actually does,
+   by hand rather than from a generator: where the site has a legal
+   consequence (an FPL team ID leaving the browser, preferences stored on
+   device) the text says so plainly rather than hiding behind boilerplate.
+   That is what makes it worth publishing — and it is also why it has to be
+   kept honest. If the behaviour changes, this page changes with it, and
+   LAST_UPDATED moves. It has not been reviewed by a solicitor.
    ════════════════════════════════════════════════════════════════════════ */
 
 const TABS: TabDef[] = [
@@ -66,12 +68,16 @@ function A({ href, children }: { href: string; children: React.ReactNode }) {
   )
 }
 
-function Note({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mb-4 rounded-xl border border-warn/40 bg-warn/10 px-4 py-3 text-[13.5px] leading-relaxed text-ink-2">
-      {children}
-    </div>
-  )
+/** When the Terms and Privacy wording last changed.
+ *
+ *  A privacy notice without a date is one a reader cannot check. It tells
+ *  someone who read it six months ago whether it is worth reading again, and
+ *  it is the first thing anyone auditing the page looks for. Bump it whenever
+ *  the wording below changes in substance — not for a typo. */
+const LAST_UPDATED = '30 July 2026'
+
+function Updated() {
+  return <p className="mb-5 text-[13px] text-ink-3">Last updated {LAST_UPDATED}.</p>
 }
 
 function About() {
@@ -182,10 +188,7 @@ function Credits() {
 function Terms() {
   return (
     <>
-      <Note>
-        <b className="text-ink">Draft for review.</b> This wording describes what the site actually
-        does and is a starting point, not legal advice. Worth having checked by someone qualified.
-      </Note>
+      <Updated />
 
       <H>1. Who we are</H>
       <P>
@@ -237,10 +240,7 @@ function Terms() {
 function Privacy() {
   return (
     <>
-      <Note>
-        <b className="text-ink">Draft for review.</b> Written from what the site actually does.
-        Worth having checked by someone qualified.
-      </Note>
+      <Updated />
 
       <H>The short version</H>
       <P>
