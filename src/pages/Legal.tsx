@@ -49,6 +49,23 @@ function H({ children }: { children: React.ReactNode }) {
 function P({ children }: { children: React.ReactNode }) {
   return <p className="mb-3 text-[14.5px] leading-relaxed text-ink-2">{children}</p>
 }
+/** The address a visitor writes to.
+ *
+ *  Named once, and deliberately not a personal address: a privacy notice has
+ *  to publish somewhere a reader can reach, and that page is indexed forever.
+ *  A role address keeps the obligation met without putting the person behind
+ *  the site into a search result. */
+const CONTACT_EMAIL = 'fpl.analyser1@gmail.com'
+
+/** A mail or web link in the body copy — same underline as the credits. */
+function A({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <a href={href} className="text-accent underline underline-offset-2 hover:text-accent-2">
+      {children}
+    </a>
+  )
+}
+
 function Note({ children }: { children: React.ReactNode }) {
   return (
     <div className="mb-4 rounded-xl border border-warn/40 bg-warn/10 px-4 py-3 text-[13.5px] leading-relaxed text-ink-2">
@@ -167,12 +184,14 @@ function Terms() {
     <>
       <Note>
         <b className="text-ink">Draft for review.</b> This wording describes what the site actually
-        does and is a starting point, not legal advice. Have it checked before launch, and replace
-        the contact address with a real one.
+        does and is a starting point, not legal advice. Worth having checked by someone qualified.
       </Note>
 
       <H>1. Who we are</H>
-      <P>FPL Analyser is an independent site run from the United Kingdom. Contact: [add an email address].</P>
+      <P>
+        FPL Analyser is an independent site run from the United Kingdom. Contact:{' '}
+        <A href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</A>.
+      </P>
 
       <H>2. Using the site</H>
       <P>
@@ -219,9 +238,8 @@ function Privacy() {
   return (
     <>
       <Note>
-        <b className="text-ink">Draft for review.</b> Written from what the site actually does. Have
-        it checked before launch, and add a real contact address — a privacy notice has to name
-        someone a visitor can write to.
+        <b className="text-ink">Draft for review.</b> Written from what the site actually does.
+        Worth having checked by someone qualified.
       </Note>
 
       <H>The short version</H>
@@ -272,8 +290,9 @@ function Privacy() {
         The preferences stored on your device are there because you asked for them by using the site,
         and are strictly necessary for the features you chose. We hold no database of users, so there
         is nothing for us to look up, correct or delete on request — but you can remove everything
-        yourself by clearing your browser storage. If you have a question, write to [add an email
-        address]. You can complain to the Information Commissioner’s Office at ico.org.uk.
+        yourself by clearing your browser storage. If you have a question, write to{' '}
+        <A href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</A>. You can complain to the Information
+        Commissioner’s Office at ico.org.uk.
       </P>
 
       <H>If you support the site</H>
