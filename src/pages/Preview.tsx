@@ -9,7 +9,7 @@ import { Icon } from '../components/Icon'
 import { PageSkeleton } from '../components/Skeleton'
 import { Exportable } from '../components/ExportPanel'
 import { useCore } from '../lib/useData'
-import { useAvailability, availFor, type TeamRecord } from '../lib/availability'
+import { useAvailability, availFor, notPlaying, penaltyDuty, type TeamRecord } from '../lib/availability'
 import { useMarketOdds, useXpModel, useShotProfiles, xpForGw } from '../lib/xp'
 import { num } from '../lib/rows'
 import { teamLabel, playerHref, derbyName, teamColors } from '../lib/util'
@@ -31,7 +31,6 @@ import type { RatingRow } from '../lib/types'
    the round.
    ════════════════════════════════════════════════════════════════════════ */
 
-const OUT = new Set(['i', 's', 'u', 'n'])
 
 /** How many of each position a club typically starts, in FPL's classification
  *  rather than football's: wingers are midfielders here, so the common
@@ -180,7 +179,7 @@ export default function Preview() {
     const rows: { r: RatingRow; xp: number; side: Side; own: number }[] = []
     for (const r of ratings) {
       const p = availFor(avail, num(r, 'element'), num(r, 'code'))
-      if (p && OUT.has(String(p.status ?? 'a'))) continue
+      if (p && notPlaying(p.status)) continue
       const side = sides.get(String(r.team))
       if (!side) continue
       const xp = xpForGw(r, gw, fe, avail, model, market, profiles)
@@ -231,10 +230,10 @@ export default function Preview() {
       // shirt — but he can never BE the answer. Naming a doubtful player as
       // the man who steps up produced rows like "Kudus (doubt) steps up" on a
       // page that flagged Kudus two lines below.
-      const fit = pool.filter((r) => !OUT.has(statusOf(r)))
+      const fit = pool.filter((r) => !notPlaying(statusOf(r)))
       const line = fit.slice(0, n)
       const promoted = line.filter((r) => !fc.has(r.element) && statusOf(r) === 'a')
-      const absent = firstChoice.filter((r) => OUT.has(statusOf(r)))
+      const absent = firstChoice.filter((r) => notPlaying(statusOf(r)))
       absent.forEach((r, i) => { if (promoted[i]) stepFor.set(r.element, promoted[i]) })
       // For a doubtful starter, the first fit man outside the line comes in.
       const next = fit.slice(n).find((r) => statusOf(r) === 'a')
@@ -285,14 +284,29 @@ export default function Preview() {
   const differential = board.filter((b) => b.own <= 5 && b.xp >= 3)[0] ?? null
   const attacks = [...sides.values()].sort((a, b) => b.lam - a.lam)
   const shutouts = [...sides.values()].sort((a, b) => b.cs - a.cs)
-  /** The club's first-choice penalty taker, when the live layer knows one. */
+  /** Who is on penalties for this club on Saturday — not who is first choice.
+   *
+   *  Those came apart the moment Bournemouth's first choice picked up a
+   *  three-month injury: FPL keeps listing him at order 1, so the card went on
+   *  naming a man who will not be on the pitch. When the ball falls to a
+   *  deputy the card says whose absence put it there, because that is the bit
+   *  that decides whether you trust it to last. */
   const penTaker = (team: string): string | null => {
-    for (const r of ratings) {
-      if (r.team !== team) continue
-      const p = availFor(avail, num(r, 'element'), num(r, 'code'))
-      if (p?.pen_order === 1) return String(r.web_name)
+    const id = ratings.find((r) => r.team === team)
+    const p0 = id ? availFor(avail, num(id, 'element'), num(id, 'code')) : null
+    if (p0?.team == null) return null
+    const duty = penaltyDuty(avail, p0.team)
+    if (!duty) return null
+    const nameOf = (el: number) => {
+      const hit = ratings.find((r) => Number(r.element) === el)
+      return hit ? String(hit.web_name) : null
     }
-    return null
+    const who = nameOf(duty.taker.element)
+    if (!who) return null
+    const first = duty.deputisingFor ? nameOf(duty.deputisingFor.element) : null
+    // The whole phrase, not just the name: the reason has to sit inside the
+    // brackets with "pens" or it reads as two separate parentheticals.
+    return first ? `${who} (pens — ${first} out)` : `${who} (pens)`
   }
 
   /** One fixture card. `feat` is the round's headline game: bigger, opened,
@@ -494,7 +508,7 @@ export default function Preview() {
                                 const team = t === 'h' ? m.h : m.a
                                 const taker = penTaker(team)
                                 const set = sp(team)
-                                const bits = [taker ? `${taker} (pens)` : null, set ? `${set} (set pieces)` : null].filter(Boolean).join(' · ')
+                                const bits = [taker, set ? `${set} (set pieces)` : null].filter(Boolean).join(' · ')
                                 return bits ? <Fact key={t} k={<ClubTag team={team} what="dead balls" />} v={<b className="text-ink">{bits}</b>} /> : null
                               })}
                               {diff && (

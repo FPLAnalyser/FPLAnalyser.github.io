@@ -4,7 +4,7 @@ import { Icon } from './Icon'
 import { Exportable } from './ExportPanel'
 import { num, bool } from '../lib/rows'
 import { teamLabel } from '../lib/util'
-import { availFor, type Availability } from '../lib/availability'
+import { availFor, onPenalties, type Availability } from '../lib/availability'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -39,24 +39,40 @@ export function squadNarrative(chosen: RatingRow[], fixtureEase: FixtureEaseRow[
   const outfield = chosen.filter((r) => r.position !== 'GKP')
 
   // Penalties — the single most repeatable source of points in the game.
-  // Only the club's FIRST-choice taker counts: FPL publishes a full order,
-  // but everyone below #1 only inherits the ball when he's off the pitch.
+  //
+  // What counts is the man who will actually stand over the ball, which is not
+  // the same as `pen_order === 1`. FPL lists the club's stated order and never
+  // re-ranks it for an injury, so reading rank 1 credited a squad for owning
+  // Bournemouth's first choice while he sat out three months with a foot
+  // injury — and gave no credit at all for owning the deputy who was taking
+  // them. `penaltyDuty` resolves the queue against who is fit.
+  //
   // Live orders when the daily refresh has run; the season snapshot otherwise.
   // Duty moves between seasons (Thiago went from Brentford's #2 to #1), so the
-  // freshest source always wins.
-  const penOrder = (r: RatingRow): number | null => {
-    const live = avail ? availFor(avail, num(r, 'element'), num(r, 'code')) : null
-    if (live && avail?.generatedAt) return live.pen_order ?? null
-    return num(r, 'penalties_order')
+  // freshest source always wins — and without the live layer there is nothing
+  // to resolve availability against, so rank 1 is the best that can be said.
+  const live = avail?.generatedAt ? avail : null
+  const takesPens = (r: RatingRow): boolean =>
+    live ? onPenalties(live, availFor(live, num(r, 'element'), num(r, 'code'))) : num(r, 'penalties_order') === 1
+  const deputy = (r: RatingRow): boolean => {
+    if (!live) return false
+    const p = availFor(live, num(r, 'element'), num(r, 'code'))
+    return (p?.pen_order ?? 1) > 1
   }
-  const pens = chosen.filter((r) => penOrder(r) === 1)
+  const pens = chosen.filter(takesPens)
   const penNames = pens.map((r) => r.web_name).join(', ')
+  // A deputy is on them until the first choice is fit, so the claim is hedged
+  // where it needs to be rather than stated flat and quietly going stale.
+  const standIns = pens.filter(deputy).map((r) => r.web_name)
+  const caveat = standIns.length
+    ? ` ${standIns.join(' and ')} ${standIns.length > 1 ? 'have' : 'has'} them while the first choice is out, so this lasts as long as the injury does.`
+    : ''
   if (pens.length >= 3) {
-    out.push({ tone: 'good', head: `${pens.length} penalty takers`, body: `${penNames} are all first choice from the spot. Penalties are the most repeatable points in the game — this many is a deliberate edge, not an accident.` })
+    out.push({ tone: 'good', head: `${pens.length} penalty takers`, body: `${penNames} are all on them for their clubs. Penalties are the most repeatable points in the game — this many is a deliberate edge, not an accident.${caveat}` })
   } else if (pens.length === 0) {
-    out.push({ tone: 'warn', head: 'No penalty takers', body: 'Nobody in the fifteen is first choice from the spot. Roughly one goal in nine comes from a penalty; you are giving that up.' })
+    out.push({ tone: 'warn', head: 'No penalty takers', body: 'Nobody in the fifteen is on penalties for their club. Roughly one goal in nine comes from a penalty; you are giving that up.' })
   } else {
-    out.push({ tone: 'flat', head: `${pens.length} penalty taker${pens.length > 1 ? 's' : ''}`, body: `${penNames} — first choice from the spot.` })
+    out.push({ tone: 'flat', head: `${pens.length} penalty taker${pens.length > 1 ? 's' : ''}`, body: `${penNames} — on them for ${pens.length > 1 ? 'their clubs' : 'his club'}.${caveat}` })
   }
 
   // Set-piece delivery — corners and free kicks only, ranked across all

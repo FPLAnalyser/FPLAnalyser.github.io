@@ -277,3 +277,56 @@ export function availBadge(p: AvailPlayer | null): AvailBadgeInfo | null {
   if (p.status === 'd') return { label: `${chance}%`, tone, sev, title }
   return { label: 'OUT', tone: 'bad', sev: 3, title } // u / n — not available to pick
 }
+
+/** Statuses that mean he is not playing: injured, suspended, unavailable, not
+ *  in the squad. A doubt still holds the shirt — most doubts start — so `d` is
+ *  deliberately not in here.
+ *
+ *  Exported because three files were each keeping their own copy of this set,
+ *  and they have to agree: if the penalty rule counts a doubt as absent while
+ *  the team-news list counts him as present, the page promotes a deputy over a
+ *  man it is simultaneously showing as playing. */
+export const OUT_STATUS: ReadonlySet<string> = new Set(['i', 's', 'u', 'n'])
+export const notPlaying = (status: string | null | undefined): boolean =>
+  OUT_STATUS.has(String(status ?? 'a'))
+
+export interface PenaltyDuty {
+  /** The man who actually takes them this week. */
+  taker: AvailPlayer
+  /** The first choice he is standing in for — null when he IS first choice. */
+  deputisingFor: AvailPlayer | null
+}
+
+/** Who takes this club's penalties this week.
+ *
+ *  FPL publishes the club's stated ORDER, not who is fit, and it does not
+ *  re-rank when someone gets hurt: Kroupi Jr stayed listed as Bournemouth's
+ *  first choice through a foot injury that ruled him out for months. Reading
+ *  `pen_order === 1` therefore answers "who is first choice", which is a
+ *  question nobody is asking — what a manager wants to know before a deadline
+ *  is who is standing over the ball on Saturday.
+ *
+ *  So: walk the queue and take the first man who is available. The caller is
+ *  told who he is deputising for, because "Kluivert takes the penalties" and
+ *  "Kluivert takes them while Kroupi Jr is out" are different claims and only
+ *  one of them is true. Null when the club lists no takers, or when every man
+ *  in the queue is unavailable. */
+export function penaltyDuty(avail: Availability, teamId: number): PenaltyDuty | null {
+  const queue: AvailPlayer[] = []
+  for (const p of avail.byElement.values()) {
+    if (p.team === teamId && p.pen_order != null) queue.push(p)
+  }
+  if (!queue.length) return null
+  queue.sort((a, b) => (a.pen_order ?? 0) - (b.pen_order ?? 0))
+  const i = queue.findIndex((p) => !notPlaying(p.status))
+  if (i < 0) return null
+  return { taker: queue[i], deputisingFor: i > 0 ? queue[0] : null }
+}
+
+/** True when this player is the man on penalties for his club this week —
+ *  first choice, or first choice by promotion. The question every caller
+ *  actually means when it reaches for `pen_order === 1`. */
+export function onPenalties(avail: Availability, p: AvailPlayer | null): boolean {
+  if (!p || p.team == null) return false
+  return penaltyDuty(avail, p.team)?.taker.element === p.element
+}
