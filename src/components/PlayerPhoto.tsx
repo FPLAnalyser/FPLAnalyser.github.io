@@ -3,11 +3,18 @@ import { liveCodeFor, liveCodesVersion, subscribeLiveCodes } from '../lib/photoC
 
 // The Premier League moved current-season headshots to a season-versioned
 // bucket with the bare code as the filename:
-//   .../premierleague25/photos/players/<size>/<code>.png
+//   .../premierleague26/photos/players/<size>/<code>.png
 // while the legacy bucket (…/premierleague/…/p<code>.png) still holds the OLD
-// photo (e.g. a transferred player's previous club). So we try the new bucket
-// first, then fall back to the legacy one.
+// photo — a transferred player in his previous club's kit. So every size in
+// every season bucket, newest first, and only then the legacy one.
+//
+// The bucket is named for the season, so a new one appears each year and the
+// old one keeps last season's pictures. Asking for the newest first costs a
+// 404 while it doesn't exist yet and picks up the new photos the day it does;
+// leaving a stale name at the front of the list is how a site quietly serves
+// last year's squad photos all season.
 const CDN = 'https://resources.premierleague.com'
+const SEASON_BUCKETS = ['premierleague26', 'premierleague25'] as const
 const PHOTO_SIZES = ['250x250', '110x140'] as const
 
 /** Candidate headshot URLs.
@@ -24,7 +31,9 @@ const PHOTO_SIZES = ['250x250', '110x140'] as const
 function photoUrls(code: number, sizes: readonly string[], ver?: string): string[] {
   const bust = ver ? `?v=${ver}` : ''
   const out: string[] = [`${import.meta.env.BASE_URL}img/players/${code}.webp`]
-  for (const s of sizes) out.push(`${CDN}/premierleague25/photos/players/${s}/${code}.png${bust}`)
+  for (const bucket of SEASON_BUCKETS) {
+    for (const s of sizes) out.push(`${CDN}/${bucket}/photos/players/${s}/${code}.png${bust}`)
+  }
   for (const s of sizes) out.push(`${CDN}/premierleague/photos/players/${s}/p${code}.png${bust}`)
   return out
 }

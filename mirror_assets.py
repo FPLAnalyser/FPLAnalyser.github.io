@@ -39,14 +39,42 @@ DATA = os.path.join(ROOT, "site_data")
 OUT = os.path.join(ROOT, "public", "img")
 CDN = "https://resources.premierleague.com"
 
-# The current-season bucket first, then the legacy one — the same chain the
-# front end walks, for the same reason: the legacy bucket still holds a
-# transferred player's photo in his OLD kit.
-PLAYER_URLS = (
-    f"{CDN}/premierleague25/photos/players/250x250/{{code}}.png",
-    f"{CDN}/premierleague/photos/players/250x250/p{{code}}.png",
-)
+# Season-versioned buckets newest first, EVERY size in each, and only then the
+# legacy bucket — which holds the player's old photo, in his old kit, from his
+# old club.
+#
+# Getting this order wrong is what put last season's pictures back on the site.
+# The first version tried one size in the current bucket and fell straight to
+# legacy, so every player whose current photo happens to exist at 110x140 but
+# not 250x250 was mirrored from the archive. The page had always walked all the
+# current-season sizes first; the mirror has to walk the same rungs, or it
+# quietly answers a different question from the one the page was asking.
+#
+# The bucket is named for the season, so a new one appears each year. Trying
+# the newest first costs a 404 while it doesn't exist yet and picks up this
+# season's photos the day it does.
+SEASON_BUCKETS = ("premierleague26", "premierleague25")
+SEASON_SIZES = ("440x700", "250x250", "110x140")
+LEGACY_SIZES = ("250x250", "110x140")
+
+
+def player_urls(code: int) -> list[tuple[str, str]]:
+    """(url, provenance) newest-season first, legacy last."""
+    out = []
+    for i, bucket in enumerate(SEASON_BUCKETS):
+        for size in SEASON_SIZES:
+            out.append((f"{CDN}/{bucket}/photos/players/{size}/{code}.png", bucket))
+    for size in LEGACY_SIZES:
+        out.append((f"{CDN}/premierleague/photos/players/{size}/p{code}.png", "legacy"))
+    return out
+
+
 BADGE_URL = f"{CDN}/premierleague/badges/t{{code}}.png"
+# Which bucket each mirrored headshot came from. A file sourced from `legacy`
+# is a player whose current-season photo had not been published yet, so it is
+# re-checked every run and upgraded the day it appears — without this a July
+# signing wears his old club's shirt on the site for the whole season.
+MANIFEST = os.path.join(OUT, "sources.json")
 
 
 # The image host answers 403 to an obviously-scripted User-Agent. These are the
@@ -139,6 +167,15 @@ for t in teams:
         missing += 1
         print(f"  no crest for {t.get('short_name', code)}", file=sys.stderr)
 
+try:
+    with open(MANIFEST, encoding="utf-8") as f:
+        sources: dict[str, str] = json.load(f)
+except (OSError, ValueError):
+    sources = {}
+
+BEST = SEASON_BUCKETS[0]
+upgraded = 0
+
 # One headshot per player currently in the game. Players who leave keep their
 # file — it costs a few KB and it means an archived season still renders.
 for p in players:
@@ -146,19 +183,33 @@ for p in players:
     if code is None:
         continue
     path = os.path.join(OUT, "players", f"{code}.webp")
-    if os.path.exists(path):
+    have = sources.get(str(code))
+    # Settled only when we already hold the newest bucket's photo. Anything
+    # older is worth one request a day to see if this season's has landed.
+    if os.path.exists(path) and have == BEST:
         continue
-    body = None
-    for url in PLAYER_URLS:
-        body = fetch(url.format(code=code))
-        if body:
+    for url, bucket in player_urls(code):
+        # No point asking for something no better than what we already have.
+        if have is not None and bucket == have:
             break
-    if body and save(path, body):
-        new_photos += 1
+        body = fetch(url)
+        if body and save(path, body):
+            if have is None:
+                new_photos += 1
+            else:
+                upgraded += 1
+                print(f"  {code}: {have} -> {bucket}")
+            sources[str(code)] = bucket
+            break
     else:
         # Not an error: FPL lists players before the photo exists, and the
         # front end still falls through to the CDN and then the monogram.
-        missing += 1
+        if have is None:
+            missing += 1
+
+os.makedirs(OUT, exist_ok=True)
+with open(MANIFEST, "w", encoding="utf-8") as f:
+    json.dump(dict(sorted(sources.items())), f, indent=0, sort_keys=True)
 
 def usage(sub: str) -> tuple[int, int]:
     d = os.path.join(OUT, sub)
@@ -170,7 +221,11 @@ def usage(sub: str) -> tuple[int, int]:
 bn, bb = usage("badges")
 pn, pb = usage("players")
 print(f"public/img: {bn} crests ({bb / 1e6:.1f} MB), {pn} headshots ({pb / 1e6:.1f} MB)")
-print(f"  added {new_badges} crests and {new_photos} headshots this run; {missing} had no image")
+print(f"  added {new_badges} crests and {new_photos} headshots this run, upgraded {upgraded} to a newer season; {missing} had no image")
+by_bucket: dict[str, int] = {}
+for v in sources.values():
+    by_bucket[v] = by_bucket.get(v, 0) + 1
+print("  headshot sources: " + ", ".join(f"{k} {v}" for k, v in sorted(by_bucket.items())))
 
 # Loud, but not fatal — the workflow step carries continue-on-error so a
 # blocked host still leaves the availability refresh free to commit. Silence
