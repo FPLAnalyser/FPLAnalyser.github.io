@@ -12,7 +12,7 @@
    One copy, and it distinguishes the three outcomes properly.
    ════════════════════════════════════════════════════════════════════════ */
 
-import { shareImageNative } from './native'
+import { shareImageNative, isNative } from './native'
 
 export type Delivery =
   /** Handed to the OS share sheet, or to the native app's. */
@@ -61,7 +61,13 @@ function canDownload(): boolean {
  *  does nothing is worse than a button that fails out loud. */
 export async function deliverImage(blob: Blob, filename: string, title: string): Promise<Delivery> {
   // Native: straight to the OS sheet through Capacitor.
-  if (await shareImageNative(blob, filename, title)) return 'shared'
+  //
+  // Guarded by the synchronous `isNative()` rather than just awaiting the
+  // helper, because on the web that await would be the first thing between the
+  // reader's tap and `navigator.share()`. iOS hands out a *transient* user
+  // activation and spends it freely; the fewer turns of the event loop between
+  // the tap and the share, the better.
+  if (isNative() && (await shareImageNative(blob, filename, title))) return 'shared'
 
   const file = new File([blob], filename, { type: 'image/png' })
   const nav = navigator as Navigator & { canShare?: (d: unknown) => boolean }

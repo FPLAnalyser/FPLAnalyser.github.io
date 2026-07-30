@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
@@ -921,47 +921,73 @@ function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, lineu
   const [fmt, setFmt] = useState<FormatId>('post')
   /** The finished PNG, shown only when nothing automatic could deliver it. */
   const [shot, setShot] = useState<string | null>(null)
+  /** The rendered image, made BEFORE the reader asks for it. See below. */
+  const [ready, setReady] = useState<Blob | null>(null)
+
+  /* Render as soon as the sheet opens, and again whenever the shape changes.
+     Not an optimisation — the difference between working and not.
+
+     iOS hands `navigator.share()` a *transient* user activation, and this card
+     takes several seconds to draw. Rendering on the tap meant the share was
+     requested long after the tap that authorised it, so iOS refused: it worked
+     when the render happened to be quick and failed the rest of the time,
+     which is exactly the one-in-six it was reported as.
+
+     So the work happens while the reader is looking at the preview and
+     choosing a size, and the button becomes a share and nothing else. */
+  useEffect(() => {
+    if (!open || total === 0) return
+    let dead = false
+    setReady(null); setMsg(''); setShot(null); setBusy(true)
+    const t = setTimeout(async () => {
+      try {
+        if (!ref.current) return
+        const spec = SHARE_FORMATS.find((f) => f.id === fmt)!
+        const shotCanvas = await rasterise(ref.current, true, spec.w)
+        // Framed, not branded. The card already carries the wordmark, the
+        // gameweek, the squad rating and the footer, so all it needs is the
+        // right shape around it — running it through the panel exporter's
+        // chrome would print the brand on it twice.
+        const out = document.createElement('canvas')
+        const pad = Math.round(spec.w * 0.03)
+        out.width = spec.w
+        out.height = frameHeight(spec, shotCanvas, pad * 2, pad)
+        const ctx = out.getContext('2d')!
+        ctx.fillStyle = '#0c0b09'
+        ctx.fillRect(0, 0, out.width, out.height)
+        drawFitted(ctx, shotCanvas, { x: pad, y: pad, w: out.width - pad * 2, h: out.height - pad * 2 })
+        const blob: Blob | null = await new Promise((res) => out.toBlob(res, 'image/png'))
+        if (dead) return
+        if (!blob) throw new Error('render failed')
+        setReady(blob)
+      } catch {
+        if (!dead) setMsg('Could not render the image on this device — try a screenshot instead.')
+      } finally {
+        if (!dead) setBusy(false)
+      }
+      // One frame of daylight so the sheet paints before the main thread is
+      // taken for a second or two.
+    }, 120)
+    return () => { dead = true; clearTimeout(t) }
+  }, [open, fmt, total, gw, chip, captain, vice])
+
   if (!open) return null
 
+  /** Pure delivery. Nothing slow happens between the tap and the share. */
   const save = async () => {
-    if (!ref.current) return
-    setBusy(true); setMsg(''); setShot(null)
+    if (!ready) return
+    setMsg(''); setShot(null)
     try {
-      const spec = SHARE_FORMATS.find((f) => f.id === fmt)!
-      // 1080 wide out, whatever width the modal got — the capture scale is
-      // raised to reach it rather than the bitmap being enlarged afterwards,
-      // which is how a phone used to export a squad barely 700px across.
-      const shot = await rasterise(ref.current, true, spec.w)
-      // Framed, not branded. The card already carries the wordmark, the
-      // gameweek, the squad rating and the footer, so all it needs is the right
-      // shape around it — running it through the panel exporter's chrome would
-      // print the brand on it twice.
-      const out = document.createElement('canvas')
-      const pad = Math.round(spec.w * 0.03)
-      out.width = spec.w
-      out.height = frameHeight(spec, shot, pad * 2, pad)
-      const ctx = out.getContext('2d')!
-      ctx.fillStyle = '#0c0b09'
-      ctx.fillRect(0, 0, out.width, out.height)
-      drawFitted(ctx, shot, { x: pad, y: pad, w: out.width - pad * 2, h: out.height - pad * 2 })
-      const blob: Blob | null = await new Promise((res) => out.toBlob(res, 'image/png'))
-      if (!blob) throw new Error('render failed')
-      const how = await deliverImage(blob, `fpl-analyser-squad-${fmt}.png`, 'My FPL squad — FPL Analyser')
-      // Dismissing the share sheet is a decision, not a fault. It used to land
-      // in the catch below and report that the image could not be rendered,
-      // beside an image that had rendered perfectly.
+      const how = await deliverImage(ready, `fpl-analyser-squad-${fmt}.png`, 'My FPL squad — FPL Analyser')
+      // Dismissing the share sheet is a decision, not a fault, and says nothing.
       if (how === 'saved') setMsg('This browser has no share sheet — the image has been saved to your downloads instead.')
-      // Last resort, and the one that always works on an iPhone: put the
-      // finished picture on screen and let them hold it. Anything else here
-      // means the button appears to do nothing, which is exactly what it did.
       if (how === 'needs-longpress') {
-        setShot(URL.createObjectURL(blob))
+        setShot(URL.createObjectURL(ready))
         setMsg('Press and hold the image to save or share it.')
       }
     } catch {
-      setMsg('Could not render the image on this device — try a screenshot instead.')
-    } finally {
-      setBusy(false)
+      setMsg('Could not share the image — press and hold the picture below to save it instead.')
+      setShot(URL.createObjectURL(ready))
     }
   }
   const btn = 'inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-line-mid px-4 text-sm font-semibold text-ink transition-colors hover:border-line-strong'
@@ -1013,7 +1039,7 @@ function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, lineu
           ))}
         </div>
         <div className="mt-2.5 flex flex-wrap justify-center gap-2">
-          <button onClick={save} disabled={busy || total === 0} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent-strong disabled:opacity-60">{busy ? 'Rendering…' : '↗ Share image'}</button>
+          <button onClick={save} disabled={!ready} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent-strong disabled:opacity-60">{ready ? '↗ Share image' : busy ? 'Preparing…' : '↗ Share image'}</button>
           <button onClick={onClose} className={btn}>Close</button>
         </div>
         {msg && <div className="mt-2 text-center text-xs text-ink-2">{msg}</div>}

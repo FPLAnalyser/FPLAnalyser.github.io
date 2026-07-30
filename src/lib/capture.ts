@@ -170,11 +170,51 @@ const twoFrames = () =>
  *  chosen so the canvas is at least that wide natively rather than being
  *  enlarged afterwards, which is the one part of the iframe attempt worth
  *  keeping: it is a plain html2canvas option and carries no layout risk. */
-/** Capped at 4: beyond that a tall panel on a phone is a canvas big enough to
- *  be refused outright, and a blank export is worse than a soft one. */
+/** Did the capture come back empty?
+ *
+ *  The one failure the primary engine can have without throwing: Safari
+ *  finishes loading the serialised SVG, reports success, and draws nothing.
+ *  Samples a coarse grid rather than every pixel — a panel that is genuinely
+ *  one flat colour over sixty-four sample points is not a panel worth
+ *  exporting either, so a false positive costs a slower render and never a
+ *  wrong picture. */
+function looksBlank(canvas: HTMLCanvasElement, bg: string): boolean {
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx || !canvas.width || !canvas.height) return true
+  const probe = document.createElement('canvas').getContext('2d')!
+  probe.fillStyle = bg
+  probe.fillRect(0, 0, 1, 1)
+  const [br, bgc, bb] = probe.getImageData(0, 0, 1, 1).data
+  const STEPS = 8
+  try {
+    for (let i = 1; i <= STEPS; i++) {
+      for (let j = 1; j <= STEPS; j++) {
+        const x = Math.floor((canvas.width * i) / (STEPS + 1))
+        const y = Math.floor((canvas.height * j) / (STEPS + 1))
+        const [r, g, b, a] = ctx.getImageData(x, y, 1, 1).data
+        if (a > 8 && (Math.abs(r - br) > 10 || Math.abs(g - bgc) > 10 || Math.abs(b - bb) > 10)) return false
+      }
+    }
+  } catch {
+    // Tainted canvas: unreadable, but that means something was drawn onto it.
+    return false
+  }
+  return true
+}
+
+/** Exactly enough to reach the frame, and not a pixel more.
+ *
+ *  This used to round up to the next half — 3.02 became 3.5, which on the squad
+ *  card meant a 1253px-wide canvas for a 1080px frame. Thirty-five percent more
+ *  pixels to rasterise, encode and then throw away in the downscale, on the one
+ *  export that was already the slowest thing on the site.
+ *
+ *  Floor of 2 so a small panel still exports at retina density; ceiling of 4
+ *  because beyond that a tall panel on a phone is a canvas big enough to be
+ *  refused outright, and a blank export is worse than a soft one. */
 function captureScale(node: HTMLElement, minWidth: number): number {
   const live = node.getBoundingClientRect().width || 1
-  return Math.max(2, Math.min(4, Math.ceil((minWidth / live) * 2) / 2))
+  return Math.max(2, Math.min(4, minWidth / live))
 }
 
 /** The old engine, kept as the parachute.
@@ -252,10 +292,32 @@ export async function rasterise(node: HTMLElement, dark: boolean, minWidth = 0):
     restoreImages = hideUnrasterisable(node)
     await twoFrames()
     const { domToCanvas } = await import('modern-screenshot')
-    return await domToCanvas(node, {
+    const bg = dark ? '#0c0b09' : '#ffffff'
+    const canvas = await domToCanvas(node, {
       scale: captureScale(node, minWidth),
-      backgroundColor: dark ? '#0c0b09' : '#ffffff',
+      backgroundColor: bg,
+      features: {
+        // Off, and it is the difference between one second and eleven.
+        //
+        // The library guards against Safari failing to decode a large SVG on
+        // first draw by drawing it repeatedly. The guard is not sized to the
+        // problem: it increments its retry count once per embedded image AND
+        // once per CSS background-image, then waits `i + 100`ms before each
+        // redraw. The squad card has thirty images and a great many gradients,
+        // so it redrew about a hundred times on a rising delay — measured at
+        // 10.8s under an iPhone user agent against 0.67s otherwise, for the
+        // same card, the same nodes, the same output.
+        //
+        // Paying that on every export to insure against a failure that may not
+        // happen is the wrong trade when the failure is *detectable*. So the
+        // insurance comes off and the result is checked instead: a blank
+        // canvas throws, and the throw lands on the old engine below, which
+        // draws slowly but draws.
+        fixSvgXmlDecode: false,
+      },
     })
+    if (looksBlank(canvas, bg)) throw new Error('empty capture')
+    return canvas
   } catch {
     return await legacyShot(node, dark, minWidth)
   } finally {
