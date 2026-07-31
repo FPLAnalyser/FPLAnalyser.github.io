@@ -474,6 +474,19 @@ body {
   radial-gradient(70% 55% at 50% -5%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 60%),
   repeating-linear-gradient(90deg, rgba(255,255,255,.03) 0 8%, transparent 8% 16%),
   linear-gradient(180deg, #10233a 0%, #0a1626 55%, #060c15 100%); }
+/* GW Review: the Monday page — a claret counterpart to the Preview's floodlit
+   blue. The tall tile carries a results-board rise; the slim section banner
+   takes the wash alone, where four bars would only read as stray blocks. */
+.hw-review { background:
+  radial-gradient(65% 50% at 50% -8%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 58%),
+  linear-gradient(168deg, #2a1016 0%, #170a0e 62%, #0a0507 100%); }
+.hw-photo.hw-review { background:
+  radial-gradient(65% 50% at 50% -8%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 58%),
+  linear-gradient(to top, color-mix(in srgb, var(--accent) 26%, transparent) 0 18%, transparent 18%) 6% 100% / 11% 34% no-repeat,
+  linear-gradient(to top, color-mix(in srgb, var(--accent) 26%, transparent) 0 42%, transparent 42%) 24% 100% / 11% 34% no-repeat,
+  linear-gradient(to top, color-mix(in srgb, var(--accent) 26%, transparent) 0 70%, transparent 70%) 42% 100% / 11% 34% no-repeat,
+  linear-gradient(to top, color-mix(in srgb, var(--accent) 26%, transparent) 0 100%, transparent 100%) 60% 100% / 11% 34% no-repeat,
+  linear-gradient(168deg, #2a1016 0%, #170a0e 62%, #0a0507 100%); }
 .hw-fixtures { background:
   radial-gradient(80% 60% at 50% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 55%),
   repeating-linear-gradient(90deg, #0a2417 0 12.5%, #0c2b1b 12.5% 25%),

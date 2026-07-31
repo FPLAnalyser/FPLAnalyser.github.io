@@ -42,9 +42,15 @@ function Hero() {
 // Base path for site assets (relative build → GitHub Pages sub-path safe).
 const IMG_BASE = import.meta.env.BASE_URL
 
-interface HomeWin { key: string; to: string; kicker: string; title: string; desc: string; stat: string; ghost?: { text: string; style: CSSProperties } }
+interface HomeWin {
+  key: string; to: string; kicker: string; title: string; desc: string; stat: string
+  /** No licensed photo yet — the branded `.hw-<key>` gradient stands alone. */
+  noPhoto?: boolean
+  ghost?: { text: string; style: CSSProperties }
+}
 const WINDOWS: HomeWin[] = [
   { key: 'preview', to: '/preview', kicker: 'This week', title: 'GW Preview', desc: 'The whole gameweek before the deadline — captain, chips, every fixture and who is missing.', stat: 'Before the deadline' },
+  { key: 'review', to: '/review', kicker: 'Last week', title: 'GW Review', desc: 'What the gameweek actually did — hauls, captain calls and where the model missed.', stat: 'Every Monday', noPhoto: true },
   { key: 'players', to: '/players', kicker: 'Explore', title: 'Players', desc: 'Every player rated 0–100 — form, value, fixtures and the editorial player hero.', stat: '600+ rated' },
   { key: 'teams', to: '/teams', kicker: 'Explore', title: 'Teams', desc: 'Attack, defence and set-piece ratings for all 20 clubs, with matchup previews.', stat: '20 clubs' },
   { key: 'fixtures', to: '/fixtures', kicker: 'Plan', title: 'Fixtures', desc: 'Our own fixture rating and rotation planner.', stat: 'Next 6 GWs' },
@@ -81,14 +87,16 @@ function WindowCard({ w }: { w: HomeWin }) {
       aria-label={`${w.title} — ${w.desc}`}
     >
       <div className={`hw-photo hw-${w.key}`}>
-        <img
-          src={`${IMG_BASE}home/${w.key}.jpg`}
-          alt=""
-          loading="lazy"
-          onLoad={() => setLoaded(true)}
-          onError={(e) => { e.currentTarget.style.display = 'none' }}
-          className={`hw-img ${loaded ? 'is-on' : ''}`}
-        />
+        {!w.noPhoto && (
+          <img
+            src={`${IMG_BASE}home/${w.key}.jpg`}
+            alt=""
+            loading="lazy"
+            onLoad={() => setLoaded(true)}
+            onError={(e) => { e.currentTarget.style.display = 'none' }}
+            className={`hw-img ${loaded ? 'is-on' : ''}`}
+          />
+        )}
       </div>
       {w.ghost && <div className="hw-ghost" style={w.ghost.style}>{w.ghost.text}</div>}
       <div className="hw-grain" />

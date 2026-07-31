@@ -20,16 +20,25 @@ Say what it is and is not, the way the rest of the site does: it is a
 projection from minutes and availability, not a team sheet. Nobody else in this
 space is honest about that distinction and it is cheap to be.
 
-### A post-gameweek Review page
-The one real hole in the weekly content rhythm. Every other slot in the cycle —
-deadline minus 3, minus 2, minus 1, midweek — is sourced from a page that
-exists. Monday is when FPL is busiest and there is nothing to post: who rode
-their luck, whose xG finally landed, which captain call was right for the wrong
-reason.
+### The GW Review page — content
+The route, the nav link, the home tile and the pre-GW1 holding state now exist
+(`pages/Review.tsx`, `/review`). What does not exist is the thing itself: the
+page lists its six intended sections and says it switches on after gameweek 1,
+which is honest but is not content.
 
-Also the natural home for **publishing the model's misses**, which is the most
-trust-building thing this site could do and the thing established rivals cannot
-copy without undermining themselves.
+It cannot be built against real data until a gameweek has been played, so the
+work between now and then is layout — the same job as My Team. The six sections
+the page already promises are the spec: team of the week, the captain call,
+points against expected goals, **where the model missed**, ownership swings,
+and the handoff into the next GW Preview.
+
+Publishing the misses is the most trust-building thing this site could do, and
+the thing established rivals cannot copy without undermining themselves.
+
+`public/sitemap.xml` deliberately does not list `#/review` yet — there is no
+reason to send a crawler to a holding page. Add it when the content lands.
+There is no `public/home/review.jpg` either; the tile and banner run on the
+branded `.hw-review` gradient (`noPhoto` / `photo={false}`).
 
 ### Price and injury push notifications
 `fpl_notify.py` exists and the deadline reminders already work on-device. Price

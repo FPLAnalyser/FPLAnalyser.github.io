@@ -29,17 +29,20 @@ export function SectionBanner({
   title,
   subtitle,
   tools,
+  photo = true,
 }: {
   /** Photo key — matches the home tile: players | teams | fixtures | scouting | squad | myteam */
   imgKey: string
   title: string
   subtitle?: string
   tools?: ReactNode
+  /** Set false for a section with no licensed photo yet — the branded gradient stands alone. */
+  photo?: boolean
 }) {
   return (
     <header className="sb">
       <div className={`sb-photo hw-${imgKey}`}>
-        <BannerImg src={`${IMG_BASE}home/${imgKey}.jpg`} />
+        {photo && <BannerImg src={`${IMG_BASE}home/${imgKey}.jpg`} />}
       </div>
       <div className="hw-grain" />
       <div className="sb-inner">

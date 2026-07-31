@@ -17,7 +17,11 @@ import type { RatingRow } from '../lib/types'
 
 const LINKS: { to: string; label: string }[] = [
   { to: '/', label: 'Home' },
-  { to: '/preview', label: 'GW Preview' },
+  // Short labels: the nav is a single non-wrapping row with a hidden
+  // scrollbar, so anything past the edge is effectively invisible. The pages
+  // are still titled "GW Preview" / "GW Review"; the pairing reads fine here.
+  { to: '/preview', label: 'Preview' },
+  { to: '/review', label: 'Review' },
   { to: '/players', label: 'Players' },
   { to: '/teams', label: 'Teams' },
   { to: '/fixtures', label: 'Fixtures' },
@@ -78,7 +82,7 @@ export function Layout() {
                 to={link.to}
                 end={link.to === '/'}
                 className={({ isActive }) =>
-                  `relative flex min-h-11 items-center whitespace-nowrap rounded-md px-2 text-sm font-medium transition-colors lg:px-2.5 xl:px-3 ${
+                  `relative flex min-h-11 items-center whitespace-nowrap rounded-md px-2 text-sm font-medium transition-colors lg:px-2.5 xl:px-2.5 2xl:px-3 ${
                     isActive ? 'text-accent' : 'text-ink-2 hover:text-ink'
                   }`
                 }
