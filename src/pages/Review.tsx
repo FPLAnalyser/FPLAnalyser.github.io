@@ -3,9 +3,11 @@ import { SectionBanner } from '../components/SectionBanner'
 import { Icon, type IconName } from '../components/Icon'
 import { useSeason } from '../lib/season'
 
-// GW Review — the Monday page. It reads a gameweek that has been played, so
-// there is nothing for it to read until one has been. Pre-season it says so in
-// the same words as My Team; the sections below are what it will be.
+// GW Review — the look-back page. It reads a gameweek that has been played, so
+// there is nothing for it to read until one has been, and it lands whenever the
+// last fixture finishes rather than on a fixed day: gameweeks run Friday to
+// Monday, and Cup weeks and postponements move them again. Pre-season it says
+// so in the same words as My Team; the sections below are what it will be.
 
 interface Planned { icon: IconName; title: string; desc: string }
 const PLANNED: Planned[] = [
@@ -77,7 +79,7 @@ export default function Review() {
 
       <h2 className="mt-8 mb-1 text-[11px] font-bold tracking-[0.18em] text-ink-3 uppercase">What it will cover</h2>
       <p className="mb-4 max-w-2xl text-sm leading-relaxed text-ink-2">
-        Every Monday, the gameweek read back through the same numbers the ratings are built on.
+        Once the gameweek is done, it gets read back through the same numbers the ratings are built on.
       </p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {PLANNED.map((p) => (

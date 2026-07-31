@@ -474,7 +474,7 @@ body {
   radial-gradient(70% 55% at 50% -5%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 60%),
   repeating-linear-gradient(90deg, rgba(255,255,255,.03) 0 8%, transparent 8% 16%),
   linear-gradient(180deg, #10233a 0%, #0a1626 55%, #060c15 100%); }
-/* GW Review: the Monday page — a claret counterpart to the Preview's floodlit
+/* GW Review: the look-back page — a claret counterpart to the Preview's floodlit
    blue. The tall tile carries a results-board rise; the slim section banner
    takes the wash alone, where four bars would only read as stray blocks. */
 .hw-review { background:
