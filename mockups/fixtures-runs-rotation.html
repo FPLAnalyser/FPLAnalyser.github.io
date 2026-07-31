@@ -1,0 +1,142 @@
+<style>
+:root{--bg:#0a0908;--s1:#131110;--s2:#1b1917;--line:#2a2724;--ink:#f4efe3;--ink2:#a9a294;--ink3:#777064;--acc:#c9a227;--acc2:#e8c85a;--good:#5ec98a;--bad:#e08b80}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 ui-sans-serif,system-ui,-apple-system,sans-serif}
+.wrap{max-width:1560px;margin:0 auto;padding:26px 18px 70px}
+h1{font-size:25px;margin:0 0 6px;letter-spacing:-.02em}
+h3{font-size:17px;margin:34px 0 4px}
+.sub{color:var(--ink2);font-size:14px;margin:0 0 10px;max-width:88ch}
+.note{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:13px 16px;margin:10px 0 24px;font-size:13.5px;color:var(--ink2);max-width:98ch}
+.note b{color:var(--ink)}
+.grid{display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(346px,1fr))}
+.col h2{font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--acc);margin:0 0 3px}
+.why{font-size:13px;color:var(--ink2);margin:0 0 12px;min-height:6.4em}
+.phone{width:100%;max-width:390px;border:1px solid var(--line);border-radius:20px;overflow:hidden;background:var(--bg);box-shadow:0 16px 36px rgba(0,0,0,.5)}
+.ph-top{background:var(--s1);border-bottom:1px solid var(--line);padding:8px 12px;font-size:10.5px;color:var(--ink3);letter-spacing:.1em;text-transform:uppercase}
+.body{padding:10px;max-height:660px;overflow-y:auto}
+.pill{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:5px 10px;font-size:12px;color:var(--ink2)}
+.pill.on{border-color:var(--acc);background:rgba(201,162,39,.14);color:var(--acc2)}
+select.pill{appearance:none;padding-right:24px;background:transparent;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a9a294' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 7px center;background-size:12px;color:var(--ink2)}
+.row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px}
+.card{border:1px solid var(--line);border-radius:12px;background:var(--s1);margin-bottom:7px;overflow:hidden}
+.ch{display:flex;align-items:center;gap:8px;padding:8px 10px}
+.rk{width:15px;font-size:10px;font-weight:800;color:var(--ink3);text-align:right}
+.bg{width:21px;height:21px;border-radius:50%;background:var(--s2);display:grid;place-items:center;font-size:8px;font-weight:800;color:var(--ink2);flex:none}
+.tn{font-weight:700;font-size:13.5px;flex:1;min-width:0}
+.sm{font-size:10px;color:var(--ink3);font-weight:600}
+.big{font-weight:800;font-variant-numeric:tabular-nums;font-size:15.5px}
+.unit{font-size:9px;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase;margin-left:3px}
+.strip{display:flex;gap:2.5px;padding:0 10px 9px}
+.cell{flex:1;border-radius:4px;padding:3px 1px;text-align:center;font-size:9.5px;font-weight:700;line-height:1.2;color:var(--ink)}
+.cell small{display:block;font-size:7.5px;opacity:.7;font-weight:600}
+.sumbar{border:1px solid var(--line);border-radius:10px;background:var(--s2);padding:7px 10px;margin-bottom:9px;font-size:12px;color:var(--ink2)}
+.sumbar b{color:var(--acc2)}
+.foot{font-size:10.5px;color:var(--ink3);margin-top:8px;line-height:1.5}
+/* vertical rotation board */
+.vb{width:100%;border-collapse:collapse;font-size:11.5px}
+.vb th{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);padding:5px 2px;font-weight:800}
+.vb th.gw{width:30px;text-align:left;padding-left:4px}
+.vb td{padding:2px;vertical-align:top}
+.vb td.gw{font-size:9.5px;font-weight:800;color:var(--ink3);padding-top:8px}
+.vc{border-radius:5px;padding:4px 2px;text-align:center;line-height:1.25;font-weight:700;font-size:10.5px;color:var(--ink);opacity:.42}
+.vc.start{opacity:1;box-shadow:inset 0 0 0 1.5px var(--acc)}
+.vc small{display:block;font-size:7.5px;font-weight:600;opacity:.72}
+.tl{position:relative;height:15px;border-radius:4px;background:var(--s2);overflow:hidden;display:flex;gap:1px}
+.tl i{flex:1;display:block}
+</style><div class="wrap">
+<h1>Best runs, rethought — and the rotation planner turned vertical</h1>
+<p class="sub">Real 2026/27 fixtures and the site's own 1dp difficulty throughout.</p>
+
+<h3>1 · Best runs</h3>
+<div class="note"><b>What is wrong now.</b> The board invents a "score" where <em>higher is better</em>, on a page where every other number is difficulty and <em>lower is better</em> — so a 4.20 looks like a brutal run and is in fact the kindest. It is also unsortable on a phone, and it silently shows one run per club chosen by a rule the reader cannot see. All three options below drop the invented number and rank on difficulty itself.</div>
+<div class="grid" id="runs"></div>
+
+<h3>2 · Rotation planner</h3>
+<div class="note"><b>What is wrong now.</b> The strip shows one starter per gameweek even when you have asked to start three of five, and it names the club you would field without ever naming who they play — which is the thing that made it the pick. Turning the board vertical fixes both: gameweeks run down, your rotation clubs are the columns, and every cell can carry an opponent because the column is as wide as the phone divided by the group.</div>
+<div class="grid" id="rot"></div>
+</div><script>
+const D=[{"team": "ARS", "fx": [{"gw": 1, "o": "COV", "v": "H", "d": 2.3, "xg": 2.51, "cs": 51}, {"gw": 2, "o": "AVL", "v": "A", "d": 3.5, "xg": 1.69, "cs": 33}, {"gw": 3, "o": "CHE", "v": "H", "d": 1.8, "xg": 3.08, "cs": 71}, {"gw": 4, "o": "SUN", "v": "A", "d": 4.6, "xg": 1.27, "cs": 45}, {"gw": 5, "o": "BHA", "v": "A", "d": 2.9, "xg": 1.97, "cs": 33}, {"gw": 6, "o": "LEE", "v": "H", "d": 2.3, "xg": 2.55, "cs": 56}], "xgTot": 13.1, "csExp": 2.89, "avg": 2.9, "est": false}, {"team": "COV", "fx": [{"gw": 1, "o": "ARS", "v": "A", "d": 5.0, "xg": 0.68, "cs": 8}, {"gw": 2, "o": "HUL", "v": "H", "d": 2.3, "xg": 1.55, "cs": 29}, {"gw": 3, "o": "MCI", "v": "A", "d": 3.0, "xg": 1.19, "cs": 8}, {"gw": 4, "o": "BHA", "v": "H", "d": 2.4, "xg": 1.51, "cs": 20}, {"gw": 5, "o": "NFO", "v": "A", "d": 3.0, "xg": 1.19, "cs": 10}, {"gw": 6, "o": "NEW", "v": "H", "d": 3.2, "xg": 1.23, "cs": 20}], "xgTot": 7.3, "csExp": 0.95, "avg": 3.15, "est": true}, {"team": "HUL", "fx": [{"gw": 1, "o": "MUN", "v": "H", "d": 3.9, "xg": 1.04, "cs": 14}, {"gw": 2, "o": "COV", "v": "A", "d": 2.8, "xg": 1.24, "cs": 22}, {"gw": 3, "o": "AVL", "v": "H", "d": 3.0, "xg": 1.29, "cs": 20}, {"gw": 4, "o": "CHE", "v": "A", "d": 2.3, "xg": 1.52, "cs": 47}, {"gw": 5, "o": "NEW", "v": "A", "d": 3.7, "xg": 0.99, "cs": 13}, {"gw": 6, "o": "EVE", "v": "H", "d": 1.3, "xg": 2.48, "cs": 30}], "xgTot": 8.6, "csExp": 1.46, "avg": 2.83, "est": true}, {"team": "MUN", "fx": [{"gw": 1, "o": "HUL", "v": "A", "d": 2.8, "xg": 1.96, "cs": 36}, {"gw": 2, "o": "IPS", "v": "H", "d": 2.3, "xg": 2.44, "cs": 44}, {"gw": 3, "o": "EVE", "v": "A", "d": 1.8, "xg": 3.15, "cs": 37}, {"gw": 4, "o": "MCI", "v": "H", "d": 2.5, "xg": 2.34, "cs": 26}, {"gw": 5, "o": "FUL", "v": "A", "d": 3.8, "xg": 1.56, "cs": 57}, {"gw": 6, "o": "TOT", "v": "H", "d": 4.3, "xg": 1.47, "cs": 39}], "xgTot": 12.9, "csExp": 2.39, "avg": 2.92, "est": false}, {"team": "EVE", "fx": [{"gw": 1, "o": "CRY", "v": "H", "d": 1.0, "xg": 3.62, "cs": 6}, {"gw": 2, "o": "BOU", "v": "A", "d": 4.3, "xg": 0.85, "cs": 14}, {"gw": 3, "o": "MUN", "v": "H", "d": 3.9, "xg": 1.02, "cs": 4}, {"gw": 4, "o": "TOT", "v": "A", "d": 4.8, "xg": 0.73, "cs": 6}, {"gw": 5, "o": "IPS", "v": "H", "d": 2.3, "xg": 1.51, "cs": 14}, {"gw": 6, "o": "HUL", "v": "A", "d": 2.8, "xg": 1.21, "cs": 9}], "xgTot": 8.9, "csExp": 0.53, "avg": 3.18, "est": false}, {"team": "CRY", "fx": [{"gw": 1, "o": "EVE", "v": "A", "d": 1.8, "xg": 2.86, "cs": 3}, {"gw": 2, "o": "MCI", "v": "H", "d": 2.5, "xg": 2.13, "cs": 1}, {"gw": 3, "o": "FUL", "v": "A", "d": 3.8, "xg": 1.42, "cs": 14}, {"gw": 4, "o": "IPS", "v": "H", "d": 2.3, "xg": 2.22, "cs": 5}, {"gw": 5, "o": "LEE", "v": "A", "d": 2.8, "xg": 1.81, "cs": 4}, {"gw": 6, "o": "NFO", "v": "H", "d": 2.5, "xg": 2.13, "cs": 1}], "xgTot": 12.6, "csExp": 0.28, "avg": 2.62, "est": false}, {"team": "IPS", "fx": [{"gw": 1, "o": "SUN", "v": "H", "d": 4.1, "xg": 0.97, "cs": 31}, {"gw": 2, "o": "MUN", "v": "A", "d": 4.4, "xg": 0.84, "cs": 9}, {"gw": 3, "o": "LIV", "v": "H", "d": 1.5, "xg": 2.14, "cs": 31}, {"gw": 4, "o": "CRY", "v": "A", "d": 1.5, "xg": 2.98, "cs": 11}, {"gw": 5, "o": "EVE", "v": "A", "d": 1.8, "xg": 1.99, "cs": 22}, {"gw": 6, "o": "FUL", "v": "H", "d": 3.3, "xg": 1.23, "cs": 51}], "xgTot": 10.2, "csExp": 1.55, "avg": 2.77, "est": true}, {"team": "SUN", "fx": [{"gw": 1, "o": "IPS", "v": "A", "d": 2.8, "xg": 1.16, "cs": 38}, {"gw": 2, "o": "FUL", "v": "H", "d": 3.3, "xg": 1.15, "cs": 66}, {"gw": 3, "o": "BRE", "v": "A", "d": 2.7, "xg": 1.23, "cs": 40}, {"gw": 4, "o": "ARS", "v": "H", "d": 4.5, "xg": 0.8, "cs": 28}, {"gw": 5, "o": "MCI", "v": "A", "d": 3.0, "xg": 1.12, "cs": 21}, {"gw": 6, "o": "BHA", "v": "H", "d": 2.4, "xg": 1.41, "cs": 37}], "xgTot": 6.9, "csExp": 2.3, "avg": 3.12, "est": false}, {"team": "NFO", "fx": [{"gw": 1, "o": "LEE", "v": "H", "d": 2.3, "xg": 2.39, "cs": 36}, {"gw": 2, "o": "LIV", "v": "A", "d": 2.0, "xg": 2.62, "cs": 25}, {"gw": 3, "o": "TOT", "v": "H", "d": 4.3, "xg": 1.41, "cs": 26}, {"gw": 4, "o": "AVL", "v": "A", "d": 3.5, "xg": 1.58, "cs": 15}, {"gw": 5, "o": "COV", "v": "H", "d": 2.3, "xg": 2.35, "cs": 31}, {"gw": 6, "o": "CRY", "v": "A", "d": 1.5, "xg": 4.53, "cs": 12}], "xgTot": 14.9, "csExp": 1.45, "avg": 2.65, "est": false}, {"team": "LEE", "fx": [{"gw": 1, "o": "NFO", "v": "A", "d": 3.0, "xg": 1.03, "cs": 9}, {"gw": 2, "o": "BRE", "v": "H", "d": 2.2, "xg": 1.42, "cs": 31}, {"gw": 3, "o": "BHA", "v": "A", "d": 2.9, "xg": 1.05, "cs": 13}, {"gw": 4, "o": "NEW", "v": "H", "d": 3.2, "xg": 1.07, "cs": 19}, {"gw": 5, "o": "CRY", "v": "H", "d": 1.0, "xg": 3.22, "cs": 17}, {"gw": 6, "o": "ARS", "v": "A", "d": 5.0, "xg": 0.59, "cs": 8}], "xgTot": 8.4, "csExp": 0.97, "avg": 2.88, "est": false}, {"team": "BRE", "fx": [{"gw": 1, "o": "TOT", "v": "H", "d": 4.3, "xg": 0.88, "cs": 23}, {"gw": 2, "o": "LEE", "v": "A", "d": 2.8, "xg": 1.19, "cs": 25}, {"gw": 3, "o": "SUN", "v": "H", "d": 4.1, "xg": 0.91, "cs": 30}, {"gw": 4, "o": "BOU", "v": "A", "d": 4.3, "xg": 0.82, "cs": 28}, {"gw": 5, "o": "CHE", "v": "H", "d": 1.8, "xg": 1.79, "cs": 52}, {"gw": 6, "o": "AVL", "v": "A", "d": 3.5, "xg": 0.98, "cs": 12}], "xgTot": 6.6, "csExp": 1.7, "avg": 3.47, "est": false}, {"team": "TOT", "fx": [{"gw": 1, "o": "BRE", "v": "A", "d": 2.7, "xg": 1.47, "cs": 42}, {"gw": 2, "o": "NEW", "v": "H", "d": 3.2, "xg": 1.39, "cs": 38}, {"gw": 3, "o": "NFO", "v": "A", "d": 3.0, "xg": 1.34, "cs": 25}, {"gw": 4, "o": "EVE", "v": "H", "d": 1.3, "xg": 2.79, "cs": 49}, {"gw": 5, "o": "AVL", "v": "H", "d": 3.0, "xg": 1.45, "cs": 38}, {"gw": 6, "o": "MUN", "v": "A", "d": 4.4, "xg": 0.94, "cs": 23}], "xgTot": 9.4, "csExp": 2.15, "avg": 2.93, "est": false}, {"team": "BHA", "fx": [{"gw": 1, "o": "AVL", "v": "H", "d": 3.0, "xg": 1.67, "cs": 21}, {"gw": 2, "o": "CHE", "v": "A", "d": 2.3, "xg": 1.98, "cs": 48}, {"gw": 3, "o": "LEE", "v": "H", "d": 2.3, "xg": 2.04, "cs": 35}, {"gw": 4, "o": "COV", "v": "A", "d": 2.8, "xg": 1.61, "cs": 22}, {"gw": 5, "o": "ARS", "v": "H", "d": 4.5, "xg": 1.1, "cs": 14}, {"gw": 6, "o": "SUN", "v": "A", "d": 4.6, "xg": 1.01, "cs": 25}], "xgTot": 9.4, "csExp": 1.65, "avg": 3.25, "est": false}, {"team": "AVL", "fx": [{"gw": 1, "o": "BHA", "v": "A", "d": 2.9, "xg": 1.58, "cs": 19}, {"gw": 2, "o": "ARS", "v": "H", "d": 4.5, "xg": 1.11, "cs": 19}, {"gw": 3, "o": "HUL", "v": "A", "d": 2.8, "xg": 1.62, "cs": 28}, {"gw": 4, "o": "NFO", "v": "H", "d": 2.5, "xg": 1.94, "cs": 21}, {"gw": 5, "o": "TOT", "v": "A", "d": 4.8, "xg": 0.98, "cs": 24}, {"gw": 6, "o": "BRE", "v": "H", "d": 2.2, "xg": 2.13, "cs": 38}], "xgTot": 9.4, "csExp": 1.49, "avg": 3.28, "est": false}, {"team": "MCI", "fx": [{"gw": 1, "o": "BOU", "v": "H", "d": 3.8, "xg": 1.74, "cs": 39}, {"gw": 2, "o": "CRY", "v": "A", "d": 1.5, "xg": 4.81, "cs": 12}, {"gw": 3, "o": "COV", "v": "H", "d": 2.3, "xg": 2.49, "cs": 31}, {"gw": 4, "o": "MUN", "v": "A", "d": 4.4, "xg": 1.35, "cs": 10}, {"gw": 5, "o": "SUN", "v": "H", "d": 4.1, "xg": 1.56, "cs": 33}, {"gw": 6, "o": "LIV", "v": "A", "d": 2.0, "xg": 2.78, "cs": 25}], "xgTot": 14.7, "csExp": 1.5, "avg": 3.02, "est": false}, {"team": "BOU", "fx": [{"gw": 1, "o": "MCI", "v": "A", "d": 3.0, "xg": 0.94, "cs": 18}, {"gw": 2, "o": "EVE", "v": "H", "d": 1.3, "xg": 1.95, "cs": 43}, {"gw": 3, "o": "NEW", "v": "A", "d": 3.7, "xg": 0.78, "cs": 24}, {"gw": 4, "o": "BRE", "v": "H", "d": 2.2, "xg": 1.28, "cs": 44}, {"gw": 5, "o": "LIV", "v": "H", "d": 1.5, "xg": 1.69, "cs": 44}, {"gw": 6, "o": "CHE", "v": "A", "d": 2.3, "xg": 1.2, "cs": 59}], "xgTot": 7.8, "csExp": 2.32, "avg": 2.33, "est": false}, {"team": "NEW", "fx": [{"gw": 1, "o": "LIV", "v": "H", "d": 1.5, "xg": 2.81, "cs": 39}, {"gw": 2, "o": "TOT", "v": "A", "d": 4.8, "xg": 0.98, "cs": 25}, {"gw": 3, "o": "BOU", "v": "H", "d": 3.8, "xg": 1.42, "cs": 46}, {"gw": 4, "o": "LEE", "v": "A", "d": 2.8, "xg": 1.66, "cs": 35}, {"gw": 5, "o": "HUL", "v": "H", "d": 2.3, "xg": 2.03, "cs": 37}, {"gw": 6, "o": "COV", "v": "A", "d": 2.8, "xg": 1.63, "cs": 29}], "xgTot": 10.5, "csExp": 2.11, "avg": 3.0, "est": false}, {"team": "LIV", "fx": [{"gw": 1, "o": "NEW", "v": "A", "d": 3.7, "xg": 0.94, "cs": 6}, {"gw": 2, "o": "NFO", "v": "H", "d": 2.5, "xg": 1.41, "cs": 7}, {"gw": 3, "o": "IPS", "v": "A", "d": 2.8, "xg": 1.18, "cs": 12}, {"gw": 4, "o": "FUL", "v": "H", "d": 3.3, "xg": 1.17, "cs": 40}, {"gw": 5, "o": "BOU", "v": "A", "d": 4.3, "xg": 0.83, "cs": 19}, {"gw": 6, "o": "MCI", "v": "H", "d": 2.5, "xg": 1.41, "cs": 6}], "xgTot": 6.9, "csExp": 0.9, "avg": 3.18, "est": false}, {"team": "FUL", "fx": [{"gw": 1, "o": "CHE", "v": "H", "d": 1.8, "xg": 1.03, "cs": 61}, {"gw": 2, "o": "SUN", "v": "A", "d": 4.6, "xg": 0.42, "cs": 32}, {"gw": 3, "o": "CRY", "v": "H", "d": 1.0, "xg": 2.02, "cs": 25}, {"gw": 4, "o": "LIV", "v": "A", "d": 2.0, "xg": 0.93, "cs": 31}, {"gw": 5, "o": "MUN", "v": "H", "d": 3.9, "xg": 0.57, "cs": 21}, {"gw": 6, "o": "IPS", "v": "A", "d": 2.8, "xg": 0.67, "cs": 30}], "xgTot": 5.6, "csExp": 2.0, "avg": 2.68, "est": false}, {"team": "CHE", "fx": [{"gw": 1, "o": "FUL", "v": "A", "d": 3.8, "xg": 0.49, "cs": 36}, {"gw": 2, "o": "BHA", "v": "H", "d": 2.4, "xg": 0.75, "cs": 14}, {"gw": 3, "o": "ARS", "v": "A", "d": 5.0, "xg": 0.34, "cs": 5}, {"gw": 4, "o": "HUL", "v": "H", "d": 2.3, "xg": 0.77, "cs": 22}, {"gw": 5, "o": "BRE", "v": "A", "d": 2.7, "xg": 0.65, "cs": 17}, {"gw": 6, "o": "BOU", "v": "H", "d": 3.8, "xg": 0.54, "cs": 30}], "xgTot": 3.5, "csExp": 1.24, "avg": 3.33, "est": false}];
+const dCol=v=>{const t=Math.max(0,Math.min(1,(v-1.6)/2.4));
+ return t<.5?`rgba(44,122,75,${(1-t*1.5).toFixed(2)})`:`rgba(140,58,52,${((t-.5)*1.6+.25).toFixed(2)})`};
+const runs=[];
+D.forEach(t=>{for(let len=3;len<=6;len++)for(let s=0;s+len<=t.fx.length;s++){
+ const w=t.fx.slice(s,s+len);const avg=w.reduce((a,x)=>a+x.d,0)/len;
+ runs.push({team:t.team,from:w[0].gw,to:w[len-1].gw,len,avg,home:w.filter(x=>x.v==='H').length,fx:w});}});
+const bp=new Map();runs.forEach(r=>{const c=bp.get(r.team);if(!c||r.avg<c.avg-1e-9||(Math.abs(r.avg-c.avg)<1e-9&&r.home>c.home))bp.set(r.team,r)});
+const best=[...bp.values()].sort((a,b)=>a.avg-b.avg||b.home-a.home);
+
+/* R1 — rank on difficulty, sortable */
+let R1=`<div class="row"><span class="pill on">Kindest</span><span class="pill">Longest</span><span class="pill">Most home</span><span class="pill">Earliest</span>
+ <select class="pill"><option>Whole season</option><option>First half</option></select></div>
+ <div class="sumbar">Each club's kindest stretch · <b>lower is kinder</b>, same 1\u20135 as every other tab</div>`;
+best.forEach((r,i)=>{R1+=`<div class="card"><div class="ch"><span class="rk">${i+1}</span><span class="bg">${r.team}</span>
+ <span class="tn">${r.team}<div class="sm">GW${r.from}\u2013${r.to} \u00b7 ${r.len} games \u00b7 ${r.home} home</div></span>
+ <span class="big" style="color:${r.avg<2.6?'var(--good)':r.avg>3.2?'var(--bad)':'var(--ink2)'}">${r.avg.toFixed(2)}</span><span class="unit">avg diff</span></div>
+ <div class="strip">${r.fx.map(f=>`<div class="cell" style="background:${dCol(f.d)}"><small>GW${f.gw}</small>${f.o}<small>${f.v} \u00b7 ${f.d.toFixed(1)}</small></div>`).join('')}</div></div>`});
+R1+='<p class="foot">One number, and it is the one already on the difficulty tab. Four sorts, because "kindest" and "longest" are different questions and the old board answered a blend of both without saying so.</p>';
+
+/* R2 — get on / get off, as a season bar */
+let R2=`<div class="row"><span class="pill on">Kindest</span><span class="pill">Longest</span>
+ <select class="pill"><option>Next 6</option><option>Whole season</option></select></div>
+ <div class="sumbar">When to <b>get on</b>, and when to get off</div>`;
+best.forEach((r)=>{
+ const all=D.find(t=>t.team===r.team).fx;
+ R2+=`<div class="card"><div class="ch"><span class="bg">${r.team}</span>
+  <span class="tn">${r.team}<div class="sm">Get on <b style="color:var(--acc2)">GW${r.from}</b> \u00b7 off after <b style="color:var(--acc2)">GW${r.to}</b></div></span>
+  <span class="big" style="color:${r.avg<2.6?'var(--good)':'var(--ink2)'}">${r.avg.toFixed(2)}</span></div>
+  <div style="padding:0 10px 9px"><div class="tl">${all.map(f=>{
+    const inRun=f.gw>=r.from&&f.gw<=r.to;
+    return `<i style="background:${dCol(f.d)};opacity:${inRun?1:.28}"></i>`}).join('')}</div>
+   <div class="sm" style="display:flex;justify-content:space-between;margin-top:3px">${all.map(f=>`<span style="flex:1;text-align:center;font-size:7.5px">${f.gw}</span>`).join('')}</div></div></div>`});
+R2+='<p class="foot">The run in the context of the whole window rather than cut out of it \u2014 you can see what it is kinder <em>than</em>. Loses the opponent names.</p>';
+
+/* R3 — every run, not one per club */
+const topRuns=runs.sort((a,b)=>a.avg-b.avg||b.home-a.home).slice(0,14);
+let R3=`<div class="row"><span class="pill on">Kindest</span><span class="pill">Longest</span>
+ <select class="pill"><option>3+ games</option><option>4+ games</option><option>5+ games</option></select></div>
+ <div class="sumbar">Every qualifying run in the league, not one per club</div>`;
+topRuns.forEach((r,i)=>{R3+=`<div class="card"><div class="ch"><span class="rk">${i+1}</span><span class="bg">${r.team}</span>
+ <span class="tn">${r.team} <span class="sm">GW${r.from}\u2013${r.to}</span></span>
+ <span class="big" style="color:${r.avg<2.6?'var(--good)':'var(--ink2)'}">${r.avg.toFixed(2)}</span></div>
+ <div class="strip">${r.fx.map(f=>`<div class="cell" style="background:${dCol(f.d)}"><small>GW${f.gw}</small>${f.o}</div>`).join('')}</div></div>`});
+R3+='<p class="foot">Drops the hidden one-per-club rule: if a club owns the two kindest runs in the league, it appears twice. Honest, and noisier.</p>';
+
+document.getElementById('runs').innerHTML=[
+ ['R1 \u00b7 Rank on difficulty','The minimum fix, and the one I would build. The invented score goes; the run is ranked on its average difficulty, the same 1\u20135 that colours every other tab, and lower is kinder exactly as it is everywhere else. Four explicit sorts replace the hidden blend of length and kindness. Each fixture still names the opponent and its own difficulty.',R1],
+ ['R2 \u00b7 Get on / get off','Answers the question the tab is actually named after. The run is drawn inside the whole window rather than cut out of it, so you can see what it is kinder than, and the header says the gameweek to buy and the gameweek to leave. Costs the opponent names.',R2],
+ ['R3 \u00b7 Every run, not one per club','Today one run per club is shown, chosen by a rule the reader cannot see. This lists every qualifying run: if a club owns the two kindest stretches in the league it appears twice. More honest, more repetitive.',R3],
+].map(([h,w,inner])=>`<div class="col"><h2>${h}</h2><p class="why">${w}</p><div class="phone"><div class="ph-top">${h.split(' \u00b7 ')[0]}</div><div class="body">${inner}</div></div></div>`).join('');
+
+/* ── ROTATION: vertical boards ─────────────────────────────────────────── */
+function board(group, startK, label){
+  const n=Math.min(...group.map(g=>g.fx.length));
+  let h=`<table class="vb"><tr><th class="gw"></th>${group.map(g=>`<th>${g.team}</th>`).join('')}</tr>`;
+  for(let w=0;w<n;w++){
+    const ranked=[...group].map(g=>({g,f:g.fx[w]})).sort((a,b)=>a.f.d-b.f.d);
+    const starters=new Set(ranked.slice(0,startK).map(x=>x.g.team));
+    h+=`<tr><td class="gw">GW${group[0].fx[w].gw}</td>${group.map(g=>{
+      const f=g.fx[w];const on=starters.has(g.team);
+      return `<td><div class="vc${on?' start':''}" style="background:${dCol(f.d)}">${f.o}<small>${f.v} \u00b7 ${f.d.toFixed(1)}</small></div></td>`}).join('')}</tr>`;
+  }
+  h+='</table>';
+  return h;
+}
+const g5=[...D].sort((a,b)=>a.avg-b.avg).slice(0,5);
+const g2=g5.slice(0,2);
+let V1=`<div class="row"><select class="pill"><option>Rotate 5</option></select><select class="pill"><option>Start 3</option></select>
+ <select class="pill"><option>Next 6</option></select><select class="pill"><option>Any price</option></select></div>
+ <div class="sumbar">Gameweeks down, your clubs across \u00b7 <b>ringed = start</b></div>
+ <div class="card" style="padding:8px 6px 10px">${board(g5,3)}</div>`;
+V1+='<p class="foot">Start 3 of 5 rings three cells per row, which the horizontal strip could never show \u2014 it only ever had room for one. Every cell names the opponent, the venue and its difficulty.</p>';
+
+let V2=`<div class="row"><select class="pill"><option>Rotate 2</option></select><select class="pill"><option>Start 1</option></select>
+ <select class="pill"><option>Next 6</option></select></div>
+ <div class="sumbar">The same board with a pair \u00b7 <b>ringed = start</b></div>
+ <div class="card" style="padding:8px 6px 10px">${board(g2,1)}</div>`;
+V2+='<p class="foot">Two columns give each fixture real width. This is the common case and it is where the vertical board is most obviously better than a six-cell strip.</p>';
+
+document.getElementById('rot').innerHTML=[
+ ['V1 \u00b7 Vertical, rotate 5 start 3','Gameweeks run down, your rotation clubs are the columns. Because the column is the phone divided by the group rather than by six gameweeks, every cell has room for the opponent, the venue and the fixture\u2019s difficulty \u2014 none of which the current strip shows. Starting three of five rings three cells in every row.',V1],
+ ['V2 \u00b7 The same board, a pair','Two clubs, start one \u2014 the ordinary case. Wider columns still, and the ringed cell answers "who do I actually field this week" without asking the reader to compare two numbers themselves.',V2],
+].map(([h,w,inner])=>`<div class="col"><h2>${h}</h2><p class="why">${w}</p><div class="phone"><div class="ph-top">${h.split(' \u00b7 ')[0]}</div><div class="body">${inner}</div></div></div>`).join('');
+</script>
