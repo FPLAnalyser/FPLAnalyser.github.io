@@ -252,7 +252,12 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
                 rail — the rail spans both rows, so a short brief leaves a gap
                 in one column rather than a dead half across the page. */}
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-start">
-              <Exportable title={`${r.web_name} — the brief`}><TheBrief r={r} data={data} verdict={verdict} /></Exportable>
+              {/* The identity strip is at the top of the page, outside this
+                  node, so a shared brief arrived as sentences about an unnamed
+                  player. Face, rating and personas go into the picture. */}
+              <Exportable title={`${r.web_name} — the brief`} ident={<ShareIdent r={r} peers={peers} personas={personas} />}>
+                <TheBrief r={r} data={data} verdict={verdict} />
+              </Exportable>
               <div className="min-w-0 lg:row-span-2">
                 <Exportable title={`${r.web_name} — promise vs delivery`}><EvidenceBand r={r} peers={peers} /></Exportable>
                 <Receipts r={r} data={data} name={name} />
@@ -457,6 +462,43 @@ function IdentStrip({ r, peers, personas, status, flags, isPenTaker, isSpTaker, 
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+/** Who the brief is about, for the exported picture only (`capture-only`).
+ *  Deliberately the same facts and the same order as the page's IdentStrip —
+ *  photo, name, position/club/price, personas, rating — at a size that suits a
+ *  panel rather than a page header. */
+function ShareIdent({ r, peers, personas }: { r: RatingRow; peers: RatingRow[]; personas: string[] }) {
+  const team = String(r.team)
+  const tc = teamColors[team] ?? '#7ad1ff'
+  const rating = ratingTo100(num(r, 'season_overall_score'))
+  const rank = rating != null ? 1 + peers.filter((p) => (ratingTo100(num(p, 'season_overall_score')) ?? -1) > rating).length : null
+  return (
+    <div className="mb-3 flex items-center gap-3 rounded-xl border border-line bg-surface-2/50 px-3 py-2.5">
+      <PhotoImg
+        hero code={r.code} element={r.element}
+        className="h-[58px] w-auto shrink-0 object-contain"
+        placeholder={<div className="flex h-[58px] w-[42px] items-end justify-center"><HeroSilhouette /></div>}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-[19px] leading-tight font-extrabold tracking-[-0.01em] text-ink">{String(r.web_name)}</div>
+        <div className="mt-0.5 text-[12.5px] text-ink-2">
+          {POS_LABEL[r.position] ?? r.position} · <b className="font-semibold" style={{ color: tc }}>{teamFullNames[team] || team}</b> · £{r.price}m
+        </div>
+        {personas.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {personas.slice(0, 2).map((p) => <HeroPill key={p} ident>{p}</HeroPill>)}
+          </div>
+        )}
+      </div>
+      {rating != null && (
+        <div className="shrink-0 text-center">
+          <div className="metallic-num font-display text-[34px] leading-[.85]">{rating}</div>
+          {rank != null && <div className="mt-1 text-[10.5px] font-semibold whitespace-nowrap text-ink-3">#{rank} of {peers.length}</div>}
+        </div>
+      )}
     </div>
   )
 }

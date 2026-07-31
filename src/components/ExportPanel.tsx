@@ -118,11 +118,22 @@ function brand(source: HTMLCanvasElement, fmt: ShareFormat, title: string, dark:
   return out
 }
 
-export function Exportable({ title, filename, children, className, toolbar, variant = 'row', beforeCapture, afterCapture }: {
+export function Exportable({ title, filename, children, className, toolbar, ident, variant = 'row', beforeCapture, afterCapture }: {
   title: string
   filename?: string
   children: ReactNode
   className?: string
+  /** Who the panel is about, drawn into the picture but not onto the page.
+   *
+   *  A rating breakdown or a brief is unreadable once it leaves the site: the
+   *  name, face and number that give it meaning live in the page header or the
+   *  sheet header, outside the captured node, so the export arrived as a set
+   *  of bars belonging to nobody. This renders inside the capture instead.
+   *
+   *  Clipped rather than `display:none` on the page — a hidden `<img>` may
+   *  never fetch, and a photo that arrives after the shutter is a blank square
+   *  in the export. */
+  ident?: ReactNode
   /** Controls to sit on the same line as the Share button. Without this the
    *  button gets a row of its own, which on a crowded panel is a whole line
    *  of height spent on one small control. */
@@ -256,7 +267,7 @@ export function Exportable({ title, filename, children, className, toolbar, vari
             {chooser}
           </div>
         )}
-        <div ref={ref}>{children}</div>
+        <div ref={ref}>{ident && <div className="capture-only">{ident}</div>}{children}</div>
       </div>
     )
   }
@@ -280,7 +291,7 @@ export function Exportable({ title, filename, children, className, toolbar, vari
 
       {open && <div data-no-capture className="mb-3 rounded-xl border border-line bg-surface-1 p-3">{chooser}</div>}
 
-      <div ref={ref}>{children}</div>
+      <div ref={ref}>{ident && <div className="capture-only">{ident}</div>}{children}</div>
     </div>
   )
 }

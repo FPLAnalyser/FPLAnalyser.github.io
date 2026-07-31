@@ -392,6 +392,21 @@ body {
 [data-capturing] [data-no-capture] {
   display: none !important;
 }
+/* The inverse of data-no-capture: belongs to the picture, not to the page.
+   Who the panel is about — face, name, rating — which the page already shows
+   in a header above the captured node and the export therefore lost.
+
+   Clipped to a pixel rather than display:none on purpose. A display:none
+   <img> is not guaranteed to fetch, and a photo that lands after the shutter
+   is a blank square in the export; at 1px it is laid out, so it loads. */
+.capture-only {
+  position: absolute; width: 1px; height: 1px;
+  overflow: hidden; opacity: 0; pointer-events: none;
+}
+[data-capturing] .capture-only {
+  position: static !important; width: auto !important; height: auto !important;
+  overflow: visible !important; opacity: 1 !important;
+}
 /* Anything the page hides behind a scrollbar has to be visible to be
    captured; otherwise the export ends at the edge of the viewport. */
 [data-capturing] .overflow-x-auto,
