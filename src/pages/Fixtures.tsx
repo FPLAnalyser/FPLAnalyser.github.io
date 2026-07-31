@@ -899,8 +899,65 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
 
   const headCls = 'px-2 py-2 text-center text-[11px] font-semibold tracking-wide text-ink-3 uppercase'
   const wide = useWide()
+  /** Which suggestion is open on a phone. '' means all closed; null means
+   *  untouched, in which case the first one shows. */
+  const [openGroup, setOpenGroup] = useState<string | null>(null)
   const pill = (active: boolean) => `min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${active ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`
   const startOpts = Array.from({ length: size - 1 }, (_, i) => i + 1) // 1 … N-1
+
+  /* ── The board, turned on its side ────────────────────────────────────────
+     Gameweeks down, the rotation's clubs across. Teams down and gameweeks
+     across needs a column per gameweek plus a team column, which scrolled
+     sideways on a phone; this way a column is the screen divided by the group,
+     so every cell has room for the opponent, the venue and the difficulty —
+     and it rings as many starters as `startK` rather than the single one a
+     six-cell strip could hold. Shared by the open suggestion and the planner
+     proper, so they cannot disagree about who starts. */
+  const rotationBoard = (group: string[]) => {
+    const starters = (gw: number) => {
+      const ranked = group
+        .map((t) => ({ t, c: cellFor(t, gw) }))
+        .filter((x): x is { t: string; c: { f: FixtureEaseRow; diff: number } } => x.c != null)
+        .sort((a, b) => a.c.diff - b.c.diff)
+      return new Set(ranked.slice(0, Math.min(startK, ranked.length)).map((x) => x.t))
+    }
+    return (
+      <div className="overflow-hidden rounded-xl border border-line">
+        <div className="flex gap-1 border-b border-line bg-surface-1 px-2 py-1.5">
+          <span className="w-8 shrink-0" />
+          {group.map((t) => (
+            <span key={t} className="flex flex-1 items-center justify-center gap-1 text-[9.5px] font-bold tracking-[0.06em] text-ink-3 uppercase">
+              <TeamBadge team={t} size={12} />{t}
+            </span>
+          ))}
+        </div>
+        {gws.map((gw) => {
+          const on = starters(gw)
+          return (
+            <div key={gw} className="flex items-stretch gap-1 border-b border-line px-2 py-1 last:border-0">
+              <span className="flex w-8 shrink-0 items-center text-[9.5px] font-extrabold text-ink-3">GW{gw}</span>
+              {group.map((t) => {
+                const c = cellFor(t, gw)
+                if (!c) return <span key={t} className="flex-1 rounded bg-surface-2 py-1 text-center text-[10px] text-ink-3">—</span>
+                const start = on.has(t)
+                return (
+                  <span
+                    key={t}
+                    className={`flex-1 rounded py-1 text-center text-[10.5px] leading-tight font-bold text-ink ${start ? '' : 'opacity-45'}`}
+                    style={{ background: diffFill(c.diff), boxShadow: start ? 'inset 0 0 0 1.5px var(--accent)' : undefined }}
+                    title={`${c.f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(c.f.opponent)} — difficulty ${c.diff.toFixed(1)}${start ? ' · START' : ''}`}
+                  >
+                    {c.f.opponent}
+                    <span className="block text-[7.5px] font-semibold opacity-70">{c.f.venue} · {c.diff.toFixed(1)}</span>
+                  </span>
+                )
+              })}
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -1012,13 +1069,27 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
         <Exportable title={`Top rotations — start ${startK} of ${size}, next ${gws.length}`}>
           <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Top rotations · start {startK} of {size} · next {gws.length} · {LENS_LABEL_ROT[lens]}</div>
           <div className="overflow-hidden rounded-xl border border-line">
-            {topGroups.map((g, i) => (
-              <button key={g.group.join('')} onClick={() => setTeams(g.group)} className="flex w-full flex-col border-b border-line px-3 py-2.5 text-left transition-colors last:border-0 hover:bg-surface-2/50">
-                <span className="flex w-full items-center gap-3">
+            {topGroups.map((g, i) => {
+              const key = g.group.join('')
+              // On a phone a suggestion opens in place. Tapping used to load
+              // the rotation into the planner, which replaced the whole list —
+              // the only way back to the other suggestions was Clear. The
+              // first one is open on arrival so the board is visible without
+              // anyone having to discover that the row is a control.
+              const open = !wide && (openGroup ?? topGroups[0]?.group.join('')) === key
+              return (
+              <div key={key} className="border-b border-line last:border-0">
+              <button
+                onClick={() => (wide ? setTeams(g.group) : setOpenGroup(open ? '' : key))}
+                aria-expanded={wide ? undefined : open}
+                className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-2/50"
+              >
                 <span className="w-5 shrink-0 text-center font-num text-xs tabular-nums text-ink-3">{i + 1}</span>
+                {/* Short codes on a phone: five full club names do not fit a
+                    390px row, and the badge already carries the identity. */}
                 <span className="flex flex-1 flex-wrap items-center gap-x-2 gap-y-1 font-medium text-ink">
                   {g.group.map((t, k) => (
-                    <span key={t} className="flex items-center gap-1.5">{k > 0 && <span className="text-ink-3">+</span>}<TeamBadge team={t} size={16} />{teamLabel(t)}</span>
+                    <span key={t} className="flex items-center gap-1.5">{k > 0 && <span className="text-ink-3">+</span>}<TeamBadge team={t} size={16} />{wide ? teamLabel(t) : t}</span>
                   ))}
                 </span>
                 {filtering && (
@@ -1033,27 +1104,23 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
                   <span className="font-num text-sm font-semibold tabular-nums" style={{ color: runColor(g.combined) }}>{g.combined.toFixed(1)}</span>
                   <span className="ml-1 text-[10px] text-ink-3">avg diff</span>
                 </span>
-                </span>
-                {/* Who you would actually start each week. The pairing IS this
-                    strip — a combined average with the weekly picks left out
-                    asks the reader to redo the work the number came from. */}
-                <span className="mt-1.5 flex gap-1">
-                  {gws.map((gw) => {
-                    const best = g.group
-                      .map((t) => ({ t, c: cellFor(t, gw) }))
-                      .filter((x): x is { t: string; c: { f: FixtureEaseRow; diff: number } } => x.c != null)
-                      .sort((a, b) => a.c.diff - b.c.diff)[0]
-                    return (
-                      <span key={gw} className="flex-1 rounded py-1 text-center text-[9.5px] leading-tight font-bold"
-                        style={best ? { background: `color-mix(in srgb, ${runColor(best.c.diff)} 26%, transparent)`, color: runColor(best.c.diff) } : { background: 'var(--surface-2)', color: 'var(--ink-3)' }}>
-                        <span className="block text-[7.5px] font-semibold opacity-70">GW{gw}</span>
-                        {best ? best.t : '–'}
-                      </span>
-                    )
-                  })}
-                </span>
+                {!wide && (
+                  <span className={`shrink-0 text-ink-3 transition-transform ${open ? 'rotate-180' : ''}`}><Icon name="chevron-right" size={14} className="rotate-90" /></span>
+                )}
               </button>
-            ))}
+              {open && (
+                <div className="border-t border-line px-2 pt-2 pb-3">
+                  {rotationBoard(g.group)}
+                  <button
+                    onClick={() => setTeams(g.group)}
+                    className="mt-2 w-full rounded-lg border border-line-mid py-2 text-[12px] font-semibold text-ink-2 transition-colors hover:border-accent hover:text-accent"
+                  >
+                    Plan this rotation
+                  </button>
+                </div>
+              )}
+              </div>
+            )})}
             {topGroups.length === 0 && (
               <div className="px-3 py-8 text-center text-sm text-ink-3">
                 {filtering ? 'No rotation fits that budget — try a higher cap or a different position.' : 'No fixtures to rank yet.'}
@@ -1080,39 +1147,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
               column the phone divided by the group instead of by the window,
               which leaves room for the opponent, the venue and the difficulty
               in every cell, and rings as many as `startK`. */}
-          {!wide ? (
-            <div className="overflow-hidden rounded-xl border border-line">
-              <div className="flex gap-1 border-b border-line bg-surface-1 px-2 py-1.5">
-                <span className="w-8 shrink-0" />
-                {teams.map((t) => (
-                  <span key={t} className="flex flex-1 items-center justify-center gap-1 text-[9.5px] font-bold tracking-[0.06em] text-ink-3 uppercase">
-                    <TeamBadge team={t} size={12} />{t}
-                  </span>
-                ))}
-              </div>
-              {gws.map((gw) => (
-                <div key={gw} className="flex items-stretch gap-1 border-b border-line px-2 py-1 last:border-0">
-                  <span className="flex w-8 shrink-0 items-center text-[9.5px] font-extrabold text-ink-3">GW{gw}</span>
-                  {teams.map((t) => {
-                    const c = cellFor(t, gw)
-                    const start = startByGw.get(gw)?.has(t)
-                    if (!c) return <span key={t} className="flex-1 rounded bg-surface-2 py-1 text-center text-[10px] text-ink-3">—</span>
-                    return (
-                      <span
-                        key={t}
-                        className={`flex-1 rounded py-1 text-center text-[10.5px] leading-tight font-bold text-ink ${start ? 'ring-1.5 ring-accent' : 'opacity-45'}`}
-                        style={{ background: diffFill(c.diff), boxShadow: start ? 'inset 0 0 0 1.5px var(--accent)' : undefined }}
-                        title={`${c.f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(c.f.opponent)} — difficulty ${c.diff.toFixed(1)}${start ? ' · START' : ''}`}
-                      >
-                        {c.f.opponent}
-                        <span className="block text-[7.5px] font-semibold opacity-70">{c.f.venue} · {c.diff.toFixed(1)}</span>
-                      </span>
-                    )
-                  })}
-                </div>
-              ))}
-            </div>
-          ) : (
+          {!wide ? rotationBoard(teams) : (
           <div className="overflow-x-auto rounded-xl border border-line">
             <table className="w-full border-collapse text-sm">
               <thead>
