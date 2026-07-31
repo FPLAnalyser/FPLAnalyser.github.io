@@ -6,8 +6,9 @@ registered in the last month lands in "Newly Registered Domain". Both are
 blocked by default in most enterprise filters. A lot of FPL happens at a desk
 on a weekday lunch break, so this is worth ten minutes.
 
-Submissions are free, take about a minute each, and are usually actioned in
-24–48 hours.
+Where a vendor accepts public submissions they are free, take about a minute,
+and are usually actioned in 24–48 hours. Several vendors accept nothing from
+non-customers at all — see the table.
 
 ---
 
@@ -53,18 +54,28 @@ Request **Sports** as the primary category. Where a second is allowed, use the
 vendor's nearest equivalent of *Recreation / Hobbies / Reference*. Avoid
 anything named Games where the taxonomy also uses Games for gambling.
 
-| Vendor | Where | Notes |
-|---|---|---|
-| **Zscaler** | [sitereview.zscaler.com](https://sitereview.zscaler.com/) | Very common in UK enterprise. Look up the domain, then request a change; up to three suggested categories. |
-| **Symantec / Broadcom (WebPulse)** | [sitereview.symantec.com](https://sitereview.symantec.com/) | Check Category, then fill the review form. Typically updated in 24–48h. Follow-ups: site.review@broadcom.com |
-| **Palo Alto (PAN-DB)** | [urlfiltering.paloaltonetworks.com](https://urlfiltering.paloaltonetworks.com/) | Search, then **Request Change**. A crawler validates immediately — if it agrees, the change lands straight away. |
-| **Fortinet (FortiGuard)** | [fortiguard.com/webfilter](https://www.fortiguard.com/webfilter) | Look up, then submit the rating request. Usually within 24h. |
-| **Cisco Talos** | [talosintelligence.com/reputation_center/web_categorization](https://talosintelligence.com/reputation_center/web_categorization) | Choose **Content**, not Security — the wrong one routes it to the wrong team. |
-| **Forcepoint** | [Site Lookup on the Customer Hub](https://forcepoint2.my.site.com/ForcepointCustomerHub/s/article/How-To-Submit-Uncategorized-Sites) | Analyze, then Recategorization. |
-| **Cloudflare** | [radar.cloudflare.com/domains/feedback](https://radar.cloudflare.com/domains/feedback) | Drives Gateway and 1.1.1.1 for Families. Max two content categories. |
+Not all of these are open to the public. Two are confirmed gated; the rest are
+believed open but were **not** verifiable from the dev container, whose proxy
+blocks these hosts. Ten-second test in a browser: if the page asks you to sign
+in, or says it cannot identify you, it is gated — move on.
 
-Netskope has no public self-serve form — it is customer-side configuration, so
-there is nothing to submit. Skip it.
+| Vendor | Where | Who can submit |
+|---|---|---|
+| **Fortinet (FortiGuard)** | [fortiguard.com/webfilter](https://www.fortiguard.com/webfilter) | Believed open — look up, submit the rating request with an email. Usually within 24h. |
+| **Palo Alto (PAN-DB)** | [urlfiltering.paloaltonetworks.com](https://urlfiltering.paloaltonetworks.com/) | Believed open — search, then **Request Change**. A crawler validates on submission; if it agrees the change lands immediately. |
+| **Symantec / Broadcom (WebPulse)** | [sitereview.symantec.com](https://sitereview.symantec.com/) | Believed open — check Category, then the review form. Typically 24–48h. |
+| **Cisco Talos** | [talosintelligence.com/reputation_center/web_categorization](https://talosintelligence.com/reputation_center/web_categorization) | Believed open, may want a free Cisco account. Choose **Content**, not Security — the wrong one routes it to the wrong team. |
+| **Cloudflare** | [radar.cloudflare.com/domains/feedback](https://radar.cloudflare.com/domains/feedback) | Believed open. Drives Gateway and 1.1.1.1 for Families. Max two content categories. |
+| **Zscaler** | [sitereview.zscaler.com](https://sitereview.zscaler.com/) | **Customers only.** Access requires the request to originate from a Zscaler egress IP; submissions from other source IPs are rejected. Nothing to do from outside. |
+| **Forcepoint** | [Customer Hub site lookup](https://forcepoint2.my.site.com/ForcepointCustomerHub/s/article/How-To-Submit-Uncategorized-Sites) | **Customers only** — the lookup and recategorisation live behind the Hub login. |
+| **Netskope** | — | No public form. Customer-side configuration only. |
+
+Zscaler is the frustrating one, because it is the most common filter in UK
+enterprise. There is no way to submit from outside it. What does work is time:
+their crawlers categorise domains once there is traffic and inbound linking, so
+this resolves itself as the site gets used. If someone whose workplace runs
+Zscaler wants to submit it from there, that route exists — but it is their
+call, not something to solicit.
 
 ---
 
