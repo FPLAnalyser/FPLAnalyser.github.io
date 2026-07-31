@@ -491,6 +491,7 @@ function SeasonRunsBoard({ fixtureEase, lens, baselines, lensControl }: {
    *  shows, and stacking them cost three bands of height above it. */
   lensControl?: ReactNode
 }) {
+  const wide = useWide()
   const scale = useMemo(() => buildDiffScale(baselines), [baselines])
   const [half, setHalf] = useState<'all' | 1 | 2>('all')
   const [view, setView] = useState<'ranked' | 'map'>('ranked')
@@ -624,13 +625,50 @@ function SeasonRunsBoard({ fixtureEase, lens, baselines, lensControl }: {
         }
       >
         {view === 'ranked' ? (
-          <SortableTable
-            rows={ranked}
-            columns={columns}
-            initialSort="score"
-            initialDir="desc"
-            rowKey={(r) => `${r.team}-${r.half}`}
-          />
+          wide ? (
+            <SortableTable
+              rows={ranked}
+              columns={columns}
+              initialSort="score"
+              initialDir="desc"
+              rowKey={(r) => `${r.team}-${r.half}`}
+            />
+          ) : (
+            /* Phone: the run is the row. An eight-column sortable table put a
+               609px table in a 368px column, so the club, the span and the
+               score stack into a header and the run itself becomes a strip —
+               which is the thing being ranked and the thing worth seeing. */
+            <div className="overflow-hidden rounded-xl border border-line">
+              {ranked.map((r, i) => (
+                <div key={`${r.team}-${r.half}`} className="border-b border-line px-3 py-2.5 last:border-0">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-4 shrink-0 text-right font-num text-[11px] font-extrabold tabular-nums text-ink-3">{i + 1}</span>
+                    <TeamBadge team={r.team} size={17} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13.5px] font-bold text-ink">{teamLabel(r.team)}</span>
+                      <span className="block text-[10.5px] font-semibold text-ink-3">
+                        GW{r.from}–{r.to} · {r.fixtures.length} games · {r.avg.toFixed(2)} avg · {r.home} home
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-right">
+                      <span className="font-num text-[15px] font-extrabold tabular-nums text-accent-2">{r.advantage.toFixed(1)}</span>
+                      <span className="block text-[9px] font-bold tracking-[0.1em] text-ink-3 uppercase">score</span>
+                    </span>
+                  </div>
+                  <div className="mt-1.5 flex gap-1">
+                    {r.fixtures.map((f) => (
+                      <span key={`${f.gw}-${f.opponent}`} className="flex-1 rounded py-1 text-center text-[9.5px] leading-tight font-bold"
+                        style={{ background: `color-mix(in srgb, ${runColor(f.diff)} 26%, transparent)`, color: runColor(f.diff) }}>
+                        <span className="block text-[7.5px] font-semibold opacity-70">GW{f.gw}</span>
+                        {f.opponent}
+                        <span className="block text-[7.5px] font-semibold opacity-70">{f.venue}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         ) : (
           <RunsTimeline fixtureEase={fixtureEase} runs={shown} gws={mapGws} lens={lens} scale={scale} />
         )}
@@ -791,7 +829,21 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
       for (const t of group) for (const gw of gws) if (cellFor(t, gw)?.f.venue === 'H') home++
       out.push({ group, combined: c, home })
     }
-    return out.sort((x, y) => x.combined - y.combined || y.home - x.home).slice(0, 8)
+    // Cap each club at two appearances. The kindest club partners well with
+    // everyone, so an uncapped list gave Man Utd five of the eight rows — a
+    // ranking of one club's fixtures dressed as a ranking of rotations. Locked
+    // clubs are exempt: if you have asked to see partners for a side, every
+    // row is supposed to contain it.
+    const ranked = out.sort((x, y) => x.combined - y.combined || y.home - x.home)
+    const seen = new Map<string, number>()
+    const spread: typeof out = []
+    for (const g of ranked) {
+      if (g.group.some((t) => !teams.includes(t) && (seen.get(t) ?? 0) >= 2)) continue
+      for (const t of g.group) seen.set(t, (seen.get(t) ?? 0) + 1)
+      spread.push(g)
+      if (spread.length >= 8) break
+    }
+    return spread
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allTeams, excluded, teams, size, startK, gws, cellFor, pickBy, filtering])
 
@@ -910,7 +962,8 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
           <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Top rotations · start {startK} of {size} · next {gws.length} · {LENS_LABEL_ROT[lens]}</div>
           <div className="overflow-hidden rounded-xl border border-line">
             {topGroups.map((g, i) => (
-              <button key={g.group.join('')} onClick={() => setTeams(g.group)} className="flex w-full items-center gap-3 border-b border-line px-3 py-2.5 text-left transition-colors last:border-0 hover:bg-surface-2/50">
+              <button key={g.group.join('')} onClick={() => setTeams(g.group)} className="flex w-full flex-col border-b border-line px-3 py-2.5 text-left transition-colors last:border-0 hover:bg-surface-2/50">
+                <span className="flex w-full items-center gap-3">
                 <span className="w-5 shrink-0 text-center font-num text-xs tabular-nums text-ink-3">{i + 1}</span>
                 <span className="flex flex-1 flex-wrap items-center gap-x-2 gap-y-1 font-medium text-ink">
                   {g.group.map((t, k) => (
@@ -928,6 +981,25 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
                 <span className="shrink-0 text-right">
                   <span className="font-num text-sm font-semibold tabular-nums" style={{ color: runColor(g.combined) }}>{g.combined.toFixed(1)}</span>
                   <span className="ml-1 text-[10px] text-ink-3">avg diff</span>
+                </span>
+                </span>
+                {/* Who you would actually start each week. The pairing IS this
+                    strip — a combined average with the weekly picks left out
+                    asks the reader to redo the work the number came from. */}
+                <span className="mt-1.5 flex gap-1">
+                  {gws.map((gw) => {
+                    const best = g.group
+                      .map((t) => ({ t, c: cellFor(t, gw) }))
+                      .filter((x): x is { t: string; c: { f: FixtureEaseRow; diff: number } } => x.c != null)
+                      .sort((a, b) => a.c.diff - b.c.diff)[0]
+                    return (
+                      <span key={gw} className="flex-1 rounded py-1 text-center text-[9.5px] leading-tight font-bold"
+                        style={best ? { background: `color-mix(in srgb, ${runColor(best.c.diff)} 26%, transparent)`, color: runColor(best.c.diff) } : { background: 'var(--surface-2)', color: 'var(--ink-3)' }}>
+                        <span className="block text-[7.5px] font-semibold opacity-70">GW{gw}</span>
+                        {best ? best.t : '–'}
+                      </span>
+                    )
+                  })}
                 </span>
               </button>
             ))}
