@@ -37,8 +37,18 @@ the thing established rivals cannot copy without undermining themselves.
 
 `public/sitemap.xml` deliberately does not list `#/review` yet — there is no
 reason to send a crawler to a holding page. Add it when the content lands.
-There is no `public/home/review.jpg` either; the tile and banner run on the
-branded `.hw-review` gradient (`noPhoto` / `photo={false}`).
+
+### The rest of the stadium photos
+`StadiumBanner` on a club page loads `public/stadiums/<TEAM>.jpg` over a
+club-tinted floodlit bowl, and falls back to the bowl alone when the file is
+missing. Six of the twenty are present (ARS, CHE, FUL, LIV, MUN, TOT), so the rest open on the generated
+gradient — fine, but the ones with a real photo are visibly better and the
+inconsistency is more noticeable than either state would be on its own.
+
+Same rules as `public/home/README.md`: landscape, crop before dropping the file
+in rather than leaving it to `object-fit`, around 1600px wide, compressed to
+roughly 300KB, and licensed. The banner prints the club name over the image, so
+avoid anything with its own lettering. Credit the source in the README.
 
 ### Price and injury push notifications
 `fpl_notify.py` exists and the deadline reminders already work on-device. Price

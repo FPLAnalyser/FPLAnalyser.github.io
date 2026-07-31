@@ -15,6 +15,7 @@ then the photo fades in automatically — no code change needed.
 | `scouting.jpg`  | Scouting       | Scouting / analysis imagery              |
 | `squad.jpg`     | Squad Builder  | Pitch / formation imagery                |
 | `myteam.jpg`    | My Team        | Kit / badge / fan imagery                |
+| `review.jpg`    | GW Review      | Result / aftermath / rise-and-fall imagery |
 | `compare.jpg`   | Compare        | Two-players / head-to-head imagery       |
 
 ## Specs

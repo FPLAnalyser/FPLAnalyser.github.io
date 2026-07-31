@@ -20,6 +20,8 @@ const SITE_NAME = BRAND
 
 /** Draw the captured panel onto a branded canvas of the chosen aspect. */
 function brand(source: HTMLCanvasElement, fmt: ShareFormat, title: string, dark: boolean): HTMLCanvasElement {
+  // An empty title collapses the header to the wordmark alone — see `ident`.
+  const showTitle = title.length > 0
   const out = document.createElement('canvas')
   out.width = fmt.w
   const pad0 = Math.round(fmt.w * 0.045)
@@ -40,7 +42,7 @@ function brand(source: HTMLCanvasElement, fmt: ShareFormat, title: string, dark:
   ctx.fillStyle = ink
   ctx.font = `700 ${Math.round(out.width * 0.028)}px ui-sans-serif, system-ui, sans-serif`
   ctx.textBaseline = 'alphabetic'
-  ctx.fillText(title, pad, headY)
+  if (showTitle) ctx.fillText(title, pad, headY)
   ctx.fillStyle = '#c9a227'
   ctx.font = `400 ${Math.round(out.width * 0.023)}px Montserrat, ui-sans-serif, system-ui, sans-serif`
   ctx.textAlign = 'right'
@@ -187,7 +189,12 @@ export function Exportable({ title, filename, children, className, toolbar, iden
       // reaches the frame natively — so the export is the same picture on a
       // phone and a laptop, and is never a bitmap stretched to fit.
       const shot = await rasterise(ref.current, dark, spec.w)
-      const canvas = brand(shot, spec, title, dark)
+      // No caption when the panel names itself. `ident` puts the face, the
+      // name and the rating at the top of the picture, and "Gabriel — the
+      // brief" printed above that is the same sentence twice. Tied to `ident`
+      // rather than given its own flag so the two cannot drift apart; `title`
+      // still names the file, the button and the share sheet.
+      const canvas = brand(shot, spec, ident ? '' : title, dark)
       const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, 'image/png'))
       if (!blob) throw new Error('render failed')
       const name = `${filename ?? title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${fmt}.png`

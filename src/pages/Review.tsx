@@ -52,7 +52,6 @@ export default function Review() {
     <PageShell>
       <SectionBanner
         imgKey="review"
-        photo={false}
         title="GW Review"
         subtitle="What the gameweek actually did — hauls, captain calls and where the model missed"
       />

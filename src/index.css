@@ -458,6 +458,13 @@ body {
 .hw-img.is-on { opacity: 1; }
 .hw-card::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background: linear-gradient(to top, rgba(0,0,0,.9) 0%, rgba(0,0,0,.55) 32%, rgba(0,0,0,0) 62%); }
+/* The one photo shot on a near-white background. The shared scrim is tuned for
+   dark football photography and left the GW Review title at 3.7:1 against
+   white, where the tiles either side of it measure 5.9–6.7:1 — the stat line
+   under it is 11px, so that is a fail rather than a preference. Deeper scrim,
+   same shape, only where the photo is light. */
+.hw-card:has(.hw-review)::before {
+  background: linear-gradient(to top, rgba(0,0,0,.94) 0%, rgba(0,0,0,.78) 34%, rgba(0,0,0,.12) 68%); }
 .hw-card::after { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; z-index: 3;
   background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 75%, transparent), transparent);
   opacity: 0; transition: opacity .3s; }
