@@ -1385,7 +1385,13 @@ function FixtureGrid({
     if (sortKey === key) setDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     else {
       setSortKey(key)
-      setDir('asc')
+      // Best first on a column you have just picked, whichever "best" means
+      // here: kindest fixture for difficulty, most goals or the highest
+      // clean-sheet chance for the projections. Ascending for everything was
+      // right for difficulty and exactly backwards for the other two — the
+      // first tap on an xG column put the leanest attack in the league at the
+      // top. Club stays A–Z, which is the only order a name has.
+      setDir(key === 'team' || mode === 'diff' ? 'asc' : 'desc')
     }
   }
   const arrow = (key: number | 'run' | 'team') => (sortKey === key ? (dir === 'asc' ? ' ↑' : ' ↓') : '')
