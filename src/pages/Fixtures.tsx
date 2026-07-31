@@ -526,6 +526,26 @@ function SeasonRunsBoard({ fixtureEase, lens, baselines, lensControl }: {
     () => [...shown].sort((a, b) => b.advantage - a.advantage || b.home - a.home || a.from - b.from),
     [shown],
   )
+
+  /** Every fixture a club has in the current half — the backdrop the run is
+   *  drawn against, so a kind stretch can be seen as kind relative to the rest
+   *  rather than only in isolation. */
+  const windowAll = useMemo(() => {
+    const cache = new Map<string, { gw: number; opponent: string; venue: 'H' | 'A'; diff: number }[]>()
+    return (team: string) => {
+      const hit = cache.get(team)
+      if (hit) return hit
+      const out = fixtureEase
+        .filter((f) => f.team === team && (half === 'all' || (half === 1 ? f.gw <= 19 : f.gw >= 20)))
+        .sort((a, b) => a.gw - b.gw)
+        .map((f) => {
+          const venue: 'H' | 'A' = String(f.venue) === 'H' ? 'H' : 'A'
+          return { gw: f.gw, opponent: String(f.opponent), venue, diff: analyserDiff(String(f.opponent), lens, venue, num(f, 'fdr') ?? 3, scale).diff }
+        })
+      cache.set(team, out)
+      return out
+    }
+  }, [fixtureEase, half, lens, scale])
   const rankOf = new Map(ranked.map((r, i) => [`${r.team}-${r.half}`, i + 1]))
 
   const columns: Column<(typeof ranked)[number]>[] = [
@@ -657,14 +677,33 @@ function SeasonRunsBoard({ fixtureEase, lens, baselines, lensControl }: {
                     <TeamBadge team={r.team} size={17} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13.5px] font-bold text-ink">{teamLabel(r.team)}</span>
+                      {/* The question this tab is named after, answered in
+                          words: which gameweek to buy, and which to leave. */}
                       <span className="block text-[10.5px] font-semibold text-ink-3">
-                        GW{r.from}–{r.to} · {r.fixtures.length} games · {r.avg.toFixed(2)} avg · {r.home} home
+                        Get on <b className="text-accent-2">GW{r.from}</b> · off after <b className="text-accent-2">GW{r.to}</b> · {r.home} home
                       </span>
                     </span>
                     <span className="shrink-0 text-right">
-                      <span className="font-num text-[15px] font-extrabold tabular-nums text-accent-2">{r.advantage.toFixed(1)}</span>
-                      <span className="block text-[9px] font-bold tracking-[0.1em] text-ink-3 uppercase">score</span>
+                      {/* Difficulty, not an invented score. Every other number
+                          on this page is 1–5 with lower kinder; a "score" that
+                          ran the other way made the kindest run in the league
+                          read as the harshest. */}
+                      <span className="font-num text-[15px] font-extrabold tabular-nums" style={{ color: runColor(r.avg) }}>{r.avg.toFixed(2)}</span>
+                      <span className="block text-[9px] font-bold tracking-[0.1em] text-ink-3 uppercase">avg diff</span>
                     </span>
+                  </div>
+                  {/* The run inside the whole window rather than cut out of
+                      it, so you can see what it is kinder *than*. Fixtures in
+                      the run keep their colour; the rest fade back. */}
+                  <div className="mt-2 flex gap-[2px]">
+                    {windowAll(r.team).map((f) => {
+                      const inRun = f.gw >= r.from && f.gw <= r.to
+                      return (
+                        <span key={f.gw} className="h-2 flex-1 rounded-[2px]"
+                          style={{ background: diffFill(f.diff), opacity: inRun ? 1 : 0.22 }}
+                          title={`GW${f.gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(f.opponent)} — ${f.diff.toFixed(1)}`} />
+                      )
+                    })}
                   </div>
                   <div className="mt-1.5 flex gap-1">
                     {r.fixtures.map((f) => (
@@ -859,6 +898,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
   }, [allTeams, excluded, teams, size, startK, gws, cellFor, pickBy, filtering])
 
   const headCls = 'px-2 py-2 text-center text-[11px] font-semibold tracking-wide text-ink-3 uppercase'
+  const wide = useWide()
   const pill = (active: boolean) => `min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${active ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`
   const startOpts = Array.from({ length: size - 1 }, (_, i) => i + 1) // 1 … N-1
 
@@ -1032,6 +1072,47 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
               {rotAvg < fixedAvg - 0.1 ? ' The rotation is the smoother run.' : ' Rotation adds little over just holding the best here.'}
             </div>
           )}
+          {/* ── Phone: the board turned on its side ────────────────────────
+              Teams down and gameweeks across needs a column per gameweek plus
+              a team column, so it scrolled sideways on a phone — and the strip
+              that replaced it could only ever ring one starter, however many
+              you had asked to field. Gameweeks down and clubs across makes a
+              column the phone divided by the group instead of by the window,
+              which leaves room for the opponent, the venue and the difficulty
+              in every cell, and rings as many as `startK`. */}
+          {!wide ? (
+            <div className="overflow-hidden rounded-xl border border-line">
+              <div className="flex gap-1 border-b border-line bg-surface-1 px-2 py-1.5">
+                <span className="w-8 shrink-0" />
+                {teams.map((t) => (
+                  <span key={t} className="flex flex-1 items-center justify-center gap-1 text-[9.5px] font-bold tracking-[0.06em] text-ink-3 uppercase">
+                    <TeamBadge team={t} size={12} />{t}
+                  </span>
+                ))}
+              </div>
+              {gws.map((gw) => (
+                <div key={gw} className="flex items-stretch gap-1 border-b border-line px-2 py-1 last:border-0">
+                  <span className="flex w-8 shrink-0 items-center text-[9.5px] font-extrabold text-ink-3">GW{gw}</span>
+                  {teams.map((t) => {
+                    const c = cellFor(t, gw)
+                    const start = startByGw.get(gw)?.has(t)
+                    if (!c) return <span key={t} className="flex-1 rounded bg-surface-2 py-1 text-center text-[10px] text-ink-3">—</span>
+                    return (
+                      <span
+                        key={t}
+                        className={`flex-1 rounded py-1 text-center text-[10.5px] leading-tight font-bold text-ink ${start ? 'ring-1.5 ring-accent' : 'opacity-45'}`}
+                        style={{ background: diffFill(c.diff), boxShadow: start ? 'inset 0 0 0 1.5px var(--accent)' : undefined }}
+                        title={`${c.f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(c.f.opponent)} — difficulty ${c.diff.toFixed(1)}${start ? ' · START' : ''}`}
+                      >
+                        {c.f.opponent}
+                        <span className="block text-[7.5px] font-semibold opacity-70">{c.f.venue} · {c.diff.toFixed(1)}</span>
+                      </span>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+          ) : (
           <div className="overflow-x-auto rounded-xl border border-line">
             <table className="w-full border-collapse text-sm">
               <thead>
@@ -1080,6 +1161,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
               </tbody>
             </table>
           </div>
+          )}
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-ink-3">
             <span>Difficulty:</span>
             {([1, 2, 3, 4, 5] as const).map((d) => <span key={d} className="rounded px-1.5 py-0.5 font-semibold text-ink-2" style={{ background: diffFill(d) }}>{d}</span>)}
