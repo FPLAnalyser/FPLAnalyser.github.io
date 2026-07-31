@@ -48,16 +48,21 @@ interface HomeWin {
   noPhoto?: boolean
   ghost?: { text: string; style: CSSProperties }
 }
+// Order is the layout. At lg the grid is four columns, so this array reads as
+// two rows of four: the pre-deadline jobs across the top, the browse-and-track
+// pages underneath, closing on the page that looks back.
 const WINDOWS: HomeWin[] = [
+  // Top row
   { key: 'preview', to: '/preview', kicker: 'This week', title: 'GW Preview', desc: 'The whole gameweek before the deadline — captain, chips, every fixture and who is missing.', stat: 'Before the deadline' },
-  { key: 'review', to: '/review', kicker: 'Look back', title: 'GW Review', desc: 'What the gameweek actually did — hauls, captain calls and where the model missed.', stat: 'Recapping the GW', noPhoto: true },
-  { key: 'players', to: '/players', kicker: 'Explore', title: 'Players', desc: 'Every player rated 0–100 — form, value, fixtures and the editorial player hero.', stat: '600+ rated' },
-  { key: 'teams', to: '/teams', kicker: 'Explore', title: 'Teams', desc: 'Attack, defence and set-piece ratings for all 20 clubs, with matchup previews.', stat: '20 clubs' },
-  { key: 'fixtures', to: '/fixtures', kicker: 'Plan', title: 'Fixtures', desc: 'Our own fixture rating and rotation planner.', stat: 'Next 6 GWs' },
-  { key: 'scouting', to: '/scout', kicker: 'Discover', title: 'Scouting', desc: 'Filter the market for your next differential.', stat: 'Find gems' },
   { key: 'squad', to: '/squad', kicker: 'Build', title: 'Squad Builder', desc: 'Draft an XI and plan the season week by week.', stat: '£100.0m' },
+  { key: 'fixtures', to: '/fixtures', kicker: 'Plan', title: 'Fixtures', desc: 'Our own fixture rating and rotation planner.', stat: 'Next 6 GWs' },
+  { key: 'players', to: '/players', kicker: 'Explore', title: 'Players', desc: 'Every player rated 0–100 — form, value, fixtures and the editorial player hero.', stat: '600+ rated' },
+  // Bottom row
+  { key: 'scouting', to: '/scout', kicker: 'Discover', title: 'Scouting', desc: 'Filter the market for your next differential.', stat: 'Find gems' },
+  { key: 'teams', to: '/teams', kicker: 'Explore', title: 'Teams', desc: 'Attack, defence and set-piece ratings for all 20 clubs, with matchup previews.', stat: '20 clubs' },
   { key: 'myteam', to: '/loadteam', kicker: 'Track', title: 'My Team', desc: 'Link your side for a live rated breakdown.', stat: 'Live GW1',
     ghost: { text: '★', style: { right: '6%', top: '6%', fontSize: 'clamp(44px,6vw,84px)', WebkitTextStroke: '2px color-mix(in srgb, var(--accent) 18%, transparent)' } } },
+  { key: 'review', to: '/review', kicker: 'Look back', title: 'GW Review', desc: 'What the gameweek actually did — hauls, captain calls and where the model missed.', stat: 'Recapping the GW', noPhoto: true },
 ]
 
 function ArrowRight() {
