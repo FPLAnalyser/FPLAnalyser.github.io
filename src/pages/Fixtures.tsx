@@ -1340,11 +1340,25 @@ function FixtureGrid({
               <span className="flex flex-1 gap-1">
                 {gws.map((gw) => {
                   const v = gwVal(r, gw)
+                  // Same red-to-green bands as the difficulty grid, and the
+                  // same gold for the best figure in the column — literal
+                  // metal rather than a stronger tint, so the winner reads as
+                  // the winner in either theme. Doubles are excluded from the
+                  // gold for the same reason as the wide grid: the total that
+                  // won the column is not any one of its fixtures.
+                  const single = (r.byGw.get(gw)?.length ?? 0) === 1
+                  const best = bestByGw.get(gw)
+                  const isBest = v != null && single && best != null && Math.abs(v - best) < 1e-9
                   return (
                     <span
                       key={gw}
                       className="flex-1 rounded py-1 text-center font-num text-[10.5px] font-bold tabular-nums"
-                      style={v == null ? { background: 'var(--surface-2)', color: 'var(--ink-3)' } : { background: bandFill(v), color: 'var(--ink)' }}
+                      style={v == null
+                        ? { background: 'var(--surface-2)', color: 'var(--ink-3)' }
+                        : isBest
+                          ? { background: 'linear-gradient(180deg,#F7E3A6,#C9A227)', color: '#17130A' }
+                          : { background: bandFill(v), color: 'var(--ink)' }}
+                      title={isBest ? 'Best this gameweek' : undefined}
                     >
                       {v == null ? '–' : mode === 'xg' ? v.toFixed(1) : Math.round(v * 100)}
                     </span>
