@@ -11,6 +11,7 @@ import { PageSkeleton } from '../components/Skeleton'
 import { useCore, useLazyTable } from '../lib/useData'
 import { classifyZone, toPitch } from '../lib/shotzones'
 import { Exportable } from '../components/ExportPanel'
+import { useWide } from '../lib/useWide'
 import { num, str } from '../lib/rows'
 import { useMarketOdds, type MarketOdds } from '../lib/xp'
 import { teamLabel, playerHref } from '../lib/util'
@@ -1051,6 +1052,7 @@ function FixtureGrid({
   league: Profile
 }) {
   const market = useMarketOdds()
+  const wide = useWide()
   const diffScale = useMemo(() => buildDiffScale(baselines), [baselines])
   const [sortKey, setSortKey] = useState<number | 'run' | 'team'>('run')
   // Difficulty: ascending = easiest first. Projections: descending = most
@@ -1225,6 +1227,86 @@ function FixtureGrid({
 
   const headCls = 'cursor-pointer select-none px-2 py-2 text-center text-[11px] font-semibold tracking-wide text-ink-3 uppercase transition-colors hover:text-ink'
   const colSpan = gws.length + 2
+
+  /* ── Phone: a league ladder, not a grid ────────────────────────────────────
+     Projected goals and clean sheets are league questions — who is best at
+     this over the window — and a ranking is a comparison, so every club has to
+     be on screen in the same shape. The wide grid answers them by scrolling
+     sideways, which on a phone showed three of six gameweeks with no scrollbar
+     to say so: the half you could not see looked like it did not exist.
+
+     Difficulty keeps the grid at every width. It is read down a single club's
+     run rather than across the division, and that is what the grid is good at.
+
+     Same rows, same percentile colour scale and same totals as the table below
+     — this is a second rendering of one model, not a second model. */
+  const ladder = !wide && mode !== 'diff' && (
+    <div className="mb-8">
+      <div className="mb-2 flex items-center gap-1.5 text-[11px] text-ink-3">
+        <span>All {sorted.length} clubs, ranked over {gws.length} gameweeks. Tap a club for the read on its run.</span>
+        <InfoTip text={MODE_TIP[mode] + ' Promoted opponents have no top-flight baseline yet, so a league-average opponent is assumed and the cell is marked with a dot.'} />
+      </div>
+      <div className="overflow-hidden rounded-xl border border-line">
+        <div className="flex items-center gap-1.5 border-b border-line bg-surface-1 px-2 py-1.5 text-[9.5px] font-bold tracking-[0.1em] text-ink-3 uppercase">
+          <span className="w-[76px] shrink-0 pl-5">Club</span>
+          <span className="flex flex-1 gap-1">
+            {gws.map((gw) => <span key={gw} className="flex-1 text-center">{gw}</span>)}
+          </span>
+          <span className="w-9 shrink-0 text-right">{mode === 'xg' ? 'xG' : 'CS'}</span>
+        </div>
+        {sorted.map((r, i) => (
+          <div key={r.team}>
+            <button
+              onClick={() => setOpen((o) => (o === r.team ? null : r.team))}
+              className="flex w-full items-center gap-1.5 border-b border-line px-2 py-1.5 text-left transition-colors last:border-0 hover:bg-surface-2/40"
+            >
+              <span className="w-[76px] shrink-0 min-w-0 items-center gap-1.5 flex">
+                <span className="w-3.5 shrink-0 text-right font-num text-[10px] tabular-nums text-ink-3">{i + 1}</span>
+                <TeamBadge team={r.team} size={15} />
+                <span className="truncate text-[12.5px] font-bold text-ink">{r.team}</span>
+              </span>
+              <span className="flex flex-1 gap-1">
+                {gws.map((gw) => {
+                  const v = gwVal(r, gw)
+                  return (
+                    <span
+                      key={gw}
+                      className="flex-1 rounded py-1 text-center font-num text-[10.5px] font-bold tabular-nums"
+                      style={v == null ? { background: 'var(--surface-2)', color: 'var(--ink-3)' } : { background: bandFill(v), color: 'var(--ink)' }}
+                    >
+                      {v == null ? '–' : mode === 'xg' ? v.toFixed(1) : Math.round(v * 100)}
+                    </span>
+                  )
+                })}
+              </span>
+              <span className="w-9 shrink-0 text-right font-num text-[12.5px] font-extrabold tabular-nums text-accent-2">
+                {r.run == null ? '–' : mode === 'xg' ? r.run.toFixed(1) : r.run.toFixed(2)}
+              </span>
+            </button>
+            {open === r.team && (
+              <div className="border-b border-line bg-surface-1/60 px-3 py-2.5">
+                <RunRead
+                  team={r.team}
+                  fixtures={gws.flatMap((gw) => (r.byGw.get(gw) ?? []).map((f) => {
+                    const l = lamOf(r.team, f)
+                    return { gw, opponent: f.opponent, venue: f.venue, diff: diffOf(f).diff, xg: l ? l.for : null, cs: l ? Math.exp(-l.against) : null }
+                  }))}
+                  profiles={profiles} league={league} usedFdr={r.usedFdr} n={gws.length}
+                  leagueRuns={runAverages}
+                />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 text-[11px] leading-relaxed text-ink-3">
+        {mode === 'xg'
+          ? 'Each cell is that fixture\u2019s projected goals; the column on the right is the total across the window. Reading down a column shows which gameweek the whole division is kind in.'
+          : 'Each cell is that fixture\u2019s clean-sheet chance as a percentage; the column on the right is expected clean sheets across the window. A defender buy is a run of dark cells, not one.'}
+      </p>
+    </div>
+  )
+  if (ladder) return ladder
 
   return (
     <div className="mb-8">
