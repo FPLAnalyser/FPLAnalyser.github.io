@@ -601,17 +601,33 @@ function SeasonRunsBoard({ fixtureEase, lens, baselines, lensControl }: {
           </div>
         )}
       </div>
-      {view === 'ranked' ? (
-        <SortableTable
-          rows={ranked}
-          columns={columns}
-          initialSort="score"
-          initialDir="desc"
-          rowKey={(r) => `${r.team}-${r.half}`}
-        />
-      ) : (
-        <RunsTimeline fixtureEase={fixtureEase} runs={shown} gws={mapGws} lens={lens} scale={scale} />
-      )}
+      {/* Shareable: the best runs of the season are the most postable thing on
+          this page and had no way out of it. The heading names the settings,
+          since a table of clubs and scores means nothing without the lens and
+          the half it was read at. */}
+      <Exportable
+        title={`Best runs — ${view === 'ranked' ? 'ranked' : 'season map'}`}
+        ident={
+          <div className="mb-2">
+            <div className="text-[11px] font-extrabold tracking-[0.14em] text-accent uppercase">Best runs of the season</div>
+            <div className="mt-0.5 text-[11px] text-ink-3">
+              {LENS_LABEL_ROT[lens]} · {half === 'all' ? 'whole season' : half === 1 ? 'first half' : 'second half'}
+            </div>
+          </div>
+        }
+      >
+        {view === 'ranked' ? (
+          <SortableTable
+            rows={ranked}
+            columns={columns}
+            initialSort="score"
+            initialDir="desc"
+            rowKey={(r) => `${r.team}-${r.half}`}
+          />
+        ) : (
+          <RunsTimeline fixtureEase={fixtureEase} runs={shown} gws={mapGws} lens={lens} scale={scale} />
+        )}
+      </Exportable>
     </div>
   )
 }
@@ -811,11 +827,30 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
             <button key={pos} onClick={() => setNeedPos(pos)} className={pill(needPos === pos)}>{pos === 'any' ? 'Anyone' : pos}</button>
           ))}
         </div>
+        {/* A select, not chips. Six price options in a row that had no overflow
+            container pushed the whole document to 461px inside a 390px phone —
+            not a scrolling strip but a page-level sideways scroll, taking the
+            header, the tabs and the results with it. It is also the one control
+            here with an obvious natural order, which is what a select is for. */}
         <div className="flex items-center gap-1.5">
-          <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Up to</span>
-          {([null, 4, 4.5, 5, 5.5, 6] as const).map((v) => (
-            <button key={String(v)} onClick={() => setMaxPrice(v)} className={pill(maxPrice === v)}>{v == null ? 'Any price' : `£${v.toFixed(1)}m`}</button>
-          ))}
+          <label htmlFor="rot-maxprice" className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Up to</label>
+          <select
+            id="rot-maxprice"
+            value={maxPrice == null ? 'any' : String(maxPrice)}
+            onChange={(e) => setMaxPrice(e.target.value === 'any' ? null : Number(e.target.value))}
+            className={`${pill(maxPrice != null)} appearance-none bg-surface-1 pr-7`}
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a9a294' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 0.5rem center',
+              backgroundSize: '0.85rem',
+            }}
+          >
+            <option value="any">Any price</option>
+            {([4, 4.5, 5, 5.5, 6] as const).map((v) => (
+              <option key={v} value={v}>£{v.toFixed(1)}m</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -855,8 +890,10 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
         )}
       </div>
 
+      {/* The rotations board's own heading is inside the captured node and
+          already names the settings, so no `ident` — it would print twice. */}
       {teams.length < 2 ? (
-        <div>
+        <Exportable title={`Top rotations — start ${startK} of ${size}, next ${gws.length}`}>
           <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Top rotations · start {startK} of {size} · next {gws.length} · {LENS_LABEL_ROT[lens]}</div>
           <div className="overflow-hidden rounded-xl border border-line">
             {topGroups.map((g, i) => (
@@ -888,7 +925,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
             )}
           </div>
           <p className="mt-2 text-xs text-ink-3">Lower is kinder — the combined difficulty if you always start the {startK} kindest fixture{startK > 1 ? 's' : ''} in the group.</p>
-        </div>
+        </Exportable>
       ) : (
         <>
           {rotAvg != null && fixedAvg != null && (
@@ -1491,7 +1528,22 @@ function MatchupExplorer({ ratings, league }: { ratings: RatingRow[]; league: st
             ))}
           </div>
 
+          {/* Shareable only once an opponent is picked — an empty explorer is
+              not a picture. Wraps the weakness tiles and the ranked players
+              together, because either alone is half the argument. */}
           {opp && oProf && leagueProfile.totalXg > 0 && (
+          <Exportable
+            title={`${teamLabel(opp)} — where they concede, and who exploits it`}
+            ident={
+              <div className="mb-2 flex items-center gap-2">
+                <TeamBadge team={opp} size={20} />
+                <div>
+                  <div className="text-[13px] font-extrabold text-ink">{teamLabel(opp)}</div>
+                  <div className="text-[11px] text-ink-3">Matchup Explorer · where they concede their xG</div>
+                </div>
+              </div>
+            }
+          >
             <div className="mb-4 rounded-xl border border-line bg-surface-1/60 p-4">
               <div className="mb-2 flex items-center gap-2 font-semibold text-ink"><TeamBadge team={opp} size={18} />Where {teamLabel(opp)} concede their xG</div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
@@ -1504,9 +1556,8 @@ function MatchupExplorer({ ratings, league }: { ratings: RatingRow[]; league: st
               </div>
               <p className="mt-2 text-xs text-ink-3">Share of expected goals conceded this season vs the league average. Channels are from the attacking team's point of view.</p>
             </div>
-          )}
 
-          {opp && results.length > 0 && (
+          {results.length > 0 && (
             <div className="overflow-hidden rounded-xl border border-line">
               {results.map(({ r, uplift, why }, i) => (
                 <button
@@ -1528,6 +1579,8 @@ function MatchupExplorer({ ratings, league }: { ratings: RatingRow[]; league: st
                 </button>
               ))}
             </div>
+          )}
+          </Exportable>
           )}
           {opp && !results.length && (
             <EmptyState icon={<Icon name="target" size={40} />}>No qualifying players (20+ shots this season) for this matchup yet.</EmptyState>
