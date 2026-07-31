@@ -38,6 +38,24 @@ the thing established rivals cannot copy without undermining themselves.
 `public/sitemap.xml` deliberately does not list `#/review` yet — there is no
 reason to send a crawler to a holding page. Add it when the content lands.
 
+### Load a squad into the Squad Builder without typing it
+Fifteen players entered by hand is a lot of taps before the builder gives
+anything back, and it is the main reason someone bounces off it.
+
+**Team ID first.** My Team already reads a live squad through the Worker
+(`fetchPicksCached`), which is exact rather than inferred and is already built
+and tested. Feeding that into the builder's state is a small piece of work and
+gets a perfect fifteen every time. Do this one.
+
+**Then, maybe, the screenshot.** Upload a screenshot from the FPL app and have
+it read the squad — nice magic, and worth having if people ask. Tesseract.js in
+the browser is roughly 2MB of WASM, which is real weight for a route that also
+has to work on a phone. The hard part is not reading the text: FPL screenshots
+vary by device, theme, scroll position and language, surnames truncate on the
+pitch, and a misread substitutes the wrong player *silently*, which is worse
+than failing. It needs a confirm-and-correct step, and that step eats a good
+deal of the convenience it was bought for. Not before launch.
+
 ### The rest of the stadium photos
 `StadiumBanner` on a club page loads `public/stadiums/<TEAM>.jpg` over a
 club-tinted floodlit bowl, and falls back to the bowl alone when the file is
