@@ -15,19 +15,23 @@ import { useCore } from '../lib/useData'
 import { ensureLiveCodes } from '../lib/photoCodes'
 import type { RatingRow } from '../lib/types'
 
+// Same sequence as the home tiles in `pages/Home.tsx` — the two are the only
+// full menus on the site and disagreeing about the order makes both feel
+// arbitrary. Change one, change the other.
+//
+// Short labels: the nav is a single non-wrapping row with a hidden scrollbar,
+// so anything past the edge is effectively invisible. The pages keep their
+// full titles ("GW Preview", "GW Review", "Squad Builder").
 const LINKS: { to: string; label: string }[] = [
   { to: '/', label: 'Home' },
-  // Short labels: the nav is a single non-wrapping row with a hidden
-  // scrollbar, so anything past the edge is effectively invisible. The pages
-  // are still titled "GW Preview" / "GW Review"; the pairing reads fine here.
   { to: '/preview', label: 'Preview' },
-  { to: '/review', label: 'Review' },
-  { to: '/players', label: 'Players' },
-  { to: '/teams', label: 'Teams' },
-  { to: '/fixtures', label: 'Fixtures' },
-  { to: '/scout', label: 'Scouting' },
   { to: '/squad', label: 'Squad' },
+  { to: '/fixtures', label: 'Fixtures' },
+  { to: '/players', label: 'Players' },
+  { to: '/scout', label: 'Scouting' },
+  { to: '/teams', label: 'Teams' },
   { to: '/loadteam', label: 'My Team' },
+  { to: '/review', label: 'Review' },
 ]
 
 export function Layout() {
