@@ -2,12 +2,19 @@ import { NavLink } from 'react-router-dom'
 import { Icon, type IconName } from './Icon'
 import { tapHaptic } from '../lib/native'
 
+// First three sit left of the centre Search button, last two to its right.
+// Order follows the home tiles; labels are short because the row is six
+// columns on a 320px phone — "GW Preview" and "Squad Builder" do not fit, so
+// the pages keep their full titles and the tabs use the header nav's wording.
+//
+// Scouting and My Team are deliberately not here. The bottom bar is the only
+// nav on a phone, so both are reachable from the home tiles and search only.
 const TABS: { to: string; label: string; icon: IconName }[] = [
   { to: '/', label: 'Home', icon: 'bolt' },
-  { to: '/players', label: 'Players', icon: 'trophy' },
+  { to: '/preview', label: 'Preview', icon: 'clock' },
+  { to: '/squad', label: 'Squad', icon: 'pitch' },
   { to: '/fixtures', label: 'Fixtures', icon: 'calendar' },
-  { to: '/scout', label: 'Scout', icon: 'target' },
-  { to: '/loadteam', label: 'My Team', icon: 'pitch' },
+  { to: '/players', label: 'Players', icon: 'trophy' },
 ]
 
 /**
