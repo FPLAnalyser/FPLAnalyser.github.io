@@ -12,7 +12,7 @@ season; `code` does not), and writes site_data/<NEW_SEASON>/ with:
 
 It marks the season "provisional" in seasons.json so the site shows a pre-season
 banner and a "'25/26" tag on carried ratings. Needs only the public FPL API and
-last season's site_data — no Understat, no Google Drive. Run it again any time to
+last season's site_data — no Understat, no local data directory. Run it again any time to
 refresh prices/ownership/fixtures; once real games are played, switch back to the
 full pipeline (fpl_analyser_rating.py + build_site_data.py) to replace the
 carry-over with genuine new-season ratings.

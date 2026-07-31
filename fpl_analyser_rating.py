@@ -4,8 +4,7 @@ import numpy as np
 import os
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-DATA_DIR = os.environ.get("FPL_DATA_DIR") or os.path.expanduser(
-    "~/Library/CloudStorage/GoogleDrive-stefcourt2004@gmail.com/My Drive/FPL/FPL_2025-26_historical")
+DATA_DIR = os.environ.get("FPL_DATA_DIR") or "./data"
 # CHANGED: enriched dataset replaces player_gw_history.csv (superset of its columns)
 GW_HISTORY_FILE = os.environ.get("FPL_ENRICHED_FILE") or os.path.join(DATA_DIR, "player_gw_enriched.csv")
 SEASON_SUMMARY_FILE = os.path.join(DATA_DIR, "season_summary.csv")

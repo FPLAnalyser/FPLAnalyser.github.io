@@ -187,7 +187,7 @@ def main():
 
 # Mirror to the Drive folder so pipeline scripts' defaults just work
     drive_dir = Path(
-        "~/Library/CloudStorage/GoogleDrive-stefcourt2004@gmail.com/My Drive/FPL/FPL_2025-26_historical"
+        "./data"
     ).expanduser()
     enriched.to_csv(drive_dir / "player_gw_enriched.csv", index=False)
     print(f"Mirrored enriched CSV to {drive_dir}")

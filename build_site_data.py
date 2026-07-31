@@ -35,8 +35,7 @@ from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
 
-DATA_DIR = os.environ.get("FPL_DATA_DIR") or os.path.expanduser(
-    "~/Library/CloudStorage/GoogleDrive-stefcourt2004@gmail.com/My Drive/FPL/FPL_2025-26_historical")
+DATA_DIR = os.environ.get("FPL_DATA_DIR") or "./data"
 # Site data is published from the repo, so default output next to this script.
 # Data is namespaced by season: site_data/<season>/*.json, with a top-level
 # site_data/seasons.json manifest listing seasons and the current one. Set
@@ -331,7 +330,7 @@ row_counts["fixture_ease"] = write_json(
 # ── Shots conceded (team shot map) ────────────────────────────────────────────
 # Raw per-shot pulls live in the repo's own data/ folder (like
 # understat_player_match.csv), not DATA_DIR — pull_understat_data.py always
-# writes there regardless of which season's Google Drive folder is active.
+# writes there regardless of which season's data directory is active.
 SHOTS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                           "data", "understat_shots.csv")
 SHOTS_JSON_COLS = ["x", "y", "xg", "result", "situation", "shot_type",

@@ -10,8 +10,7 @@ import pandas as pd
 import numpy as np
 import os
 
-DATA_DIR = os.environ.get("FPL_DATA_DIR") or os.path.expanduser(
-    "~/Library/CloudStorage/GoogleDrive-stefcourt2004@gmail.com/My Drive/FPL/FPL_2025-26_historical")
+DATA_DIR = os.environ.get("FPL_DATA_DIR") or "./data"
 ENRICHED_FILE = os.environ.get("FPL_ENRICHED_FILE") or os.path.expanduser(
     "~/Desktop/fpl-analyser/player_gw_enriched.csv")
 SEASON_SUMMARY_FILE = os.path.join(DATA_DIR, "season_summary.csv")

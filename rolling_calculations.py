@@ -3,9 +3,8 @@ import numpy as np
 import os
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-# FPL_DATA_DIR env var overrides the default Google Drive location (used for testing).
-DATA_DIR = os.environ.get("FPL_DATA_DIR") or os.path.expanduser(
-    "~/Library/CloudStorage/GoogleDrive-stefcourt2004@gmail.com/My Drive/FPL/FPL_2025-26_historical")
+# FPL_DATA_DIR points at the working data directory; ./data is the default.
+DATA_DIR = os.environ.get("FPL_DATA_DIR") or "./data"
 # CHANGED: input is now the enriched dataset (superset of player_gw_history.csv).
 # If player_gw_enriched.csv lives in your repo root instead of the Drive folder,
 # set ENRICHED_FILE accordingly.
