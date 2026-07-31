@@ -31,20 +31,26 @@ const WINDOWS = [6, 8, 10, 19] as const
 const HALF = 19
 const winLabel = (w: number) => (w === HALF ? 'To GW19' : `Next ${w}`)
 
+/* Difficulty and the two projections were one grid behind a "Show" toggle,
+   which buried them: they answer a different question (who is best in the
+   league at this) and want different controls, and a toggle two rows down is
+   not a place anyone finds them. They are their own tab now, and the planner
+   moves up behind it — deciding a rotation is closer to reading the grid than
+   to browsing the season's best runs. */
 const VIEW_TABS: TabDef[] = [
   { id: 'difficulty', label: 'Difficulty' },
-  { id: 'runs', label: 'Best Runs' },
+  { id: 'projections', label: 'Goals & Clean Sheets' },
   { id: 'rotation', label: 'Rotation Planner' },
+  { id: 'runs', label: 'Best Runs' },
   { id: 'matchup', label: 'Matchup Explorer' },
 ]
-type View = 'difficulty' | 'runs' | 'rotation' | 'matchup'
+type View = 'difficulty' | 'projections' | 'runs' | 'rotation' | 'matchup'
 
 /* The grid shows one of three things per cell: our 1–5 difficulty, the
    projected xG the team's attack should produce in that fixture, or the
    probability of a clean sheet — with window totals in the Run column. */
 type GridMode = 'diff' | 'xg' | 'cs'
-const MODE_TABS: TabDef[] = [
-  { id: 'diff', label: 'Difficulty' },
+const PROJ_TABS: TabDef[] = [
   { id: 'xg', label: 'Projected xG' },
   { id: 'cs', label: 'Clean sheets' },
 ]
@@ -272,7 +278,10 @@ export default function Fixtures() {
   // and having them compare notes.
   const [windowN, setWindowN] = useState<(typeof WINDOWS)[number]>(6)
   const [lens, setLens] = useState<Lens>('overall')
-  const [mode, setMode] = useState<GridMode>('diff')
+  // The grid mode is no longer a control — it follows the tab. Only the two
+  // projections are a choice, and only inside their own tab.
+  const [projMode, setProjMode] = useState<Exclude<GridMode, 'diff'>>('xg')
+  const mode: GridMode = view === 'projections' ? projMode : 'diff'
 
 
   // Per-game xG / xGC baselines for the projection modes (normalised from
@@ -342,7 +351,7 @@ export default function Fixtures() {
 
       <div className="mb-4"><Tabs tabs={VIEW_TABS} active={view} onChange={(id) => setView(id as View)} layoutId="fx-view" /></div>
 
-      {view === 'difficulty' ? (
+      {view === 'difficulty' || view === 'projections' ? (
         hasFixtures ? (
           <>
             {/* Window + lens controls */}
@@ -363,22 +372,24 @@ export default function Fixtures() {
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Show</span>
-                {MODE_TABS.map((m) => (
-                  <span key={m.id} className="flex items-center gap-1">
-                    <button
-                      onClick={() => setMode(m.id as GridMode)}
-                      className={`min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${
-                        mode === m.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
-                      }`}
-                    >
-                      {m.label}
-                    </button>
-                    <InfoTip text={MODE_TIP[m.id as GridMode]} />
-                  </span>
-                ))}
-              </div>
+              {view === 'projections' && (
+                <div className="flex items-center gap-1.5">
+                  <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Show</span>
+                  {PROJ_TABS.map((m) => (
+                    <span key={m.id} className="flex items-center gap-1">
+                      <button
+                        onClick={() => setProjMode(m.id as Exclude<GridMode, 'diff'>)}
+                        className={`min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${
+                          projMode === m.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+                        }`}
+                      >
+                        {m.label}
+                      </button>
+                      <InfoTip text={MODE_TIP[m.id as GridMode]} />
+                    </span>
+                  ))}
+                </div>
+              )}
               {mode === 'diff' && (
                 <div className="flex items-center gap-1.5">
                   <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Rate for</span>
@@ -1312,6 +1323,63 @@ function FixtureGrid({
 
      Same rows, same percentile colour scale and same totals as the table below
      — this is a second rendering of one model, not a second model. */
+  /* ── Phone, difficulty: one card per club ─────────────────────────────────
+     Difficulty is read down a single club's run, so the club is the card and
+     its gameweeks are a strip that fits because the card owns the full width.
+     The wide grid put three of six gameweeks on screen behind a hidden
+     scrollbar. Sorted kindest first, so the ranking is the scroll order. */
+  const diffCards = !wide && mode === 'diff' && (
+    <div className="mb-8">
+      <div className="mb-2 flex items-center gap-1.5 text-[11px] text-ink-3">
+        <span>All {sorted.length} clubs over {gws.length} gameweeks, kindest run first. Tap a club for the read on its run.</span>
+        <InfoTip text={MODE_TIP.diff} />
+      </div>
+      {sorted.map((r) => (
+        <div key={r.team} className="mb-2 overflow-hidden rounded-xl border border-line bg-surface-1/60">
+          <button onClick={() => setOpen((o) => (o === r.team ? null : r.team))} className="w-full px-3 pt-2.5 pb-2 text-left">
+            <span className="flex items-center gap-2.5">
+              <TeamBadge team={r.team} size={20} />
+              <span className="flex-1 truncate text-[14.5px] font-bold text-ink">{teamLabel(r.team)}</span>
+              <span className="font-num text-[15px] font-extrabold tabular-nums" style={{ color: r.run == null ? 'var(--ink-3)' : runColor(r.run) }}>
+                {r.run == null ? '–' : r.run.toFixed(2)}
+              </span>
+              <span className="text-[9px] font-bold tracking-[0.1em] text-ink-3 uppercase">avg</span>
+            </span>
+            <span className="mt-2 flex gap-1">
+              {gws.map((gw) => {
+                const fs = r.byGw.get(gw) ?? []
+                if (!fs.length) return <span key={gw} className="flex-1 rounded bg-surface-2 py-1 text-center text-[9.5px] font-bold text-ink-3"><span className="block text-[7.5px] opacity-70">GW{gw}</span>–</span>
+                const f = fs[0]
+                const d = diffOf(f).diff
+                return (
+                  <span key={gw} className="flex-1 rounded py-1 text-center text-[9.5px] leading-tight font-bold text-ink" style={{ background: diffFill(d) }}>
+                    <span className="block text-[7.5px] font-semibold opacity-70">GW{gw}</span>
+                    {f.opponent}
+                    <span className="block text-[7.5px] font-semibold opacity-70">{f.venue}{fs.length > 1 ? ' ×2' : ''}</span>
+                  </span>
+                )
+              })}
+            </span>
+          </button>
+          {open === r.team && (
+            <div className="border-t border-line px-3 py-2.5">
+              <RunRead
+                team={r.team}
+                fixtures={gws.flatMap((gw) => (r.byGw.get(gw) ?? []).map((f) => {
+                  const l = lamOf(r.team, f)
+                  return { gw, opponent: f.opponent, venue: f.venue, diff: diffOf(f).diff, xg: l ? l.for : null, cs: l ? Math.exp(-l.against) : null }
+                }))}
+                profiles={profiles} league={league} usedFdr={r.usedFdr} n={gws.length}
+                leagueRuns={runAverages}
+              />
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+  if (diffCards) return diffCards
+
   const ladder = !wide && mode !== 'diff' && (
     <div className="mb-8">
       <div className="mb-2 flex items-center gap-1.5 text-[11px] text-ink-3">
@@ -1319,12 +1387,24 @@ function FixtureGrid({
         <InfoTip text={MODE_TIP[mode] + ' Promoted opponents have no top-flight baseline yet, so a league-average opponent is assumed and the cell is marked with a dot.'} />
       </div>
       <div className="overflow-hidden rounded-xl border border-line">
-        <div className="flex items-center gap-1.5 border-b border-line bg-surface-1 px-2 py-1.5 text-[9.5px] font-bold tracking-[0.1em] text-ink-3 uppercase">
-          <span className="w-[76px] shrink-0 pl-5">Club</span>
+        {/* Every column sorts, the same as the wide grid: tap a gameweek to
+            rank the league by that week, tap the total to go back to the
+            window. Without it the ladder answered one question and the phone
+            reader could not ask another. */}
+        <div className="flex items-center gap-1.5 border-b border-line bg-surface-1 px-2 py-1 text-[9.5px] font-bold tracking-[0.1em] text-ink-3 uppercase">
+          <button onClick={() => clickHeader('team')} className="w-[76px] shrink-0 pl-5 text-left transition-colors hover:text-ink">Club{arrow('team')}</button>
           <span className="flex flex-1 gap-1">
-            {gws.map((gw) => <span key={gw} className="flex-1 text-center">{gw}</span>)}
+            {gws.map((gw) => (
+              <button key={gw} onClick={() => clickHeader(gw)}
+                className={`flex-1 py-1 text-center transition-colors hover:text-ink ${sortKey === gw ? 'text-accent' : ''}`}>
+                {gw}{sortKey === gw ? (dir === 'asc' ? '↑' : '↓') : ''}
+              </button>
+            ))}
           </span>
-          <span className="w-9 shrink-0 text-right">{mode === 'xg' ? 'xG' : 'CS'}</span>
+          <button onClick={() => clickHeader('run')}
+            className={`w-9 shrink-0 py-1 text-right transition-colors hover:text-ink ${sortKey === 'run' ? 'text-accent' : ''}`}>
+            {mode === 'xg' ? 'xG' : 'CS'}{sortKey === 'run' ? (dir === 'asc' ? '↑' : '↓') : ''}
+          </button>
         </div>
         {sorted.map((r, i) => (
           <div key={r.team}>
