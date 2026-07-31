@@ -506,7 +506,13 @@ function SeasonRunsBoard({ fixtureEase, lens, baselines, lensControl }: {
   // Ranking is the whole point of the table, so it is fixed to the score
   // rather than to whatever column was clicked last: rank 1 has to mean the
   // best run, not the alphabetically first club.
-  const ranked = useMemo(() => [...shown].sort((a, b) => b.advantage - a.advantage), [shown])
+  // Ties break on home games — see `bestRuns`. Two runs the model rates the
+  // same are not equally worth owning, and the home count is the one thing
+  // left that separates them.
+  const ranked = useMemo(
+    () => [...shown].sort((a, b) => b.advantage - a.advantage || b.home - a.home || a.from - b.from),
+    [shown],
+  )
   const rankOf = new Map(ranked.map((r, i) => [`${r.team}-${r.half}`, i + 1]))
 
   const columns: Column<(typeof ranked)[number]>[] = [
@@ -772,13 +778,19 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
     // the ones already picked — "I know I want an Arsenal defender, show me
     // who partners them" is the question this answers.
     const pool = allTeams.filter((t) => !excluded.includes(t) && qualifies(t))
-    const out: { group: string[]; combined: number }[] = []
+    const out: { group: string[]; combined: number; home: number }[] = []
     for (const group of combos(pool, size)) {
       if (!teams.every((t) => group.includes(t))) continue
       const c = startKAvg(group, startK)
-      if (c != null) out.push({ group, combined: c })
+      if (c == null) continue
+      // Home fixtures across the whole group over the window. Two rotations
+      // the model rates identically are not equally attractive; the one
+      // playing at home more often is the one to own.
+      let home = 0
+      for (const t of group) for (const gw of gws) if (cellFor(t, gw)?.f.venue === 'H') home++
+      out.push({ group, combined: c, home })
     }
-    return out.sort((x, y) => x.combined - y.combined).slice(0, 8)
+    return out.sort((x, y) => x.combined - y.combined || y.home - x.home).slice(0, 8)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allTeams, excluded, teams, size, startK, gws, cellFor, pickBy, filtering])
 

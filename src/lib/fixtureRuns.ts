@@ -264,11 +264,18 @@ export function bestRuns(
         if (blank) continue
         const advantage = fixtures.reduce((s, f) => s + (NEUTRAL - f.diff), 0)
         const avg = fixtures.reduce((s, f) => s + f.diff, 0) / fixtures.length
-        // Ties go to the longer window, then the earlier one — a longer run at
-        // the same total advantage is the more useful thing to own.
-        if (!best || advantage > best.advantage + 1e-9 ||
-            (Math.abs(advantage - best.advantage) < 1e-9 && to - from > best.to - best.from)) {
-          best = { half, from, to, fixtures, avg, advantage, home: fixtures.filter((f) => f.venue === 'H').length }
+        // Ties break on HOME GAMES first, then the longer window, then the
+        // earlier one. Two runs the model rates identically are not equally
+        // worth owning: the one with more home fixtures is the safer hold,
+        // since home advantage is already priced into each fixture's
+        // difficulty but nothing else separates a dead heat.
+        const home = fixtures.filter((f) => f.venue === 'H').length
+        const tied = best != null && Math.abs(advantage - best.advantage) < 1e-9
+        const better = !best || advantage > best.advantage + 1e-9 ||
+          (tied && home > best.home) ||
+          (tied && home === best.home && to - from > best.to - best.from)
+        if (better) {
+          best = { half, from, to, fixtures, avg, advantage, home }
         }
       }
     }
