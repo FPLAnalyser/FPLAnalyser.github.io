@@ -1,0 +1,114 @@
+<style>
+:root{--bg:#0a0908;--s1:#131110;--s2:#1b1917;--line:#2a2724;--ink:#f4efe3;--ink2:#a9a294;--ink3:#777064;--acc:#c9a227;--acc2:#e8c85a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 ui-sans-serif,system-ui,-apple-system,sans-serif}
+.wrap{max-width:1200px;margin:0 auto;padding:28px 18px 64px}
+h1{font-size:24px;margin:0 0 6px;letter-spacing:-.02em}
+.sub{color:var(--ink2);font-size:14px;margin:0 0 28px;max-width:62ch}
+.note{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:0 0 30px;font-size:13.5px;color:var(--ink2)}
+.note b{color:var(--ink)}
+.grid{display:grid;gap:26px;grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}
+.col h2{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin:0 0 4px}
+.col .why{font-size:13px;color:var(--ink2);margin:0 0 14px;min-height:4.2em}
+.phone{width:100%;max-width:390px;border:1px solid var(--line);border-radius:22px;overflow:hidden;background:var(--bg);box-shadow:0 18px 40px rgba(0,0,0,.5)}
+.ph-top{background:var(--s1);border-bottom:1px solid var(--line);padding:9px 12px;font-size:11px;color:var(--ink3);letter-spacing:.1em;text-transform:uppercase}
+.body{padding:12px;max-height:620px;overflow-y:auto}
+.pill{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;padding:6px 11px;font-size:12.5px;color:var(--ink2);background:transparent}
+.pill.on{border-color:var(--acc);background:rgba(201,162,39,.14);color:var(--acc2)}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+select.pill{appearance:none;padding-right:26px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a9a294' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;background-size:13px}
+.f1{background:#12643c;color:#dcffe9}.f2{background:#2c7a4b;color:#e6fff0}.f3{background:#5c5445;color:#efe8d8}.f4{background:#8c3a34;color:#ffe6e2}.f5{background:#6d211d;color:#ffdcd6}
+.card{border:1px solid var(--line);border-radius:14px;background:var(--s1);margin-bottom:9px;overflow:hidden}
+.card-h{display:flex;align-items:center;gap:9px;padding:10px 12px}
+.badge{width:24px;height:24px;border-radius:50%;background:var(--s2);display:grid;place-items:center;font-size:9.5px;font-weight:800;color:var(--ink2);flex:none}
+.tname{font-weight:700;font-size:14.5px;flex:1}
+.avg{font-weight:800;font-variant-numeric:tabular-nums;font-size:15px}
+.strip{display:flex;gap:3px;padding:0 12px 11px}
+.cell{flex:1;border-radius:6px;padding:5px 2px;text-align:center;font-size:10.5px;font-weight:700;line-height:1.25}
+.cell small{display:block;font-size:8.5px;opacity:.72;font-weight:600;letter-spacing:.04em}
+.stack{border:1px solid var(--line);border-radius:14px;background:var(--s1);margin-bottom:9px;padding:10px 12px}
+.gwrow{display:flex;align-items:center;gap:9px;padding:6px 0;border-top:1px solid var(--line)}
+.gwrow:first-of-type{border-top:0}
+.gwlab{width:38px;font-size:10.5px;font-weight:800;color:var(--ink3);letter-spacing:.06em}
+.opp{flex:1;font-size:13px;font-weight:600}
+.chip{border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:800;font-variant-numeric:tabular-nums}
+.acc{background:linear-gradient(90deg,var(--acc2),var(--acc));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sheet{border:1px solid var(--line);border-radius:14px;background:var(--s2);padding:11px 12px;margin-bottom:11px}
+.sheet .lab{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+.summary{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);border-radius:12px;background:var(--s2);padding:10px 12px;margin-bottom:11px;font-size:13px}
+.summary b{color:var(--acc2)}
+.tag{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.sticky{position:sticky;top:0;background:linear-gradient(var(--bg) 72%,transparent);padding-bottom:8px;z-index:2}
+.bars{display:flex;gap:2px;align-items:flex-end;height:26px}
+.bar{flex:1;border-radius:2px 2px 0 0}
+.legend{font-size:11px;color:var(--ink3);margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sw{width:15px;height:11px;border-radius:3px;display:inline-block;vertical-align:-1px}
+</style>
+
+<div class="wrap">
+<h1>Fixtures on a phone — three directions</h1>
+<p class="sub">Same data, same six gameweeks, rendered at 390px. Real 2026/27 fixtures and our difficulty ratings, sorted kindest run first.</p>
+
+<div class="note">
+<b>The problem, measured.</b> Today the grid is teams down, gameweeks across: at 390px that shows 3 of 6 gameweeks with no scrollbar hint, so the half you can't see looks like it doesn't exist. Above it, three to six rows of filter chips own the first screenful — the Rotation Planner opened with six rows before a single result. Every option below keeps the horizontal axis off the page entirely.
+</div>
+
+<div class="grid" id="cols"></div>
+</div>
+
+<script>
+const DATA = [{"team": "MUN", "avg": 2.8, "fx": [{"gw": 1, "o": "HUL", "v": "A", "f": 2}, {"gw": 2, "o": "IPS", "v": "H", "f": 2}, {"gw": 3, "o": "EVE", "v": "A", "f": 3}, {"gw": 4, "o": "MCI", "v": "H", "f": 4}, {"gw": 5, "o": "FUL", "v": "A", "f": 3}, {"gw": 6, "o": "TOT", "v": "H", "f": 3}]}, {"team": "EVE", "avg": 2.8, "fx": [{"gw": 1, "o": "CRY", "v": "H", "f": 3}, {"gw": 2, "o": "BOU", "v": "A", "f": 3}, {"gw": 3, "o": "MUN", "v": "H", "f": 4}, {"gw": 4, "o": "TOT", "v": "A", "f": 3}, {"gw": 5, "o": "IPS", "v": "H", "f": 2}, {"gw": 6, "o": "HUL", "v": "A", "f": 2}]}, {"team": "NEW", "avg": 2.8, "fx": [{"gw": 1, "o": "LIV", "v": "H", "f": 4}, {"gw": 2, "o": "TOT", "v": "A", "f": 3}, {"gw": 3, "o": "BOU", "v": "H", "f": 3}, {"gw": 4, "o": "LEE", "v": "A", "f": 3}, {"gw": 5, "o": "HUL", "v": "H", "f": 2}, {"gw": 6, "o": "COV", "v": "A", "f": 2}]}, {"team": "LIV", "avg": 2.8, "fx": [{"gw": 1, "o": "NEW", "v": "A", "f": 3}, {"gw": 2, "o": "NFO", "v": "H", "f": 3}, {"gw": 3, "o": "IPS", "v": "A", "f": 2}, {"gw": 4, "o": "FUL", "v": "H", "f": 2}, {"gw": 5, "o": "BOU", "v": "A", "f": 3}, {"gw": 6, "o": "MCI", "v": "H", "f": 4}]}, {"team": "ARS", "avg": 3.0, "fx": [{"gw": 1, "o": "COV", "v": "H", "f": 2}, {"gw": 2, "o": "AVL", "v": "A", "f": 4}, {"gw": 3, "o": "CHE", "v": "H", "f": 4}, {"gw": 4, "o": "SUN", "v": "A", "f": 3}, {"gw": 5, "o": "BHA", "v": "A", "f": 3}, {"gw": 6, "o": "LEE", "v": "H", "f": 2}]}, {"team": "CRY", "avg": 3.0, "fx": [{"gw": 1, "o": "EVE", "v": "A", "f": 3}, {"gw": 2, "o": "MCI", "v": "H", "f": 4}, {"gw": 3, "o": "FUL", "v": "A", "f": 3}, {"gw": 4, "o": "IPS", "v": "H", "f": 2}, {"gw": 5, "o": "LEE", "v": "A", "f": 3}, {"gw": 6, "o": "NFO", "v": "H", "f": 3}]}, {"team": "IPS", "avg": 3.0, "fx": [{"gw": 1, "o": "SUN", "v": "H", "f": 2}, {"gw": 2, "o": "MUN", "v": "A", "f": 4}, {"gw": 3, "o": "LIV", "v": "H", "f": 4}, {"gw": 4, "o": "CRY", "v": "A", "f": 3}, {"gw": 5, "o": "EVE", "v": "A", "f": 3}, {"gw": 6, "o": "FUL", "v": "H", "f": 2}]}, {"team": "SUN", "avg": 3.0, "fx": [{"gw": 1, "o": "IPS", "v": "A", "f": 2}, {"gw": 2, "o": "FUL", "v": "H", "f": 2}, {"gw": 3, "o": "BRE", "v": "A", "f": 3}, {"gw": 4, "o": "ARS", "v": "H", "f": 4}, {"gw": 5, "o": "MCI", "v": "A", "f": 5}, {"gw": 6, "o": "BHA", "v": "H", "f": 2}]}, {"team": "NFO", "avg": 3.0, "fx": [{"gw": 1, "o": "LEE", "v": "H", "f": 2}, {"gw": 2, "o": "LIV", "v": "A", "f": 4}, {"gw": 3, "o": "TOT", "v": "H", "f": 3}, {"gw": 4, "o": "AVL", "v": "A", "f": 4}, {"gw": 5, "o": "COV", "v": "H", "f": 2}, {"gw": 6, "o": "CRY", "v": "A", "f": 3}]}, {"team": "TOT", "avg": 3.0, "fx": [{"gw": 1, "o": "BRE", "v": "A", "f": 3}, {"gw": 2, "o": "NEW", "v": "H", "f": 2}, {"gw": 3, "o": "NFO", "v": "A", "f": 3}, {"gw": 4, "o": "EVE", "v": "H", "f": 3}, {"gw": 5, "o": "AVL", "v": "H", "f": 3}, {"gw": 6, "o": "MUN", "v": "A", "f": 4}]}, {"team": "BHA", "avg": 3.0, "fx": [{"gw": 1, "o": "AVL", "v": "H", "f": 3}, {"gw": 2, "o": "CHE", "v": "A", "f": 4}, {"gw": 3, "o": "LEE", "v": "H", "f": 2}, {"gw": 4, "o": "COV", "v": "A", "f": 2}, {"gw": 5, "o": "ARS", "v": "H", "f": 4}, {"gw": 6, "o": "SUN", "v": "A", "f": 3}]}, {"team": "AVL", "avg": 3.0, "fx": [{"gw": 1, "o": "BHA", "v": "A", "f": 3}, {"gw": 2, "o": "ARS", "v": "H", "f": 4}, {"gw": 3, "o": "HUL", "v": "A", "f": 2}, {"gw": 4, "o": "NFO", "v": "H", "f": 3}, {"gw": 5, "o": "TOT", "v": "A", "f": 3}, {"gw": 6, "o": "BRE", "v": "H", "f": 3}]}, {"team": "MCI", "avg": 3.0, "fx": [{"gw": 1, "o": "BOU", "v": "H", "f": 3}, {"gw": 2, "o": "CRY", "v": "A", "f": 3}, {"gw": 3, "o": "COV", "v": "H", "f": 2}, {"gw": 4, "o": "MUN", "v": "A", "f": 4}, {"gw": 5, "o": "SUN", "v": "H", "f": 2}, {"gw": 6, "o": "LIV", "v": "A", "f": 4}]}, {"team": "CHE", "avg": 3.0, "fx": [{"gw": 1, "o": "FUL", "v": "A", "f": 3}, {"gw": 2, "o": "BHA", "v": "H", "f": 2}, {"gw": 3, "o": "ARS", "v": "A", "f": 5}, {"gw": 4, "o": "HUL", "v": "H", "f": 2}, {"gw": 5, "o": "BRE", "v": "A", "f": 3}, {"gw": 6, "o": "BOU", "v": "H", "f": 3}]}, {"team": "COV", "avg": 3.2, "fx": [{"gw": 1, "o": "ARS", "v": "A", "f": 5}, {"gw": 2, "o": "HUL", "v": "H", "f": 2}, {"gw": 3, "o": "MCI", "v": "A", "f": 5}, {"gw": 4, "o": "BHA", "v": "H", "f": 2}, {"gw": 5, "o": "NFO", "v": "A", "f": 3}, {"gw": 6, "o": "NEW", "v": "H", "f": 2}]}, {"team": "HUL", "avg": 3.2, "fx": [{"gw": 1, "o": "MUN", "v": "H", "f": 4}, {"gw": 2, "o": "COV", "v": "A", "f": 2}, {"gw": 3, "o": "AVL", "v": "H", "f": 3}, {"gw": 4, "o": "CHE", "v": "A", "f": 4}, {"gw": 5, "o": "NEW", "v": "A", "f": 3}, {"gw": 6, "o": "EVE", "v": "H", "f": 3}]}, {"team": "LEE", "avg": 3.2, "fx": [{"gw": 1, "o": "NFO", "v": "A", "f": 3}, {"gw": 2, "o": "BRE", "v": "H", "f": 3}, {"gw": 3, "o": "BHA", "v": "A", "f": 3}, {"gw": 4, "o": "NEW", "v": "H", "f": 2}, {"gw": 5, "o": "CRY", "v": "H", "f": 3}, {"gw": 6, "o": "ARS", "v": "A", "f": 5}]}, {"team": "BRE", "avg": 3.2, "fx": [{"gw": 1, "o": "TOT", "v": "H", "f": 3}, {"gw": 2, "o": "LEE", "v": "A", "f": 3}, {"gw": 3, "o": "SUN", "v": "H", "f": 2}, {"gw": 4, "o": "BOU", "v": "A", "f": 3}, {"gw": 5, "o": "CHE", "v": "H", "f": 4}, {"gw": 6, "o": "AVL", "v": "A", "f": 4}]}, {"team": "FUL", "avg": 3.3, "fx": [{"gw": 1, "o": "CHE", "v": "H", "f": 4}, {"gw": 2, "o": "SUN", "v": "A", "f": 3}, {"gw": 3, "o": "CRY", "v": "H", "f": 3}, {"gw": 4, "o": "LIV", "v": "A", "f": 4}, {"gw": 5, "o": "MUN", "v": "H", "f": 4}, {"gw": 6, "o": "IPS", "v": "A", "f": 2}]}, {"team": "BOU", "avg": 3.7, "fx": [{"gw": 1, "o": "MCI", "v": "A", "f": 5}, {"gw": 2, "o": "EVE", "v": "H", "f": 3}, {"gw": 3, "o": "NEW", "v": "A", "f": 3}, {"gw": 4, "o": "BRE", "v": "H", "f": 3}, {"gw": 5, "o": "LIV", "v": "H", "f": 4}, {"gw": 6, "o": "CHE", "v": "A", "f": 4}]}];
+const cls = f => 'f' + f;
+const el = (h) => { const d = document.createElement('div'); d.innerHTML = h.trim(); return d.firstChild }
+
+function phone(title, inner) {
+  return `<div class="phone"><div class="ph-top">${title}</div><div class="body">${inner}</div></div>`
+}
+const filtersA = `<div class="sticky"><div class="row">
+  <span class="pill on">Next 6</span><span class="pill">Next 8</span><span class="pill">To GW19</span>
+  <select class="pill"><option>Difficulty</option><option>Projected xG</option><option>Clean sheets</option></select>
+  <select class="pill"><option>Overall</option><option>Attack</option><option>Defence</option></select>
+</div></div>`
+
+/* A — team cards, fixtures as a horizontal strip inside each card */
+let a = filtersA
+DATA.forEach(t => {
+  a += `<div class="card"><div class="card-h">
+    <span class="badge">${t.team}</span><span class="tname">${t.team}</span>
+    <span class="avg" style="color:${t.avg<3?'#5ec98a':t.avg<3.4?'#d9c07a':'#e08b80'}">${t.avg}</span>
+    <span class="tag">avg</span></div>
+    <div class="strip">${t.fx.map(f=>`<div class="cell ${cls(f.f)}"><small>GW${f.gw}</small>${f.o}<small>${f.v}</small></div>`).join('')}</div></div>`
+})
+
+/* B — one team per card, fixtures listed vertically */
+let b = filtersA
+DATA.forEach(t => {
+  b += `<div class="stack"><div class="card-h" style="padding:0 0 8px">
+    <span class="badge">${t.team}</span><span class="tname">${t.team}</span>
+    <span class="avg" style="color:${t.avg<3?'#5ec98a':t.avg<3.4?'#d9c07a':'#e08b80'}">${t.avg}</span></div>
+    ${t.fx.map(f=>`<div class="gwrow"><span class="gwlab">GW${f.gw}</span><span class="opp">${f.o} <span style="color:var(--ink3);font-weight:600">(${f.v})</span></span><span class="chip ${cls(f.f)}">${f.f}</span></div>`).join('')}
+  </div>`
+})
+
+/* C — gameweek-first: scroll down through the season */
+const gws = [1,2,3,4,5,6]
+let c = `<div class="sticky"><div class="row">
+  <span class="pill on">By gameweek</span><span class="pill">By team</span>
+  <select class="pill"><option>Difficulty</option><option>Projected xG</option><option>Clean sheets</option></select>
+</div></div>`
+gws.forEach(g => {
+  const fixtures = DATA.map(t => ({t: t.team, ...t.fx.find(x => x.gw === g)})).filter(x => x.o)
+    .filter(x => x.v === 'H')
+  c += `<div class="sheet"><div class="lab">Gameweek ${g}</div>
+    ${fixtures.slice(0,10).map(f=>`<div class="gwrow"><span class="opp" style="flex:1">${f.t} <span style="color:var(--ink3)">v</span> ${f.o}</span><span class="chip ${cls(f.f)}">${f.f}</span></div>`).join('')}
+  </div>`
+})
+
+const cols = [
+  ['A · Team cards, strip inside', 'Closest to today. Each club is a card; its six gameweeks are a strip that fits because the card owns the full width and the cells shrink. Scanning a run is one glance. Ranking across clubs still means scrolling.', a],
+  ['B · Team cards, fixtures vertical', 'What you suggested. Each club opens into its gameweeks down the page — nothing is ever off-screen and the opponent gets room for a real name. Costs height: six rows per club, twenty clubs.', b],
+  ['C · Gameweek first', 'Inverts it. Scroll the season, not the table — every fixture in GW1, then GW2. Best for "who do I captain this week", worst for "who has the kindest run", which is what this page is for.', c],
+]
+document.getElementById('cols').innerHTML = cols.map(([h, why, inner]) =>
+  `<div class="col"><h2>${h}</h2><p class="why">${why}</p>${phone(h.split(' · ')[0], inner)}</div>`).join('')
+</script>
