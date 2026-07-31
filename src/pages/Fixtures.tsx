@@ -905,6 +905,29 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
   const pill = (active: boolean) => `min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${active ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`
   const startOpts = Array.from({ length: size - 1 }, (_, i) => i + 1) // 1 … N-1
 
+  /** Who the exported board is about. The clubs, the settings and the number
+   *  they earned — a grid of fixtures with no header is unreadable once it
+   *  leaves the site. */
+  const rotationIdent = (group: string[], combined: number) => (
+    <div className="mb-2 flex items-center gap-2">
+      <span className="flex flex-1 flex-wrap items-center gap-x-1.5 gap-y-1">
+        {group.map((t, k) => (
+          <span key={t} className="flex items-center gap-1 text-[13px] font-extrabold text-ink">
+            {k > 0 && <span className="text-ink-3">+</span>}<TeamBadge team={t} size={15} />{t}
+          </span>
+        ))}
+      </span>
+      {/* Stacked, not inline. Side by side, "avg diff" first wrapped onto the
+          board's header row and then clipped at the frame edge — a label
+          fighting the clubs for the same line will always lose one way or the
+          other. Two short lines cannot. */}
+      <span className="shrink-0 text-right leading-tight">
+        <span className="font-num block text-[15px] font-extrabold tabular-nums" style={{ color: runColor(combined) }}>{combined.toFixed(1)}</span>
+        <span className="block text-[8.5px] font-bold tracking-[0.08em] text-ink-3 uppercase">avg diff</span>
+      </span>
+    </div>
+  )
+
   /* ── The board, turned on its side ────────────────────────────────────────
      Gameweeks down, the rotation's clubs across. Teams down and gameweeks
      across needs a column per gameweek plus a team column, which scrolled
@@ -1066,7 +1089,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
       {/* The rotations board's own heading is inside the captured node and
           already names the settings, so no `ident` — it would print twice. */}
       {teams.length < 2 ? (
-        <Exportable title={`Top rotations — start ${startK} of ${size}, next ${gws.length}`}>
+        <div>
           <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Top rotations · start {startK} of {size} · next {gws.length} · {LENS_LABEL_ROT[lens]}</div>
           <div className="overflow-hidden rounded-xl border border-line">
             {topGroups.map((g, i) => {
@@ -1110,13 +1133,13 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
               </button>
               {open && (
                 <div className="border-t border-line px-2 pt-2 pb-3">
-                  {rotationBoard(g.group)}
-                  <button
-                    onClick={() => setTeams(g.group)}
-                    className="mt-2 w-full rounded-lg border border-line-mid py-2 text-[12px] font-semibold text-ink-2 transition-colors hover:border-accent hover:text-accent"
-                  >
-                    Plan this rotation
-                  </button>
+                  {/* The share is on the board, not on the page. Wrapping the
+                      whole suggestions list exported eight collapsed rows and
+                      the filter chrome around them; the artefact worth sending
+                      is this one rotation's fixtures. */}
+                  <Exportable title={`${g.group.join(' + ')} — start ${startK} of ${size}`} ident={rotationIdent(g.group, g.combined)}>
+                    {rotationBoard(g.group)}
+                  </Exportable>
                 </div>
               )}
               </div>
@@ -1128,7 +1151,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
             )}
           </div>
           <p className="mt-2 text-xs text-ink-3">Lower is kinder — the combined difficulty if you always start the {startK} kindest fixture{startK > 1 ? 's' : ''} in the group.</p>
-        </Exportable>
+        </div>
       ) : (
         <>
           {rotAvg != null && fixedAvg != null && (
@@ -1147,7 +1170,11 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
               column the phone divided by the group instead of by the window,
               which leaves room for the opponent, the venue and the difficulty
               in every cell, and rings as many as `startK`. */}
-          {!wide ? rotationBoard(teams) : (
+          {!wide ? (
+            <Exportable title={`${teams.join(' + ')} — start ${startK} of ${teams.length}`} ident={rotationIdent(teams, rotAvg ?? 0)}>
+              {rotationBoard(teams)}
+            </Exportable>
+          ) : (
           <div className="overflow-x-auto rounded-xl border border-line">
             <table className="w-full border-collapse text-sm">
               <thead>
