@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { InfoTip } from './InfoTip'
+import { useWide } from '../lib/useWide'
 
 export interface Column<T> {
   key: string
@@ -18,6 +19,15 @@ export interface Column<T> {
    *  taking 61px of a 390px screen because the header carried an info icon
    *  and a sort arrow at full padding. */
   narrow?: boolean
+  /** Drop this column below `lg`. Nine columns do not fit 368px and no amount
+   *  of shrinking changes that, so each board keeps the numbers it is named
+   *  for and folds or drops the rest. Measured: eight columns is the ceiling. */
+  mobileHide?: boolean
+  /** Shorter header below `lg`, where the full one would set the column width. */
+  mobileHeader?: ReactNode
+  /** Different cell below `lg` — a plain number where the wide table draws a
+   *  bar, thousands where it prints six figures. */
+  mobileCell?: (row: T) => ReactNode
 }
 
 interface Props<T> {
@@ -34,7 +44,13 @@ interface Props<T> {
 
 const alignClass = { left: 'text-left', right: 'text-right', center: 'text-center' } as const
 
-export function SortableTable<T>({ rows, columns, initialSort, initialDir = 'desc', rowKey, onRowClick, featured }: Props<T>) {
+export function SortableTable<T>({ rows, columns: allColumns, initialSort, initialDir = 'desc', rowKey, onRowClick, featured }: Props<T>) {
+  // Below lg the board drops the columns it can live without and shortens the
+  // ones it keeps. The sort state still refers to columns by key, so a column
+  // that is hidden on a phone simply stops being reachable rather than
+  // breaking the sort.
+  const wide = useWide()
+  const columns = useMemo(() => (wide ? allColumns : allColumns.filter((c) => !c.mobileHide)), [allColumns, wide])
   const firstSortable = columns.find((c) => c.sortValue)?.key
   const [sortCol, setSortCol] = useState<string | undefined>(initialSort ?? firstSortable)
   const [dir, setDir] = useState<'asc' | 'desc'>(initialDir)
@@ -70,7 +86,7 @@ export function SortableTable<T>({ rows, columns, initialSort, initialDir = 'des
 
   return (
     <div className="overflow-x-auto rounded-xl border border-line bg-surface-1/40">
-      <table className="w-full border-collapse text-[13px] md:text-sm">
+      <table className="w-full border-collapse text-[12px] lg:text-sm">
         <thead>
           <tr className="border-b border-line-mid">
             {columns.map((col, i) => {
@@ -80,7 +96,7 @@ export function SortableTable<T>({ rows, columns, initialSort, initialDir = 'des
                 <th
                   key={col.key}
                   onClick={() => onHeaderClick(col)}
-                  className={`${col.narrow ? 'px-1' : 'px-2.5'} py-3 text-[10px] font-semibold tracking-[0.08em] whitespace-nowrap text-ink-3 uppercase md:px-4 md:py-3.5 md:text-[11px] md:tracking-[0.1em] ${alignClass[col.align ?? (i === 0 ? 'left' : 'right')]} ${
+                  className={`${col.narrow ? 'px-1' : 'px-1 lg:px-2.5'} py-2.5 text-[9px] font-extrabold tracking-[0.06em] whitespace-nowrap text-ink-3 uppercase lg:px-4 lg:py-3.5 lg:text-[11px] lg:tracking-[0.1em] ${alignClass[col.align ?? (i === 0 ? 'left' : 'right')]} ${
                     col.sortValue ? 'cursor-pointer select-none hover:text-ink-2' : ''
                   } ${isSticky ? 'sticky left-0 z-10 bg-surface-1' : ''}`}
                 >
@@ -89,8 +105,8 @@ export function SortableTable<T>({ rows, columns, initialSort, initialDir = 'des
                       (col.align ?? (i === 0 ? 'left' : 'right')) === 'right' ? 'flex-row-reverse' : ''
                     }`}
                   >
-                    {col.header}
-                    {col.tip && <span className={col.narrow ? 'hidden md:inline-flex' : 'inline-flex'}><InfoTip text={col.tip} /></span>}
+                    {(!wide && col.mobileHeader) || col.header}
+                    {col.tip && <span className={col.narrow ? 'hidden md:inline-flex' : 'hidden lg:inline-flex'}><InfoTip text={col.tip} /></span>}
                     {active && <span className="text-accent">{dir === 'asc' ? '▲' : '▼'}</span>}
                   </span>
                 </th>
@@ -114,11 +130,11 @@ export function SortableTable<T>({ rows, columns, initialSort, initialDir = 'des
                   return (
                     <td
                       key={col.key}
-                      className={`${col.narrow ? 'px-1' : 'px-2.5'} py-3 md:px-4 md:py-4 ${alignClass[col.align ?? (i === 0 ? 'left' : 'right')]} ${
+                      className={`${col.narrow ? 'px-1' : 'px-1 lg:px-2.5'} py-2 lg:py-4 lg:px-4 ${alignClass[col.align ?? (i === 0 ? 'left' : 'right')]} ${
                         isSticky ? 'sticky left-0 z-10 bg-bg-0' : ''
                       } ${isLeader && i === 0 ? 'shadow-[inset_2px_0_0_var(--accent)]' : ''}`}
                     >
-                      {col.cell(row)}
+                      {!wide && col.mobileCell ? col.mobileCell(row) : col.cell(row)}
                     </td>
                   )
                 })}

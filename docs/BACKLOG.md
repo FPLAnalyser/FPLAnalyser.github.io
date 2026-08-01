@@ -97,15 +97,25 @@ sub-labels were 7.5px across 240 nodes, and the Squad Builder's xP labels 8px.
 Both are now 9px — the same size as the site's other secondary labels — with no
 cell overflow at 320px.
 
-Still open, in the order it costs readers:
+**The Players leaderboard hid 408px** — 776px of table inside a 368px column,
+so 4GW Rating, Pts, PPG and xPts were entirely off-screen. Every one of its ten
+boards now fits an iPhone 13 exactly: measured hidden width 0 on all ten, the
+same numbers `mockups/players-c-all.html` was designed against.
 
-**The Players leaderboard hides 408px.** The table is 776px inside a 368px
-column, so 4GW Rating, Pts, PPG and xPts are entirely off-screen behind a
-hidden scrollbar, and the Season rating badge sits clipped at the right edge.
-The design is settled — see `mockups/players-c-all.html`, where all ten
-sub-tables fit a 368px column with measured zero overflow — and the build is
-still to do. Eight columns is the ceiling, price rides under the player name,
-and names wrap inside a capped column so one long name cannot widen a table.
+`SortableTable` gained the compact mode rather than the page: `mobileHide`,
+`mobileHeader` and `mobileCell` on a column, applied below `lg`. Position, club
+and price fold onto a second line under the name; the name wraps inside a 104px
+cap so the longest name on screen cannot set the column width; PPG prints its
+number instead of a bar; shot quality leaves Goal Threats and the games count
+leaves xPoints, both of which restated what was already in the row; transfer
+counts go to thousands. **The short header is what actually did the work** —
+"SEASON RATING" costs 125px to display a two-digit badge, and until the short
+headers went in, seven of the ten boards still overflowed.
+
+At 320px four boards still scroll inside their own box (20–68px): the design
+was measured against 368px, and the page itself does not move.
+
+Still open, in the order it costs readers:
 
 **Text still sits at 9–9.5px** on GW Preview (51 nodes) and across the fixture
 grids. That is the floor now rather than the outlier it was, but it is a floor

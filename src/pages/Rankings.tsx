@@ -63,17 +63,35 @@ function rankCol(): Column<Row> {
     cell: (r) => <span className="font-num text-ink-3 tabular-nums">{num(r, '_rank')}</span>,
   }
 }
+/** Below `lg` the name carries position, club and price on a second line, so
+ *  three columns become none. The box is capped and the name wraps inside it:
+ *  left to size itself the column took the longest name on screen, which put
+ *  the hot-streak board 3px inside the phone until an Alexander-Arnold turned
+ *  up in it. */
 const playerCol: Column<Row> = {
   key: 'player',
   header: 'Player',
   align: 'left',
   sortValue: (r) => str(r, 'web_name'),
   cell: (r) => <PlayerNameCell name={String(r.web_name)} code={num(r, 'code')} />,
+  mobileCell: (r) => {
+    const price = num(r, 'price')
+    return (
+      <span className="block max-w-[104px]">
+        <PlayerNameCell name={String(r.web_name)} code={num(r, 'code')} />
+        <span className="mt-px block text-[9px] leading-tight font-semibold tracking-[0.02em] text-ink-3">
+          {String(r.position)} · {String(r.team)}
+          {price != null ? ` · £${price}m` : ''}
+        </span>
+      </span>
+    )
+  },
 }
 const posCol: Column<Row> = {
   key: 'pos',
   header: 'Pos',
   align: 'left',
+  mobileHide: true,
   sortValue: (r) => str(r, 'position'),
   cell: (r) => <PosBadge pos={String(r.position)} />,
 }
@@ -81,29 +99,33 @@ const teamCol: Column<Row> = {
   key: 'team',
   header: 'Team',
   align: 'left',
+  mobileHide: true,
   sortValue: (r) => str(r, 'team'),
   cell: (r) => <TeamCell team={String(r.team)} />,
 }
 const priceCol: Column<Row> = {
   key: 'price',
   header: 'Price',
+  mobileHide: true,
   tip: 'Current FPL price.',
   sortValue: (r) => num(r, 'price'),
   cell: (r) => <span className="font-num tabular-nums">£{num(r, 'price')}m</span>,
 }
 // Overall ratings render from the continuous 0–5 score for a granular /100 number.
-const scoreCol = (scoreKey: string, header: string, tip?: string): Column<Row> => ({
+const scoreCol = (scoreKey: string, header: string, tip?: string, short?: string): Column<Row> => ({
   key: scoreKey,
   header,
+  mobileHeader: short,
   tip,
   align: 'left',
   sortValue: (r) => num(r, scoreKey),
   cell: (r) => <StarRating value={num(r, scoreKey)} />,
 })
 // Like scoreCol, but shows an explained N/A when the window has too few minutes.
-const windowScoreCol = (scoreKey: string, header: string, tip?: string): Column<Row> => ({
+const windowScoreCol = (scoreKey: string, header: string, tip?: string, short?: string): Column<Row> => ({
   key: scoreKey,
   header,
+  mobileHeader: short,
   tip,
   align: 'left',
   sortValue: (r) => num(r, scoreKey),
@@ -125,6 +147,10 @@ function ppgCol(rows: Row[]): Column<Row> {
       const v = num(r, 'season_ppg')
       return v == null ? <span className="text-ink-3">N/A</span> : <MiniBar value={+v.toFixed(1)} max={maxPpg} />
     },
+    mobileCell: (r) => {
+      const v = num(r, 'season_ppg')
+      return v == null ? <span className="text-ink-3">—</span> : <span className="font-num tabular-nums">{v.toFixed(1)}</span>
+    },
   }
 }
 
@@ -145,9 +171,10 @@ const xptsCol: Column<Row> = {
 // ── Raw-metric columns (the ingredients behind each rating) ──────────────────
 const dash = <span className="text-ink-3">—</span>
 /** Plain numeric per-90 / ratio metric, N decimals. */
-const numCol = (key: string, header: string, tip: string, digits = 2): Column<Row> => ({
+const numCol = (key: string, header: string, tip: string, digits = 2, short?: string): Column<Row> => ({
   key,
   header,
+  mobileHeader: short,
   tip,
   align: 'right',
   sortValue: (r) => num(r, key),
@@ -157,9 +184,10 @@ const numCol = (key: string, header: string, tip: string, digits = 2): Column<Ro
   },
 })
 /** A 0–1 fraction rendered as a percentage. */
-const pctCol = (key: string, header: string, tip: string): Column<Row> => ({
+const pctCol = (key: string, header: string, tip: string, short?: string): Column<Row> => ({
   key,
   header,
+  mobileHeader: short,
   tip,
   align: 'right',
   sortValue: (r) => num(r, key),
@@ -425,9 +453,9 @@ export default function Rankings() {
             posCol,
             teamCol,
             priceCol,
-            scoreCol('season_overall_score', 'Season Rating', TOOLTIPS.overall as string),
-            windowScoreCol('gw4_overall_score', '4GW Rating', 'The same composite rating measured over the last 4 gameweeks only — a form snapshot.'),
-            numCol('season_total_points', 'Pts', 'Total FPL points scored this season.', 0),
+            scoreCol('season_overall_score', 'Season Rating', TOOLTIPS.overall as string, 'Sea'),
+            windowScoreCol('gw4_overall_score', '4GW Rating', 'The same composite rating measured over the last 4 gameweeks only — a form snapshot.', '4GW'),
+            numCol('season_total_points', 'Pts', 'Total FPL points scored this season.', 0, 'Pts'),
             ppgCol(rows),
             xptsCol,
           ],
@@ -444,13 +472,13 @@ export default function Rankings() {
             playerCol,
             posCol,
             teamCol,
-            scoreCol('season_goal_score_norm', 'Goal Threat', TOOLTIPS.goal as string),
-            numCol('season_total_xg', 'xG', 'Total expected goals this season (FPL).', 1),
-            numCol('season_m_xg', 'xG/90', 'Expected goals per 90 minutes — the core of the goal-threat rating.'),
-            numCol('season_m_npxg', 'npxG/90', 'Non-penalty expected goals per 90 (Understat) — threat stripped of penalties.'),
-            numCol('season_m_box_shots', 'Box Sh/90', 'Shots taken from inside the box per 90 minutes.', 1),
-            pctCol('season_m_sot_rate', 'SoT%', 'Share of this player’s shots that are on target.'),
-            numCol('season_m_shot_quality', 'Shot Q', TOOLTIPS.shot_quality as string, 3),
+            scoreCol('season_goal_score_norm', 'Goal Threat', TOOLTIPS.goal as string, 'Thr'),
+            numCol('season_total_xg', 'xG', 'Total expected goals this season (FPL).', 1, 'xG'),
+            numCol('season_m_xg', 'xG/90', 'Expected goals per 90 minutes — the core of the goal-threat rating.', 2, 'xG/90'),
+            numCol('season_m_npxg', 'npxG/90', 'Non-penalty expected goals per 90 (Understat) — threat stripped of penalties.', 2, 'npxG'),
+            numCol('season_m_box_shots', 'Box Sh/90', 'Shots taken from inside the box per 90 minutes.', 1, 'Box'),
+            pctCol('season_m_sot_rate', 'SoT%', 'Share of this player’s shots that are on target.', 'SoT%'),
+            { ...numCol('season_m_shot_quality', 'Shot Q', TOOLTIPS.shot_quality as string, 3), mobileHide: true },
           ],
           rows,
         }
@@ -465,12 +493,12 @@ export default function Rankings() {
             playerCol,
             posCol,
             teamCol,
-            scoreCol('season_creative_score_norm', 'Creativity', TOOLTIPS.creative as string),
-            numCol('season_total_xa', 'xA', 'Total expected assists this season (FPL).', 1),
-            numCol('season_m_xa', 'xA/90', 'Expected assists per 90 minutes — the core of the creativity rating.'),
-            numCol('season_m_big_chances', 'Big Ch/90', 'Big chances created per 90 minutes.'),
-            numCol('season_m_creativity_depth', 'xGChain/90', TOOLTIPS.creativity_depth as string),
-            numCol('season_m_set_piece', 'Set P/90', TOOLTIPS.set_piece as string),
+            scoreCol('season_creative_score_norm', 'Creativity', TOOLTIPS.creative as string, 'Cre'),
+            numCol('season_total_xa', 'xA', 'Total expected assists this season (FPL).', 1, 'xA'),
+            numCol('season_m_xa', 'xA/90', 'Expected assists per 90 minutes — the core of the creativity rating.', 2, 'xA/90'),
+            numCol('season_m_big_chances', 'Big Ch/90', 'Big chances created per 90 minutes.', 2, 'Big'),
+            numCol('season_m_creativity_depth', 'xGChain/90', TOOLTIPS.creativity_depth as string, 2, 'Chain'),
+            numCol('season_m_set_piece', 'Set P/90', TOOLTIPS.set_piece as string, 2, 'SetP'),
           ],
           rows,
         }
@@ -484,11 +512,11 @@ export default function Rankings() {
             playerCol,
             teamCol,
             priceCol,
-            scoreCol('season_cs_score_norm', 'Clean Sheet', TOOLTIPS.cs as string),
-            pctCol('season_m_cs_rate', 'CS%', 'Share of appearances that ended in a clean sheet.'),
-            numCol('season_m_xgc', 'xGC/90', 'Expected goals conceded per 90 while on the pitch — lower is better.'),
-            scoreCol('season_dc_score_norm', 'Def Con', TOOLTIPS.dc as string),
-            scoreCol('season_overall_score', 'Overall', TOOLTIPS.overall as string),
+            scoreCol('season_cs_score_norm', 'Clean Sheet', TOOLTIPS.cs as string, 'CS'),
+            pctCol('season_m_cs_rate', 'CS%', 'Share of appearances that ended in a clean sheet.', 'CS%'),
+            numCol('season_m_xgc', 'xGC/90', 'Expected goals conceded per 90 while on the pitch — lower is better.', 2, 'xGC'),
+            scoreCol('season_dc_score_norm', 'Def Con', TOOLTIPS.dc as string, 'DC'),
+            scoreCol('season_overall_score', 'Overall', TOOLTIPS.overall as string, 'Ovr'),
           ],
           rows,
         }
@@ -502,13 +530,13 @@ export default function Rankings() {
             playerCol,
             teamCol,
             priceCol,
-            scoreCol('season_overall_score', 'Rating', TOOLTIPS.overall as string),
-            scoreCol('season_cs_score_norm', 'Clean Sheet', TOOLTIPS.cs as string),
-            scoreCol('season_save_score_norm', 'Shot Stop', TOOLTIPS.save as string),
-            pctCol('season_m_cs_rate', 'CS%', 'Share of appearances that ended in a clean sheet.'),
-            numCol('season_m_xgc', 'xGC/90', 'Expected goals conceded per 90 while on the pitch — lower is better.'),
-            numCol('season_m_saves', 'Saves/90', 'Saves per 90 minutes.', 1),
-            numCol('season_m_prevented', 'Prev/90', 'Goals prevented vs expected per 90 (shot-stopping edge).'),
+            scoreCol('season_overall_score', 'Rating', TOOLTIPS.overall as string, 'Rat'),
+            scoreCol('season_cs_score_norm', 'Clean Sheet', TOOLTIPS.cs as string, 'CS'),
+            scoreCol('season_save_score_norm', 'Shot Stop', TOOLTIPS.save as string, 'Stop'),
+            pctCol('season_m_cs_rate', 'CS%', 'Share of appearances that ended in a clean sheet.', 'CS%'),
+            numCol('season_m_xgc', 'xGC/90', 'Expected goals conceded per 90 while on the pitch — lower is better.', 2, 'xGC'),
+            numCol('season_m_saves', 'Saves/90', 'Saves per 90 minutes.', 1, 'Sv'),
+            numCol('season_m_prevented', 'Prev/90', 'Goals prevented vs expected per 90 (shot-stopping edge).', 2, 'Prev'),
           ],
           rows,
         }
@@ -523,11 +551,11 @@ export default function Rankings() {
             playerCol,
             posCol,
             teamCol,
-            scoreCol('season_dc_score_norm', 'Def Con', TOOLTIPS.dc as string),
-            pctCol('season_m_dc_hit', 'DC Hit%', 'How often the player hits FPL’s defensive-contribution threshold (2 pts): 10 CBIT for defenders, 12 incl. recoveries for MID/FWD.'),
-            numCol('season_m_tackles', 'Tkl/90', 'Tackles per 90 minutes.', 1),
-            numCol('season_m_cbi', 'CBI/90', 'Clearances, blocks and interceptions per 90 minutes.', 1),
-            numCol('season_m_recoveries', 'Rec/90', 'Ball recoveries per 90. Counts toward the DC threshold for MID/FWD only — not defenders.', 1),
+            scoreCol('season_dc_score_norm', 'Def Con', TOOLTIPS.dc as string, 'DC'),
+            pctCol('season_m_dc_hit', 'DC Hit%', 'How often the player hits FPL’s defensive-contribution threshold (2 pts): 10 CBIT for defenders, 12 incl. recoveries for MID/FWD.', 'Hit%'),
+            numCol('season_m_tackles', 'Tkl/90', 'Tackles per 90 minutes.', 1, 'Tkl'),
+            numCol('season_m_cbi', 'CBI/90', 'Clearances, blocks and interceptions per 90 minutes.', 1, 'CBI'),
+            numCol('season_m_recoveries', 'Rec/90', 'Ball recoveries per 90. Counts toward the DC threshold for MID/FWD only — not defenders.', 1, 'Rec'),
           ],
           rows,
         }
@@ -541,8 +569,8 @@ export default function Rankings() {
             posCol,
             teamCol,
             priceCol,
-            scoreCol('season_value_score_norm', 'Value Rating', TOOLTIPS.value as string),
-            numCol('season_total_points', 'Pts', 'Total FPL points scored this season.', 0),
+            scoreCol('season_value_score_norm', 'Value Rating', TOOLTIPS.value as string, 'Val'),
+            numCol('season_total_points', 'Pts', 'Total FPL points scored this season.', 0, 'Pts'),
             ppgCol(rows),
             xptsCol,
           ],
@@ -564,11 +592,13 @@ export default function Rankings() {
             {
               key: '_tin', header: 'In', align: 'right', sortValue: (r) => num(r, '_tin') ?? 0,
               cell: (r) => <span className="font-num font-bold text-good tabular-nums">+{(num(r, '_tin') ?? 0).toLocaleString()}</span>,
+              mobileCell: (r) => <span className="font-num font-bold text-good tabular-nums">{kilo(num(r, '_tin') ?? 0)}</span>,
               tip: 'Managers who have brought him in this gameweek.',
             },
             {
               key: '_tout', header: 'Out', align: 'right', sortValue: (r) => num(r, '_tout') ?? 0,
               cell: (r) => <span className="font-num font-bold text-bad tabular-nums">−{(num(r, '_tout') ?? 0).toLocaleString()}</span>,
+              mobileCell: (r) => <span className="font-num font-bold text-bad tabular-nums">{kilo(num(r, '_tout') ?? 0)}</span>,
               tip: 'Managers who have sold him this gameweek. Sort by this to find the exodus before it shows up in the price.',
             },
             {
@@ -577,10 +607,16 @@ export default function Rankings() {
                 const v = num(r, '_tnet') ?? 0
                 return <span className={`font-num font-extrabold tabular-nums ${v > 0 ? 'text-good' : v < 0 ? 'text-bad' : 'text-ink-3'}`}>{v > 0 ? '+' : v < 0 ? '−' : ''}{Math.abs(v).toLocaleString()}</span>
               },
+              // Net keeps its sign: it is the one column whose direction is not
+              // already in the header.
+              mobileCell: (r) => {
+                const v = num(r, '_tnet') ?? 0
+                return <span className={`font-num font-extrabold tabular-nums ${v > 0 ? 'text-good' : v < 0 ? 'text-bad' : 'text-ink-3'}`}>{v > 0 ? '+' : v < 0 ? '−' : ''}{kilo(Math.abs(v))}</span>
+              },
               tip: 'In minus out. The direction of the market on him this week.',
             },
             {
-              key: '_dprice', header: 'Price move', align: 'right', sortValue: (r) => num(r, '_dprice') ?? 0,
+              key: '_dprice', header: 'Price move', mobileHeader: 'Δ£', align: 'right', sortValue: (r) => num(r, '_dprice') ?? 0,
               cell: (r) => {
                 const v = num(r, '_dprice') ?? 0
                 if (!v) return <span className="text-ink-3">—</span>
@@ -588,7 +624,7 @@ export default function Rankings() {
               },
               tip: 'How far his price has already moved this gameweek. FPL does not publish the threshold for the next move, so this is what has happened rather than a forecast.',
             },
-            numCol('_own', 'Owned', "Share of managers who own him, as FPL had it this morning — the base the transfers above are moving.", 1),
+            numCol('_own', 'Owned', "Share of managers who own him, as FPL had it this morning — the base the transfers above are moving.", 1, 'Own'),
           ],
           rows,
         }
@@ -627,6 +663,7 @@ export default function Rankings() {
             {
               key: '_n4',
               header: `xP next ${next4.gws.length}`,
+              mobileHeader: `xP${next4.gws.length}`,
               tip: `Projected FPL points across the next ${next4.gws.length} gameweeks, added up from the same per-gameweek model used on GW Preview and the Squad Builder. Availability is applied week by week, so an injury that clears in three weeks costs a player three of them.`,
               align: 'right',
               sortValue: (r) => num(r, '_n4'),
@@ -636,6 +673,7 @@ export default function Rankings() {
             {
               key: 'games',
               header: 'Games',
+              mobileHide: true,
               tip: 'How many of these gameweeks his club actually plays in — blanks and doubles are why two players on the same form project differently.',
               align: 'right',
               sortValue: (r) => num(r, '_n4games'),
@@ -644,7 +682,7 @@ export default function Rankings() {
                 return <span className={`font-num tabular-nums ${g < next4.gws.length ? 'text-warn' : 'text-ink-2'}`}>{g}</span>
               },
             },
-            scoreCol('season_overall_score', 'Season Rating', TOOLTIPS.overall as string),
+            scoreCol('season_overall_score', 'Season Rating', TOOLTIPS.overall as string, 'Sea'),
           ],
           rows,
         }
@@ -852,6 +890,10 @@ export default function Rankings() {
 /** xGI movement is read on its own merits: green when the underlying numbers
  *  are rising, red when they are falling, muted when the shift is noise. */
 const xgiTone = (v: number | null) => (v == null || Math.abs(v) < 0.05 ? 'text-ink-3' : v > 0 ? 'text-good' : 'text-bad')
+/** Six figures is 68px of a 368px row, and nobody reads a transfer count to the
+ *  individual manager on a phone. Above a million it goes to "2.3m", which is
+ *  narrower still — a bandwagon makes the column smaller, not wider. */
+const kilo = (v: number) => (v >= 1e6 ? `${(v / 1e6).toFixed(1)}m` : v >= 10000 ? `${Math.round(v / 1000)}k` : v.toLocaleString())
 const fmtDelta = (v: number | null) => (v == null ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(2)}`)
 
 function FormTables({ rows, pos, onPlayer }: { rows: Row[]; pos: string; onPlayer: (n: string, code?: number | null) => void }) {
@@ -866,10 +908,10 @@ function FormTables({ rows, pos, onPlayer }: { rows: Row[]; pos: string; onPlaye
     .slice(0, 15)
 
   const th = (label: string, tip: string, right = true) => (
-    <th className={`px-2.5 py-2 font-semibold md:px-3 ${right ? 'text-right' : 'text-left'}`}>
+    <th className={`px-1.5 py-2 font-semibold lg:px-3 ${right ? 'text-right' : 'text-left'}`}>
       <span className={`inline-flex items-center gap-1 ${right ? 'flex-row-reverse' : ''}`}>
         {label}
-        <InfoTip text={tip} />
+        <span className="hidden lg:inline-flex"><InfoTip text={tip} /></span>
       </span>
     </th>
   )
@@ -881,9 +923,9 @@ function FormTables({ rows, pos, onPlayer }: { rows: Row[]; pos: string; onPlaye
         <table className="w-full text-[13px] md:text-sm">
           <thead>
             <tr className="border-b border-line bg-surface-2 text-ink-2">
-              <th className="px-2.5 py-2 text-left font-semibold md:px-3">Player</th>
-              <th className="px-2.5 py-2 text-left font-semibold md:px-3">Team</th>
-              <th className="px-2.5 py-2 text-left font-semibold md:px-3">Pos</th>
+              <th className="px-1.5 py-2 text-left font-semibold lg:px-3">Player</th>
+              <th className="hidden px-2.5 py-2 text-left font-semibold lg:table-cell lg:px-3">Team</th>
+              <th className="hidden px-2.5 py-2 text-left font-semibold lg:table-cell lg:px-3">Pos</th>
               {th('Season P90', 'Average FPL points per 90 minutes across the whole season.')}
               {th('4GW P90', 'Average FPL points per 90 minutes over the last 4 gameweeks.')}
               {th('Delta', 'Last-4-gameweek points-per-90 minus the season baseline — the size of the streak.')}
@@ -899,35 +941,41 @@ function FormTables({ rows, pos, onPlayer }: { rows: Row[]; pos: string; onPlaye
                 onClick={() => onPlayer(String(p.web_name), num(p, 'code'))}
                 className="cursor-pointer border-b border-line/60 transition-colors last:border-0 hover:bg-surface-2/70"
               >
-                <td className="px-2.5 py-2 md:px-3">
-                  <PlayerNameCell name={String(p.web_name)} code={num(p, 'code')} />
+                <td className="px-1.5 py-2 lg:px-3">
+                  <span className="block max-w-[104px] lg:max-w-none">
+                    <PlayerNameCell name={String(p.web_name)} code={num(p, 'code')} />
+                    <span className="mt-px block text-[9px] leading-tight font-semibold text-ink-3 lg:hidden">
+                      {String(p.position)} · {String(p.team)}
+                      {num(p, 'price') != null ? ` · £${num(p, 'price')}m` : ''}
+                    </span>
+                  </span>
                 </td>
-                <td className="px-2.5 py-2 md:px-3">
+                <td className="hidden px-2.5 py-2 lg:table-cell lg:px-3">
                   <TeamCell team={String(p.team)} />
                 </td>
-                <td className="px-2.5 py-2 md:px-3">
+                <td className="hidden px-2.5 py-2 lg:table-cell lg:px-3">
                   <PosBadge pos={String(p.position)} />
                 </td>
-                <td className="px-2.5 py-2 text-right font-num tabular-nums md:px-3">
+                <td className="px-1.5 py-2 text-right font-num tabular-nums lg:px-3">
                   {(num(p, 'pts_per90_season') ?? 0).toFixed(2)}
                 </td>
-                <td className="px-2.5 py-2 text-right font-num tabular-nums md:px-3">
+                <td className="px-1.5 py-2 text-right font-num tabular-nums lg:px-3">
                   {(num(p, 'pts_per90_4gw') ?? 0).toFixed(2)}
                 </td>
-                <td className={`px-2.5 py-2 text-right font-num tabular-nums md:px-3 ${deltaClass}`}>
+                <td className={`px-1.5 py-2 text-right font-num tabular-nums lg:px-3 ${deltaClass}`}>
                   {sign ? '+' : ''}
                   {(num(p, 'pts_delta') ?? 0).toFixed(2)}
                 </td>
-                <td className="px-2.5 py-2 text-right font-num tabular-nums text-ink-2 md:px-3">
+                <td className="px-1.5 py-2 text-right font-num tabular-nums text-ink-2 lg:px-3">
                   {(num(p, 'xgi_per90_season') ?? 0).toFixed(2)}
                 </td>
-                <td className="px-2.5 py-2 text-right font-num tabular-nums text-ink-2 md:px-3">
+                <td className="px-1.5 py-2 text-right font-num tabular-nums text-ink-2 lg:px-3">
                   {(num(p, 'xgi_per90_4gw') ?? 0).toFixed(2)}
                 </td>
                 {/* Coloured on its own sign rather than the streak's: a hot run
                     with the underlying numbers going the other way is exactly
                     the thing this column exists to show. */}
-                <td className={`px-2.5 py-2 text-right font-num tabular-nums md:px-3 ${xgiTone(num(p, 'xgi_delta'))}`}>
+                <td className={`px-1.5 py-2 text-right font-num tabular-nums lg:px-3 ${xgiTone(num(p, 'xgi_delta'))}`}>
                   {fmtDelta(num(p, 'xgi_delta'))}
                 </td>
               </tr>
