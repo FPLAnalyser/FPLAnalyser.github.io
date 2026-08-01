@@ -38,6 +38,42 @@ the thing established rivals cannot copy without undermining themselves.
 `public/sitemap.xml` deliberately does not list `#/review` yet — there is no
 reason to send a crawler to a holding page. Add it when the content lands.
 
+### Mobile audit — what the sweep found after Fixtures
+Measured on an iPhone 13 across all eleven routes. Three clean results worth
+recording so nobody re-checks them: **zero page-level horizontal overflow
+anywhere**, **nothing hidden behind the bottom bar** at the end of any page,
+and **no console errors** on any route.
+
+What is left, in the order it costs readers:
+
+**The Players leaderboard hides 408px.** The table is 776px inside a 368px
+column, so 4GW Rating, Pts, PPG and xPts are entirely off-screen behind a
+hidden scrollbar, and the Season rating badge sits clipped at the right edge.
+This is the same fault the fixtures grid had, on the most-used page on the
+site — and the same answer applies: below `lg` the row should carry the two or
+three numbers that matter with the rest behind a tap, rather than a table
+nobody can see the right half of.
+
+**The market scatter on a player page hides 238px** (540px in 302px). A chart
+that has to be dragged sideways on a phone is a chart most people never see the
+right-hand side of; it wants a mobile aspect rather than a scroll.
+
+**Info tips are 14×14px.** Eleven of them on Players alone, three on GW Preview.
+Below the 24px anyone would call a minimum and well under the 44px that is
+comfortable. They carry the explanations the whole site is built on, so they
+are worth hitting.
+
+**Body text bottoms out at 9.5–10px** on GW Preview, player pages, Teams,
+Squad Builder and Legal — captions like "Biggest attack", "Projected points",
+"Leaves your browser". Legible on a desk, marginal on a phone in daylight.
+
+**The pre-season banner's dismiss is 24×24px**, on every page until it is
+dismissed.
+
+Minor: the Legal tab strip scrolls 133px, which is a tab bar doing what tab
+bars do. One run saw a 542px scroller on GW Preview that four later probes
+could not reproduce — worth a second look rather than a fix.
+
 ### Load a squad into the Squad Builder without typing it
 Fifteen players entered by hand is a lot of taps before the builder gives
 anything back, and it is the main reason someone bounces off it.
