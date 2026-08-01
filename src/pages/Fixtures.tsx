@@ -745,6 +745,14 @@ function combos<T>(arr: T[], k: number): T[][] {
 const ROT_SIZES = [2, 3, 4, 5] as const
 const ROT_WINDOWS = [4, 6, 8, 10] as const
 const LENS_LABEL_ROT: Record<Lens, string> = { overall: 'Overall', attack: 'Attack', defence: 'Defence' }
+/** Gold, silver, bronze — the site already speaks in medals on the podium and
+ *  the tier cards, so the band borrows the same language rather than inventing
+ *  a third way of saying "best of these". */
+const MEDAL = [
+  'linear-gradient(90deg,#F7E3A6,#C9A227)',
+  'linear-gradient(90deg,#E4E9EF,#9FB4C7)',
+  'linear-gradient(90deg,#E6C0A0,#A9714B)',
+]
 const RATE_LABEL: Record<GridMode, string> = { diff: 'Difficulty', cs: 'Clean sheets', xg: 'Goals' }
 
 /* A rotation is defensive or attacking, and that one choice settles the rest:
@@ -1042,6 +1050,12 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
     // One label for the band, since a mixed group would otherwise need one per
     // column. With a position chosen it is that position's metric; with
     // "Anyone" it is whatever the side implies most of the time.
+    // Where each club places on the band metric inside THIS rotation.
+    const rank = new Map<string, number>()
+    ;[...group]
+      .map((t) => ({ t, s: dcBy.get(t)?.[0]?.score ?? -1 }))
+      .sort((a, b) => b.s - a.s)
+      .forEach((x, i) => rank.set(x.t, i))
     const bandLabel = needPos === 'any'
       ? (side === 'defence' ? 'Def Con' : 'Attack')
       : POS_METRIC[side][needPos]?.label ?? ''
@@ -1085,10 +1099,18 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
                 // ranking. Recolouring the whole board per lens would mean
                 // green meant three different things across one tab.
                 return (
+                  /* A real border in a literal colour, not an inset
+                     box-shadow in var(--accent). Two things a rasteriser can
+                     drop: html2canvas ignores box-shadow entirely on the
+                     fallback path, and a custom property need not resolve
+                     inside a cloned tree — so the export lost the one mark
+                     that says which fixture you would actually start. Every
+                     cell carries the border and only its colour changes, so
+                     the layout is identical either way. */
                   <span
                     key={t}
-                    className={`flex-1 rounded py-1 text-center text-[10.5px] leading-tight font-bold text-ink ${start ? '' : 'opacity-45'}`}
-                    style={{ background: diffFill(c.diff), boxShadow: start ? 'inset 0 0 0 1.5px var(--accent)' : undefined }}
+                    className={`flex-1 rounded border-2 py-1 text-center text-[10.5px] leading-tight font-bold text-ink ${start ? '' : 'opacity-45'}`}
+                    style={{ background: diffFill(c.diff), borderColor: start ? '#c9a227' : 'transparent' }}
                     title={`${c.f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(c.f.opponent)} — ${RATE_LABEL[rateOn].toLowerCase()} ${rateFmt(v)}${start ? ' · START' : ''}`}
                   >
                     {c.f.opponent}
@@ -1114,8 +1136,12 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
               <span key={t} className="min-w-0 flex-1 text-center" title={`${best.name} (${best.pos})${best.price != null ? ` £${best.price}m` : ''} — ${best.label} ${best.score.toFixed(0)} of 100`}>
                 <span className="block truncate text-[9.5px] font-bold text-ink">{best.name}</span>
                 <span className="block text-[8px] text-ink-3">{best.pos}{best.price != null ? ` £${best.price}m` : ''} · {best.score.toFixed(0)}</span>
-                <span className="mt-0.5 block h-[3px] overflow-hidden rounded-full bg-surface-3">
-                  <span className="block h-full rounded-full" style={{ width: `${Math.round((best.score / dcMax) * 100)}%`, background: best.score >= 90 ? 'linear-gradient(90deg,#9fb4c7,var(--accent))' : 'var(--line-strong)' }} />
+                {/* Gold, silver, bronze by rank inside this rotation. A single
+                    grey bar said "here is a number" and nothing else; the
+                    medal says which of these clubs has the better man at the
+                    job, which is the comparison the row exists to make. */}
+                <span className="mt-1 block h-[4px] overflow-hidden rounded-full bg-surface-3">
+                  <span className="block h-full rounded-full" style={{ width: `${Math.round((best.score / dcMax) * 100)}%`, background: MEDAL[Math.min(2, rank.get(t) ?? 2)] }} />
                 </span>
               </span>
             )
