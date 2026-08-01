@@ -745,6 +745,12 @@ function combos<T>(arr: T[], k: number): T[][] {
 const ROT_SIZES = [2, 3, 4, 5] as const
 const ROT_WINDOWS = [4, 6, 8, 10] as const
 const LENS_LABEL_ROT: Record<Lens, string> = { overall: 'Overall', attack: 'Attack', defence: 'Defence' }
+const RATE_LABEL: Record<GridMode, string> = { diff: 'Difficulty', cs: 'Clean sheets', xg: 'Goals' }
+const RATE_TIP: Record<GridMode, string> = {
+  diff: 'Rank and start on our own fixture difficulty — a blend of what each side is expected to score and concede. The right default when the rotation is not position-specific.',
+  cs: 'Rank and start on the clean-sheet chance for that fixture. What you want when the rotation is defenders or a keeper: the starter becomes the one most likely to earn the four points rather than the one with the kindest blended fixture.',
+  xg: 'Rank and start on the goals that club is projected to score in that fixture. What you want for an attacking rotation.',
+}
 const mean = (ds: number[]) => (ds.length ? ds.reduce((a, b) => a + b, 0) / ds.length : null)
 
 /* ── Rotation planner: pick teams and see who to start each gameweek ──────
@@ -777,8 +783,33 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
   const [startK, setStartK] = useState(1)
   const [windowN, setWindowN] = useState<(typeof ROT_WINDOWS)[number]>(6)
   const [lens, setLens] = useState<Lens>('overall')
+  /* What the board ranks and rings on. Difficulty is a blend; rotating
+     defenders you want the clean-sheet projection and rotating attackers you
+     want goals, and both are already computed for the Goals & Clean Sheets
+     tab. The ring genuinely changes hands between them in several gameweeks,
+     which is the whole reason this is a control and not a preference. */
+  const [rateOn, setRateOn] = useState<GridMode>('diff')
 
   const allTeams = useMemo(() => [...new Set(fixtureEase.map((f) => f.team))].sort(), [fixtureEase])
+
+  /** Every club's best Defensive Contribution players. DC points land whether
+   *  or not the clean sheet does, so two clubs with the same fixtures are not
+   *  the same buy if one of them has a 99 in it — and nothing on this board
+   *  said so. */
+  const dcBy = useMemo(() => {
+    const m = new Map<string, { name: string; pos: string; score: number }[]>()
+    for (const r of ratings) {
+      const sc = num(r, 'season_dc_score')
+      if (sc == null || (r.position !== 'DEF' && r.position !== 'MID')) continue
+      const t = String(r.team)
+      const list = m.get(t) ?? []
+      list.push({ name: String(r.web_name), pos: String(r.position), score: sc })
+      m.set(t, list)
+    }
+    for (const list of m.values()) list.sort((a, b) => b.score - a.score)
+    return m
+  }, [ratings])
+  const dcMax = useMemo(() => Math.max(1, ...[...dcBy.values()].map((l) => l[0]?.score ?? 0)), [dcBy])
 
   /** The best player each club can offer inside the budget — highest rated,
    *  not cheapest: at a fixed price cap you want the best man available at
@@ -816,6 +847,20 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
       return v
     }
   }, [fixtureEase, baselines, leagueBase, market, diffScale, lens])
+
+  /** The fixture's value under the chosen lens, and which way is better.
+   *  Difficulty is lower-is-kinder; goals and clean sheets are higher-is-
+   *  better, so the comparator flips with the control rather than the caller
+   *  having to remember which one is on. */
+  const rateVal = (team: string, gw: number): number | null => {
+    const c = cellFor(team, gw)
+    if (!c) return null
+    if (rateOn === 'diff') return c.diff
+    const p = projectCell(rateOn, baselines.get(team), baselines.get(c.f.opponent), leagueBase, c.f.venue, mktOf(market, team, c.f))
+    return p ? p.v : null
+  }
+  const better = (a: number, b: number) => (rateOn === 'diff' ? a - b : b - a)
+  const rateFmt = (v: number) => (rateOn === 'diff' ? v.toFixed(1) : rateOn === 'xg' ? v.toFixed(1) : `${Math.round(v * 100)}%`)
 
   const changeSize = (n: (typeof ROT_SIZES)[number]) => {
     setSize(n)
@@ -939,9 +984,9 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
   const rotationBoard = (group: string[]) => {
     const starters = (gw: number) => {
       const ranked = group
-        .map((t) => ({ t, c: cellFor(t, gw) }))
-        .filter((x): x is { t: string; c: { f: FixtureEaseRow; diff: number } } => x.c != null)
-        .sort((a, b) => a.c.diff - b.c.diff)
+        .map((t) => ({ t, v: rateVal(t, gw) }))
+        .filter((x): x is { t: string; v: number } => x.v != null)
+        .sort((a, b) => better(a.v, b.v))
       return new Set(ranked.slice(0, Math.min(startK, ranked.length)).map((x) => x.t))
     }
     return (
@@ -961,23 +1006,47 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
               <span className="flex w-8 shrink-0 items-center text-[9.5px] font-extrabold text-ink-3">GW{gw}</span>
               {group.map((t) => {
                 const c = cellFor(t, gw)
-                if (!c) return <span key={t} className="flex-1 rounded bg-surface-2 py-1 text-center text-[10px] text-ink-3">—</span>
+                const v = rateVal(t, gw)
+                if (!c || v == null) return <span key={t} className="flex-1 rounded bg-surface-2 py-1 text-center text-[10px] text-ink-3">—</span>
                 const start = on.has(t)
+                // Colour always comes from the difficulty, whichever lens is
+                // ranking. Recolouring the whole board per lens would mean
+                // green meant three different things across one tab.
                 return (
                   <span
                     key={t}
                     className={`flex-1 rounded py-1 text-center text-[10.5px] leading-tight font-bold text-ink ${start ? '' : 'opacity-45'}`}
                     style={{ background: diffFill(c.diff), boxShadow: start ? 'inset 0 0 0 1.5px var(--accent)' : undefined }}
-                    title={`${c.f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(c.f.opponent)} — difficulty ${c.diff.toFixed(1)}${start ? ' · START' : ''}`}
+                    title={`${c.f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(c.f.opponent)} — ${RATE_LABEL[rateOn].toLowerCase()} ${rateFmt(v)}${start ? ' · START' : ''}`}
                   >
                     {c.f.opponent}
-                    <span className="block text-[7.5px] font-semibold opacity-70">{c.f.venue} · {c.diff.toFixed(1)}</span>
+                    <span className="block text-[7.5px] font-semibold opacity-70">{c.f.venue} · {rateFmt(v)}</span>
                   </span>
                 )
               })}
             </div>
           )
         })}
+        {/* Def Con under the fixtures. A second dimension of the same choice,
+            not an annotation on the first: the points land whether or not the
+            clean sheet does, and position matters — a 99 midfielder and a 99
+            defender are different buys at the same score. */}
+        <div className="flex gap-1 border-t border-line bg-surface-2/40 px-2 py-1.5">
+          <span className="flex w-8 shrink-0 items-center text-[8px] font-extrabold tracking-[0.06em] text-ink-3 uppercase">Def<br />Con</span>
+          {group.map((t) => {
+            const best = dcBy.get(t)?.[0]
+            if (!best) return <span key={t} className="flex-1 text-center text-[9px] text-ink-3">—</span>
+            return (
+              <span key={t} className="min-w-0 flex-1 text-center" title={`${best.name} (${best.pos}) — Defensive Contribution ${best.score.toFixed(0)} of 100`}>
+                <span className="block truncate text-[9.5px] font-bold text-ink">{best.name}</span>
+                <span className="block text-[8px] text-ink-3">{best.pos} · {best.score.toFixed(0)}</span>
+                <span className="mt-0.5 block h-[3px] overflow-hidden rounded-full bg-surface-3">
+                  <span className="block h-full rounded-full" style={{ width: `${Math.round((best.score / dcMax) * 100)}%`, background: best.score >= 90 ? 'linear-gradient(90deg,#9fb4c7,var(--accent))' : 'var(--line-strong)' }} />
+                </span>
+              </span>
+            )
+          })}
+        </div>
       </div>
     )
   }
@@ -1015,13 +1084,38 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
         </div>
       </div>
 
-      {/* Budget filter — the reason most rotations exist. */}
       <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-3">
-        <div className="flex items-center gap-1.5">
-          <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Must field</span>
-          {(['any', 'GKP', 'DEF', 'MID', 'FWD'] as const).map((pos) => (
-            <button key={pos} onClick={() => setNeedPos(pos)} className={pill(needPos === pos)}>{pos === 'any' ? 'Anyone' : pos}</button>
+        {/* Where "Must field" used to be. That control filtered which clubs
+            could be suggested by whether they field a player at a position —
+            a question you ask once you have a rotation, not while choosing
+            one, and with the defaults on it did nothing at all. This is the
+            control that changes what the board answers. */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Rate on</span>
+          {(['diff', 'cs', 'xg'] as const).map((m) => (
+            <span key={m} className="flex items-center gap-1">
+              <button onClick={() => setRateOn(m)} className={pill(rateOn === m)}>{RATE_LABEL[m]}</button>
+              <InfoTip text={RATE_TIP[m]} />
+            </span>
           ))}
+        </div>
+        {/* Affordability, demoted to a select. Still the reason most rotations
+            exist, but it belongs beside the price it works with. */}
+        <div className="flex items-center gap-1.5">
+          <label htmlFor="rot-pos" className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Fields a</label>
+          <select
+            id="rot-pos"
+            value={needPos}
+            onChange={(e) => setNeedPos(e.target.value as typeof needPos)}
+            className={`${pill(needPos !== 'any')} appearance-none bg-surface-1 pr-7`}
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a9a294' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.5rem center', backgroundSize: '0.85rem',
+            }}
+          >
+            <option value="any">Anyone</option>
+            {(['GKP', 'DEF', 'MID', 'FWD'] as const).map((pos) => <option key={pos} value={pos}>{pos}</option>)}
+          </select>
         </div>
         {/* A select, not chips. Six price options in a row that had no overflow
             container pushed the whole document to 461px inside a 390px phone —
