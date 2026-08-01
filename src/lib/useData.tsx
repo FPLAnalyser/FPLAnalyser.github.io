@@ -69,14 +69,46 @@ export function useCore() {
       if (p.element != null) byElement.set(Number(p.element), p)
       if (p.code != null) byCode.set(Number(p.code), p)
     }
+    /* Numeric FPL team id -> our short code, by majority vote.
+     *
+     * Derived from the players present in both files rather than a table of
+     * our own, so it cannot drift out of step with either. Majority rather
+     * than first-or-last seen for one reason: this map is about to be used to
+     * detect transfers, and a transferred player is precisely a row whose two
+     * clubs disagree. Take him as the truth and he redefines his new club's id
+     * as his old club, moving the whole squad with him. */
+    const votes = new Map<number, Map<string, number>>()
+    for (const r of core.data.ratings as RatingRow[]) {
+      const l = byElement.get(Number(r.element)) ?? byCode.get(Number(r.code))
+      if (l?.team == null || !r.team) continue
+      const m = votes.get(Number(l.team)) ?? new Map<string, number>()
+      m.set(String(r.team), (m.get(String(r.team)) ?? 0) + 1)
+      votes.set(Number(l.team), m)
+    }
+    const shortByTeamId = new Map<number, string>()
+    for (const [id, m] of votes) {
+      const best = [...m.entries()].sort((a, b) => b[1] - a[1])[0]
+      if (best) shortByTeamId.set(id, best[0])
+    }
+
     let changed = false
     const ratings = (core.data.ratings as RatingRow[]).map((r) => {
       const l = byElement.get(Number(r.element)) ?? byCode.get(Number(r.code))
-      if (!l || (l.price == null && l.own == null)) return r
+      if (!l) return r
       const next = { ...r }
       if (l.price != null) next.price = l.price
       if (l.own != null) next.selected_by_percent = l.own
-      if (next.price !== r.price || next.selected_by_percent !== r.selected_by_percent) changed = true
+      /* A transfer. The build is run by hand and can be a fortnight behind in
+       * an open window, so the feed is the authority on who plays for whom —
+       * and club is not cosmetic here: every fixture, clean-sheet projection
+       * and expected-points number for this player is computed against it.
+       * His rates are his own and travel with him; his fixtures do not. */
+      const club = l.team != null ? shortByTeamId.get(Number(l.team)) : undefined
+      if (club && club !== r.team) { next.team = club; next.moved = true }
+      // FPL reclassifies the odd player between positions; same argument.
+      if (l.pos && l.pos !== r.position) next.position = l.pos as RatingRow['position']
+      if (next.price !== r.price || next.selected_by_percent !== r.selected_by_percent
+          || next.team !== r.team || next.position !== r.position) changed = true
       return next
     })
     /* Players the daily feed knows about and the ratings build does not.
@@ -95,11 +127,6 @@ export function useCore() {
      *
      * The team id is mapped through the players present in both files rather
      * than a table of our own, so it cannot drift out of step with either. */
-    const shortByTeamId = new Map<number, string>()
-    for (const r of core.data.ratings as RatingRow[]) {
-      const l = byElement.get(Number(r.element)) ?? byCode.get(Number(r.code))
-      if (l?.team != null && r.team) shortByTeamId.set(Number(l.team), String(r.team))
-    }
     const known = new Set((core.data.ratings as RatingRow[]).map((r) => Number(r.element)))
     const POS = new Set(['GKP', 'DEF', 'MID', 'FWD'])
     const unrated = rows

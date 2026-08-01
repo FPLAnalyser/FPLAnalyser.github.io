@@ -165,7 +165,22 @@ The daily availability feed cannot fix this on its own: it carries element,
 code, team, status, price and ownership — no name and no position — so it can
 flag a player it has never heard of but cannot introduce him.
 
-**Half of this is now fixed.** `refresh_availability.py` carries `name` and
+**Transfers, not just additions.** The first pass at this covered players the
+feed had and the build did not. It did not cover players whose *club* had
+changed, because `useCore` only ever overlaid price and ownership — so a
+transferred player kept his old badge, and with it his old club's fixtures,
+clean-sheet projection and expected points. It now overlays club and position
+too.
+
+The team-id map behind that is a majority vote, and has to be: it is derived
+from the players present in both files, and a transferred player is exactly a
+row whose two clubs disagree. Take him as the truth and he redefines his new
+club's id as his old club, moving the whole squad with him. A first diagnostic
+here reported "zero transfers" because it silently skipped any id with two
+clubs — which is the signature of the thing it was looking for. Recounted by
+majority: **Garnacho, CHE → AVL**, which the site had been showing wrong.
+
+**The rest is fixed too.** `refresh_availability.py` carries `name` and
 `pos` for every element, so from the next 06:00 run the daily feed can
 introduce a player rather than only describe one, and `useCore` appends anyone
 the feed knows and the build does not. They arrive with no metrics, so
