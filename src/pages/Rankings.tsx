@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
 import { SectionBanner } from '../components/SectionBanner'
 import { Tabs, PillGroup, type TabDef } from '../components/Tabs'
 import { SortableTable, type Column } from '../components/SortableTable'
+import { ColumnGuide } from '../components/ColumnGuide'
+import { useWide } from '../lib/useWide'
 import { StarRating } from '../components/StarRating'
 import { MiniBar } from '../components/viz'
 import { PlayerNameCell, PosBadge, TeamCell } from '../components/cells'
@@ -435,6 +437,16 @@ export default function Rankings() {
     return { ...r, _tin: tin, _tout: tout, _tnet: tin - tout, _dprice: (p?.dprice ?? 0) / 10, _own: p?.own ?? num(r, 'selected_by_percent') ?? 0 }
   }), [ratings, avail])
 
+  // Each gameweek in the window is a column, so Next 8 and Next 10 are boards a
+  // phone has no room for — 10 would be sixteen columns before a single one is
+  // dropped. They stay on the wide layout, and a window carried over from a
+  // desktop session falls back to the longest one that fits.
+  const wide = useWide()
+  const xpWindows = useMemo(() => (wide ? XP_WINDOWS : XP_WINDOWS.filter((w) => w <= 6)), [wide])
+  useEffect(() => {
+    if (!xpWindows.includes(xpWindow)) setXpWindow(xpWindows[xpWindows.length - 1])
+  }, [xpWindows, xpWindow])
+
   const view: TabView | null = useMemo(() => {
     // Leaderboards rank only players with enough minutes to earn a rating.
     // But when the user searches by name, widen to the full pool so newly
@@ -756,7 +768,7 @@ export default function Rankings() {
               is measuring what has already happened. */}
           {tab === 'next4' && (
             <PillGroup
-              options={XP_WINDOWS.map((w) => ({ id: String(w), label: `Next ${w}` }))}
+              options={xpWindows.map((w) => ({ id: String(w), label: `Next ${w}` }))}
               active={String(xpWindow)}
               onChange={(id) => setXpWindow(Number(id) as (typeof XP_WINDOWS)[number])}
             />
@@ -858,7 +870,10 @@ export default function Rankings() {
         <FormTables rows={seasonToDate} pos={pos} onPlayer={toPlayer} />
       ) : view ? (
         view.rows.length ? (
-          <Exportable title={TABS.find((t) => t.id === tab)?.label ?? 'Players'}>
+          <Exportable
+            title={TABS.find((t) => t.id === tab)?.label ?? 'Players'}
+            toolbar={<ColumnGuide columns={view.columns} />}
+          >
             <SortableTable
               rows={view.rows}
               columns={view.columns}
@@ -986,7 +1001,20 @@ function FormTables({ rows, pos, onPlayer }: { rows: Row[]; pos: string; onPlaye
     </div>
   )
 
+  // Form has no share export, so its guide sits on a row of its own rather than
+  // beside a button that is not there. Same definitions the headers carry.
+  const guideCols = [
+    { key: 'p90', header: 'Season P90', tip: 'Average FPL points per 90 minutes across the whole season.', cell: () => null },
+    { key: 'p90_4', header: '4GW P90', tip: 'Average FPL points per 90 minutes over the last 4 gameweeks.', cell: () => null },
+    { key: 'delta', header: 'Delta', tip: 'Last-4-gameweek points-per-90 minus the season baseline — the size of the streak.', cell: () => null },
+    { key: 'xgi', header: 'xGI/90', tip: 'Expected goal involvements per 90 across the season: expected goals plus expected assists. The baseline a streak is measured against.', cell: () => null },
+    { key: 'xgi_4', header: '4GW xGI', tip: 'Expected goal involvements per 90 over the last 4 gameweeks.', cell: () => null },
+    { key: 'xgi_d', header: 'xGI Δ', tip: 'Last-4-gameweek xGI per 90 minus the season baseline. This is the column that separates a real change from a hot run of finishing: points up and xGI up is a player doing more, points up and xGI flat is variance.', cell: () => null },
+  ] satisfies Column<Row>[]
+
   return (
+    <>
+    <div className="mb-2 flex"><ColumnGuide columns={guideCols} /></div>
     <div className="flex flex-col gap-6 lg:flex-row">
       {table(
         <>
@@ -1005,6 +1033,7 @@ function FormTables({ rows, pos, onPlayer }: { rows: Row[]; pos: string; onPlaye
         false,
       )}
     </div>
+    </>
   )
 }
 
