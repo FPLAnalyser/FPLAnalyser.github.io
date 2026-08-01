@@ -18,8 +18,9 @@ h1{font-size:25px;margin:0 0 6px;letter-spacing:-.02em}
 table{width:max-content;min-width:100%;border-collapse:collapse;font-size:12px}
 th{font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);padding:6px 4px;font-weight:800;white-space:nowrap;background:var(--s2)}
 td{padding:5px 4px;border-top:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
+td.pl{max-width:104px;white-space:normal}
 th:first-child,td:first-child{padding-left:8px}th:last-child,td:last-child{padding-right:8px}
-.nm{font-weight:700;font-size:12.5px;white-space:nowrap}
+.nm{font-weight:700;font-size:12.5px;white-space:normal;overflow-wrap:anywhere;line-height:1.2}
 .meta{font-size:9px;color:var(--ink3);font-weight:600;letter-spacing:.02em}
 .rk{color:var(--ink3);font-size:10px;font-weight:800}
 .badge{display:inline-block;min-width:24px;text-align:center;border-radius:5px;padding:2px 4px;font-size:11px;font-weight:800}
@@ -34,8 +35,8 @@ th:first-child,td:first-child{padding-left:8px}th:last-child,td:last-child{paddi
 .tot td{padding:7px 10px;white-space:normal}
 </style>
 <div class="wrap">
-<h1>Option C — price under the name, two columns cut</h1>
-<p class="sub">Every leaderboard in option C's treatment: crest and price columns dropped, with position, club and price folded under the name, rating badges compact, PPG as a number rather than a bar. Real 2026/27 data. Each table is set to <code>max-content</code> inside the 368px phone column, so it grows when it needs to — the overflow figure under each one is measured, not estimated.</p>
+<h1>Option C — all ten sub-tables inside the phone</h1>
+<p class="sub">Every leaderboard in option C's treatment: crest and price columns dropped, with position, club and price folded under the name, rating badges compact, PPG as a number rather than a bar, transfer counts in thousands, shot quality off the phone, and player names that wrap instead of widening their column. Real 2026/27 data. Each table is set to <code>max-content</code> inside the 368px phone column, so it grows when it needs to — the overflow figure under each one is measured, not estimated.</p>
 <div class="note"><b>What today looks like.</b> Measured on an iPhone 13 against the live build: Top Rated 776px (408 hidden), xPoints 852 (484), Goal Threats 810 (442), Creators 755 (387), Clean Sheets 667 (299), Goalkeepers 869 (501), Def Con 625 (257), Value 636 (268), Form 625 (257). Every tab overflows. The widest single columns are the rating badge headers — "Season Rating" costs 125px — and the PPG mini-bar at 104px.</div>
 <div class="grid" id="cols"></div>
 <div class="tot" id="tot"></div>
@@ -45,16 +46,17 @@ const D = {"top-rated": [{"n": "Haaland", "pos": "FWD", "team": "MCI", "price": 
 const cls = v => v==null?'g60':v>=90?'g90':v>=80?'g80':v>=65?'g70':v>=50?'g60':'gl';
 const bd = v => v==null?'<span class="badge g60" style="opacity:.35">–</span>':`<span class="badge ${cls(v)}">${v}</span>`;
 const nm = p => `<div class="nm">${p.n}</div><div class="meta">${p.pos} · ${p.team}${p.price!=null?' · £'+p.price.toFixed(1)+'m':''}</div>`;
+const k = v => v >= 1e6 ? (v/1e6).toFixed(1)+'m' : v >= 10000 ? Math.round(v/1000)+'k' : v.toLocaleString();
 const sgn = v => `<span class="${v>0?'good':v<0?'bad':''}">${v>0?'+':''}${v}</span>`;
 
-const WAS = {"top-rated": 295, "xpoints": 376, "goal-threats": 387, "creators": 352, "clean-sheets": 292, "goalkeepers": 360, "def-con": 275, "value": 268, "form": 365, "transfers": 446};
+const WAS = {"top-rated": 295, "xpoints": 345, "goal-threats": 387, "creators": 352, "clean-sheets": 292, "goalkeepers": 360, "def-con": 275, "value": 268, "form": 365, "transfers": 426};
 const PANELS = [
  { id:'top-rated', t:'Top Rated', now:776, hdr:['#','Player','Sea','4GW','Pts','PPG','xPts'],
    row:(p,i)=>[i+1, nm(p), bd(p.sea), bd(p.gw4), p.pts, p.ppg.toFixed(1), p.xpts.toFixed(2)] },
  { id:'xpoints', t:'xPoints — Next 4', now:852, hdr:['#','Player','xP4','GW1','GW2','GW3','GW4','Sea'],
    row:(p,i)=>[i+1, nm(p), `<b class="good">${p.xp4.toFixed(1)}</b>`, p.g1.toFixed(2), p.g2.toFixed(2), p.g3.toFixed(2), p.g4.toFixed(2), bd(p.sea)] },
- { id:'goal-threats', t:'Goal Threats', now:810, hdr:['#','Player','Thr','xG','xG/90','npxG','Box','SoT%','ShQ'],
-   row:(p,i)=>[i+1, nm(p), bd(p.thr), p.xg, p.xg90.toFixed(2), p.npxg.toFixed(2), p.box.toFixed(1), p.sot+'%', p.q.toFixed(3)] },
+ { id:'goal-threats', t:'Goal Threats', now:810, hdr:['#','Player','Thr','xG','xG/90','npxG','Box','SoT%'],
+   row:(p,i)=>[i+1, nm(p), bd(p.thr), p.xg, p.xg90.toFixed(2), p.npxg.toFixed(2), p.box.toFixed(1), p.sot+'%'] },
  { id:'creators', t:'Creators', now:755, hdr:['#','Player','Cre','xA','xA/90','Big','Chain','SetP'],
    row:(p,i)=>[i+1, nm(p), bd(p.cre), p.xa, p.xa90.toFixed(2), p.big.toFixed(2), p.chain.toFixed(2), p.sp.toFixed(2)] },
  { id:'clean-sheets', t:'Clean Sheets', now:667, hdr:['#','Player','CS','CS%','xGC','DC','Ovr'],
@@ -68,8 +70,8 @@ const PANELS = [
  { id:'form', t:'Form — hot streak', now:625, hdr:['#','Player','Sea','4GW','Δ','xGI','4xGI','xGIΔ'],
    row:(p,i)=>[i+1, nm(p), p.s90.toFixed(2), p.f90.toFixed(2), sgn(p.d.toFixed(2)), p.xs.toFixed(2), p.xf.toFixed(2), sgn(p.xd.toFixed(2))] },
  { id:'transfers', t:'Transfers', now:null, hdr:['#','Player','In','Out','Net','Δ£','Own'],
-   row:(p,i)=>[i+1, nm(p), `<span class="good">${p.tin.toLocaleString()}</span>`, `<span class="bad">${p.tout.toLocaleString()}</span>`,
-     `<b class="${p.tin-p.tout>0?'good':'bad'}">${p.tin-p.tout>0?'+':'−'}${Math.abs(p.tin-p.tout).toLocaleString()}</b>`,
+   row:(p,i)=>[i+1, nm(p), `<span class="good">${k(p.tin)}</span>`, `<span class="bad">${k(p.tout)}</span>`,
+     `<b class="${p.tin-p.tout>0?'good':'bad'}">${p.tin-p.tout>0?'+':'−'}${k(Math.abs(p.tin-p.tout))}</b>`,
      `<span class="good">▲£0.1m</span>`, p.own+'%'] },
 ];
 /* Transfers has no feed pre-season, so this one panel uses worst-case six-figure
@@ -78,7 +80,7 @@ const TR = D['top-rated'].map((p,i)=>({...p, tin: 312450 - i*38000, tout: 128900
 
 document.getElementById('cols').innerHTML = PANELS.map(P=>{
   const rows = P.id==='transfers' ? TR : D[P.id];
-  const body = rows.map((p,i)=>`<tr>${P.row(p,i).map((c,j)=>`<td${j===0?' class="rk"':''}>${c==null?'–':c}</td>`).join('')}</tr>`).join('');
+  const body = rows.map((p,i)=>`<tr>${P.row(p,i).map((c,j)=>`<td${j===0?' class="rk"':j===1?' class="pl"':''}>${c==null?'–':c}</td>`).join('')}</tr>`).join('');
   return `<div class="col"><h2>${P.t}</h2><p class="verdict" id="v-${P.id}">measuring…</p>
    <div class="phone"><div class="ph-top"><span>${P.hdr.length} columns</span><span>${P.now?P.now+'px today':'no feed pre-season'}</span></div>
    <div class="body"><div class="lst" id="box-${P.id}"><table><tr>${P.hdr.map(h=>`<th>${h}</th>`).join('')}</tr>${body}</table></div></div></div></div>`;
@@ -100,7 +102,7 @@ const res = PANELS.map(P=>{
 });
 const sorted = [...res].sort((a,b)=>a.w-b.w);
 document.getElementById('tot').innerHTML = `<table>
-<tr><th>Sub-table</th><th>Columns</th><th>Width today</th><th>Price under the name</th><th>After the cuts</th><th>Saved</th><th>Verdict in 368px</th></tr>
+<tr><th>Sub-table</th><th>Columns</th><th>Width today</th><th>Last round</th><th>Now</th><th>Saved</th><th>Verdict in 368px</th></tr>
 ${sorted.map(r=>`<tr><td><b>${r.t}</b></td><td>${r.cols}</td><td>${r.now?r.now+'px':'no feed pre-season'}</td><td>${r.was}px</td><td>${r.w}px</td>
  <td class="${r.was-r.w>0?'good':r.was-r.w<0?'bad':''}">${r.was-r.w>0?'−'+(r.was-r.w)+'px':r.was===r.w?'—':'+'+(r.w-r.was)+'px'}</td>
  <td class="${r.over>0?'bad':'good'}">${r.over>0?r.over+'px over':(-r.over)+'px spare'}</td></tr>`).join('')}
