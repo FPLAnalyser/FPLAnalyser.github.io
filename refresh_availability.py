@@ -9,6 +9,10 @@ The rest of the pipeline is a season-history build; this file is the news:
   · price and ownership as they stand this morning — both move daily, while
     the ratings build behind them is a season-history job; the site overlays
     these so budgets and the template read are never a week out of date
+  · name and position for every player in the game, so a signing registered
+    since the last ratings build still appears — unrated, but findable. This
+    file is the only thing that runs daily; the ratings build is run by hand,
+    and between the two the squad list would otherwise be as old as it is
   · set-piece duty as it stands TODAY — penalties_order etc. change with
     transfers and manager whim, and a snapshot from last season goes stale
     (Thiago moved from Brentford's #2 to #1 between seasons)
@@ -79,12 +83,23 @@ fixtures = [
     if f.get("event") and f.get("kickoff_time")
 ]
 
+# id -> GKP/DEF/MID/FWD, straight from the payload rather than hard-coded, so
+# a change at FPL's end cannot silently mislabel a whole position.
+POSITIONS = {t["id"]: t["singular_name_short"] for t in boot["element_types"]}
+
 players = []
 for el in boot["elements"]:
     row = {
         "element": el["id"],
         "code": el["code"],
         "team": el["team"],
+        # Name and position are the two fields that let the site render a
+        # player it has never seen. Without them this feed could describe a
+        # new signing — fit, £6.5m, Arsenal — but not introduce him, so nine
+        # players sat in the FPL game and on no page of the site while this
+        # job ran green every morning. They cost about 11KB across the file.
+        "name": el["web_name"],
+        "pos": POSITIONS.get(el["element_type"], ""),
         "status": el.get("status", "a"),
         # Price and ownership move every single day — prices settle around
         # 01:30 UTC and ownership drifts all week — while the ratings build

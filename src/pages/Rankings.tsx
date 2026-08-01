@@ -414,7 +414,13 @@ export default function Rankings() {
       const own = num(p, 'selected_by_percent') ?? 0
       if (ownership === 'template' && own < 20) return false
       if (ownership === 'differential' && own >= 10) return false
-      if (nailedOnly) {
+      // A player carried by the daily feed alone — a signing registered since
+      // the last ratings build — has no minutes record at all, so this filter
+      // cannot say anything true about him and would silently answer "no". He
+      // is already out of every leaderboard for want of `season_ok`, so the
+      // only place he can appear is a name search, which is exactly where
+      // hiding him would be wrong.
+      if (nailedOnly && !p.unrated) {
         const sr = num(p, 'season_start_rate')
         const m90 = num(p, 'season_mins90_rate')
         // Nailed = starts nearly everything, or plays full shifts when fit.

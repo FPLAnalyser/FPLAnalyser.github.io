@@ -39,7 +39,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
    file into a much richer shape (flags, return dates, set-piece order), but it
    imports from here, so reading the two fields every page needs directly is
    what keeps the two modules from importing each other. */
-interface LiveRow { element: number; code: number; price?: number; own?: number }
+interface LiveRow { element: number; code: number; price?: number; own?: number
+  /** Numeric FPL team id (1–20), not our short code. */
+  team?: number
+  /** Present since the availability refresh started carrying them; a player
+   *  the ratings build has never seen can only be rendered with these two. */
+  name?: string
+  pos?: string
+}
 
 /** Core tables (null until loaded), with price and ownership taken from the
  *  daily refresh rather than the pipeline snapshot.
@@ -72,8 +79,47 @@ export function useCore() {
       if (next.price !== r.price || next.selected_by_percent !== r.selected_by_percent) changed = true
       return next
     })
-    if (!changed) return core
-    return { ...core, data: { ...core.data, ratings } }
+    /* Players the daily feed knows about and the ratings build does not.
+     *
+     * The ratings build is run by hand and the feed every morning, so during a
+     * transfer window the feed is ahead: on the day this was written it listed
+     * 564 players against the build's 555, and those nine — one of them an
+     * Arsenal player at £6.5m already owned by 1.3% — existed in the FPL game
+     * and on no page of this site. Not in search, not in the Squad Builder.
+     *
+     * They come in carrying only what the feed has: name, position, club,
+     * price, ownership. No metrics, so `season_ok` is absent and every
+     * leaderboard already leaves them out — which is right, because there is
+     * nothing to rank them on. What they get is to exist: findable by name,
+     * pickable in a squad, honestly marked N/A.
+     *
+     * The team id is mapped through the players present in both files rather
+     * than a table of our own, so it cannot drift out of step with either. */
+    const shortByTeamId = new Map<number, string>()
+    for (const r of core.data.ratings as RatingRow[]) {
+      const l = byElement.get(Number(r.element)) ?? byCode.get(Number(r.code))
+      if (l?.team != null && r.team) shortByTeamId.set(Number(l.team), String(r.team))
+    }
+    const known = new Set((core.data.ratings as RatingRow[]).map((r) => Number(r.element)))
+    const POS = new Set(['GKP', 'DEF', 'MID', 'FWD'])
+    const unrated = rows
+      .filter((p) => p.element != null && !known.has(Number(p.element)) && p.name && p.pos && POS.has(p.pos) && p.team != null && shortByTeamId.has(Number(p.team)))
+      .map((p) => ({
+        element: Number(p.element),
+        code: Number(p.code),
+        web_name: String(p.name),
+        position: p.pos as RatingRow['position'],
+        team: shortByTeamId.get(Number(p.team)) as string,
+        price: p.price ?? 0,
+        selected_by_percent: p.own ?? 0,
+        total_mins: 0,
+        /** No pipeline row behind this one. Pages that explain a rating check
+         *  it before promising a breakdown that does not exist. */
+        unrated: true,
+      })) as unknown as RatingRow[]
+
+    if (!changed && !unrated.length) return core
+    return { ...core, data: { ...core.data, ratings: unrated.length ? [...ratings, ...unrated] : ratings } }
   }, [core, live.data])
 }
 

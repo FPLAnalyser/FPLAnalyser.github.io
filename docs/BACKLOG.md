@@ -150,11 +150,24 @@ The daily availability feed cannot fix this on its own: it carries element,
 code, team, status, price and ownership — no name and no position — so it can
 flag a player it has never heard of but cannot introduce him.
 
-Two things to do. **Re-run the pipeline before launch and again close to the
-GW1 deadline**, because the squad list moves all through a transfer window.
-Then **give it a schedule**, the way odds and availability already have one —
-a stale squad list is the one data fault a reader can spot instantly, by
-searching for a player they have just transferred in.
+**Half of this is now fixed.** `refresh_availability.py` carries `name` and
+`pos` for every element, so from the next 06:00 run the daily feed can
+introduce a player rather than only describe one, and `useCore` appends anyone
+the feed knows and the build does not. They arrive with no metrics, so
+`season_ok` is absent and every leaderboard leaves them out — which is right,
+there is nothing to rank them on. What they get is to exist: findable by name,
+pickable in the Squad Builder, honestly marked N/A.
+
+One filter had to give way. `nailedOnly` defaults to **on**, and it asks for a
+start rate the feed does not carry, so it answered "not nailed" for players it
+knew nothing about and hid all nine. It now skips rows flagged `unrated`: they
+are already out of every leaderboard, so a name search is the only place they
+appear, and that is exactly where hiding them is wrong.
+
+Still to do, and only you can: **re-run the ratings pipeline before launch and
+again close to the GW1 deadline.** The feed can now name a new player, but it
+carries no minutes, no xG and no rates, so until the pipeline runs he is a name
+with N/A beside it. The pipeline still has no schedule of its own.
 
 ### Load a squad into the Squad Builder without typing it
 Fifteen players entered by hand is a lot of taps before the builder gives
