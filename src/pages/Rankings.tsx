@@ -317,7 +317,7 @@ function FilterBar({ teams, priceMin, priceMax, setPriceMin, setPriceMax, teamFi
             <option value="differential">Differential (&lt;10%)</option>
           </select>
         </label>
-        <label className="flex min-h-9 items-center gap-2 text-sm text-ink-2">
+        <label className="flex min-h-11 items-center gap-2 text-sm text-ink-2">
           <input type="checkbox" checked={nailedOnly} onChange={(e) => setNailedOnly(e.target.checked)} className="size-4 accent-[var(--accent)]" />
           Nailed starters only
         </label>
