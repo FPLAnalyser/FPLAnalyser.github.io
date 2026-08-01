@@ -1,0 +1,106 @@
+<style>
+:root{--bg:#0a0908;--s1:#131110;--s2:#1b1917;--s3:#242120;--line:#2a2724;--ink:#f4efe3;--ink2:#a9a294;--ink3:#777064;--acc:#c9a227;--acc2:#e8c85a;--good:#5ec98a;--bad:#e08b80}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 ui-sans-serif,system-ui,-apple-system,sans-serif}
+.wrap{max-width:1720px;margin:0 auto;padding:26px 18px 70px}
+h1{font-size:25px;margin:0 0 6px;letter-spacing:-.02em}
+.sub{color:var(--ink2);font-size:14px;margin:0 0 12px;max-width:96ch}
+.note{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:13px 16px;margin:10px 0 24px;font-size:13.5px;color:var(--ink2);max-width:104ch}
+.note b{color:var(--ink)}
+.grid{display:grid;gap:22px;grid-template-columns:repeat(auto-fit,minmax(400px,1fr))}
+.col h2{font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--acc);margin:0 0 2px}
+.verdict{font-size:12px;margin:0 0 9px;font-weight:700}
+.fits{color:var(--good)}.over{color:var(--bad)}
+.phone{width:100%;max-width:390px;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--bg)}
+.ph-top{background:var(--s1);border-bottom:1px solid var(--line);padding:7px 12px;font-size:10px;color:var(--ink3);letter-spacing:.1em;text-transform:uppercase;display:flex;justify-content:space-between}
+.body{padding:10px}
+.lst{border:1px solid var(--line);border-radius:11px;background:var(--s1);overflow-x:auto}
+table{width:max-content;min-width:100%;border-collapse:collapse;font-size:12px}
+th{font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);padding:6px 4px;font-weight:800;white-space:nowrap;background:var(--s2)}
+td{padding:5px 4px;border-top:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
+th:first-child,td:first-child{padding-left:8px}th:last-child,td:last-child{padding-right:8px}
+.nm{font-weight:700;font-size:12.5px;white-space:nowrap}
+.meta{font-size:9px;color:var(--ink3);font-weight:600;letter-spacing:.02em}
+.rk{color:var(--ink3);font-size:10px;font-weight:800}
+.badge{display:inline-block;min-width:24px;text-align:center;border-radius:5px;padding:2px 4px;font-size:11px;font-weight:800}
+.g90{background:rgba(201,162,39,.9);color:#17130a}.g80{background:rgba(94,201,138,.85);color:#04180d}
+.g70{background:rgba(94,201,138,.5);color:#dff5e8}.g60{background:rgba(159,180,199,.3);color:#e6eef5}
+.gl{background:rgba(140,58,52,.35);color:#ffd9d2}
+.good{color:var(--good)}.bad{color:var(--bad)}
+.foot{font-size:10.5px;color:var(--ink3);margin-top:7px;line-height:1.5}
+.tot{margin:26px 0 0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.tot table{width:100%;font-size:13px}
+.tot th{font-size:9.5px;padding:8px 10px;text-align:left}
+.tot td{padding:7px 10px;white-space:normal}
+</style>
+<div class="wrap">
+<h1>Option C on every Players sub-table</h1>
+<p class="sub">Every leaderboard in option C's treatment: crest column dropped, position and club folded under the name, rating badges compact, PPG as a number rather than a bar. Real 2026/27 data. Each table is set to <code>max-content</code> inside the 368px phone column, so it grows when it needs to — the overflow figure under each one is measured, not estimated.</p>
+<div class="note"><b>What today looks like.</b> Measured on an iPhone 13 against the live build: Top Rated 776px (408 hidden), xPoints 852 (484), Goal Threats 810 (442), Creators 755 (387), Clean Sheets 667 (299), Goalkeepers 869 (501), Def Con 625 (257), Value 636 (268), Form 625 (257). Every tab overflows. The widest single columns are the rating badge headers — "Season Rating" costs 125px — and the PPG mini-bar at 104px.</div>
+<div class="grid" id="cols"></div>
+<div class="tot" id="tot"></div>
+</div>
+<script>
+const D = {"top-rated": [{"n": "Haaland", "pos": "FWD", "team": "MCI", "price": 15.5, "sea": 99, "gw4": null, "pts": 239, "ppg": 6.8, "xpts": 6.41}, {"n": "B.Fernandes", "pos": "MID", "team": "MUN", "price": 12.0, "sea": 96, "gw4": 77, "pts": 235, "ppg": 6.7, "xpts": 6.05}, {"n": "Gabriel", "pos": "DEF", "team": "ARS", "price": 8.0, "sea": 86, "gw4": 82, "pts": 209, "ppg": 6.5, "xpts": 5.39}, {"n": "Senesi", "pos": "DEF", "team": "TOT", "price": 6.0, "sea": 85, "gw4": 76, "pts": 175, "ppg": 4.7, "xpts": 5.28}, {"n": "Thiago", "pos": "FWD", "team": "BRE", "price": 8.0, "sea": 83, "gw4": 47, "pts": 181, "ppg": 4.8, "xpts": 5.17}, {"n": "Tarkowski", "pos": "DEF", "team": "EVE", "price": 6.0, "sea": 82, "gw4": 74, "pts": 170, "ppg": 4.6, "xpts": 5.05}, {"n": "Virgil", "pos": "DEF", "team": "LIV", "price": 6.5, "sea": 81, "gw4": 57, "pts": 175, "ppg": 4.6, "xpts": 5.03}, {"n": "Enzo", "pos": "MID", "team": "CHE", "price": 7.0, "sea": 81, "gw4": 60, "pts": 157, "ppg": 4.4, "xpts": 4.97}], "goal-threats": [{"n": "Thiago", "pos": "FWD", "team": "BRE", "price": 8.0, "thr": 99, "xg": 20.6, "xg90": 0.56, "npxg": 0.49, "box": 2.2, "sot": 51, "q": 0.212}, {"n": "Haaland", "pos": "FWD", "team": "MCI", "price": 15.5, "thr": 99, "xg": 25.5, "xg90": 0.78, "npxg": 0.79, "box": 3.4, "sot": 46, "q": 0.206}, {"n": "Mbeumo", "pos": "MID", "team": "MUN", "price": 8.0, "thr": 89, "xg": 12.0, "xg90": 0.41, "npxg": 0.46, "box": 1.9, "sot": 42, "q": 0.182}, {"n": "Schade", "pos": "MID", "team": "BRE", "price": 6.0, "thr": 88, "xg": 12.1, "xg90": 0.4, "npxg": 0.36, "box": 1.8, "sot": 40, "q": 0.194}, {"n": "Watkins", "pos": "FWD", "team": "AVL", "price": 8.0, "thr": 85, "xg": 15.4, "xg90": 0.49, "npxg": 0.6, "box": 2.2, "sot": 46, "q": 0.227}, {"n": "Calvert-Lewin", "pos": "FWD", "team": "LEE", "price": 6.0, "thr": 85, "xg": 15.6, "xg90": 0.52, "npxg": 0.49, "box": 2.2, "sot": 47, "q": 0.204}, {"n": "Sarr", "pos": "MID", "team": "CRY", "price": 6.5, "thr": 83, "xg": 10.9, "xg90": 0.45, "npxg": 0.38, "box": 1.6, "sot": 42, "q": 0.193}, {"n": "Palmer", "pos": "MID", "team": "CHE", "price": 9.5, "thr": 83, "xg": 10.5, "xg90": 0.49, "npxg": 0.26, "box": 1.5, "sot": 39, "q": 0.089}], "creators": [{"n": "Cherki", "pos": "MID", "team": "MCI", "price": 7.5, "cre": 99, "xa": 8.9, "xa90": 0.45, "big": 0.96, "chain": 1.62, "sp": 3.1}, {"n": "B.Fernandes", "pos": "MID", "team": "MUN", "price": 12.0, "cre": 99, "xa": 12.3, "xa90": 0.36, "big": 0.97, "chain": 1.1, "sp": 3.52}, {"n": "Saka", "pos": "MID", "team": "ARS", "price": 9.5, "cre": 89, "xa": 7.2, "xa90": 0.29, "big": 0.49, "chain": 1.1, "sp": 2.64}, {"n": "Yeremy", "pos": "MID", "team": "CRY", "price": 5.5, "cre": 86, "xa": 6.1, "xa90": 0.27, "big": 0.65, "chain": 0.78, "sp": 2.17}, {"n": "Wharton", "pos": "MID", "team": "CRY", "price": 5.5, "cre": 86, "xa": 7.5, "xa90": 0.26, "big": 0.49, "chain": 0.89, "sp": 2.04}, {"n": "Gro\u00df", "pos": "MID", "team": "BHA", "price": 5.5, "cre": 86, "xa": 4.0, "xa90": 0.22, "big": 0.28, "chain": 1.01, "sp": 3.74}, {"n": "Neto", "pos": "MID", "team": "CHE", "price": 6.5, "cre": 84, "xa": 6.8, "xa90": 0.23, "big": 0.41, "chain": 1.0, "sp": 3.08}, {"n": "Rice", "pos": "MID", "team": "ARS", "price": 7.5, "cre": 84, "xa": 7.3, "xa90": 0.21, "big": 0.49, "chain": 0.92, "sp": 4.07}], "clean-sheets": [{"n": "Gabriel", "pos": "DEF", "team": "ARS", "price": 8.0, "cs": 97, "csp": 47, "xgc": 0.72, "dc": 69, "ov": 86}, {"n": "Saliba", "pos": "DEF", "team": "ARS", "price": 6.0, "cs": 92, "csp": 39, "xgc": 0.7, "dc": 50, "ov": 68}, {"n": "J.Timber", "pos": "DEF", "team": "ARS", "price": 6.5, "cs": 87, "csp": 34, "xgc": 0.64, "dc": 47, "ov": 75}, {"n": "Calafiori", "pos": "DEF", "team": "ARS", "price": 5.5, "cs": 80, "csp": 34, "xgc": 0.52, "dc": 39, "ov": 63}, {"n": "Disasi", "pos": "DEF", "team": "CHE", "price": 4.5, "cs": 78, "csp": 43, "xgc": 1.33, "dc": 57, "ov": 69}, {"n": "Gu\u00e9hi", "pos": "DEF", "team": "MCI", "price": 6.0, "cs": 75, "csp": 37, "xgc": 1.27, "dc": 72, "ov": 80}, {"n": "Virgil", "pos": "DEF", "team": "LIV", "price": 6.5, "cs": 72, "csp": 26, "xgc": 1.25, "dc": 91, "ov": 81}, {"n": "Matheus N.", "pos": "DEF", "team": "MCI", "price": 6.0, "cs": 72, "csp": 32, "xgc": 1.1, "dc": 50, "ov": 64}], "goalkeepers": [{"n": "Raya", "pos": "GKP", "team": "ARS", "price": 6.0, "rat": 79, "cs": 99, "ss": 33, "csp": 50, "xgc": 0.74, "sv": 1.6, "prev": 0.04}, {"n": "Donnarumma", "pos": "GKP", "team": "MCI", "price": 5.5, "rat": 72, "cs": 86, "ss": 49, "csp": 43, "xgc": 1.13, "sv": 2.3, "prev": 0.28}, {"n": "Kelleher", "pos": "GKP", "team": "BRE", "price": 5.0, "rat": 70, "cs": 65, "ss": 64, "csp": 26, "xgc": 1.45, "sv": 2.9, "prev": 0.12}, {"n": "Pickford", "pos": "GKP", "team": "EVE", "price": 5.5, "rat": 70, "cs": 66, "ss": 58, "csp": 29, "xgc": 1.48, "sv": 2.6, "prev": 0.16}, {"n": "Roefs", "pos": "GKP", "team": "SUN", "price": 5.0, "rat": 69, "cs": 64, "ss": 65, "csp": 26, "xgc": 1.43, "sv": 3.1, "prev": 0.12}, {"n": "Verbruggen", "pos": "GKP", "team": "BHA", "price": 4.5, "rat": 69, "cs": 67, "ss": 62, "csp": 26, "xgc": 1.29, "sv": 2.8, "prev": 0.08}, {"n": "Henderson", "pos": "GKP", "team": "CRY", "price": 5.0, "rat": 68, "cs": 66, "ss": 63, "csp": 29, "xgc": 1.39, "sv": 2.9, "prev": 0.01}, {"n": "Petrovi\u0107", "pos": "GKP", "team": "BOU", "price": 4.5, "rat": 68, "cs": 64, "ss": 64, "csp": 29, "xgc": 1.49, "sv": 2.9, "prev": 0.07}], "def-con": [{"n": "Lacroix", "pos": "DEF", "team": "CRY", "price": 6.0, "dc": 99, "hit": 53, "tkl": 1.8, "cbi": 9.0, "rec": 2.8}, {"n": "Tarkowski", "pos": "DEF", "team": "EVE", "price": 6.0, "dc": 99, "hit": 58, "tkl": 1.4, "cbi": 8.8, "rec": 2.4}, {"n": "Garner", "pos": "MID", "team": "EVE", "price": 6.0, "dc": 99, "hit": 53, "tkl": 3.1, "cbi": 4.1, "rec": 4.9}, {"n": "Anderson", "pos": "MID", "team": "MCI", "price": 6.5, "dc": 99, "hit": 68, "tkl": 2.8, "cbi": 2.9, "rec": 8.3}, {"n": "Senesi", "pos": "DEF", "team": "TOT", "price": 6.0, "dc": 99, "hit": 68, "tkl": 1.7, "cbi": 9.8, "rec": 4.2}, {"n": "Andersen", "pos": "DEF", "team": "FUL", "price": 5.0, "dc": 97, "hit": 53, "tkl": 1.4, "cbi": 8.9, "rec": 3.6}, {"n": "Ampadu", "pos": "MID", "team": "LEE", "price": 5.5, "dc": 97, "hit": 50, "tkl": 2.3, "cbi": 4.4, "rec": 5.3}, {"n": "Virgil", "pos": "DEF", "team": "LIV", "price": 6.5, "dc": 91, "hit": 42, "tkl": 0.6, "cbi": 8.7, "rec": 2.3}], "value": [{"n": "Mukiele", "pos": "DEF", "team": "SUN", "price": 5.5, "val": 100, "pts": 151, "ppg": 4.7, "xpts": 4.15}, {"n": "Bijol", "pos": "DEF", "team": "LEE", "price": 5.0, "val": 99, "pts": 99, "ppg": 4.0, "xpts": 2.52}, {"n": "Gu\u00e9hi", "pos": "DEF", "team": "MCI", "price": 6.0, "val": 99, "pts": 179, "ppg": 5.1, "xpts": 4.94}, {"n": "Stach", "pos": "MID", "team": "LEE", "price": 6.0, "val": 100, "pts": 137, "ppg": 4.7, "xpts": 3.43}, {"n": "Alderete", "pos": "DEF", "team": "SUN", "price": 5.0, "val": 98, "pts": 125, "ppg": 3.8, "xpts": 3.71}, {"n": "Dewsbury-Hall", "pos": "MID", "team": "EVE", "price": 6.5, "val": 99, "pts": 151, "ppg": 4.9, "xpts": 3.74}, {"n": "Senesi", "pos": "DEF", "team": "TOT", "price": 6.0, "val": 97, "pts": 175, "ppg": 4.7, "xpts": 5.28}, {"n": "Truffert", "pos": "DEF", "team": "BOU", "price": 5.5, "val": 97, "pts": 165, "ppg": 4.3, "xpts": 4.61}], "xpoints": [{"n": "Haaland", "pos": "FWD", "team": "MCI", "price": 15.5, "xp4": 27.3, "g1": 7.17, "g2": 6.28, "g3": 7.58, "g4": 6.01, "games": 4, "sea": 99}, {"n": "B.Fernandes", "pos": "MID", "team": "MUN", "price": 12.0, "xp4": 26.9, "g1": 7.05, "g2": 6.18, "g3": 7.45, "g4": 5.91, "games": 4, "sea": 96}, {"n": "Gabriel", "pos": "DEF", "team": "ARS", "price": 8.0, "xp4": 26.1, "g1": 6.86, "g2": 6.01, "g3": 7.25, "g4": 5.75, "games": 4, "sea": 86}, {"n": "Senesi", "pos": "DEF", "team": "TOT", "price": 6.0, "xp4": 18.9, "g1": 4.97, "g2": 4.35, "g3": 5.25, "g4": 4.16, "games": 4, "sea": 85}, {"n": "Thiago", "pos": "FWD", "team": "BRE", "price": 8.0, "xp4": 19.1, "g1": 5.0, "g2": 4.38, "g3": 5.29, "g4": 4.19, "games": 4, "sea": 83}, {"n": "Tarkowski", "pos": "DEF", "team": "EVE", "price": 6.0, "xp4": 18.4, "g1": 4.82, "g2": 4.23, "g3": 5.1, "g4": 4.04, "games": 4, "sea": 82}, {"n": "Virgil", "pos": "DEF", "team": "LIV", "price": 6.5, "xp4": 18.4, "g1": 4.84, "g2": 4.24, "g3": 5.11, "g4": 4.05, "games": 4, "sea": 81}, {"n": "Enzo", "pos": "MID", "team": "CHE", "price": 7.0, "xp4": 17.4, "g1": 4.58, "g2": 4.01, "g3": 4.84, "g4": 3.84, "games": 4, "sea": 81}], "form": [{"n": "Watkins", "pos": "FWD", "team": "AVL", "price": null, "s90": 5.3, "f90": 11.4, "d": 6.09, "xs": 0.53, "xf": 0.89, "xd": 0.36}, {"n": "Anderson", "pos": "MID", "team": "NFO", "price": null, "s90": 4.86, "f90": 8.41, "d": 3.55, "xs": 0.21, "xf": 0.39, "xd": 0.18}, {"n": "Saka", "pos": "MID", "team": "ARS", "price": null, "s90": 6.37, "f90": 9.67, "d": 3.3, "xs": 0.6, "xf": 0.82, "xd": 0.22}, {"n": "Dunk", "pos": "DEF", "team": "BHA", "price": null, "s90": 3.17, "f90": 5.96, "d": 2.78, "xs": 0.08, "xf": 0.19, "xd": 0.12}, {"n": "Raya", "pos": "GKP", "team": "ARS", "price": null, "s90": 4.38, "f90": 7.0, "d": 2.62, "xs": 0.0, "xf": 0.0, "xd": 0.0}, {"n": "Senesi", "pos": "DEF", "team": "BOU", "price": null, "s90": 4.79, "f90": 7.0, "d": 2.21, "xs": 0.17, "xf": 0.05, "xd": -0.12}, {"n": "Truffert", "pos": "DEF", "team": "BOU", "price": null, "s90": 4.4, "f90": 6.5, "d": 2.1, "xs": 0.12, "xf": 0.2, "xd": 0.09}, {"n": "Szoboszlai", "pos": "MID", "team": "LIV", "price": null, "s90": 4.46, "f90": 6.5, "d": 2.04, "xs": 0.32, "xf": 0.49, "xd": 0.17}]};
+const cls = v => v==null?'g60':v>=90?'g90':v>=80?'g80':v>=65?'g70':v>=50?'g60':'gl';
+const bd = v => v==null?'<span class="badge g60" style="opacity:.35">–</span>':`<span class="badge ${cls(v)}">${v}</span>`;
+const nm = p => `<div class="nm">${p.n}</div><div class="meta">${p.pos} · ${p.team}</div>`;
+const sgn = v => `<span class="${v>0?'good':v<0?'bad':''}">${v>0?'+':''}${v}</span>`;
+
+const PANELS = [
+ { id:'top-rated', t:'Top Rated', now:776, hdr:['#','Player','£','Sea','4GW','Pts','PPG','xPts'],
+   row:(p,i)=>[i+1, nm(p), p.price, bd(p.sea), bd(p.gw4), p.pts, p.ppg.toFixed(1), p.xpts.toFixed(2)] },
+ { id:'xpoints', t:'xPoints — Next 4', now:852, hdr:['#','Player','£','xP4','GW1','GW2','GW3','GW4','Gms','Sea'],
+   row:(p,i)=>[i+1, nm(p), p.price, `<b class="good">${p.xp4.toFixed(1)}</b>`, p.g1.toFixed(2), p.g2.toFixed(2), p.g3.toFixed(2), p.g4.toFixed(2), p.games, bd(p.sea)] },
+ { id:'goal-threats', t:'Goal Threats', now:810, hdr:['#','Player','Thr','xG','xG/90','npxG','Box','SoT%','ShQ'],
+   row:(p,i)=>[i+1, nm(p), bd(p.thr), p.xg, p.xg90.toFixed(2), p.npxg.toFixed(2), p.box.toFixed(1), p.sot+'%', p.q.toFixed(3)] },
+ { id:'creators', t:'Creators', now:755, hdr:['#','Player','Cre','xA','xA/90','Big','Chain','SetP'],
+   row:(p,i)=>[i+1, nm(p), bd(p.cre), p.xa, p.xa90.toFixed(2), p.big.toFixed(2), p.chain.toFixed(2), p.sp.toFixed(2)] },
+ { id:'clean-sheets', t:'Clean Sheets', now:667, hdr:['#','Player','£','CS','CS%','xGC','DC','Ovr'],
+   row:(p,i)=>[i+1, nm(p), p.price, bd(p.cs), p.csp+'%', p.xgc.toFixed(2), bd(p.dc), bd(p.ov)] },
+ { id:'goalkeepers', t:'Goalkeepers', now:869, hdr:['#','Player','£','Rat','CS','Stop','CS%','xGC','Sv','Prev'],
+   row:(p,i)=>[i+1, nm(p), p.price, bd(p.rat), bd(p.cs), bd(p.ss), p.csp+'%', p.xgc.toFixed(2), p.sv.toFixed(1), p.prev.toFixed(2)] },
+ { id:'def-con', t:'Def Con', now:625, hdr:['#','Player','DC','Hit%','Tkl','CBI','Rec'],
+   row:(p,i)=>[i+1, nm(p), bd(p.dc), p.hit+'%', p.tkl.toFixed(1), p.cbi.toFixed(1), p.rec.toFixed(1)] },
+ { id:'value', t:'Value Picks', now:636, hdr:['#','Player','£','Val','Pts','PPG','xPts'],
+   row:(p,i)=>[i+1, nm(p), p.price, bd(p.val), p.pts, p.ppg.toFixed(1), p.xpts.toFixed(2)] },
+ { id:'form', t:'Form — hot streak', now:625, hdr:['#','Player','Sea','4GW','Δ','xGI','4xGI','xGIΔ'],
+   row:(p,i)=>[i+1, nm(p), p.s90.toFixed(2), p.f90.toFixed(2), sgn(p.d.toFixed(2)), p.xs.toFixed(2), p.xf.toFixed(2), sgn(p.xd.toFixed(2))] },
+ { id:'transfers', t:'Transfers', now:null, hdr:['#','Player','£','In','Out','Net','Δ£','Own'],
+   row:(p,i)=>[i+1, nm(p), p.price, `<span class="good">+${p.tin.toLocaleString()}</span>`, `<span class="bad">−${p.tout.toLocaleString()}</span>`,
+     `<b class="${p.tin-p.tout>0?'good':'bad'}">${p.tin-p.tout>0?'+':'−'}${Math.abs(p.tin-p.tout).toLocaleString()}</b>`,
+     `<span class="good">▲£0.1m</span>`, p.own+'%'] },
+];
+/* Transfers has no feed pre-season, so this one panel uses worst-case six-figure
+   counts — the point of it is the column width, not the players. */
+const TR = D['top-rated'].map((p,i)=>({...p, tin: 312450 - i*38000, tout: 128900 - i*11000, own: (48.2 - i*4.1).toFixed(1)}));
+
+document.getElementById('cols').innerHTML = PANELS.map(P=>{
+  const rows = P.id==='transfers' ? TR : D[P.id];
+  const body = rows.map((p,i)=>`<tr>${P.row(p,i).map((c,j)=>`<td${j===0?' class="rk"':''}>${c==null?'–':c}</td>`).join('')}</tr>`).join('');
+  return `<div class="col"><h2>${P.t}</h2><p class="verdict" id="v-${P.id}">measuring…</p>
+   <div class="phone"><div class="ph-top"><span>${P.hdr.length} columns</span><span>${P.now?P.now+'px today':'no feed pre-season'}</span></div>
+   <div class="body"><div class="lst" id="box-${P.id}"><table><tr>${P.hdr.map(h=>`<th>${h}</th>`).join('')}</tr>${body}</table></div></div></div></div>`;
+}).join('');
+
+/* Natural width, not the stretched one: min-width:100% would make every table
+   that fits report exactly 366px and hide how much headroom it really has. */
+const res = PANELS.map(P=>{
+  const box = document.getElementById('box-'+P.id);
+  const t = box.querySelector('table');
+  t.style.minWidth = 'auto';
+  const w = Math.ceil(t.getBoundingClientRect().width);
+  t.style.minWidth = '100%';
+  const over = w - 368;
+  const el = document.getElementById('v-'+P.id);
+  el.className = 'verdict ' + (over>0?'over':'fits');
+  el.textContent = over>0 ? `${P.hdr.length} cols · wants ${w}px — ${over}px over` : `${P.hdr.length} cols · ${w}px — fits, ${-over}px spare`;
+  return {t:P.t, cols:P.hdr.length, now:P.now, w, over};
+});
+const sorted = [...res].sort((a,b)=>a.w-b.w);
+document.getElementById('tot').innerHTML = `<table>
+<tr><th>Sub-table</th><th>Columns in C</th><th>Width today</th><th>Natural width in C</th><th>Verdict in 368px</th></tr>
+${sorted.map(r=>`<tr><td><b>${r.t}</b></td><td>${r.cols}</td><td>${r.now?r.now+'px':'no feed pre-season'}</td><td>${r.w}px</td>
+ <td class="${r.over>0?'bad':'good'}">${r.over>0?r.over+'px over':(-r.over)+'px spare'}</td></tr>`).join('')}
+</table>`;
+</script>
