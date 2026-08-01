@@ -868,9 +868,12 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
     setStartK((k) => Math.min(k, n - 1))
   }
 
-  // Sorted (kindest first) fixtures for a group in one gameweek.
+  // Best-first fixtures for a group in one gameweek, under whichever lens is
+  // selected. This used to be difficulty only, which left the suggestions
+  // ranked one way while the board's ring picked another — an export headed
+  // "by clean sheets" would have been ranked on something else.
   const rankGw = (group: string[], gw: number) =>
-    group.map((t) => ({ t, diff: cellFor(t, gw)?.diff })).filter((x): x is { t: string; diff: number } => x.diff != null).sort((a, b) => a.diff - b.diff)
+    group.map((t) => ({ t, diff: rateVal(t, gw) })).filter((x): x is { t: string; diff: number } => x.diff != null).sort((a, b) => better(a.diff, b.diff))
 
   // Combined difficulty if you start the best K of `group` each week.
   const startKAvg = (group: string[], k: number) => {
@@ -890,11 +893,11 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
     for (const sub of combos(group, k)) {
       const ds: number[] = []
       for (const gw of gws) {
-        const dd = sub.map((t) => cellFor(t, gw)?.diff).filter((v): v is number => v != null)
+        const dd = sub.map((t) => rateVal(t, gw)).filter((v): v is number => v != null)
         if (dd.length) ds.push(dd.reduce((a, b) => a + b, 0) / dd.length)
       }
       const a = mean(ds)
-      if (a != null && (best == null || a < best)) best = a
+      if (a != null && (best == null || better(a, best) < 0)) best = a
     }
     return best
   }
@@ -929,7 +932,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
     // ranking of one club's fixtures dressed as a ranking of rotations. Locked
     // clubs are exempt: if you have asked to see partners for a side, every
     // row is supposed to contain it.
-    const ranked = out.sort((x, y) => x.combined - y.combined || y.home - x.home)
+    const ranked = out.sort((x, y) => better(x.combined, y.combined) || y.home - x.home)
     const seen = new Map<string, number>()
     const spread: typeof out = []
     for (const g of ranked) {
@@ -940,7 +943,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
     }
     return spread
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allTeams, excluded, teams, size, startK, gws, cellFor, pickBy, filtering])
+  }, [allTeams, excluded, teams, size, startK, gws, cellFor, pickBy, filtering, rateOn])
 
   const headCls = 'px-2 py-2 text-center text-[11px] font-semibold tracking-wide text-ink-3 uppercase'
   const wide = useWide()
@@ -953,22 +956,26 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
   /** Who the exported board is about. The clubs, the settings and the number
    *  they earned — a grid of fixtures with no header is unreadable once it
    *  leaves the site. */
-  const rotationIdent = (group: string[], combined: number) => (
-    <div className="mb-2 flex items-center gap-2">
-      <span className="flex flex-1 flex-wrap items-center gap-x-1.5 gap-y-1">
-        {group.map((t, k) => (
-          <span key={t} className="flex items-center gap-1 text-[13px] font-extrabold text-ink">
-            {k > 0 && <span className="text-ink-3">+</span>}<TeamBadge team={t} size={15} />{t}
-          </span>
-        ))}
+  const rotationIdent = (_group: string[], combined: number) => (
+    <div className="mb-2 flex items-end gap-2">
+      {/* The clubs used to be listed here and it was the same information
+          twice — the board's own column headers name them, with their badges,
+          directly underneath. A header should say what the picture IS. */}
+      <span className="flex-1">
+        <span className="block text-[13.5px] font-extrabold tracking-[-0.01em] text-ink">
+          GW{gws[0]}–{gws[gws.length - 1]} rotation plan
+        </span>
+        <span className="block text-[10.5px] font-semibold text-ink-3">
+          Start {startK} of {_group.length} · by {RATE_LABEL[rateOn].toLowerCase()}
+        </span>
       </span>
       {/* Stacked, not inline. Side by side, "avg diff" first wrapped onto the
           board's header row and then clipped at the frame edge — a label
           fighting the clubs for the same line will always lose one way or the
           other. Two short lines cannot. */}
       <span className="shrink-0 text-right leading-tight">
-        <span className="font-num block text-[15px] font-extrabold tabular-nums" style={{ color: runColor(combined) }}>{combined.toFixed(1)}</span>
-        <span className="block text-[8.5px] font-bold tracking-[0.08em] text-ink-3 uppercase">avg diff</span>
+        <span className="font-num block text-[15px] font-extrabold tabular-nums" style={{ color: rateOn === 'diff' ? runColor(combined) : 'var(--good)' }}>{rateFmt(combined)}</span>
+        <span className="block text-[8.5px] font-bold tracking-[0.08em] text-ink-3 uppercase">avg {rateOn === 'diff' ? 'diff' : rateOn === 'cs' ? 'CS' : 'xG'}</span>
       </span>
     </div>
   )
@@ -991,11 +998,20 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
     }
     return (
       <div className="overflow-hidden rounded-xl border border-line">
+        {/* Two clubs get twice the width of four, so the badge and the name
+            grow into it rather than sitting small in the middle of a wide
+            column. Matters most in the export, where this row is the only
+            thing naming the clubs. */}
         <div className="flex gap-1 border-b border-line bg-surface-1 px-2 py-1.5">
           <span className="w-8 shrink-0" />
           {group.map((t) => (
-            <span key={t} className="flex flex-1 items-center justify-center gap-1 text-[9.5px] font-bold tracking-[0.06em] text-ink-3 uppercase">
-              <TeamBadge team={t} size={12} />{t}
+            <span
+              key={t}
+              className={`flex flex-1 items-center justify-center gap-1.5 font-bold tracking-[0.06em] text-ink-2 uppercase ${
+                group.length <= 2 ? 'text-[14px]' : group.length === 3 ? 'text-[12px]' : 'text-[9.5px]'
+              }`}
+            >
+              <TeamBadge team={t} size={group.length <= 2 ? 20 : group.length === 3 ? 16 : 12} />{t}
             </span>
           ))}
         </div>
@@ -1218,8 +1234,8 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
                   </span>
                 )}
                 <span className="shrink-0 text-right">
-                  <span className="font-num text-sm font-semibold tabular-nums" style={{ color: runColor(g.combined) }}>{g.combined.toFixed(1)}</span>
-                  <span className="ml-1 text-[10px] text-ink-3">avg diff</span>
+                  <span className="font-num text-sm font-semibold tabular-nums" style={{ color: rateOn === 'diff' ? runColor(g.combined) : 'var(--good)' }}>{rateFmt(g.combined)}</span>
+                  <span className="ml-1 text-[10px] text-ink-3">avg {rateOn === 'diff' ? 'diff' : rateOn === 'cs' ? 'CS' : 'xG'}</span>
                 </span>
                 {!wide && (
                   <span className={`shrink-0 text-ink-3 transition-transform ${open ? 'rotate-180' : ''}`}><Icon name="chevron-right" size={14} className="rotate-90" /></span>
@@ -1231,7 +1247,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
                       whole suggestions list exported eight collapsed rows and
                       the filter chrome around them; the artefact worth sending
                       is this one rotation's fixtures. */}
-                  <Exportable variant="below" title={`${g.group.join(' + ')} — start ${startK} of ${size}`} ident={rotationIdent(g.group, g.combined)}>
+                  <Exportable variant="below" title={`GW${gws[0]}–${gws[gws.length - 1]} rotation plan — ${g.group.join(' + ')}`} ident={rotationIdent(g.group, g.combined)}>
                     {rotationBoard(g.group)}
                   </Exportable>
                 </div>
@@ -1244,15 +1260,15 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
               </div>
             )}
           </div>
-          <p className="mt-2 text-xs text-ink-3">Lower is kinder — the combined difficulty if you always start the {startK} kindest fixture{startK > 1 ? 's' : ''} in the group.</p>
+          <p className="mt-2 text-xs text-ink-3">{rateOn === 'diff' ? 'Lower is kinder' : 'Higher is better'} — the combined {RATE_LABEL[rateOn].toLowerCase()} if you always start the {startK} best fixture{startK > 1 ? 's' : ''} in the group.</p>
         </div>
       ) : (
         <>
           {rotAvg != null && fixedAvg != null && (
             <div className="mb-4 rounded-xl border border-line bg-surface-1/60 p-4 text-sm">
               Starting the best {startK} of these {teams.length} each week averages{' '}
-              <strong className="text-good">{rotAvg.toFixed(1)}</strong> difficulty over the next {gws.length} — versus{' '}
-              <strong className="text-ink">{fixedAvg.toFixed(1)}</strong> if you fixed the best {startK} and never rotated.
+              <strong className="text-good">{rateFmt(rotAvg)}</strong> {RATE_LABEL[rateOn].toLowerCase()} over the next {gws.length} — versus{' '}
+              <strong className="text-ink">{rateFmt(fixedAvg)}</strong> if you fixed the best {startK} and never rotated.
               {rotAvg < fixedAvg - 0.1 ? ' The rotation is the smoother run.' : ' Rotation adds little over just holding the best here.'}
             </div>
           )}
@@ -1265,7 +1281,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
               which leaves room for the opponent, the venue and the difficulty
               in every cell, and rings as many as `startK`. */}
           {!wide ? (
-            <Exportable variant="below" title={`${teams.join(' + ')} — start ${startK} of ${teams.length}`} ident={rotationIdent(teams, rotAvg ?? 0)}>
+            <Exportable variant="below" title={`GW${gws[0]}–${gws[gws.length - 1]} rotation plan — ${teams.join(' + ')}`} ident={rotationIdent(teams, rotAvg ?? 0)}>
               {rotationBoard(teams)}
             </Exportable>
           ) : (
