@@ -1,0 +1,95 @@
+<style>
+:root{--bg:#0a0908;--s1:#131110;--s2:#1b1917;--s3:#242120;--line:#2a2724;--ink:#f4efe3;--ink2:#a9a294;--ink3:#777064;--acc:#c9a227;--acc2:#e8c85a;--good:#5ec98a;--bad:#e08b80}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 ui-sans-serif,system-ui,-apple-system,sans-serif}
+.wrap{max-width:1560px;margin:0 auto;padding:26px 18px 70px}
+h1{font-size:25px;margin:0 0 6px;letter-spacing:-.02em}
+.sub{color:var(--ink2);font-size:14px;margin:0 0 10px;max-width:92ch}
+.note{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:13px 16px;margin:10px 0 26px;font-size:13.5px;color:var(--ink2);max-width:100ch}
+.note b{color:var(--ink)}
+.grid{display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(348px,1fr))}
+.col h2{font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--acc);margin:0 0 3px}
+.why{font-size:13px;color:var(--ink2);margin:0 0 12px;min-height:7.2em}
+.phone{width:100%;max-width:390px;border:1px solid var(--line);border-radius:20px;overflow:hidden;background:var(--bg);box-shadow:0 16px 36px rgba(0,0,0,.5)}
+.ph-top{background:var(--s1);border-bottom:1px solid var(--line);padding:8px 12px;font-size:10.5px;color:var(--ink3);letter-spacing:.1em;text-transform:uppercase}
+.body{padding:10px;max-height:680px;overflow-y:auto}
+.row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px}
+.pill{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:5px 10px;font-size:12px;color:var(--ink2)}
+.pill.on{border-color:var(--acc);background:rgba(201,162,39,.14);color:var(--acc2)}
+select.pill{appearance:none;padding-right:24px;background:transparent;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a9a294' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 7px center;background-size:12px;color:var(--ink2)}
+.lst{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--s1)}
+.hd{display:flex;align-items:center;gap:7px;padding:6px 9px;background:var(--s2);border-bottom:1px solid var(--line);font-size:9px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3)}
+.r{display:flex;align-items:center;gap:7px;padding:7px 9px;border-bottom:1px solid var(--line)}
+.r:last-child{border-bottom:0}
+.rk{width:15px;text-align:right;font-size:10.5px;font-weight:800;color:var(--ink3);font-variant-numeric:tabular-nums}
+.bg{width:19px;height:19px;border-radius:50%;background:var(--s3);display:grid;place-items:center;font-size:7.5px;font-weight:800;color:var(--ink2);flex:none}
+.nm{font-weight:700;font-size:13.5px;min-width:0;flex:1}
+.meta{font-size:10px;color:var(--ink3);font-weight:600}
+.num{font-variant-numeric:tabular-nums;font-weight:800}
+.badge{min-width:30px;text-align:center;border-radius:6px;padding:3px 5px;font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums}
+.g90{background:rgba(201,162,39,.9);color:#17130a}.g80{background:rgba(94,201,138,.85);color:#04180d}
+.g70{background:rgba(94,201,138,.5);color:#dff5e8}.g60{background:rgba(159,180,199,.3);color:#e6eef5}
+.gl{background:rgba(140,58,52,.35);color:#ffd9d2}
+.chev{color:var(--ink3);font-size:12px}
+.exp{padding:8px 9px 11px;background:rgba(255,255,255,.02);border-bottom:1px solid var(--line)}
+.kv{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.kv div{background:var(--s2);border-radius:7px;padding:5px 4px;text-align:center}
+.kv b{display:block;font-size:13px;font-variant-numeric:tabular-nums}
+.kv span{font-size:8px;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase}
+.foot{font-size:10.5px;color:var(--ink3);margin-top:8px;line-height:1.5}
+.sw{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;margin-bottom:8px}
+.sw span{flex:none;border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:11.5px;color:var(--ink2)}
+.sw span.on{border-color:var(--acc);color:var(--acc2);background:rgba(201,162,39,.14)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);padding:5px 3px;font-weight:800}
+td{padding:5px 3px;border-top:1px solid var(--line)}
+</style><div class="wrap">
+<h1>The Players leaderboard on a phone</h1>
+<p class="sub">Real 2026/27 ratings. Today the table is 776px wide inside a 368px column: 4GW Rating, Pts, PPG and xPts are entirely off-screen behind a hidden scrollbar, and the Season rating badge is clipped at the right edge.</p>
+<div class="note"><b>The constraint.</b> Nine columns will not fit 390px and no amount of shrinking changes that. So the question is not how to compress the table — it is which two or three numbers earn a place in the row, and where the rest go. All three options below fit without a sideways scroll.</div>
+<div class="grid" id="cols"></div></div><script>
+const D=[{"n": "Haaland", "pos": "FWD", "team": "MCI", "price": 15.5, "season": 99, "gw4": null, "pts": 239, "ppg": 6.829, "xpts": null, "own": 62.9}, {"n": "B.Fernandes", "pos": "MID", "team": "MUN", "price": 12.0, "season": 96, "gw4": 77, "pts": 235, "ppg": 6.714, "xpts": null, "own": 41.3}, {"n": "Gabriel", "pos": "DEF", "team": "ARS", "price": 8.0, "season": 86, "gw4": 82, "pts": 209, "ppg": 6.531, "xpts": null, "own": 20.8}, {"n": "Senesi", "pos": "DEF", "team": "TOT", "price": 6.0, "season": 85, "gw4": 76, "pts": 175, "ppg": 4.73, "xpts": null, "own": 20.7}, {"n": "Thiago", "pos": "FWD", "team": "BRE", "price": 8.0, "season": 83, "gw4": 47, "pts": 181, "ppg": 4.763, "xpts": null, "own": 24.5}, {"n": "Tarkowski", "pos": "DEF", "team": "EVE", "price": 6.0, "season": 82, "gw4": 74, "pts": 170, "ppg": 4.595, "xpts": null, "own": 18.5}, {"n": "Virgil", "pos": "DEF", "team": "LIV", "price": 6.5, "season": 81, "gw4": 57, "pts": 175, "ppg": 4.605, "xpts": null, "own": 16.1}, {"n": "Enzo", "pos": "MID", "team": "CHE", "price": 7.0, "season": 81, "gw4": 60, "pts": 157, "ppg": 4.361, "xpts": null, "own": 6.7}, {"n": "Gu\u00e9hi", "pos": "DEF", "team": "MCI", "price": 6.0, "season": 80, "gw4": 53, "pts": 179, "ppg": 5.114, "xpts": null, "own": 25.4}, {"n": "Mbeumo", "pos": "MID", "team": "MUN", "price": 8.0, "season": 79, "gw4": 99, "pts": 148, "ppg": 4.485, "xpts": null, "own": 13.2}, {"n": "Raya", "pos": "GKP", "team": "ARS", "price": 6.0, "season": 79, "gw4": 63, "pts": 162, "ppg": 4.378, "xpts": null, "own": 24.7}, {"n": "Semenyo", "pos": "MID", "team": "MCI", "price": 8.5, "season": 79, "gw4": 52, "pts": 202, "ppg": 5.459, "xpts": null, "own": 19.1}, {"n": "Rice", "pos": "MID", "team": "ARS", "price": 7.5, "season": 77, "gw4": 44, "pts": 184, "ppg": 5.111, "xpts": null, "own": 25.1}, {"n": "Anderson", "pos": "MID", "team": "MCI", "price": 6.5, "season": 77, "gw4": 65, "pts": 180, "ppg": 4.737, "xpts": null, "own": 11.6}, {"n": "Lacroix", "pos": "DEF", "team": "CRY", "price": 6.0, "season": 77, "gw4": 34, "pts": 154, "ppg": 4.4, "xpts": null, "own": 18.9}, {"n": "Truffert", "pos": "DEF", "team": "BOU", "price": 5.5, "season": 75, "gw4": 73, "pts": 165, "ppg": 4.342, "xpts": null, "own": 6.0}, {"n": "Jo\u00e3o Pedro", "pos": "FWD", "team": "CHE", "price": 7.5, "season": 75, "gw4": 46, "pts": 177, "ppg": 5.057, "xpts": null, "own": 43.5}, {"n": "J.Timber", "pos": "DEF", "team": "ARS", "price": 6.5, "season": 75, "gw4": null, "pts": 149, "ppg": 4.967, "xpts": null, "own": 1.5}, {"n": "Watkins", "pos": "FWD", "team": "AVL", "price": 8.0, "season": 74, "gw4": 90, "pts": 167, "ppg": 4.514, "xpts": null, "own": 20.0}, {"n": "Gibbs-White", "pos": "MID", "team": "NFO", "price": 8.0, "season": 74, "gw4": null, "pts": 188, "ppg": 5.081, "xpts": null, "own": 14.6}, {"n": "Van Hecke", "pos": "DEF", "team": "TOT", "price": 5.0, "season": 74, "gw4": 66, "pts": 148, "ppg": 4.111, "xpts": null, "own": 7.4}, {"n": "O'Reilly", "pos": "DEF", "team": "MCI", "price": 6.5, "season": 73, "gw4": null, "pts": 160, "ppg": 4.706, "xpts": null, "own": 23.3}, {"n": "Saka", "pos": "MID", "team": "ARS", "price": 9.5, "season": 73, "gw4": 82, "pts": 157, "ppg": 5.065, "xpts": null, "own": 11.6}, {"n": "Szoboszlai", "pos": "MID", "team": "LIV", "price": 7.0, "season": 73, "gw4": 66, "pts": 160, "ppg": 4.444, "xpts": null, "own": 31.4}];
+const cls=v=>v>=90?'g90':v>=80?'g80':v>=70?'g70':v>=60?'g60':'gl';
+const filt=`<div class="row"><span class="pill on">All</span><span class="pill">GKP</span><span class="pill">DEF</span><span class="pill">MID</span><span class="pill">FWD</span>
+ <select class="pill"><option>Top rated</option><option>Best value</option><option>Form</option></select></div>`;
+
+/* A — two numbers in the row, everything else on tap */
+let A=filt+`<div class="lst"><div class="hd"><span style="width:15px"></span><span style="flex:1">Player</span><span style="width:36px;text-align:center">Sea</span><span style="width:36px;text-align:center">4GW</span><span style="width:12px"></span></div>`;
+D.forEach((p,i)=>{
+  A+=`<div class="r"><span class="rk">${i+1}</span><span class="bg">${p.team}</span>
+   <span class="nm">${p.n}<div class="meta">${p.pos} · ${p.team} · £${p.price}m</div></span>
+   <span class="badge ${cls(p.season)}">${p.season}</span>
+   <span class="badge ${p.gw4?cls(p.gw4):'g60'}" style="${p.gw4?'':'opacity:.35'}">${p.gw4??'–'}</span>
+   <span class="chev">${i===2?'▴':'▾'}</span></div>`;
+  if(i===2) A+=`<div class="exp"><div class="kv">
+    <div><b>${p.pts}</b><span>Pts</span></div><div><b>${p.ppg.toFixed(1)}</b><span>PPG</span></div>
+    <div><b>${p.own}%</b><span>Owned</span></div><div><b>£${p.price}m</b><span>Price</span></div></div></div>`;
+});
+A+='</div><p class="foot">Rating and form rating are the two the page is named for; the rest open in place. The tapped row here is Gabriel.</p>';
+
+/* B — one metric, chosen by a switcher */
+let B=filt+`<div class="sw"><span class="on">Season rating</span><span>4GW form</span><span>Points</span><span>PPG</span><span>Owned</span><span>Value</span></div>
+ <div class="lst"><div class="hd"><span style="width:15px"></span><span style="flex:1">Player</span><span style="width:52px;text-align:right">Season rating</span></div>`;
+D.forEach((p,i)=>{B+=`<div class="r"><span class="rk">${i+1}</span><span class="bg">${p.team}</span>
+  <span class="nm">${p.n}<div class="meta">${p.pos} · ${p.team} · £${p.price}m</div></span>
+  <span class="badge ${cls(p.season)}" style="min-width:38px">${p.season}</span></div>`});
+B+='</div><p class="foot">One column at a time, swapped by the strip. The list re-sorts with it, so the number you are looking at is always the one it is ranked by — no hidden columns at all.</p>';
+
+/* C — keep the table, drop it to what fits */
+let C=filt+`<div class="lst" style="padding:2px 6px 6px"><table>
+ <tr><th style="text-align:left">#</th><th style="text-align:left">Player</th><th>£</th><th>Sea</th><th>4GW</th><th>Pts</th></tr>
+ ${D.map((p,i)=>`<tr><td class="num" style="color:var(--ink3)">${i+1}</td>
+  <td><b>${p.n}</b><div class="meta">${p.pos} · ${p.team}</div></td>
+  <td class="num" style="text-align:center">${p.price}</td>
+  <td style="text-align:center"><span class="badge ${cls(p.season)}" style="min-width:26px;font-size:11px">${p.season}</span></td>
+  <td style="text-align:center"><span class="badge ${p.gw4?cls(p.gw4):'g60'}" style="min-width:26px;font-size:11px;${p.gw4?'':'opacity:.35'}">${p.gw4??'–'}</span></td>
+  <td class="num" style="text-align:center">${p.pts}</td></tr>`).join('')}
+ </table></div>`;
+C+='<p class="foot">Still a table, cut to six columns that fit — no photo, no crest, position and club folded under the name. Densest of the three; also the least legible, and PPG, owned and xPts are simply gone.</p>';
+
+document.getElementById('cols').innerHTML=[
+ ['A · Two numbers, rest on tap','The one I would build. The row carries the season rating and the 4GW form rating — the two the page exists for — with position, club and price under the name. Tapping opens points, PPG, ownership and price in place. Nothing is hidden behind a scrollbar; it is behind a tap, which people find.',A],
+ ['B · One metric at a time','A switcher above the list picks the column, and the list re-sorts to match. The strongest guarantee of the three: there are no hidden columns at all, and the number on screen is always the one the ranking is by. Costs you comparing two metrics side by side.',B],
+ ['C · Just fewer columns','Keep the table and cut it to what fits — six columns, no crest, club and position folded under the name. Densest, and the closest to the desktop view. Also the least legible on a phone, and PPG, ownership and xPts are gone rather than relocated.',C],
+].map(([h,w,inner])=>`<div class="col"><h2>${h}</h2><p class="why">${w}</p><div class="phone"><div class="ph-top">${h.split(' · ')[0]}</div><div class="body">${inner}</div></div></div>`).join('');
+</script>

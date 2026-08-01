@@ -1,4 +1,5 @@
-<style>
+<!doctype html>
+<html><head><style>
 :root{--bg:#0a0908;--s1:#131110;--s2:#1b1917;--s3:#242120;--line:#2a2724;--ink:#f4efe3;--ink2:#a9a294;--ink3:#777064;--acc:#c9a227;--acc2:#e8c85a;--good:#5ec98a;--bad:#e08b80}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 ui-sans-serif,system-ui,-apple-system,sans-serif}
@@ -43,53 +44,281 @@ select.pill{appearance:none;padding-right:24px;background:transparent;background
 table{width:100%;border-collapse:collapse;font-size:12px}
 th{font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);padding:5px 3px;font-weight:800}
 td{padding:5px 3px;border-top:1px solid var(--line)}
-</style><div class="wrap">
+</style></head><body><div class="wrap">
 <h1>The Players leaderboard on a phone</h1>
 <p class="sub">Real 2026/27 ratings. Today the table is 776px wide inside a 368px column: 4GW Rating, Pts, PPG and xPts are entirely off-screen behind a hidden scrollbar, and the Season rating badge is clipped at the right edge.</p>
 <div class="note"><b>The constraint.</b> Nine columns will not fit 390px and no amount of shrinking changes that. So the question is not how to compress the table — it is which two or three numbers earn a place in the row, and where the rest go. All three options below fit without a sideways scroll.</div>
-<div class="grid" id="cols"></div></div><script>
-const D=[{"n": "Haaland", "pos": "FWD", "team": "MCI", "price": 15.5, "season": 99, "gw4": null, "pts": 239, "ppg": 6.829, "xpts": null, "own": 62.9}, {"n": "B.Fernandes", "pos": "MID", "team": "MUN", "price": 12.0, "season": 96, "gw4": 77, "pts": 235, "ppg": 6.714, "xpts": null, "own": 41.3}, {"n": "Gabriel", "pos": "DEF", "team": "ARS", "price": 8.0, "season": 86, "gw4": 82, "pts": 209, "ppg": 6.531, "xpts": null, "own": 20.8}, {"n": "Senesi", "pos": "DEF", "team": "TOT", "price": 6.0, "season": 85, "gw4": 76, "pts": 175, "ppg": 4.73, "xpts": null, "own": 20.7}, {"n": "Thiago", "pos": "FWD", "team": "BRE", "price": 8.0, "season": 83, "gw4": 47, "pts": 181, "ppg": 4.763, "xpts": null, "own": 24.5}, {"n": "Tarkowski", "pos": "DEF", "team": "EVE", "price": 6.0, "season": 82, "gw4": 74, "pts": 170, "ppg": 4.595, "xpts": null, "own": 18.5}, {"n": "Virgil", "pos": "DEF", "team": "LIV", "price": 6.5, "season": 81, "gw4": 57, "pts": 175, "ppg": 4.605, "xpts": null, "own": 16.1}, {"n": "Enzo", "pos": "MID", "team": "CHE", "price": 7.0, "season": 81, "gw4": 60, "pts": 157, "ppg": 4.361, "xpts": null, "own": 6.7}, {"n": "Gu\u00e9hi", "pos": "DEF", "team": "MCI", "price": 6.0, "season": 80, "gw4": 53, "pts": 179, "ppg": 5.114, "xpts": null, "own": 25.4}, {"n": "Mbeumo", "pos": "MID", "team": "MUN", "price": 8.0, "season": 79, "gw4": 99, "pts": 148, "ppg": 4.485, "xpts": null, "own": 13.2}, {"n": "Raya", "pos": "GKP", "team": "ARS", "price": 6.0, "season": 79, "gw4": 63, "pts": 162, "ppg": 4.378, "xpts": null, "own": 24.7}, {"n": "Semenyo", "pos": "MID", "team": "MCI", "price": 8.5, "season": 79, "gw4": 52, "pts": 202, "ppg": 5.459, "xpts": null, "own": 19.1}, {"n": "Rice", "pos": "MID", "team": "ARS", "price": 7.5, "season": 77, "gw4": 44, "pts": 184, "ppg": 5.111, "xpts": null, "own": 25.1}, {"n": "Anderson", "pos": "MID", "team": "MCI", "price": 6.5, "season": 77, "gw4": 65, "pts": 180, "ppg": 4.737, "xpts": null, "own": 11.6}, {"n": "Lacroix", "pos": "DEF", "team": "CRY", "price": 6.0, "season": 77, "gw4": 34, "pts": 154, "ppg": 4.4, "xpts": null, "own": 18.9}, {"n": "Truffert", "pos": "DEF", "team": "BOU", "price": 5.5, "season": 75, "gw4": 73, "pts": 165, "ppg": 4.342, "xpts": null, "own": 6.0}, {"n": "Jo\u00e3o Pedro", "pos": "FWD", "team": "CHE", "price": 7.5, "season": 75, "gw4": 46, "pts": 177, "ppg": 5.057, "xpts": null, "own": 43.5}, {"n": "J.Timber", "pos": "DEF", "team": "ARS", "price": 6.5, "season": 75, "gw4": null, "pts": 149, "ppg": 4.967, "xpts": null, "own": 1.5}, {"n": "Watkins", "pos": "FWD", "team": "AVL", "price": 8.0, "season": 74, "gw4": 90, "pts": 167, "ppg": 4.514, "xpts": null, "own": 20.0}, {"n": "Gibbs-White", "pos": "MID", "team": "NFO", "price": 8.0, "season": 74, "gw4": null, "pts": 188, "ppg": 5.081, "xpts": null, "own": 14.6}, {"n": "Van Hecke", "pos": "DEF", "team": "TOT", "price": 5.0, "season": 74, "gw4": 66, "pts": 148, "ppg": 4.111, "xpts": null, "own": 7.4}, {"n": "O'Reilly", "pos": "DEF", "team": "MCI", "price": 6.5, "season": 73, "gw4": null, "pts": 160, "ppg": 4.706, "xpts": null, "own": 23.3}, {"n": "Saka", "pos": "MID", "team": "ARS", "price": 9.5, "season": 73, "gw4": 82, "pts": 157, "ppg": 5.065, "xpts": null, "own": 11.6}, {"n": "Szoboszlai", "pos": "MID", "team": "LIV", "price": 7.0, "season": 73, "gw4": 66, "pts": 160, "ppg": 4.444, "xpts": null, "own": 31.4}];
-const cls=v=>v>=90?'g90':v>=80?'g80':v>=70?'g70':v>=60?'g60':'gl';
-const filt=`<div class="row"><span class="pill on">All</span><span class="pill">GKP</span><span class="pill">DEF</span><span class="pill">MID</span><span class="pill">FWD</span>
- <select class="pill"><option>Top rated</option><option>Best value</option><option>Form</option></select></div>`;
-
-/* A — two numbers in the row, everything else on tap */
-let A=filt+`<div class="lst"><div class="hd"><span style="width:15px"></span><span style="flex:1">Player</span><span style="width:34px;text-align:center">Season</span><span style="width:34px;text-align:center">4GW</span><span style="width:12px"></span></div>`;
-D.forEach((p,i)=>{
-  A+=`<div class="r"><span class="rk">${i+1}</span><span class="bg">${p.team}</span>
-   <span class="nm">${p.n}<div class="meta">${p.pos} · ${p.team} · £${p.price}m</div></span>
-   <span class="badge ${cls(p.season)}">${p.season}</span>
-   <span class="badge ${p.gw4?cls(p.gw4):'g60'}" style="${p.gw4?'':'opacity:.35'}">${p.gw4??'–'}</span>
-   <span class="chev">${i===2?'▴':'▾'}</span></div>`;
-  if(i===2) A+=`<div class="exp"><div class="kv">
-    <div><b>${p.pts}</b><span>Pts</span></div><div><b>${p.ppg.toFixed(1)}</b><span>PPG</span></div>
-    <div><b>${p.own}%</b><span>Owned</span></div><div><b>£${p.price}m</b><span>Price</span></div></div></div>`;
-});
-A+='</div><p class="foot">Rating and form rating are the two the page is named for; the rest open in place. The tapped row here is Gabriel.</p>';
-
-/* B — one metric, chosen by a switcher */
-let B=filt+`<div class="sw"><span class="on">Season rating</span><span>4GW form</span><span>Points</span><span>PPG</span><span>Owned</span><span>Value</span></div>
- <div class="lst"><div class="hd"><span style="width:15px"></span><span style="flex:1">Player</span><span style="width:52px;text-align:right">Season rating</span></div>`;
-D.forEach((p,i)=>{B+=`<div class="r"><span class="rk">${i+1}</span><span class="bg">${p.team}</span>
-  <span class="nm">${p.n}<div class="meta">${p.pos} · ${p.team} · £${p.price}m</div></span>
-  <span class="badge ${cls(p.season)}" style="min-width:38px">${p.season}</span></div>`});
-B+='</div><p class="foot">One column at a time, swapped by the strip. The list re-sorts with it, so the number you are looking at is always the one it is ranked by — no hidden columns at all.</p>';
-
-/* C — keep the table, drop it to what fits */
-let C=filt+`<div class="lst" style="padding:2px 6px 6px"><table>
- <tr><th style="text-align:left">#</th><th style="text-align:left">Player</th><th>£</th><th>Sea</th><th>4GW</th><th>Pts</th></tr>
- ${D.map((p,i)=>`<tr><td class="num" style="color:var(--ink3)">${i+1}</td>
-  <td><b>${p.n}</b><div class="meta">${p.pos} · ${p.team}</div></td>
-  <td class="num" style="text-align:center">${p.price}</td>
-  <td style="text-align:center"><span class="badge ${cls(p.season)}" style="min-width:26px;font-size:11px">${p.season}</span></td>
-  <td style="text-align:center"><span class="badge ${p.gw4?cls(p.gw4):'g60'}" style="min-width:26px;font-size:11px;${p.gw4?'':'opacity:.35'}">${p.gw4??'–'}</span></td>
-  <td class="num" style="text-align:center">${p.pts}</td></tr>`).join('')}
- </table></div>`;
-C+='<p class="foot">Still a table, cut to six columns that fit — no photo, no crest, position and club folded under the name. Densest of the three; also the least legible, and PPG, owned and xPts are simply gone.</p>';
-
-document.getElementById('cols').innerHTML=[
- ['A · Two numbers, rest on tap','The one I would build. The row carries the season rating and the 4GW form rating — the two the page exists for — with position, club and price under the name. Tapping opens points, PPG, ownership and price in place. Nothing is hidden behind a scrollbar; it is behind a tap, which people find.',A],
- ['B · One metric at a time','A switcher above the list picks the column, and the list re-sorts to match. The strongest guarantee of the three: there are no hidden columns at all, and the number on screen is always the one the ranking is by. Costs you comparing two metrics side by side.',B],
- ['C · Just fewer columns','Keep the table and cut it to what fits — six columns, no crest, club and position folded under the name. Densest, and the closest to the desktop view. Also the least legible on a phone, and PPG, ownership and xPts are gone rather than relocated.',C],
-].map(([h,w,inner])=>`<div class="col"><h2>${h}</h2><p class="why">${w}</p><div class="phone"><div class="ph-top">${h.split(' · ')[0]}</div><div class="body">${inner}</div></div></div>`).join('');
-</script>
+<div class="grid" id="cols"><div class="col"><h2>A · Two numbers, rest on tap</h2><p class="why">The one I would build. The row carries the season rating and the 4GW form rating — the two the page exists for — with position, club and price under the name. Tapping opens points, PPG, ownership and price in place. Nothing is hidden behind a scrollbar; it is behind a tap, which people find.</p><div class="phone"><div class="ph-top">A</div><div class="body"><div class="row"><span class="pill on">All</span><span class="pill">GKP</span><span class="pill">DEF</span><span class="pill">MID</span><span class="pill">FWD</span>
+ <select class="pill"><option>Top rated</option><option>Best value</option><option>Form</option></select></div><div class="lst"><div class="hd"><span style="width:15px"></span><span style="flex:1">Player</span><span style="width:36px;text-align:center">Sea</span><span style="width:36px;text-align:center">4GW</span><span style="width:12px"></span></div><div class="r"><span class="rk">1</span><span class="bg">MCI</span>
+   <span class="nm">Haaland<div class="meta">FWD · MCI · £15.5m</div></span>
+   <span class="badge g90">99</span>
+   <span class="badge g60" style="opacity:.35">–</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">2</span><span class="bg">MUN</span>
+   <span class="nm">B.Fernandes<div class="meta">MID · MUN · £12m</div></span>
+   <span class="badge g90">96</span>
+   <span class="badge g70" style="">77</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">3</span><span class="bg">ARS</span>
+   <span class="nm">Gabriel<div class="meta">DEF · ARS · £8m</div></span>
+   <span class="badge g80">86</span>
+   <span class="badge g80" style="">82</span>
+   <span class="chev">▴</span></div><div class="exp"><div class="kv">
+    <div><b>209</b><span>Pts</span></div><div><b>6.5</b><span>PPG</span></div>
+    <div><b>20.8%</b><span>Owned</span></div><div><b>£8m</b><span>Price</span></div></div></div><div class="r"><span class="rk">4</span><span class="bg">TOT</span>
+   <span class="nm">Senesi<div class="meta">DEF · TOT · £6m</div></span>
+   <span class="badge g80">85</span>
+   <span class="badge g70" style="">76</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">5</span><span class="bg">BRE</span>
+   <span class="nm">Thiago<div class="meta">FWD · BRE · £8m</div></span>
+   <span class="badge g80">83</span>
+   <span class="badge gl" style="">47</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">6</span><span class="bg">EVE</span>
+   <span class="nm">Tarkowski<div class="meta">DEF · EVE · £6m</div></span>
+   <span class="badge g80">82</span>
+   <span class="badge g70" style="">74</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">7</span><span class="bg">LIV</span>
+   <span class="nm">Virgil<div class="meta">DEF · LIV · £6.5m</div></span>
+   <span class="badge g80">81</span>
+   <span class="badge gl" style="">57</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">8</span><span class="bg">CHE</span>
+   <span class="nm">Enzo<div class="meta">MID · CHE · £7m</div></span>
+   <span class="badge g80">81</span>
+   <span class="badge g60" style="">60</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">9</span><span class="bg">MCI</span>
+   <span class="nm">Guéhi<div class="meta">DEF · MCI · £6m</div></span>
+   <span class="badge g80">80</span>
+   <span class="badge gl" style="">53</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">10</span><span class="bg">MUN</span>
+   <span class="nm">Mbeumo<div class="meta">MID · MUN · £8m</div></span>
+   <span class="badge g70">79</span>
+   <span class="badge g90" style="">99</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">11</span><span class="bg">ARS</span>
+   <span class="nm">Raya<div class="meta">GKP · ARS · £6m</div></span>
+   <span class="badge g70">79</span>
+   <span class="badge g60" style="">63</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">12</span><span class="bg">MCI</span>
+   <span class="nm">Semenyo<div class="meta">MID · MCI · £8.5m</div></span>
+   <span class="badge g70">79</span>
+   <span class="badge gl" style="">52</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">13</span><span class="bg">ARS</span>
+   <span class="nm">Rice<div class="meta">MID · ARS · £7.5m</div></span>
+   <span class="badge g70">77</span>
+   <span class="badge gl" style="">44</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">14</span><span class="bg">MCI</span>
+   <span class="nm">Anderson<div class="meta">MID · MCI · £6.5m</div></span>
+   <span class="badge g70">77</span>
+   <span class="badge g60" style="">65</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">15</span><span class="bg">CRY</span>
+   <span class="nm">Lacroix<div class="meta">DEF · CRY · £6m</div></span>
+   <span class="badge g70">77</span>
+   <span class="badge gl" style="">34</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">16</span><span class="bg">BOU</span>
+   <span class="nm">Truffert<div class="meta">DEF · BOU · £5.5m</div></span>
+   <span class="badge g70">75</span>
+   <span class="badge g70" style="">73</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">17</span><span class="bg">CHE</span>
+   <span class="nm">João Pedro<div class="meta">FWD · CHE · £7.5m</div></span>
+   <span class="badge g70">75</span>
+   <span class="badge gl" style="">46</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">18</span><span class="bg">ARS</span>
+   <span class="nm">J.Timber<div class="meta">DEF · ARS · £6.5m</div></span>
+   <span class="badge g70">75</span>
+   <span class="badge g60" style="opacity:.35">–</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">19</span><span class="bg">AVL</span>
+   <span class="nm">Watkins<div class="meta">FWD · AVL · £8m</div></span>
+   <span class="badge g70">74</span>
+   <span class="badge g90" style="">90</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">20</span><span class="bg">NFO</span>
+   <span class="nm">Gibbs-White<div class="meta">MID · NFO · £8m</div></span>
+   <span class="badge g70">74</span>
+   <span class="badge g60" style="opacity:.35">–</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">21</span><span class="bg">TOT</span>
+   <span class="nm">Van Hecke<div class="meta">DEF · TOT · £5m</div></span>
+   <span class="badge g70">74</span>
+   <span class="badge g60" style="">66</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">22</span><span class="bg">MCI</span>
+   <span class="nm">O'Reilly<div class="meta">DEF · MCI · £6.5m</div></span>
+   <span class="badge g70">73</span>
+   <span class="badge g60" style="opacity:.35">–</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">23</span><span class="bg">ARS</span>
+   <span class="nm">Saka<div class="meta">MID · ARS · £9.5m</div></span>
+   <span class="badge g70">73</span>
+   <span class="badge g80" style="">82</span>
+   <span class="chev">▾</span></div><div class="r"><span class="rk">24</span><span class="bg">LIV</span>
+   <span class="nm">Szoboszlai<div class="meta">MID · LIV · £7m</div></span>
+   <span class="badge g70">73</span>
+   <span class="badge g60" style="">66</span>
+   <span class="chev">▾</span></div></div><p class="foot">Rating and form rating are the two the page is named for; the rest open in place. The tapped row here is Gabriel.</p></div></div></div><div class="col"><h2>B · One metric at a time</h2><p class="why">A switcher above the list picks the column, and the list re-sorts to match. The strongest guarantee of the three: there are no hidden columns at all, and the number on screen is always the one the ranking is by. Costs you comparing two metrics side by side.</p><div class="phone"><div class="ph-top">B</div><div class="body"><div class="row"><span class="pill on">All</span><span class="pill">GKP</span><span class="pill">DEF</span><span class="pill">MID</span><span class="pill">FWD</span>
+ <select class="pill"><option>Top rated</option><option>Best value</option><option>Form</option></select></div><div class="sw"><span class="on">Season rating</span><span>4GW form</span><span>Points</span><span>PPG</span><span>Owned</span><span>Value</span></div>
+ <div class="lst"><div class="hd"><span style="width:15px"></span><span style="flex:1">Player</span><span style="width:52px;text-align:right">Season rating</span></div><div class="r"><span class="rk">1</span><span class="bg">MCI</span>
+  <span class="nm">Haaland<div class="meta">FWD · MCI · £15.5m</div></span>
+  <span class="badge g90" style="min-width:38px">99</span></div><div class="r"><span class="rk">2</span><span class="bg">MUN</span>
+  <span class="nm">B.Fernandes<div class="meta">MID · MUN · £12m</div></span>
+  <span class="badge g90" style="min-width:38px">96</span></div><div class="r"><span class="rk">3</span><span class="bg">ARS</span>
+  <span class="nm">Gabriel<div class="meta">DEF · ARS · £8m</div></span>
+  <span class="badge g80" style="min-width:38px">86</span></div><div class="r"><span class="rk">4</span><span class="bg">TOT</span>
+  <span class="nm">Senesi<div class="meta">DEF · TOT · £6m</div></span>
+  <span class="badge g80" style="min-width:38px">85</span></div><div class="r"><span class="rk">5</span><span class="bg">BRE</span>
+  <span class="nm">Thiago<div class="meta">FWD · BRE · £8m</div></span>
+  <span class="badge g80" style="min-width:38px">83</span></div><div class="r"><span class="rk">6</span><span class="bg">EVE</span>
+  <span class="nm">Tarkowski<div class="meta">DEF · EVE · £6m</div></span>
+  <span class="badge g80" style="min-width:38px">82</span></div><div class="r"><span class="rk">7</span><span class="bg">LIV</span>
+  <span class="nm">Virgil<div class="meta">DEF · LIV · £6.5m</div></span>
+  <span class="badge g80" style="min-width:38px">81</span></div><div class="r"><span class="rk">8</span><span class="bg">CHE</span>
+  <span class="nm">Enzo<div class="meta">MID · CHE · £7m</div></span>
+  <span class="badge g80" style="min-width:38px">81</span></div><div class="r"><span class="rk">9</span><span class="bg">MCI</span>
+  <span class="nm">Guéhi<div class="meta">DEF · MCI · £6m</div></span>
+  <span class="badge g80" style="min-width:38px">80</span></div><div class="r"><span class="rk">10</span><span class="bg">MUN</span>
+  <span class="nm">Mbeumo<div class="meta">MID · MUN · £8m</div></span>
+  <span class="badge g70" style="min-width:38px">79</span></div><div class="r"><span class="rk">11</span><span class="bg">ARS</span>
+  <span class="nm">Raya<div class="meta">GKP · ARS · £6m</div></span>
+  <span class="badge g70" style="min-width:38px">79</span></div><div class="r"><span class="rk">12</span><span class="bg">MCI</span>
+  <span class="nm">Semenyo<div class="meta">MID · MCI · £8.5m</div></span>
+  <span class="badge g70" style="min-width:38px">79</span></div><div class="r"><span class="rk">13</span><span class="bg">ARS</span>
+  <span class="nm">Rice<div class="meta">MID · ARS · £7.5m</div></span>
+  <span class="badge g70" style="min-width:38px">77</span></div><div class="r"><span class="rk">14</span><span class="bg">MCI</span>
+  <span class="nm">Anderson<div class="meta">MID · MCI · £6.5m</div></span>
+  <span class="badge g70" style="min-width:38px">77</span></div><div class="r"><span class="rk">15</span><span class="bg">CRY</span>
+  <span class="nm">Lacroix<div class="meta">DEF · CRY · £6m</div></span>
+  <span class="badge g70" style="min-width:38px">77</span></div><div class="r"><span class="rk">16</span><span class="bg">BOU</span>
+  <span class="nm">Truffert<div class="meta">DEF · BOU · £5.5m</div></span>
+  <span class="badge g70" style="min-width:38px">75</span></div><div class="r"><span class="rk">17</span><span class="bg">CHE</span>
+  <span class="nm">João Pedro<div class="meta">FWD · CHE · £7.5m</div></span>
+  <span class="badge g70" style="min-width:38px">75</span></div><div class="r"><span class="rk">18</span><span class="bg">ARS</span>
+  <span class="nm">J.Timber<div class="meta">DEF · ARS · £6.5m</div></span>
+  <span class="badge g70" style="min-width:38px">75</span></div><div class="r"><span class="rk">19</span><span class="bg">AVL</span>
+  <span class="nm">Watkins<div class="meta">FWD · AVL · £8m</div></span>
+  <span class="badge g70" style="min-width:38px">74</span></div><div class="r"><span class="rk">20</span><span class="bg">NFO</span>
+  <span class="nm">Gibbs-White<div class="meta">MID · NFO · £8m</div></span>
+  <span class="badge g70" style="min-width:38px">74</span></div><div class="r"><span class="rk">21</span><span class="bg">TOT</span>
+  <span class="nm">Van Hecke<div class="meta">DEF · TOT · £5m</div></span>
+  <span class="badge g70" style="min-width:38px">74</span></div><div class="r"><span class="rk">22</span><span class="bg">MCI</span>
+  <span class="nm">O'Reilly<div class="meta">DEF · MCI · £6.5m</div></span>
+  <span class="badge g70" style="min-width:38px">73</span></div><div class="r"><span class="rk">23</span><span class="bg">ARS</span>
+  <span class="nm">Saka<div class="meta">MID · ARS · £9.5m</div></span>
+  <span class="badge g70" style="min-width:38px">73</span></div><div class="r"><span class="rk">24</span><span class="bg">LIV</span>
+  <span class="nm">Szoboszlai<div class="meta">MID · LIV · £7m</div></span>
+  <span class="badge g70" style="min-width:38px">73</span></div></div><p class="foot">One column at a time, swapped by the strip. The list re-sorts with it, so the number you are looking at is always the one it is ranked by — no hidden columns at all.</p></div></div></div><div class="col"><h2>C · Just fewer columns</h2><p class="why">Keep the table and cut it to what fits — six columns, no crest, club and position folded under the name. Densest, and the closest to the desktop view. Also the least legible on a phone, and PPG, ownership and xPts are gone rather than relocated.</p><div class="phone"><div class="ph-top">C</div><div class="body"><div class="row"><span class="pill on">All</span><span class="pill">GKP</span><span class="pill">DEF</span><span class="pill">MID</span><span class="pill">FWD</span>
+ <select class="pill"><option>Top rated</option><option>Best value</option><option>Form</option></select></div><div class="lst" style="padding:2px 6px 6px"><table>
+ <tbody><tr><th style="text-align:left">#</th><th style="text-align:left">Player</th><th>£</th><th>Sea</th><th>4GW</th><th>Pts</th></tr>
+ <tr><td class="num" style="color:var(--ink3)">1</td>
+  <td><b>Haaland</b><div class="meta">FWD · MCI</div></td>
+  <td class="num" style="text-align:center">15.5</td>
+  <td style="text-align:center"><span class="badge g90" style="min-width:26px;font-size:11px">99</span></td>
+  <td style="text-align:center"><span class="badge g60" style="min-width:26px;font-size:11px;opacity:.35">–</span></td>
+  <td class="num" style="text-align:center">239</td></tr><tr><td class="num" style="color:var(--ink3)">2</td>
+  <td><b>B.Fernandes</b><div class="meta">MID · MUN</div></td>
+  <td class="num" style="text-align:center">12</td>
+  <td style="text-align:center"><span class="badge g90" style="min-width:26px;font-size:11px">96</span></td>
+  <td style="text-align:center"><span class="badge g70" style="min-width:26px;font-size:11px;">77</span></td>
+  <td class="num" style="text-align:center">235</td></tr><tr><td class="num" style="color:var(--ink3)">3</td>
+  <td><b>Gabriel</b><div class="meta">DEF · ARS</div></td>
+  <td class="num" style="text-align:center">8</td>
+  <td style="text-align:center"><span class="badge g80" style="min-width:26px;font-size:11px">86</span></td>
+  <td style="text-align:center"><span class="badge g80" style="min-width:26px;font-size:11px;">82</span></td>
+  <td class="num" style="text-align:center">209</td></tr><tr><td class="num" style="color:var(--ink3)">4</td>
+  <td><b>Senesi</b><div class="meta">DEF · TOT</div></td>
+  <td class="num" style="text-align:center">6</td>
+  <td style="text-align:center"><span class="badge g80" style="min-width:26px;font-size:11px">85</span></td>
+  <td style="text-align:center"><span class="badge g70" style="min-width:26px;font-size:11px;">76</span></td>
+  <td class="num" style="text-align:center">175</td></tr><tr><td class="num" style="color:var(--ink3)">5</td>
+  <td><b>Thiago</b><div class="meta">FWD · BRE</div></td>
+  <td class="num" style="text-align:center">8</td>
+  <td style="text-align:center"><span class="badge g80" style="min-width:26px;font-size:11px">83</span></td>
+  <td style="text-align:center"><span class="badge gl" style="min-width:26px;font-size:11px;">47</span></td>
+  <td class="num" style="text-align:center">181</td></tr><tr><td class="num" style="color:var(--ink3)">6</td>
+  <td><b>Tarkowski</b><div class="meta">DEF · EVE</div></td>
+  <td class="num" style="text-align:center">6</td>
+  <td style="text-align:center"><span class="badge g80" style="min-width:26px;font-size:11px">82</span></td>
+  <td style="text-align:center"><span class="badge g70" style="min-width:26px;font-size:11px;">74</span></td>
+  <td class="num" style="text-align:center">170</td></tr><tr><td class="num" style="color:var(--ink3)">7</td>
+  <td><b>Virgil</b><div class="meta">DEF · LIV</div></td>
+  <td class="num" style="text-align:center">6.5</td>
+  <td style="text-align:center"><span class="badge g80" style="min-width:26px;font-size:11px">81</span></td>
+  <td style="text-align:center"><span class="badge gl" style="min-width:26px;font-size:11px;">57</span></td>
+  <td class="num" style="text-align:center">175</td></tr><tr><td class="num" style="color:var(--ink3)">8</td>
+  <td><b>Enzo</b><div class="meta">MID · CHE</div></td>
+  <td class="num" style="text-align:center">7</td>
+  <td style="text-align:center"><span class="badge g80" style="min-width:26px;font-size:11px">81</span></td>
+  <td style="text-align:center"><span class="badge g60" style="min-width:26px;font-size:11px;">60</span></td>
+  <td class="num" style="text-align:center">157</td></tr><tr><td class="num" style="color:var(--ink3)">9</td>
+  <td><b>Guéhi</b><div class="meta">DEF · MCI</div></td>
+  <td class="num" style="text-align:center">6</td>
+  <td style="text-align:center"><span class="badge g80" style="min-width:26px;font-size:11px">80</span></td>
+  <td style="text-align:center"><span class="badge gl" style="min-width:26px;font-size:11px;">53</span></td>
+  <td class="num" style="text-align:center">179</td></tr><tr><td class="num" style="color:var(--ink3)">10</td>
+  <td><b>Mbeumo</b><div class="meta">MID · MUN</div></td>
+  <td class="num" style="text-align:center">8</td>
+  <td style="text-align:center"><span class="badge g70" style="min-width:26px;font-size:11px">79</span></td>
+  <td style="text-align:center"><span class="badge g90" style="min-width:26px;font-size:11px;">99</span></td>
+  <td class="num" style="text-align:center">148</td></tr><tr><td class="num" style="color:var(--ink3)">11</td>
+  <td><b>Raya</b><div class="meta">GKP · ARS</div></td>
+  <td class="num" style="text-align:center">6</td>
+  <td style="text-align:center"><span class="badge g70" style="min-width:26px;font-size:11px">79</span></td>
+  <td style="text-align:center"><span class="badge g60" style="min-width:26px;font-size:11px;">63</span></td>
+  <td class="num" style="text-align:center">162</td></tr><tr><td class="num" style="color:var(--ink3)">12</td>
+  <td><b>Semenyo</b><div class="meta">MID · MCI</div></td>
+  <td class="num" style="text-align:center">8.5</td>
+  <td style="text-align:center"><span class="badge g70" style="min-width:26px;font-size:11px">79</span></td>
+  <td style="text-align:center"><span class="badge gl" style="min-width:26px;font-size:11px;">52</span></td>
+  <td class="num" style="text-align:center">202</td></tr><tr><td class="num" style="color:var(--ink3)">13</td>
+  <td><b>Rice</b><div class="meta">MID · ARS</div></td>
+  <td class="num" style="text-align:center">7.5</td>
+  <td style="text-align:center"><span class="badge g70" style="min-width:26px;font-size:11px">77</span></td>
+  <td style="text-align:center"><span class="badge gl" style="min-width:26px;font-size:11px;">44</span></td>
+  <td class="num" style="text-align:center">184</td></tr><tr><td class="num" style="color:var(--ink3)">14</td>
+  <td><b>Anderson</b><div class="meta">MID · MCI</div></td>
+  <td class="num" style="text-align:center">6.5</td>
+  <td style="text-align:center"><span class="badge g70" style="min-width:26px;font-size:11px">77</span></td>
+  <td style="text-align:center"><span class="badge g60" style="min-width:26px;font-size:11px;">65</span></td>
+  <td class="num" style="text-align:center">180</td></tr><tr><td class="num" style="color:var(--ink3)">15</td>
+  <td><b>Lacroix</b><div class="meta">DEF · CRY</div></td>
+  <td class="num" style="text-align:center">6</td>
+  <td style="text-align:center"><span class="badge g70" style="min-width:26px;font-size:11px">77</span></td>
+  <td style="text-align:center"><span class="badge gl" style="min-width:26px;font-size:11px;">34</span></td>
+  <td class="num" style="text-align:center">154</td></tr><tr><td class="num" style="color:var(--ink3)">16</td>
+  <td><b>Truffert</b><div class="meta">DEF · BOU</div></td>
+  <td class="num" style="text-align:center">5.5</td>
+  <td style="text-align:center"><span class="badge g70" style="min-width:26px;font-size:11px">75</span></td>
+  <td style="text-align:center"><span class="badge g70" style="min-width:26px;font-size:11px;">73</span></td>
+  <td class="num" style="text-align:center">165</td></tr><tr><td class="num" style="color:var(--ink3)">17</td>
+  <td><b>João Pedro</b><div class="meta">FWD · CHE</div></td>
+  <td class="num" style="text-align:center">7.5</td>
+  <td style="text-align:center"><span class="badge g70" style="min-width:26px;font-size:11px">75</span></td>
+  <td style="text-align:center"><span class="badge gl" style="min-width:26px;font-size:11px;">46</span></td>
+  <td class="num" style="text-align:center">177</td></tr><tr><td class="num" style="color:var(--ink3)">18</td>
+  <td><b>J.Timber</b><div class="meta">DEF · ARS</div></td>
+  <td class="num" style="text-align:center">6.5</td>
+  <td style="text-align:center"><span class="badge g70" style="min-width:26px;font-size:11px">75</span></td>
+  <td style="text-align:center"><span class="badge g60" style="min-width:26px;font-size:11px;opacity:.35">–</span></td>
+  <td class="num" style="text-align:center">149</td></tr><tr><td class="num" style="color:var(--ink3)">19</td>
+  <td><b>Watkins</b><div class="meta">FWD · AVL</div></td>
+  <td class="num" style="text-align:center">8</td>
+  <td style="text-align:center"><span class="badge g70" style="min-width:26px;font-size:11px">74</span></td>
+  <td style="text-align:center"><span class="badge g90" style="min-width:26px;font-size:11px;">90</span></td>
+  <td class="num" style="text-align:center">167</td></tr><tr><td class="num" style="color:var(--ink3)">20</td>
+  <td><b>Gibbs-White</b><div class="meta">MID · NFO</div></td>
+  <td class="num" style="text-align:center">8</td>
+  <td style="text-align:center"><span class="badge g70" style="min-width:26px;font-size:11px">74</span></td>
+  <td style="text-align:center"><span class="badge g60" style="min-width:26px;font-size:11px;opacity:.35">–</span></td>
+  <td class="num" style="text-align:center">188</td></tr><tr><td class="num" style="color:var(--ink3)">21</td>
+  <td><b>Van Hecke</b><div class="meta">DEF · TOT</div></td>
+  <td class="num" style="text-align:center">5</td>
+  <td style="text-align:center"><span class="badge g70" style="min-width:26px;font-size:11px">74</span></td>
+  <td style="text-align:center"><span class="badge g60" style="min-width:26px;font-size:11px;">66</span></td>
+  <td class="num" style="text-align:center">148</td></tr><tr><td class="num" style="color:var(--ink3)">22</td>
+  <td><b>O'Reilly</b><div class="meta">DEF · MCI</div></td>
+  <td class="num" style="text-align:center">6.5</td>
+  <td style="text-align:center"><span class="badge g70" style="min-width:26px;font-size:11px">73</span></td>
+  <td style="text-align:center"><span class="badge g60" style="min-width:26px;font-size:11px;opacity:.35">–</span></td>
+  <td class="num" style="text-align:center">160</td></tr><tr><td class="num" style="color:var(--ink3)">23</td>
+  <td><b>Saka</b><div class="meta">MID · ARS</div></td>
+  <td class="num" style="text-align:center">9.5</td>
+  <td style="text-align:center"><span class="badge g70" style="min-width:26px;font-size:11px">73</span></td>
+  <td style="text-align:center"><span class="badge g80" style="min-width:26px;font-size:11px;">82</span></td>
+  <td class="num" style="text-align:center">157</td></tr><tr><td class="num" style="color:var(--ink3)">24</td>
+  <td><b>Szoboszlai</b><div class="meta">MID · LIV</div></td>
+  <td class="num" style="text-align:center">7</td>
+  <td style="text-align:center"><span class="badge g70" style="min-width:26px;font-size:11px">73</span></td>
+  <td style="text-align:center"><span class="badge g60" style="min-width:26px;font-size:11px;">66</span></td>
+  <td class="num" style="text-align:center">160</td></tr>
+ </tbody></table></div><p class="foot">Still a table, cut to six columns that fit — no photo, no crest, position and club folded under the name. Densest of the three; also the least legible, and PPG, owned and xPts are simply gone.</p></div></div></div></div></div></body></html>
