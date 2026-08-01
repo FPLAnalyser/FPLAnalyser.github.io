@@ -277,7 +277,7 @@ export default function Fixtures() {
   // smaller cost than opening two different people on two different windows
   // and having them compare notes.
   const [windowN, setWindowN] = useState<(typeof WINDOWS)[number]>(6)
-  const [lens, setLens] = useState<Lens>('overall')
+  const [lens, setLens] = useState<Lens>('defence')
   // The grid mode is no longer a control — it follows the tab. Only the two
   // projections are a choice, and only inside their own tab.
   const [projMode, setProjMode] = useState<Exclude<GridMode, 'diff'>>('xg')
@@ -746,6 +746,34 @@ const ROT_SIZES = [2, 3, 4, 5] as const
 const ROT_WINDOWS = [4, 6, 8, 10] as const
 const LENS_LABEL_ROT: Record<Lens, string> = { overall: 'Overall', attack: 'Attack', defence: 'Defence' }
 const RATE_LABEL: Record<GridMode, string> = { diff: 'Difficulty', cs: 'Clean sheets', xg: 'Goals' }
+
+/* A rotation is defensive or attacking, and that one choice settles the rest:
+   which fixture metric is worth ranking on, which positions are worth
+   fielding, and which rating tells you whether the player behind the club is
+   any good. Overall answers none of them well — it is a blend, and a blend is
+   what you pick when you have not decided. */
+type Side = 'defence' | 'attack'
+const SIDE_RATES: Record<Side, GridMode[]> = { defence: ['diff', 'cs'], attack: ['diff', 'xg'] }
+const SIDE_POS: Record<Side, ('GKP' | 'DEF' | 'MID' | 'FWD')[]> = {
+  defence: ['GKP', 'DEF', 'MID'],
+  attack: ['DEF', 'MID', 'FWD'],
+}
+/** What to show about the club's best player at that position, per side.
+ *  A keeper's job is saves; a defender's extra points come from defensive
+ *  contribution; a midfielder is the awkward one and genuinely depends on why
+ *  you are buying him, which is exactly what the side control has just said. */
+const POS_METRIC: Record<Side, Record<string, { key: string; label: string }>> = {
+  defence: {
+    GKP: { key: 'season_save_score', label: 'Saves' },
+    DEF: { key: 'season_dc_score', label: 'Def Con' },
+    MID: { key: 'season_dc_score', label: 'Def Con' },
+  },
+  attack: {
+    DEF: { key: 'season_attacking_score', label: 'Attacking' },
+    MID: { key: 'season_goal_score', label: 'Goal threat' },
+    FWD: { key: 'season_goal_score', label: 'Goal threat' },
+  },
+}
 const RATE_TIP: Record<GridMode, string> = {
   diff: 'Rank and start on our own fixture difficulty — a blend of what each side is expected to score and concede. The right default when the rotation is not position-specific.',
   cs: 'Rank and start on the clean-sheet chance for that fixture. What you want when the rotation is defenders or a keeper: the starter becomes the one most likely to earn the four points rather than the one with the kindest blended fixture.',
@@ -782,13 +810,23 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
   const [size, setSize] = useState<(typeof ROT_SIZES)[number]>(2)
   const [startK, setStartK] = useState(1)
   const [windowN, setWindowN] = useState<(typeof ROT_WINDOWS)[number]>(6)
-  const [lens, setLens] = useState<Lens>('overall')
+  const [lens, setLens] = useState<Lens>('defence')
   /* What the board ranks and rings on. Difficulty is a blend; rotating
      defenders you want the clean-sheet projection and rotating attackers you
      want goals, and both are already computed for the Goals & Clean Sheets
      tab. The ring genuinely changes hands between them in several gameweeks,
      which is the whole reason this is a control and not a preference. */
   const [rateOn, setRateOn] = useState<GridMode>('diff')
+  const side: Side = lens === 'attack' ? 'attack' : 'defence'
+  // Changing side can strand the other two controls on an option that no
+  // longer exists — goals on a defensive rotation, a keeper on an attacking
+  // one. Pull them back to something legal rather than silently filtering on
+  // a value the picker no longer shows.
+  const setSide = (nextSide: Side) => {
+    setLens(nextSide)
+    if (!SIDE_RATES[nextSide].includes(rateOn)) setRateOn('diff')
+    if (needPos !== 'any' && !SIDE_POS[nextSide].includes(needPos)) setNeedPos('any')
+  }
 
   const allTeams = useMemo(() => [...new Set(fixtureEase.map((f) => f.team))].sort(), [fixtureEase])
 
@@ -797,18 +835,30 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
    *  the same buy if one of them has a 99 in it — and nothing on this board
    *  said so. */
   const dcBy = useMemo(() => {
-    const m = new Map<string, { name: string; pos: string; score: number }[]>()
+    // Which rating matters depends on the side you are planning and the
+    // position you would buy, so the band answers "who would I actually get
+    // here, and is he any good at the job I want him for" rather than always
+    // reporting the same number.
+    const wanted = needPos === 'any' ? SIDE_POS[side] : [needPos]
+    const m = new Map<string, { name: string; pos: string; score: number; label: string; price: number | null }[]>()
     for (const r of ratings) {
-      const sc = num(r, 'season_dc_score')
-      if (sc == null || (r.position !== 'DEF' && r.position !== 'MID')) continue
+      const pos = String(r.position)
+      if (!wanted.includes(pos as 'GKP')) continue
+      const spec = POS_METRIC[side][pos]
+      if (!spec) continue
+      const sc = num(r, spec.key)
+      if (sc == null) continue
+      const price = num(r, 'price')
+      // Budget applies here too: a 99 you cannot afford is not a suggestion.
+      if (maxPrice != null && (price ?? 99) > maxPrice + 1e-9) continue
       const t = String(r.team)
       const list = m.get(t) ?? []
-      list.push({ name: String(r.web_name), pos: String(r.position), score: sc })
+      list.push({ name: String(r.web_name), pos, score: sc, label: spec.label, price })
       m.set(t, list)
     }
     for (const list of m.values()) list.sort((a, b) => b.score - a.score)
     return m
-  }, [ratings])
+  }, [ratings, side, needPos, maxPrice])
   const dcMax = useMemo(() => Math.max(1, ...[...dcBy.values()].map((l) => l[0]?.score ?? 0)), [dcBy])
 
   /** The best player each club can offer inside the budget — highest rated,
@@ -989,6 +1039,12 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
      six-cell strip could hold. Shared by the open suggestion and the planner
      proper, so they cannot disagree about who starts. */
   const rotationBoard = (group: string[]) => {
+    // One label for the band, since a mixed group would otherwise need one per
+    // column. With a position chosen it is that position's metric; with
+    // "Anyone" it is whatever the side implies most of the time.
+    const bandLabel = needPos === 'any'
+      ? (side === 'defence' ? 'Def Con' : 'Attack')
+      : POS_METRIC[side][needPos]?.label ?? ''
     const starters = (gw: number) => {
       const ranked = group
         .map((t) => ({ t, v: rateVal(t, gw) }))
@@ -1048,14 +1104,16 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
             clean sheet does, and position matters — a 99 midfielder and a 99
             defender are different buys at the same score. */}
         <div className="flex gap-1 border-t border-line bg-surface-2/40 px-2 py-1.5">
-          <span className="flex w-8 shrink-0 items-center text-[8px] font-extrabold tracking-[0.06em] text-ink-3 uppercase">Def<br />Con</span>
+          <span className="flex w-8 shrink-0 items-center text-[8px] leading-tight font-extrabold tracking-[0.06em] text-ink-3 uppercase">
+            {bandLabel}
+          </span>
           {group.map((t) => {
             const best = dcBy.get(t)?.[0]
-            if (!best) return <span key={t} className="flex-1 text-center text-[9px] text-ink-3">—</span>
+            if (!best) return <span key={t} className="flex-1 self-center text-center text-[9px] text-ink-3">{maxPrice != null ? 'None in budget' : '—'}</span>
             return (
-              <span key={t} className="min-w-0 flex-1 text-center" title={`${best.name} (${best.pos}) — Defensive Contribution ${best.score.toFixed(0)} of 100`}>
+              <span key={t} className="min-w-0 flex-1 text-center" title={`${best.name} (${best.pos})${best.price != null ? ` £${best.price}m` : ''} — ${best.label} ${best.score.toFixed(0)} of 100`}>
                 <span className="block truncate text-[9.5px] font-bold text-ink">{best.name}</span>
-                <span className="block text-[8px] text-ink-3">{best.pos} · {best.score.toFixed(0)}</span>
+                <span className="block text-[8px] text-ink-3">{best.pos}{best.price != null ? ` £${best.price}m` : ''} · {best.score.toFixed(0)}</span>
                 <span className="mt-0.5 block h-[3px] overflow-hidden rounded-full bg-surface-3">
                   <span className="block h-full rounded-full" style={{ width: `${Math.round((best.score / dcMax) * 100)}%`, background: best.score >= 90 ? 'linear-gradient(90deg,#9fb4c7,var(--accent))' : 'var(--line-strong)' }} />
                 </span>
@@ -1089,12 +1147,16 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
           <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Window</span>
           {ROT_WINDOWS.map((w) => <button key={w} onClick={() => setWindowN(w)} className={pill(windowN === w)}>Next {w}</button>)}
         </div>
+        {/* Defence or attack, and nothing else. Overall is a blend, which is
+            what you pick when you have not decided — and it left the two
+            controls below offering options that made no sense together, like
+            a goalkeeper rotation ranked on projected goals. */}
         <div className="flex items-center gap-1.5">
-          <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Rate for</span>
-          {LENS_TABS.map((l) => (
-            <span key={l.id} className="flex items-center gap-1">
-              <button onClick={() => setLens(l.id as Lens)} className={pill(lens === l.id)}>{l.label}</button>
-              <InfoTip text={LENS_TIP[l.id as Lens]} />
+          <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Rotating</span>
+          {(['defence', 'attack'] as const).map((sd) => (
+            <span key={sd} className="flex items-center gap-1">
+              <button onClick={() => setSide(sd)} className={pill(side === sd)}>{sd === 'defence' ? 'Defence' : 'Attack'}</button>
+              <InfoTip text={LENS_TIP[sd]} />
             </span>
           ))}
         </div>
@@ -1108,7 +1170,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
             control that changes what the board answers. */}
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Rate on</span>
-          {(['diff', 'cs', 'xg'] as const).map((m) => (
+          {SIDE_RATES[side].map((m) => (
             <span key={m} className="flex items-center gap-1">
               <button onClick={() => setRateOn(m)} className={pill(rateOn === m)}>{RATE_LABEL[m]}</button>
               <InfoTip text={RATE_TIP[m]} />
@@ -1130,7 +1192,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
             }}
           >
             <option value="any">Anyone</option>
-            {(['GKP', 'DEF', 'MID', 'FWD'] as const).map((pos) => <option key={pos} value={pos}>{pos}</option>)}
+            {SIDE_POS[side].map((pos) => <option key={pos} value={pos}>{pos}</option>)}
           </select>
         </div>
         {/* A select, not chips. Six price options in a row that had no overflow
@@ -1153,7 +1215,10 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
             }}
           >
             <option value="any">Any price</option>
-            {([4, 4.5, 5, 5.5, 6] as const).map((v) => (
+            {/* Up to £15m. Capping at £6 assumed every rotation is a pair of
+                cheap defenders; a premium-forward rotation is a real thing and
+                the old ladder could not express it. */}
+            {([4, 4.5, 5, 5.5, 6, 6.5, 7, 8, 9, 10, 12, 15] as const).map((v) => (
               <option key={v} value={v}>£{v.toFixed(1)}m</option>
             ))}
           </select>
