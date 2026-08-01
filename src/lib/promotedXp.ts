@@ -14,10 +14,16 @@
    Scope and shelf life:
    - Gameweek 1 only. From GW2 the clubs have played, the pipeline has real
      rates, and this file should be deleted rather than extended.
-   - 80 of the 82 players. Cartwright (HUL, GKP) and Bassette (COV, FWD) were
-     not in the source, and are left null rather than guessed at.
-   - Four names in the source — Targett, Morita, Scherpen, Maeda — are not in
-     FPL's own squad lists for these clubs and were dropped.
+   - Cartwright (HUL, GKP) and Bassette (COV, FWD) were not in the source, and
+     are left null rather than guessed at.
+   - Targett and Morita (HUL) and Scherpen and Maeda (IPS) are in the FPL game
+     but not in `ratings.json`, which was generated on 23 July — nine days
+     before the source was captured, in an open transfer window. They are
+     keyed by element id here so they work the moment the squad list is
+     regenerated. Their figures are 0.0, so nothing on screen moves; the
+     reason to carry them is that leaving them out would record a wrong
+     conclusion. The real problem they point at is in BACKLOG.md: the squad
+     list has no scheduled refresh, and nine players are missing from it.
 
    Keyed on FPL element id, which is stable across a season, rather than on
    the web name, which is not.
@@ -111,6 +117,10 @@ const SUPPLIED: ReadonlyArray<readonly [number, number]> = [
   [318, 2.1], // IPS MID Philogene
   [319, 2.7], // IPS MID Szmodics
   [312, 2.0], // IPS MID Taylor
+  [556, 0.0], // HUL DEF Targett — not yet in ratings.json (23 Jul snapshot)
+  [563, 0.0], // HUL MID Morita — not yet in ratings.json
+  [562, 0.0], // IPS MID Maeda — not yet in ratings.json
+  [564, 0.0], // IPS GKP Scherpen — not yet in ratings.json
 ]
 
 const BY_ELEMENT = new Map<number, number>(SUPPLIED.map(([el, xp]) => [el, xp]))

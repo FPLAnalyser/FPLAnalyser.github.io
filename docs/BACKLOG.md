@@ -126,6 +126,36 @@ which is a tab bar doing what tab bars do. The `truncate` spans on Teams that
 report hidden width are truncation working as designed inside a closed panel,
 not clipping.
 
+### The squad list has no scheduled refresh — nine players are missing
+`site_data/<season>/ratings.json` carries the player list, and it is written
+only when the Python pipeline is run by hand. The copy in the repo was
+generated **23 July 2026**. `availability.json` refreshes daily and already
+lists **564 players against ratings.json's 555**.
+
+Those nine exist in the FPL game and on no page of this site — not in search,
+not on a leaderboard, not in the Squad Builder. They are not all fringe:
+
+| element | club | price | owned |
+|---|---|---|---|
+| 557 | ARS | £6.5m | 1.3% |
+| 558 | NFO | £5.0m | 0.1% |
+| 559 | NEW | £5.0m | 0.1% |
+| 560, 561 | CHE | £4.5m | 0.0% |
+| 562 | IPS | £5.5m | 0.4% |
+| 564 | IPS | £4.5m | 0.1% |
+| 556 | HUL | £4.0m | 2.2% |
+| 563 | HUL | £5.0m | 0.0% |
+
+The daily availability feed cannot fix this on its own: it carries element,
+code, team, status, price and ownership — no name and no position — so it can
+flag a player it has never heard of but cannot introduce him.
+
+Two things to do. **Re-run the pipeline before launch and again close to the
+GW1 deadline**, because the squad list moves all through a transfer window.
+Then **give it a schedule**, the way odds and availability already have one —
+a stale squad list is the one data fault a reader can spot instantly, by
+searching for a player they have just transferred in.
+
 ### Load a squad into the Squad Builder without typing it
 Fifteen players entered by hand is a lot of taps before the builder gives
 anything back, and it is the main reason someone bounces off it.
