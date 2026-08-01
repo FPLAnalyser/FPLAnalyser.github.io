@@ -144,7 +144,12 @@ export function Exportable({ title, filename, children, className, toolbar, iden
    *  row above it, and floats the format chooser over the panel rather than
    *  pushing it down. For a grid of small cards — a round of fixtures — a row
    *  per card is a row of chrome per card, and the layout is the content. */
-  variant?: 'row' | 'corner'
+  /** `below` puts a full-width trigger under the panel instead of a small
+   *  one above it. For a panel that opens inside an accordion, a control
+   *  above the content sits between the reader and the thing they just
+   *  expanded; under it, the button reads as "and now do something with
+   *  this". */
+  variant?: 'row' | 'corner' | 'below'
   /** Put the panel into the state worth photographing, and put it back after.
    *
    *  A fixture card is collapsed by default, so the obvious implementation
@@ -275,6 +280,26 @@ export function Exportable({ title, filename, children, className, toolbar, iden
           </div>
         )}
         <div ref={ref}>{ident && <div className="capture-only">{ident}</div>}{children}</div>
+      </div>
+    )
+  }
+
+  if (variant === 'below') {
+    return (
+      <div className={`relative ${className ?? ''}`}>
+        <div ref={ref}>{ident && <div className="capture-only">{ident}</div>}{children}</div>
+        <div data-no-capture>
+          {open && <div className="mt-2 rounded-xl border border-line bg-surface-1 p-3">{chooser}</div>}
+          {!open && (
+            <button
+              onClick={() => setOpen(true)}
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-line-mid py-2 text-[12px] font-semibold text-ink-2 transition-colors hover:border-accent hover:text-accent"
+              aria-label={`Share ${title}`}
+            >
+              <Icon name="users" size={13} /> Share this
+            </button>
+          )}
+        </div>
       </div>
     )
   }

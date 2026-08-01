@@ -1137,7 +1137,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
                       whole suggestions list exported eight collapsed rows and
                       the filter chrome around them; the artefact worth sending
                       is this one rotation's fixtures. */}
-                  <Exportable title={`${g.group.join(' + ')} — start ${startK} of ${size}`} ident={rotationIdent(g.group, g.combined)}>
+                  <Exportable variant="below" title={`${g.group.join(' + ')} — start ${startK} of ${size}`} ident={rotationIdent(g.group, g.combined)}>
                     {rotationBoard(g.group)}
                   </Exportable>
                 </div>
@@ -1171,7 +1171,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
               which leaves room for the opponent, the venue and the difficulty
               in every cell, and rings as many as `startK`. */}
           {!wide ? (
-            <Exportable title={`${teams.join(' + ')} — start ${startK} of ${teams.length}`} ident={rotationIdent(teams, rotAvg ?? 0)}>
+            <Exportable variant="below" title={`${teams.join(' + ')} — start ${startK} of ${teams.length}`} ident={rotationIdent(teams, rotAvg ?? 0)}>
               {rotationBoard(teams)}
             </Exportable>
           ) : (
