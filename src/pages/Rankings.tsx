@@ -554,7 +554,7 @@ export default function Rankings() {
             pctCol('season_m_cs_rate', 'CS%', 'Share of appearances that ended in a clean sheet.', 'CS%'),
             numCol('season_m_xgc', 'xGC/90', 'Expected goals conceded per 90 while on the pitch — lower is better.', 2, 'xGC'),
             numCol('season_m_saves', 'Saves/90', 'Saves per 90 minutes.', 1, 'Sv'),
-            numCol('season_m_prevented', 'Prev/90', 'Goals prevented vs expected per 90 (shot-stopping edge).', 2, 'Prev'),
+            { ...numCol('season_m_prevented', 'Prev/90', 'Goals prevented vs expected per 90 (shot-stopping edge).', 2, 'Prev'), tightHide: true },
           ],
           rows,
         }
@@ -933,8 +933,8 @@ function FormTables({ rows, pos, onPlayer }: { rows: Row[]; pos: string; onPlaye
     .sort((a, b) => (num(a, 'pts_delta') ?? 0) - (num(b, 'pts_delta') ?? 0))
     .slice(0, 15)
 
-  const th = (label: string, tip: string, right = true) => (
-    <th className={`px-1.5 py-2 font-semibold lg:px-3 ${right ? 'text-right' : 'text-left'}`}>
+  const th = (label: string, tip: string, right = true, tight = false) => (
+    <th className={`px-1.5 py-2 font-semibold lg:px-3 ${right ? 'text-right' : 'text-left'} ${tight ? 'hidden min-[390px]:table-cell lg:table-cell' : ''}`}>
       <span className={`inline-flex items-center gap-1 ${right ? 'flex-row-reverse' : ''}`}>
         {label}
         <span className="hidden lg:inline-flex"><InfoTip text={tip} /></span>
@@ -955,7 +955,7 @@ function FormTables({ rows, pos, onPlayer }: { rows: Row[]; pos: string; onPlaye
               {th('Season P90', 'Average FPL points per 90 minutes across the whole season.')}
               {th('4GW P90', 'Average FPL points per 90 minutes over the last 4 gameweeks.')}
               {th('Delta', 'Last-4-gameweek points-per-90 minus the season baseline — the size of the streak.')}
-              {th('xGI/90', 'Expected goal involvements per 90 across the season: expected goals plus expected assists. The baseline a streak is measured against.')}
+              {th('xGI/90', 'Expected goal involvements per 90 across the season: expected goals plus expected assists. The baseline a streak is measured against.', true, true)}
               {th('4GW xGI', 'Expected goal involvements per 90 over the last 4 gameweeks.')}
               {th('xGI Δ', 'Last-4-gameweek xGI per 90 minus the season baseline. This is the column that separates a real change from a hot run of finishing: points up and xGI up is a player doing more, points up and xGI flat is variance.')}
             </tr>
@@ -992,7 +992,7 @@ function FormTables({ rows, pos, onPlayer }: { rows: Row[]; pos: string; onPlaye
                   {sign ? '+' : ''}
                   {(num(p, 'pts_delta') ?? 0).toFixed(2)}
                 </td>
-                <td className="px-1.5 py-2 text-right font-num tabular-nums text-ink-2 lg:px-3">
+                <td className="hidden px-1.5 py-2 text-right font-num tabular-nums text-ink-2 min-[390px]:table-cell lg:table-cell lg:px-3">
                   {(num(p, 'xgi_per90_season') ?? 0).toFixed(2)}
                 </td>
                 <td className="px-1.5 py-2 text-right font-num tabular-nums text-ink-2 lg:px-3">

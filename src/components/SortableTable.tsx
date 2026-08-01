@@ -23,6 +23,15 @@ export interface Column<T> {
    *  of shrinking changes that, so each board keeps the numbers it is named
    *  for and folds or drops the rest. Measured: eight columns is the ceiling. */
   mobileHide?: boolean
+  /** Drop this column below 390px only — a second, narrower threshold.
+   *
+   *  390 is the iPhone 13/14/15 width the mobile boards were measured and
+   *  tuned against, and they fit it exactly. A Galaxy at 360 and an iPhone SE
+   *  at 375 have 20–30px less, which is enough to shear the last column in
+   *  half: Goalkeepers lost `Prev` down to a leading `0`, Form lost `xGI Δ`
+   *  down to a sliver. Hiding one column outright on those screens is better
+   *  than cutting one in half, and this keeps 390 untouched. */
+  tightHide?: boolean
   /** Shorter header below `lg`, where the full one would set the column width. */
   mobileHeader?: ReactNode
   /** Different cell below `lg` — a plain number where the wide table draws a
@@ -50,7 +59,12 @@ export function SortableTable<T>({ rows, columns: allColumns, initialSort, initi
   // that is hidden on a phone simply stops being reachable rather than
   // breaking the sort.
   const wide = useWide()
-  const columns = useMemo(() => (wide ? allColumns : allColumns.filter((c) => !c.mobileHide)), [allColumns, wide])
+  // Narrower than the 390px the boards were tuned to — see `tightHide`.
+  const tight = !useWide(390)
+  const columns = useMemo(
+    () => (wide ? allColumns : allColumns.filter((c) => !c.mobileHide && !(tight && c.tightHide))),
+    [allColumns, wide, tight],
+  )
   const firstSortable = columns.find((c) => c.sortValue)?.key
   const [sortCol, setSortCol] = useState<string | undefined>(initialSort ?? firstSortable)
   const [dir, setDir] = useState<'asc' | 'desc'>(initialDir)

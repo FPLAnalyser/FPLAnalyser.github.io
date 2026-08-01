@@ -112,8 +112,23 @@ counts go to thousands. **The short header is what actually did the work** —
 "SEASON RATING" costs 125px to display a two-digit badge, and until the short
 headers went in, seven of the ten boards still overflowed.
 
-At 320px four boards still scroll inside their own box (20–68px): the design
-was measured against 368px, and the page itself does not move.
+**A second threshold at 390px, because that is what the boards were tuned to.**
+The iPhone 13/14/15 are exactly 390 and fit every column. A Galaxy at 360 and
+an iPhone SE at 375 have 20–30px less, which was enough to shear the last
+column in half — Goalkeepers' `Prev` down to a leading `0`, Form's `xGI Δ` down
+to a sliver, and `xGI Δ` is the column that board exists for. Hiding one column
+outright below 390 beats cutting one in half, so `Column.tightHide` drops
+Goalkeepers' `Prev` and Form's season `xGI/90` under that width only.
+
+Measured after: **360, 375, 390, 412 and desktop all fit**, and the column
+counts at 390 and above are unchanged (Goalkeepers 9, Form 7, desktop 11/9).
+320px still scrolls on five boards but far less — Goalkeepers 63px→25px, Form
+68px→14px. That is a 2016 iPhone SE and the page itself does not move.
+
+Unrelated and pre-existing: Form's two tables measure 2px past their container
+on desktop. Confirmed not caused by the above by stripping the new classes at
+runtime and re-measuring — 2px either way. Sub-pixel `border-collapse`
+rounding; invisible in use.
 
 Still open, in the order it costs readers:
 
