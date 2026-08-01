@@ -116,7 +116,7 @@ export function TeamStory({ team, data }: { team: string; data: CoreData }) {
   /* ── the unknown (promoted) team ── */
   if (!rating && !players.length) {
     return (
-      <div className="mb-5 grid gap-3 md:grid-cols-2">
+      <div className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-2">
         <div className="rounded-xl border border-line bg-surface-1 p-4">
           <Kick>What we know</Kick>
           <Sentence>Fixtures and squad roles — <em>the two signals that survive promotion</em>.</Sentence>
@@ -197,7 +197,7 @@ export function TeamStory({ team, data }: { team: string; data: CoreData }) {
           : { label: 'Signature', word: 'Appears after GW1', tone: 'text-ink-3', sub: 'Needs a played season to describe' }
 
   return (
-    <div className="mb-5 grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-start">
+    <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-start">
       <div className="flex flex-col gap-4">
       <div className="rounded-xl border border-line bg-surface-1 p-4">
         <Kick>The brief</Kick>

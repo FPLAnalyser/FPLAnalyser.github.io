@@ -107,9 +107,13 @@ export function Layout() {
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-0.5 md:ml-3 xl:ml-2">
-            {/* Search trigger — everything below xl (inline box takes over at xl) */}
+            {/* Search trigger — md to xl only. Below md the bottom bar carries a
+                centre Search of its own, so this was a second button for the
+                same sheet; it also made the header cluster 205px wide against
+                a 320px phone, which pushed every page 10px sideways. Above xl
+                the inline search box takes over. */}
             <button
-              className="flex min-h-11 min-w-10 items-center justify-center rounded-md text-ink-2 transition-colors hover:text-ink sm:min-w-11 xl:hidden"
+              className="hidden min-h-11 min-w-10 items-center justify-center rounded-md text-ink-2 transition-colors hover:text-ink sm:min-w-11 md:flex xl:hidden"
               aria-label="Search players & teams"
               onClick={() => setSearchOpen(true)}
             >

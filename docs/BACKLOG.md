@@ -66,6 +66,37 @@ another. Hidden width is 0 on iPhone 13, iPhone SE, iPad and desktop; the share
 export was driven through the real capture path and renders the portrait plot
 intact.
 
+**Every page overflowed 10px horizontally at 320px**, and GW Preview and
+Fixtures 22–24px. Four separate causes, and the diagnosis is worth keeping
+because three of them read as symptoms:
+
+1. The header's action cluster was `shrink-0` at 205px next to the brand, so it
+   ended at 330 on a 320px screen. Its search button was a second trigger for
+   the sheet the bottom bar already opens from its centre tab, so it now starts
+   at `md` — where the bottom bar stops.
+2. A grid with columns declared only at `lg` falls back to an implicit `auto`
+   track, and an `auto` track sizes to **max-content**. `overflow: hidden` on an
+   ancestor caps what you *see*, not what the track *measures*, so one
+   `truncate`d line of team news — "Has joined KVC Westerlo on loan…" — sized
+   the whole column to the full sentence. Every such grid now carries
+   `grid-cols-1` at the base, which is `minmax(0, 1fr)` and caps the track. This
+   is the one to remember: **a responsive `grid-cols-*` with no base value is a
+   latent overflow.**
+3. The Fixtures "Rate for" chip rows sat inside a wrapping parent without
+   wrapping themselves.
+4. The bottom bar measuring 342px against `inset-x-0`, and cards measuring
+   332px inside a 300px column, were **consequences** — once the document is
+   wider than the viewport, boxes stretch to it. Chasing them first wasted a
+   round; the way through was to hide subtrees one at a time and watch
+   `scrollWidth`.
+
+Clean at 320, 360 and 390 across all eleven routes.
+
+**Type no longer goes below 9px.** The fixture grids' gameweek and venue
+sub-labels were 7.5px across 240 nodes, and the Squad Builder's xP labels 8px.
+Both are now 9px — the same size as the site's other secondary labels — with no
+cell overflow at 320px.
+
 Still open, in the order it costs readers:
 
 **The Players leaderboard hides 408px.** The table is 776px inside a 368px
@@ -76,16 +107,9 @@ sub-tables fit a 368px column with measured zero overflow — and the build is
 still to do. Eight columns is the ceiling, price rides under the player name,
 and names wrap inside a capped column so one long name cannot widen a table.
 
-**Every page overflows 10px horizontally at 320px** (the original iPhone SE,
-and the narrowest phone still in use). It is on home, Teams and player pages
-alike with no single element extending past the viewport, so it is a layout
-rule rather than one component. GW Preview is worse at 22px.
-
-**Text bottoms out at 7.5px on Fixtures** — 240 nodes, the gameweek and
-opponent labels in the difficulty and rotation grids — and **8px on the Squad
-Builder**, 60 xP labels. Those are the two densest grids on the site and the
-smallest type on it. GW Preview sits at 9–9.5px across 51 nodes. Legible on a
-desk, marginal on a phone in daylight.
+**Text still sits at 9–9.5px** on GW Preview (51 nodes) and across the fixture
+grids. That is the floor now rather than the outlier it was, but it is a floor
+worth revisiting: legible on a desk, marginal on a phone in daylight.
 
 Minor: the Legal tab strip scrolls 133px and the Fixtures tab strip 259px,
 which is a tab bar doing what tab bars do. The `truncate` spans on Teams that

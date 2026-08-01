@@ -405,7 +405,7 @@ export default function SquadBuilder() {
           where a 1440 screen lands and where the lab's five tiles reach 124px
           each — enough for the longest thing one ever says, a captain's name,
           which needed 103px of the 98 it had. */}
-      <div className="no-anchor grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_520px] wide:grid-cols-[minmax(0,1fr)_680px] lg:items-start">
+      <div className="no-anchor grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_520px] wide:grid-cols-[minmax(0,1fr)_680px] lg:items-start">
         {/* The board — the same object from an empty squad to a full one:
             unfilled places are just empty slots you tap to fill. */}
         <div className="min-w-0">
@@ -587,7 +587,7 @@ export default function SquadBuilder() {
                   </div>
                   <span className="w-11 shrink-0 text-right">
                     <span className="block font-num text-sm font-extrabold tabular-nums text-accent-2">{xpOf(r)?.toFixed(1) ?? '—'}</span>
-                    <span className="block text-[8px] font-extrabold tracking-[0.1em] text-ink-3">XP</span>
+                    <span className="block text-[9px] font-extrabold tracking-[0.1em] text-ink-3">XP</span>
                   </span>
                   <span className="w-9 shrink-0 text-right font-num text-sm font-semibold tabular-nums text-ink-2">{o ?? '—'}</span>
                   {/* Once he's on the market the sign-him button is dead, and a

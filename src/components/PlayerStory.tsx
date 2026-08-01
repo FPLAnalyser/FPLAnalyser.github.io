@@ -460,7 +460,7 @@ export function StoryModules({ r, data }: { r: RatingRow; data: CoreData }) {
 
   if (arch === 'unknown') {
     return (
-      <div className="grid gap-3 md:grid-cols-2"><UnknownModules r={r} /></div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2"><UnknownModules r={r} /></div>
     )
   }
 
@@ -490,7 +490,7 @@ export function StoryModules({ r, data }: { r: RatingRow; data: CoreData }) {
     if (arch === 'enabler') modules.push(<WhatHeIsntModule key="wi" r={r} />)
   }
 
-  return <div className="grid items-start gap-3 md:grid-cols-2">{modules}</div>
+  return <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-2">{modules}</div>
 }
 
 /* ════════ Matchup character (replaces the tier table) ════════ */

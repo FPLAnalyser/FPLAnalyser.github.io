@@ -306,10 +306,13 @@ export function Exportable({ title, filename, children, className, toolbar, iden
 
   return (
     <div className={`relative ${className ?? ''}`}>
-      {/* No wrapping: the point of the toolbar is to save a row, and a row
-          that wraps costs the one it was meant to save. On a phone the word
-          "Share" drops and the icon carries it. */}
-      <div data-no-capture className="mb-1.5 flex items-center gap-1.5">
+      {/* The point of the toolbar is to save a row, so it does not wrap — down
+          to 360px, where the word "Share" drops and the icon carries it. Below
+          that it has to: a long title next to a shrink-0 button gave the row a
+          min-content of 332px inside a 300px column, and because nothing above
+          it scrolls, those 32px pushed the whole page sideways. One extra row
+          on a 320px phone beats every page on that phone scrolling. */}
+      <div data-no-capture className="mb-1.5 flex flex-wrap items-center gap-1.5 min-[360px]:flex-nowrap">
         {toolbar}
         <button
           onClick={() => setOpen((o) => !o)}

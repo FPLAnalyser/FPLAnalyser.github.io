@@ -190,7 +190,7 @@ export function RotationPartners({ fixtureEase, team, scale, fromGw, className =
         These three clubs are the kindest across exactly those weeks. Each card shows the rotation itself — who you start
         each gameweek and against whom.
       </p>
-      <div className="grid gap-2.5 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-3">
         {partners.map((p, i) => (
           /* min-w-0 so the grid item can shrink below the width of its own
              run strip — without it the eight fixture cells set the card's

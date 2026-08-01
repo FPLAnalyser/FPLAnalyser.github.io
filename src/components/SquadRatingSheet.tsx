@@ -254,7 +254,7 @@ export function SquadRatingSheet({ chosen, pool, squadScore, bestXI, fixtureEase
             {ranked.length >= 4 && (
               <div>
                 <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Best and worst rated</div>
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {[ranked.slice(0, 3), ranked.slice(-3).reverse()].map((grp, gi) => (
                     <div key={gi} className="rounded-xl border border-line bg-surface-2/50 p-3">
                       <div className="mb-1.5 text-[10px] font-semibold tracking-[0.12em] text-ink-3 uppercase">{gi === 0 ? 'Carrying it' : 'Weakest links'}</div>

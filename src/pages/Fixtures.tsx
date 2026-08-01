@@ -391,7 +391,7 @@ export default function Fixtures() {
                 </div>
               )}
               {mode === 'diff' && (
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Rate for</span>
                   {(LENS_TABS).map((l) => (
                     <span key={l.id} className="flex items-center gap-1">
@@ -435,7 +435,7 @@ export default function Fixtures() {
             lensControl={
               /* The lens matters more here than anywhere: a run that's kind to
                  a striker is not the same run that's kind to a keeper. */
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Rate for</span>
                 {LENS_TABS.map((l) => (
                   <span key={l.id} className="flex items-center gap-1">
@@ -709,9 +709,9 @@ function SeasonRunsBoard({ fixtureEase, lens, baselines, lensControl }: {
                     {r.fixtures.map((f) => (
                       <span key={`${f.gw}-${f.opponent}`} className="flex-1 rounded py-1 text-center text-[9.5px] leading-tight font-bold"
                         style={{ background: `color-mix(in srgb, ${runColor(f.diff)} 26%, transparent)`, color: runColor(f.diff) }}>
-                        <span className="block text-[7.5px] font-semibold opacity-70">GW{f.gw}</span>
+                        <span className="block text-[9px] font-semibold opacity-70">GW{f.gw}</span>
                         {f.opponent}
-                        <span className="block text-[7.5px] font-semibold opacity-70">{f.venue}</span>
+                        <span className="block text-[9px] font-semibold opacity-70">{f.venue}</span>
                       </span>
                     ))}
                   </div>
@@ -1114,7 +1114,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
                     title={`${c.f.venue === 'H' ? 'vs' : 'at'} ${teamLabel(c.f.opponent)} — ${RATE_LABEL[rateOn].toLowerCase()} ${rateFmt(v)}${start ? ' · START' : ''}`}
                   >
                     {c.f.opponent}
-                    <span className="block text-[7.5px] font-semibold opacity-70">{c.f.venue} · {rateFmt(v)}</span>
+                    <span className="block text-[9px] font-semibold opacity-70">{c.f.venue} · {rateFmt(v)}</span>
                   </span>
                 )
               })}
@@ -1126,7 +1126,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
             clean sheet does, and position matters — a 99 midfielder and a 99
             defender are different buys at the same score. */}
         <div className="flex gap-1 border-t border-line bg-surface-2/40 px-2 py-1.5">
-          <span className="flex w-8 shrink-0 items-center text-[8px] leading-tight font-extrabold tracking-[0.06em] text-ink-3 uppercase">
+          <span className="flex w-8 shrink-0 items-center text-[9px] leading-tight font-extrabold tracking-[0.06em] text-ink-3 uppercase">
             {bandLabel}
           </span>
           {group.map((t) => {
@@ -1135,7 +1135,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
             return (
               <span key={t} className="min-w-0 flex-1 text-center" title={`${best.name} (${best.pos})${best.price != null ? ` £${best.price}m` : ''} — ${best.label} ${best.score.toFixed(0)} of 100`}>
                 <span className="block truncate text-[9.5px] font-bold text-ink">{best.name}</span>
-                <span className="block text-[8px] text-ink-3">{best.pos}{best.price != null ? ` £${best.price}m` : ''} · {best.score.toFixed(0)}</span>
+                <span className="block text-[9px] text-ink-3">{best.pos}{best.price != null ? ` £${best.price}m` : ''} · {best.score.toFixed(0)}</span>
                 {/* Gold, silver, bronze by rank inside this rotation. A single
                     grey bar said "here is a number" and nothing else; the
                     medal says which of these clubs has the better man at the
@@ -1699,14 +1699,14 @@ function FixtureGrid({
             <span className="mt-2 flex gap-1">
               {gws.map((gw) => {
                 const fs = r.byGw.get(gw) ?? []
-                if (!fs.length) return <span key={gw} className="flex-1 rounded bg-surface-2 py-1 text-center text-[9.5px] font-bold text-ink-3"><span className="block text-[7.5px] opacity-70">GW{gw}</span>–</span>
+                if (!fs.length) return <span key={gw} className="flex-1 rounded bg-surface-2 py-1 text-center text-[9.5px] font-bold text-ink-3"><span className="block text-[9px] opacity-70">GW{gw}</span>–</span>
                 const f = fs[0]
                 const d = diffOf(f).diff
                 return (
                   <span key={gw} className="flex-1 rounded py-1 text-center text-[9.5px] leading-tight font-bold text-ink" style={{ background: diffFill(d) }}>
-                    <span className="block text-[7.5px] font-semibold opacity-70">GW{gw}</span>
+                    <span className="block text-[9px] font-semibold opacity-70">GW{gw}</span>
                     {f.opponent}
-                    <span className="block text-[7.5px] font-semibold opacity-70">{f.venue}{fs.length > 1 ? ' ×2' : ''}</span>
+                    <span className="block text-[9px] font-semibold opacity-70">{f.venue}{fs.length > 1 ? ' ×2' : ''}</span>
                   </span>
                 )
               })}

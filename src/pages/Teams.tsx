@@ -384,7 +384,7 @@ function ClubPage({ team, data, ratingByTeam, metricRows, ratingRows, ratings, f
           decides on, so they sit above everything that explains them. Points
           reliance was buried at the bottom of a squad card, which is the last
           place you would look for "is this a one-man team". */}
-      <div className="grid items-start gap-3 md:grid-cols-2">
+      <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-2">
         <TeamMatchup team={team} ratingByTeam={ratingByTeam} fixtureEase={fixtureEase} />
         <PointsReliance team={team} ratings={ratings} metrics={seasonMetrics} />
       </div>

@@ -231,7 +231,7 @@ function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
           {startingRated.length > 0 && (
             <>
               <SectionHeader>Squad DNA & moves</SectionHeader>
-              <div className="grid gap-3 lg:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                 <SquadDNA xi={startingRated} />
                 <SquadMoves xi={startingRated} pool={data.ratings} owned={ownedElements} onPlayer={(n) => navigate(`/player?name=${encodeURIComponent(n)}`)} />
               </div>
@@ -544,7 +544,7 @@ function MiniLeagueResult({ leagueName, rivalPicks, ownedElements, ratings }: { 
 
   return (
     <div>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <div className="mb-2 text-sm font-semibold text-ink-2">Template you're missing — owned by rivals, not you</div>
           {template.length ? <Table items={template.map(([el, c]) => [el, `${Math.round((c / n) * 100)}%`])} /> : <div className="py-2 text-sm text-ink-2"><Icon name="check" size={13} /> Nothing — you already own every template player in this league.</div>}

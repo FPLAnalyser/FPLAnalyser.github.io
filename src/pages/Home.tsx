@@ -12,7 +12,7 @@ function Hero() {
   // Wide screens: headline left, season note right — the note fills the space
   // the capped reading measure would otherwise leave empty.
   return (
-    <section className="mb-5 grid items-start gap-x-10 gap-y-4 md:mb-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+    <section className="mb-5 grid grid-cols-1 items-start gap-x-10 gap-y-4 md:mb-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
       <div>
         <p className="mb-3 text-[11px] font-semibold tracking-[0.28em] text-accent uppercase">Data. Insight. Points.</p>
         <h1 className="text-2xl leading-[1.08] font-extrabold tracking-[-0.02em] text-ink md:text-4xl">

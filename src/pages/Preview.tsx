@@ -499,7 +499,7 @@ export default function Preview() {
                     </div>
                   </button>
                   {isOpen && (
-                    <div className="mt-3 grid gap-4 border-t border-line-mid pt-3 lg:grid-cols-[1.4fr_1fr]">
+                    <div className="mt-3 grid grid-cols-1 gap-4 border-t border-line-mid pt-3 lg:grid-cols-[1.4fr_1fr]">
                       <div>
                         <div className="mb-2 text-[11px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Expected points</div>
                         {/* One gold bar each, on the same scale, so the gap
@@ -668,7 +668,7 @@ export default function Preview() {
               rest of the site uses for rating tiers, so first place looks like
               first place before a number is read. */}
           <Section gw={gw} label="Captain" name="captain" tip="Expected points for this gameweek: each player's availability-adjusted baseline scaled by how kind this specific fixture is — attackers by their side's projected goals, defenders and keepers by the clean-sheet odds.">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {board.slice(0, 3).map((b, i) => {
               const p = PODIUM[i]
               return (
@@ -730,7 +730,7 @@ export default function Preview() {
                 <span className="h-4 w-[3px] shrink-0 rounded-full bg-accent" />
                 <h3 className="text-[15px] font-extrabold tracking-[0.05em] text-ink uppercase">{day}</h3>
               </div>
-              <div className="grid gap-2.5 lg:grid-cols-2">{list.map((m) => card(m, false))}</div>
+              <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">{list.map((m) => card(m, false))}</div>
             </div>
           ))}
           </Section>
@@ -738,7 +738,7 @@ export default function Preview() {
           {/* Three columns rather than two: the top ten was a very wide table
               with a column of dead space beside it, and the two absence lists
               were stacked when they belong side by side. */}
-          <div className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[0.85fr_1.15fr]">
             <Section gw={gw} label="Expected points · top 10" name="top-10" className="">
               <div className="overflow-hidden rounded-xl border border-line">
                 {board.slice(0, 10).map((b, i) => (

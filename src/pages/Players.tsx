@@ -237,7 +237,7 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
       <div className="px-4 pb-5 md:px-6 md:pb-6">
         {unknown ? (
           <>
-            <div className="mt-5 grid gap-3 md:grid-cols-2"><UnknownModules r={r} /></div>
+            <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2"><UnknownModules r={r} /></div>
             {data.fixtureEase.some((fx) => fx.team === String(r.team)) && (
               <div className="mt-4 rounded-xl border border-line bg-surface-1 p-4">
                 <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Next fixtures</div>
@@ -251,7 +251,7 @@ function PlayerCard({ player: r, data }: { player: RatingRow; data: CoreData }) 
                 left, while the evidence and the receipts stack into a right
                 rail — the rail spans both rows, so a short brief leaves a gap
                 in one column rather than a dead half across the page. */}
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-start">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-start">
               {/* The identity strip is at the top of the page, outside this
                   node, so a shared brief arrived as sentences about an unnamed
                   player. Face, rating and personas go into the picture. */}
@@ -792,7 +792,7 @@ function Fingerprint({ r }: { r: RatingRow }) {
 
 function EvidenceBand({ r, peers }: { r: RatingRow; peers: RatingRow[] }) {
   return (
-    <div className="mt-5 grid gap-6 rounded-xl border border-line bg-surface-1 p-4 md:grid-cols-2 md:items-start lg:mt-0 lg:grid-cols-1">
+    <div className="mt-5 grid grid-cols-1 gap-6 rounded-xl border border-line bg-surface-1 p-4 md:grid-cols-2 md:items-start lg:mt-0 lg:grid-cols-1">
       <BulletGauge r={r} peers={peers} />
       <Fingerprint r={r} />
     </div>

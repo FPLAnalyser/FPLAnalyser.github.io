@@ -453,7 +453,7 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
             <span className="absolute inset-x-0 top-0 z-10 h-1" style={{ background: SEV_COLOUR[flag.sev].bar }} />
             <span
               title={flag.title}
-              className="absolute top-[5px] left-1 z-10 rounded px-1 py-0.5 text-[7.5px] leading-none font-extrabold tracking-wide"
+              className="absolute top-[5px] left-1 z-10 rounded px-1 py-0.5 text-[9px] leading-none font-extrabold tracking-wide"
               style={{ background: SEV_COLOUR[flag.sev].chip, color: SEV_COLOUR[flag.sev].ink }}
             >{flag.label}</span>
           </>
@@ -483,7 +483,7 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
           <span className="mt-0.5 hidden w-full gap-0.5 sm:flex">
             {fixtures.slice(1).map((f, i) => {
               const [b, t] = FDR_COLORS[f.fdr] || FDR_COLORS[3]
-              return <span key={i} className="min-w-0 flex-1 truncate rounded px-0.5 text-center text-[7.5px] font-bold" style={{ background: b, color: t }}>{f.opponent} ({f.venue})</span>
+              return <span key={i} className="min-w-0 flex-1 truncate rounded px-0.5 text-center text-[9px] font-bold" style={{ background: b, color: t }}>{f.opponent} ({f.venue})</span>
             })}
           </span>
         )}

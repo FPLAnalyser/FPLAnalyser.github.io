@@ -80,7 +80,7 @@ export default function Review() {
       <p className="mb-4 max-w-2xl text-sm leading-relaxed text-ink-2">
         Once the gameweek is done, it gets read back through the same numbers the ratings are built on.
       </p>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {PLANNED.map((p) => (
           <div key={p.title} className="rounded-xl border border-line bg-surface-1/50 p-4">
             <div className="mb-2 flex items-center gap-2">
