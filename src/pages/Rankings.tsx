@@ -646,8 +646,13 @@ export default function Rankings() {
         // Stamp the projection onto the rows so the table can sort on it.
         // Rows only carry scalars, so the per-gameweek breakdown stays in the
         // memo's map and the columns read it back by element.
+        // `season_ok` asks whether a player has enough minutes to be *rated*,
+        // which is a different question from whether he can be *projected*.
+        // The promoted clubs fail the first and pass the second, so this board
+        // takes anyone the projection covers — filters and position still apply.
+        const projectable = (query ? ratings : ratings.filter((p) => bool(p, 'season_ok') || next4.byEl.has(num(p, 'element') ?? -1))).filter(passesFilters)
         const withXp: Row[] = []
-        for (const r of applyPos(seasonOk)) {
+        for (const r of applyPos(projectable)) {
           const proj = next4.byEl.get(num(r, 'element') ?? -1)
           if (proj) withXp.push({ ...r, _n4: proj.total, _n4games: proj.games, _n4span: next4.gws.length })
         }

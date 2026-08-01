@@ -6,6 +6,7 @@ import { Icon } from '../components/Icon'
 import { PHOTO_CREDITS, DATA_SOURCES, LICENCE_URL, NEEDS_ATTRIBUTION, SHARE_ALIKE } from '../lib/credits'
 import { usesOwnRelay } from '../lib/api'
 import { countsVisits } from '../lib/analytics'
+import { SUPPLIED_XP_COUNT, SUPPLIED_XP_SOURCE } from '../lib/promotedXp'
 
 /* ════════════════════════════════════════════════════════════════════════
    LEGAL — credits, data sources, terms and privacy on one page.
@@ -96,6 +97,15 @@ function About() {
       <P>
         Ratings, projections and fixture difficulty are our own work, calculated from the sources
         below. Every figure is a model output, not a fact about the future.
+      </P>
+      <P>
+        One exception, and it is worth naming. Hull, Coventry and Ipswich have no Premier League
+        record, so our engine has no per-90 rates to build on and produced no expected points for
+        any of their players. For gameweek 1 only, {SUPPLIED_XP_COUNT} of those players carry{' '}
+        <b className="text-ink">{SUPPLIED_XP_SOURCE}</b> instead of a figure of ours. Where we do
+        have a record for a player at a promoted club, our own projection is used and the supplied
+        one ignored. From gameweek 2 these clubs have played, our engine takes over, and the
+        supplied figures are removed.
       </P>
       <div className="overflow-hidden rounded-xl border border-line">
         {DATA_SOURCES.map((s) => (

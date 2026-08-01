@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Icon } from './Icon'
 import { useSeason } from '../lib/season'
 
@@ -24,7 +25,8 @@ export function PreseasonBanner() {
         <span className="text-accent"><Icon name="info" size={15} /></span>
         <span>
           <b className="text-ink">Pre-season {info.label}.</b> Fixtures, squads and prices are live — player ratings are carried over from{' '}
-          <b className="text-ink">{short(info.ratings_season)}</b> until games are played. New signings and promoted clubs show N/A for now.
+          <b className="text-ink">{short(info.ratings_season)}</b> until games are played. New signings show N/A, and the promoted clubs
+          carry a supplied gameweek 1 projection rather than one of ours — see <Link to="/legal" className="underline decoration-dotted underline-offset-2 hover:text-ink">the data notes</Link>.
         </span>
         {/* Sized to WCAG 2.2 AA's 24px minimum — it was 17×18. */}
         <button onClick={dismiss} aria-label="Dismiss" className="ml-auto grid size-6 shrink-0 place-items-center text-lg leading-none text-ink-3 hover:text-ink">×</button>

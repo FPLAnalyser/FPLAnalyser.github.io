@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { num } from './rows'
 import { useLazyTable } from './useData'
 import { availFor, availabilityFactor, type Availability } from './availability'
+import { suppliedXp } from './promotedXp'
 import type { FixtureEaseRow, RatingRow } from './types'
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -267,11 +268,22 @@ export function xpPartsForGw(
     }
   } else {
     const base = num(r, 'season_xpts_per_game')
-    if (base == null) return null
-    // No component baseline (an unrated new signing): a flat per-game figure
-    // bent by difficulty is all we honestly have, so it lands as appearance
-    // points rather than pretending to a breakdown it can't support.
-    for (const f of fixes) out.appearance += base * (FDR_MULT[f.fdr] ?? 1)
+    if (base == null) {
+      // Nothing of our own at all — a promoted club, whose players have no
+      // Premier League record for the engine to rate. A supplied GW1 figure
+      // fills the gap for that one week; see promotedXp.ts for whose it is.
+      // It lands whole in `appearance` for the same reason the branch below
+      // does: it is a total, and inventing a breakdown for it would be a
+      // claim the number cannot support.
+      const supplied = suppliedXp(element, gw)
+      if (supplied == null || !fixes.length) return null
+      out.appearance += supplied
+    } else {
+      // No component baseline (an unrated new signing): a flat per-game figure
+      // bent by difficulty is all we honestly have, so it lands as appearance
+      // points rather than pretending to a breakdown it can't support.
+      for (const f of fixes) out.appearance += base * (FDR_MULT[f.fdr] ?? 1)
+    }
   }
 
   if (avail) {
