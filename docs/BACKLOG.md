@@ -44,35 +44,53 @@ recording so nobody re-checks them: **zero page-level horizontal overflow
 anywhere**, **nothing hidden behind the bottom bar** at the end of any page,
 and **no console errors** on any route.
 
-What is left, in the order it costs readers:
+**Two of this list's original findings were wrong, and the way they were wrong
+is worth keeping.** They were measured with `getBoundingClientRect`, which sees
+the drawn ring and not the hit area — and `InfoTip` deliberately pads its
+target out with an `::before`. Re-measured by walking `elementFromPoint`
+outward from the centre, the info tips are **37×37px** and the banner's dismiss
+is **47×47px**; both already clear WCAG 2.2 AA's 24px, and the dismiss clears
+the 44px comfort target. A first attempt at re-measuring said 14×14 again
+because the probe was reading through the intro splash, which still covered the
+page — wait for `.intro-lock` to clear before touching hit areas.
+
+Done since:
+
+**The market scatter on a player page** was 540px in a 302px column, 238px of
+it behind a scrollbar, and the right-hand side of a price-vs-rating scatter is
+where the premiums are. Below 640px it now goes portrait, taking its user-unit
+width from the container it is measured in so the viewBox scale is exactly 1
+and a 10-unit axis label renders at 10px — a fixed width put those at 8.7px on
+an iPhone 13 and 6.7px on a 320px phone, trading one legibility problem for
+another. Hidden width is 0 on iPhone 13, iPhone SE, iPad and desktop; the share
+export was driven through the real capture path and renders the portrait plot
+intact.
+
+Still open, in the order it costs readers:
 
 **The Players leaderboard hides 408px.** The table is 776px inside a 368px
 column, so 4GW Rating, Pts, PPG and xPts are entirely off-screen behind a
 hidden scrollbar, and the Season rating badge sits clipped at the right edge.
-This is the same fault the fixtures grid had, on the most-used page on the
-site — and the same answer applies: below `lg` the row should carry the two or
-three numbers that matter with the rest behind a tap, rather than a table
-nobody can see the right half of.
+The design is settled — see `mockups/players-c-all.html`, where all ten
+sub-tables fit a 368px column with measured zero overflow — and the build is
+still to do. Eight columns is the ceiling, price rides under the player name,
+and names wrap inside a capped column so one long name cannot widen a table.
 
-**The market scatter on a player page hides 238px** (540px in 302px). A chart
-that has to be dragged sideways on a phone is a chart most people never see the
-right-hand side of; it wants a mobile aspect rather than a scroll.
+**Every page overflows 10px horizontally at 320px** (the original iPhone SE,
+and the narrowest phone still in use). It is on home, Teams and player pages
+alike with no single element extending past the viewport, so it is a layout
+rule rather than one component. GW Preview is worse at 22px.
 
-**Info tips are 14×14px.** Eleven of them on Players alone, three on GW Preview.
-Below the 24px anyone would call a minimum and well under the 44px that is
-comfortable. They carry the explanations the whole site is built on, so they
-are worth hitting.
+**Text bottoms out at 7.5px on Fixtures** — 240 nodes, the gameweek and
+opponent labels in the difficulty and rotation grids — and **8px on the Squad
+Builder**, 60 xP labels. Those are the two densest grids on the site and the
+smallest type on it. GW Preview sits at 9–9.5px across 51 nodes. Legible on a
+desk, marginal on a phone in daylight.
 
-**Body text bottoms out at 9.5–10px** on GW Preview, player pages, Teams,
-Squad Builder and Legal — captions like "Biggest attack", "Projected points",
-"Leaves your browser". Legible on a desk, marginal on a phone in daylight.
-
-**The pre-season banner's dismiss is 24×24px**, on every page until it is
-dismissed.
-
-Minor: the Legal tab strip scrolls 133px, which is a tab bar doing what tab
-bars do. One run saw a 542px scroller on GW Preview that four later probes
-could not reproduce — worth a second look rather than a fix.
+Minor: the Legal tab strip scrolls 133px and the Fixtures tab strip 259px,
+which is a tab bar doing what tab bars do. The `truncate` spans on Teams that
+report hidden width are truncation working as designed inside a closed panel,
+not clipping.
 
 ### Load a squad into the Squad Builder without typing it
 Fifteen players entered by hand is a lot of taps before the builder gives

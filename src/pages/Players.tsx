@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PageShell, EmptyState } from '../components/PageShell'
 import { SectionBanner } from '../components/SectionBanner'
@@ -805,13 +805,28 @@ function EvidenceBand({ r, peers }: { r: RatingRow; peers: RatingRow[] }) {
    in the themed area below the hero so it works in light and dark. */
 
 /** Horizontal-scroll wrapper that starts scrolled so the highlighted player
- * is in view when the chart is wider than the screen (mobile). */
-function ScrollToPlayer({ frac, children }: { frac: number; children: ReactNode }) {
+ *  is in view when the chart is wider than the screen.
+ *
+ *  On a phone the chart is no longer wider than the screen — see the portrait
+ *  geometry in `MarketScatter` — so this wraps nothing and the effect is a
+ *  no-op. It stays for the in-between widths where 640 units still overflow. */
+function ScrollToPlayer({ frac, onWidth, children }: { frac: number; onWidth: (w: number) => void; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const el = ref.current
     if (el && el.scrollWidth > el.clientWidth) el.scrollLeft = Math.max(0, frac * el.scrollWidth - el.clientWidth / 2)
   }, [frac])
+  // The plot sizes its viewBox from this width, so it is measured here and
+  // watched — a rotation or a resized window has to re-scale the axis text.
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const read = () => onWidth(el.clientWidth)
+    read()
+    const ro = new ResizeObserver(read)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [onWidth])
   return <div ref={ref} className="overflow-x-auto">{children}</div>
 }
 
@@ -901,6 +916,9 @@ function MarketScatter({ r, peers }: { r: RatingRow; peers: RatingRow[] }) {
   const myRating = ratingTo100(num(r, 'season_overall_score'))
   const myPrice = num(r, 'price')
   const [hovered, setHovered] = useState<number | null>(null)
+  // Both above every early return — they decide the plot's shape further down.
+  const roomy = useWide(640)
+  const [boxW, setBoxW] = useState(0)
 
   const pts = useMemo(
     () =>
@@ -932,14 +950,35 @@ function MarketScatter({ r, peers }: { r: RatingRow; peers: RatingRow[] }) {
   const momentum = gw4 != null && myRating != null ? gw4 - myRating : null
 
   // Plot geometry (SVG user units; responsive via viewBox).
-  const W = 640, H = 300, PAD = { l: 34, r: 16, t: 14, b: 30 }
+  //
+  // A 640-unit box with a 540px floor meant 238px of the chart sat off a
+  // phone screen behind a scrollbar, and the right-hand side of a scatter is
+  // where the premiums are. Below 640px the plot goes portrait instead: the
+  // same data, taller than it is wide, with no sideways scroll.
+  //
+  // The narrow plot takes its user-unit width from the container it is in,
+  // measured, so the viewBox scale is exactly 1 and a 10-unit axis label
+  // renders at 10px. A fixed width instead put those labels at 8.7px on an
+  // iPhone 13 and 6.7px on a 320px phone, which is how the chart traded one
+  // legibility problem for another. The floor is only there so a collapsed
+  // container cannot produce a degenerate plot; real phones sit above it.
+  const W = roomy ? 640 : Math.max(200, boxW || 330)
+  const H = roomy ? 300 : 370
+  // The narrow plot's padding is not just the wide one scaled down. Its right
+  // edge has to clear the highlighted dot's 10-unit halo — at 12 the gold ring
+  // was cut in half for anyone priced at the top of his position — and its top
+  // and bottom have to keep the axis titles off the tick labels, which they
+  // were sitting on at 8 units apart.
+  const PAD = roomy ? { l: 34, r: 16, t: 14, b: 30 } : { l: 28, r: 22, t: 22, b: 42 }
   const xs = pts.map((d) => d.x), ys = pts.map((d) => d.y)
   const xMin = Math.floor(Math.min(...xs) - 0.3), xMax = Math.ceil(Math.max(...xs) + 0.3)
   const yMin = Math.max(0, Math.floor((Math.min(...ys) - 4) / 10) * 10), yMax = Math.min(100, Math.ceil((Math.max(...ys) + 4) / 10) * 10)
   const X = (v: number) => PAD.l + ((v - xMin) / (xMax - xMin)) * (W - PAD.l - PAD.r)
   const Y = (v: number) => H - PAD.b - ((v - yMin) / (yMax - yMin)) * (H - PAD.t - PAD.b)
+  // £2.5m ticks would collide on the narrow plot — half as many, twice as far.
+  const tickStep = roomy ? 2.5 : 5
   const priceTicks: number[] = []
-  for (let t = Math.ceil(xMin / 2.5) * 2.5; t <= xMax; t += 2.5) priceTicks.push(t)
+  for (let t = Math.ceil(xMin / tickStep) * tickStep; t <= xMax; t += tickStep) priceTicks.push(t)
   const clampY = (v: number) => Math.max(yMin, Math.min(yMax, v))
 
   const verdictLine =
@@ -968,8 +1007,8 @@ function MarketScatter({ r, peers }: { r: RatingRow; peers: RatingRow[] }) {
             </span>
           )}
         </div>
-        <ScrollToPlayer frac={(X(myPrice) - PAD.l) / (W - PAD.l - PAD.r)}>
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[540px]" role="img" aria-label={`Price versus rating scatter for all ${pos}`}>
+        <ScrollToPlayer frac={(X(myPrice) - PAD.l) / (W - PAD.l - PAD.r)} onWidth={setBoxW}>
+        <svg viewBox={`0 0 ${W} ${H}`} className={`w-full ${roomy ? 'min-w-[540px]' : ''}`} role="img" aria-label={`Price versus rating scatter for all ${pos}`}>
           {/* gridlines + axis labels */}
           {[25, 50, 75, 100].filter((v) => v > yMin && v <= yMax).map((v) => (
             <g key={v}>
