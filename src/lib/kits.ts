@@ -43,7 +43,12 @@ const K: Record<string, ClubKits> = {
   ARS: { home: { base: '#e2231a', second: '#ffffff', pattern: 'solid' },
          away: { base: '#1e2a52', second: '#f2c744', pattern: 'trim' } },
   AVL: { home: { base: '#670e36', second: '#95bfe5', pattern: 'trim' } },
-  BOU: { home: { base: '#d71920', second: '#000000', pattern: 'stripes' } },
+  BOU: { home: { base: '#d71920', second: '#000000', pattern: 'stripes' },
+         // 26/27 away: violet, with a lighter lilac geometric print over most
+         // of it. The print itself is noise at 12px, but the shirt does not
+         // read flat, so `pinstripe` carries the lighter tone without trying
+         // to draw the shapes.
+         away: { base: '#4e4287', second: '#a79dd0', pattern: 'pinstripe' } },
   BRE: { home: { base: '#e30613', second: '#ffffff', pattern: 'stripes' },
          away: { base: '#15161a', second: '#e8e4d8', pattern: 'pinstripe' } },
   BHA: { home: { base: '#0b5cc4', second: '#ffffff', pattern: 'pinstripe' },
@@ -68,7 +73,11 @@ const K: Record<string, ClubKits> = {
          away: { base: '#f5c518', second: '#14224a', pattern: 'trim' } },
   LIV: { home: { base: '#c8102e', second: '#ffffff', pattern: 'solid' },
          away: { base: '#f7f7f7', second: '#c8102e', pattern: 'trim' } },
-  MCI: { home: { base: '#6cabdd', second: '#ffffff', pattern: 'solid' } },
+  MCI: { home: { base: '#6cabdd', second: '#ffffff', pattern: 'solid' },
+         // 26/27 away: black with gold collar, cuffs and hem — the same shape
+         // as Arsenal's and Chelsea's travelling kits, so the same pattern.
+         // The bee print on the body is invisible at this size and left out.
+         away: { base: '#15171b', second: '#e6c063', pattern: 'trim' } },
   MUN: { home: { base: '#d71920', second: '#000000', pattern: 'solid' },
          away: { base: '#2b5fd0', second: '#d71920', pattern: 'trim' } },
   NEW: { home: { base: '#241f20', second: '#ffffff', pattern: 'stripes' },
