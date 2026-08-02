@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Squad Lab — four ways to make it visible</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Archivo+Black&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-0:#000;--bg-1:#070605;--s1:#16130e;--s2:#201b13;--s3:#2a2318;
+  --ink:#f4efe3;--ink2:#b3ab99;--ink3:#7d7666;
+  --line:#241f17;--line-mid:#332b1f;
+  --accent:#c9a227;--accent-2:#e2c06a;--accent-soft:rgba(201,162,39,.13);
+  --good:#3ddc7a;--warn:#e8b04a;--bad:#f0736f;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg-0);color:var(--ink);font:400 15px/1.5 'Manrope',system-ui,sans-serif;padding:26px 0 90px}
+.wrap{max-width:1500px;margin:0 auto;padding:0 18px}
+.display{font-family:'Archivo Black',sans-serif;text-transform:uppercase;letter-spacing:-.01em;font-weight:400}
+h1{font-size:26px;font-weight:800;letter-spacing:-.02em}
+.sec{border-top:1px solid var(--line);margin-top:46px;padding-top:24px}
+.sec-k{font:800 10px/1 'Manrope';letter-spacing:.16em;text-transform:uppercase;color:var(--accent-2);margin-bottom:8px}
+.sec h2{font-size:22px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px}
+.lede{color:var(--ink2);font-size:14px;max-width:82ch;margin-bottom:20px}
+.frames{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+.col{width:452px;flex:0 0 auto;border:1px solid var(--line-mid);border-radius:16px;overflow:hidden;background:var(--bg-1)}
+.cap{font:700 10.5px/1.35 'Manrope';letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);padding:9px 13px;border-bottom:1px solid var(--line);background:var(--s1)}
+.pad{padding:13px}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:13px}
+.k{font:800 9.5px/1 'Manrope';letter-spacing:.13em;text-transform:uppercase;color:var(--ink3)}
+.num{font-family:'Archivo Black',sans-serif;font-weight:400;color:var(--accent-2)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:10px;padding:9px 13px;font:800 12px/1 'Manrope';border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent-2);cursor:pointer}
+.btn.ghost{border-color:var(--line-mid);background:transparent;color:var(--ink2)}
+.dot{width:8px;height:8px;border-radius:99px;flex:0 0 auto}
+.bar{height:7px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.bar > i{display:block;height:100%;border-radius:99px;background:var(--accent)}
+.bar > i.bad{background:var(--bad)} .bar > i.good{background:var(--good)} .bar > i.warn{background:var(--warn)}
+.note{border-left:2px solid var(--accent);padding:2px 0 2px 12px;color:var(--ink2);font-size:13.5px;margin-top:16px;max-width:86ch}
+.tag{font:800 9px/1 'Manrope';letter-spacing:.09em;text-transform:uppercase;padding:4px 7px;border-radius:5px;display:inline-block}
+.tag.g{background:rgba(61,220,122,.16);color:var(--good)}
+.tag.w{background:rgba(232,176,74,.18);color:var(--warn)}
+.tag.b{background:rgba(240,115,111,.16);color:var(--bad)}
+.tag.n{background:rgba(255,255,255,.07);color:var(--ink2)}
+
+/* ── L1 rows ─────────────────────────────────────────── */
+.lrow{display:grid;grid-template-columns:9px 1fr auto;gap:11px;align-items:center;padding:12px 13px;border-bottom:1px solid var(--line);cursor:pointer}
+.lrow:last-child{border-bottom:0}
+.lrow.open{background:rgba(201,162,39,.06)}
+.lrow h4{font:800 14px/1.2 'Manrope';letter-spacing:-.01em}
+.lrow p{font-size:12.5px;color:var(--ink2);margin-top:2px}
+.lrow .rt{text-align:right;white-space:nowrap}
+.lrow .rt b{font-family:'Archivo Black',sans-serif;font-weight:400;font-size:17px;display:block;line-height:1}
+.lrow .rt s{display:block;font:700 9px/1.6 'Manrope';letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);text-decoration:none}
+.lbody{padding:0 13px 13px 33px;border-bottom:1px solid var(--line);background:rgba(201,162,39,.06)}
+
+/* ── L2 priority stack ───────────────────────────────── */
+.prio{border:1px solid var(--accent);border-radius:13px;background:linear-gradient(180deg,rgba(201,162,39,.10),rgba(201,162,39,.02));padding:14px}
+.prio .hd{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+.prio h4{font:800 16px/1.2 'Manrope';letter-spacing:-.01em}
+.mini{display:flex;align-items:center;gap:9px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--s1);margin-top:7px;cursor:pointer}
+.mini .nm{font:800 12.5px/1 'Manrope'}
+.mini .vl{margin-left:auto;font:800 12.5px/1 'Manrope';color:var(--ink2)}
+.mini .cv{color:var(--ink3);font-size:11px;margin-left:6px}
+
+/* ── L3 tiles with a picture ─────────────────────────── */
+.t3{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.tile{border:1px solid var(--line);border-radius:12px;background:var(--s1);padding:11px;cursor:pointer}
+.tile .k{margin-bottom:7px;display:block}
+.tile .v{font-family:'Archivo Black',sans-serif;font-weight:400;font-size:19px;line-height:1}
+.tile .s{font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.3}
+.spark{display:flex;align-items:flex-end;gap:3px;height:30px;margin:8px 0 2px}
+.spark i{flex:1;border-radius:2px 2px 0 0;background:var(--accent);display:block}
+.spark i.hot{background:var(--bad)} .spark i.cool{background:var(--good)}
+.ring{width:44px;height:44px;border-radius:99px;display:grid;place-items:center;font:800 15px/1 'Manrope';color:var(--accent-2)}
+.pips{display:flex;gap:3px;margin:9px 0 3px}
+.pips b{flex:1;height:7px;border-radius:2px;background:rgba(255,255,255,.09)}
+.pips b.on{background:var(--accent)} .pips b.warnp{background:var(--warn)} .pips b.badp{background:var(--bad)}
+
+/* ── L4 one narrative column ─────────────────────────── */
+.story{padding:13px}
+.story .step{display:grid;grid-template-columns:22px 1fr;gap:10px;padding-bottom:14px;position:relative}
+.story .step:not(:last-child):before{content:'';position:absolute;left:10px;top:22px;bottom:0;width:1px;background:var(--line-mid)}
+.story .bul{width:21px;height:21px;border-radius:99px;display:grid;place-items:center;font:800 10px/1 'Manrope';border:1px solid var(--line-mid);background:var(--s1);color:var(--ink3);z-index:1}
+.story .bul.w{border-color:var(--warn);color:var(--warn)}
+.story .bul.g{border-color:var(--good);color:var(--good)}
+.story h4{font:800 13.5px/1.25 'Manrope'}
+.story p{font-size:12.5px;color:var(--ink2);margin-top:2px}
+.story .act{margin-top:7px;display:flex;gap:7px}
+</style></head><body>
+<div class="wrap">
+  <h1>Squad Lab — four ways to make it visible</h1>
+  <p class="lede" style="margin-top:8px">
+    The lab computes six real things and shows them as six 98-pixel tiles with a number in each. Every figure
+    below is the live one for a measured fifteen — template 6 of 15, toughest week GW6, no transfer worth
+    making, B.Fernandes 0.7 clear as captain, two clashes costing 1.4, Triple Captain best at GW7. Only the
+    presentation changes.
+  </p>
+
+  <!-- ─────────────────────────── L1 ─────────────────────────── -->
+  <div class="sec">
+    <div class="sec-k">◆ L1</div>
+    <h2>Rows, not tiles</h2>
+    <p class="lede">
+      Same six things, one per line, with the headline in ink and the number where the eye already goes. A tile
+      98px wide can carry a number or a reason, never both — a row carries both and still fits the column. The
+      open one expands in place.
+    </p>
+    <div class="frames">
+      <div class="col">
+        <div class="cap">L1 · six rows, one open</div>
+        <div class="pad">
+          <div style="display:flex;align-items:baseline;gap:9px;margin-bottom:9px">
+            <h3 style="font:800 16px/1 'Manrope'">Squad Lab</h3>
+            <span style="font-size:11px;color:var(--ink3)">six reads on the fifteen</span>
+          </div>
+          <div class="card" style="overflow:hidden">
+            <div class="lrow open">
+              <span class="dot" style="background:var(--warn)"></span>
+              <div><h4>Horizon scan</h4><p>GW6 is the week to plan for</p></div>
+              <div class="rt"><b style="color:var(--warn)">7/15</b><s>in a hard game</s></div>
+            </div>
+            <div class="lbody">
+              <p style="font-size:12.5px;color:var(--ink2)">Seven of your fifteen face an FDR 4 or 5 that week — your worst of the next six. Everyone else averages four.</p>
+              <div class="spark" style="height:34px">
+                <i style="height:40%"></i><i style="height:52%"></i><i style="height:46%"></i><i style="height:61%"></i><i style="height:55%"></i><i class="hot" style="height:96%"></i>
+              </div>
+              <div style="display:flex;justify-content:space-between;font:700 9px/1 'Manrope';color:var(--ink3);letter-spacing:.08em">
+                <span>GW1</span><span>GW2</span><span>GW3</span><span>GW4</span><span>GW5</span><span style="color:var(--warn)">GW6</span>
+              </div>
+              <div style="margin-top:10px;display:flex;gap:7px"><span class="btn">Plan a move for GW6</span><span class="btn ghost">See the grid</span></div>
+            </div>
+            <div class="lrow">
+              <span class="dot" style="background:var(--good)"></span>
+              <div><h4>The Analyser</h4><p>no transfer gains you 3 points over six weeks</p></div>
+              <div class="rt"><b style="color:var(--good)">Hold</b><s>bank it</s></div>
+            </div>
+            <div class="lrow">
+              <span class="dot" style="background:var(--bad)"></span>
+              <div><h4>Clashes</h4><p>Van&nbsp;Hecke v Senesi, Enzo v Hughes</p></div>
+              <div class="rt"><b style="color:var(--bad)">−1.4</b><s>2 fixtures</s></div>
+            </div>
+            <div class="lrow">
+              <span class="dot" style="background:var(--accent)"></span>
+              <div><h4>Captain</h4><p>B.Fernandes, 0.7 clear of Haaland</p></div>
+              <div class="rt"><b>9.4</b><s>projected</s></div>
+            </div>
+            <div class="lrow">
+              <span class="dot" style="background:var(--accent)"></span>
+              <div><h4>Chips</h4><p>Triple Captain on B.Fernandes at GW7</p></div>
+              <div class="rt"><b>+8</b><s>GW7</s></div>
+            </div>
+            <div class="lrow">
+              <span class="dot" style="background:var(--ink3)"></span>
+              <div><h4>Template risk</h4><p>17% owned on average — a differential side</p></div>
+              <div class="rt"><b>6/15</b><s>template</s></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────── L2 ─────────────────────────── -->
+      <div class="col">
+        <div class="cap">L2 · one thing first, the rest folded</div>
+        <div class="pad">
+          <div style="display:flex;align-items:baseline;gap:9px;margin-bottom:9px">
+            <h3 style="font:800 16px/1 'Manrope'">Squad Lab</h3>
+            <span style="font-size:11px;color:var(--ink3)">worst thing first</span>
+          </div>
+          <div class="prio">
+            <div class="hd">
+              <span class="dot" style="background:var(--warn)"></span>
+              <span class="k" style="color:var(--warn)">Needs attention</span>
+              <span class="k" style="margin-left:auto">1 of 6</span>
+            </div>
+            <h4>GW6 takes seven of your fifteen into a hard game</h4>
+            <p style="font-size:13px;color:var(--ink2);margin-top:4px">
+              Your worst week of the next six, and it is five weeks away — early enough to be a plan rather than a panic.
+              Selling Van&nbsp;Hecke for Rodon covers it and costs £0.5m.
+            </p>
+            <div class="spark" style="margin-top:11px">
+              <i style="height:40%"></i><i style="height:52%"></i><i style="height:46%"></i><i style="height:61%"></i><i style="height:55%"></i><i class="hot" style="height:96%"></i>
+            </div>
+            <div style="display:flex;justify-content:space-between;font:700 9px/1 'Manrope';color:var(--ink3);letter-spacing:.08em;margin-bottom:11px">
+              <span>GW1</span><span>2</span><span>3</span><span>4</span><span>5</span><span style="color:var(--warn)">6</span>
+            </div>
+            <div style="display:flex;gap:7px"><span class="btn">Make the swap</span><span class="btn ghost">All defenders</span></div>
+          </div>
+
+          <div class="mini"><span class="dot" style="background:var(--bad)"></span><span class="nm">Clashes</span><span class="cv">your own players meet twice</span><span class="vl" style="color:var(--bad)">−1.4</span></div>
+          <div class="mini"><span class="dot" style="background:var(--good)"></span><span class="nm">The Analyser</span><span class="cv">nothing worth 3 points</span><span class="vl" style="color:var(--good)">Hold</span></div>
+          <div class="mini"><span class="dot" style="background:var(--accent)"></span><span class="nm">Captain</span><span class="cv">0.7 clear</span><span class="vl">B.Fernandes</span></div>
+          <div class="mini"><span class="dot" style="background:var(--accent)"></span><span class="nm">Chips</span><span class="cv">Triple Captain</span><span class="vl">GW7 · +8</span></div>
+          <div class="mini"><span class="dot" style="background:var(--ink3)"></span><span class="nm">Template risk</span><span class="cv">17% owned</span><span class="vl">6 of 15</span></div>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────── L3 ─────────────────────────── -->
+      <div class="col">
+        <div class="cap">L3 · tiles, but each one draws itself</div>
+        <div class="pad">
+          <div style="display:flex;align-items:baseline;gap:9px;margin-bottom:9px">
+            <h3 style="font:800 16px/1 'Manrope'">Squad Lab</h3>
+            <span style="font-size:11px;color:var(--ink3)">tap a tile to open it</span>
+          </div>
+          <div class="t3">
+            <div class="tile">
+              <span class="k">Horizon</span>
+              <div class="v" style="color:var(--warn)">GW6</div>
+              <div class="spark">
+                <i style="height:40%"></i><i style="height:52%"></i><i style="height:46%"></i><i style="height:61%"></i><i style="height:55%"></i><i class="hot" style="height:96%"></i>
+              </div>
+              <div class="s">7 of 15 in a hard game — your toughest of the next six</div>
+            </div>
+            <div class="tile">
+              <span class="k">Template risk</span>
+              <div class="v">6<span style="font-size:12px;color:var(--ink3)"> of 15</span></div>
+              <div class="pips"><b class="on"></b><b class="on"></b><b class="on"></b><b class="on"></b><b class="on"></b><b class="on"></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div>
+              <div class="s">17% owned on average — a differential side</div>
+            </div>
+            <div class="tile">
+              <span class="k">The Analyser</span>
+              <div class="v" style="color:var(--good)">Hold</div>
+              <div style="display:flex;align-items:center;gap:7px;margin:9px 0 2px">
+                <span class="bar" style="flex:1"><i class="good" style="width:28%"></i></span>
+                <span style="font:700 10px/1 'Manrope';color:var(--ink3)">+0.8</span>
+              </div>
+              <div class="s">Best move gains 0.8 over six weeks. Threshold is 3.</div>
+            </div>
+            <div class="tile">
+              <span class="k">Captain</span>
+              <div class="v">B.Fernandes</div>
+              <div style="display:flex;align-items:center;gap:6px;margin:9px 0 2px">
+                <span class="bar" style="flex:1"><i style="width:100%"></i></span>
+                <span class="bar" style="flex:1"><i style="width:93%;background:var(--ink3)"></i></span>
+              </div>
+              <div class="s">9.4 against Haaland's 8.7 — only 0.7 clear</div>
+            </div>
+            <div class="tile">
+              <span class="k">Clashes</span>
+              <div class="v" style="color:var(--bad)">−1.4</div>
+              <div style="display:flex;gap:5px;margin:9px 0 2px;font:700 9.5px/1 'Manrope'">
+                <span class="tag b">GW3 BHA v TOT</span><span class="tag b">GW9 CHE v EVE</span>
+              </div>
+              <div class="s">Two fixtures where your own players meet</div>
+            </div>
+            <div class="tile">
+              <span class="k">Chips</span>
+              <div class="v">GW7</div>
+              <div class="pips" style="gap:2px">
+                <b></b><b></b><b></b><b></b><b></b><b></b><b class="on"></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b>
+              </div>
+              <div class="s">Triple Captain · +8 — best of the next nineteen</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────── L4 ─────────────────────────── -->
+      <div class="col">
+        <div class="cap">L4 · one thing after another, in order</div>
+        <div class="pad">
+          <div style="display:flex;align-items:baseline;gap:9px;margin-bottom:9px">
+            <h3 style="font:800 16px/1 'Manrope'">What to do about it</h3>
+          </div>
+          <div class="card story">
+            <div class="step">
+              <span class="bul w">1</span>
+              <div>
+                <h4>Nothing this week</h4>
+                <p>No transfer gains you 3 points over six gameweeks. Bank it — a move made because one was available is how a bank becomes a wasted month.</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="bul w">2</span>
+              <div>
+                <h4>Plan for GW6</h4>
+                <p>Seven of your fifteen are in a hard game that week, your worst of the next six. Van&nbsp;Hecke → Rodon covers it for £0.5m and keeps the XI intact.</p>
+                <div class="act"><span class="btn">Make the swap</span><span class="btn ghost">Other options</span></div>
+              </div>
+            </div>
+            <div class="step">
+              <span class="bul">3</span>
+              <div>
+                <h4>Captain B.Fernandes, but only just</h4>
+                <p>9.4 against Haaland's 8.7. Close enough that a late team-sheet could flip it — check before the deadline.</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="bul g">4</span>
+              <div>
+                <h4>Hold the chips until GW7</h4>
+                <p>Triple Captain on B.Fernandes at GW7 projects +8, the best return available in the next nineteen weeks.</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="bul">5</span>
+              <div>
+                <h4>Two things to live with</h4>
+                <p>Your own players meet twice, costing about 1.4 across the season. Six of fifteen are template at 17% average ownership — a differential side, which cuts both ways.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <b>Where I'd go.</b> <b>L1</b> is the smallest change and fixes the actual complaint — every headline becomes
+      readable and every number keeps its place. <b>L2</b> is the strongest if the question is "what should I do",
+      because it answers it before you tap anything; the cost is that five of six reads become one-liners.
+      <b>L3</b> keeps the grid you have and gives each tile a picture, which is the most work for the least change
+      in what the page says. <b>L4</b> is the boldest — it stops being a dashboard and becomes a to-do list — and it
+      is the one that would make somebody screenshot it.
+      <br><br>
+      L1 and L2 combine well: the priority card on top, rows underneath instead of minis. That is probably the
+      version to build.
+    </div>
+  </div>
+</div>
+</body></html>

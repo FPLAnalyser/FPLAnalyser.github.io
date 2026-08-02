@@ -161,8 +161,19 @@ export default function SquadBuilder() {
      The reflow arrives over several frames, not one, so a single correction
      measured against a half-finished layout and missed most of the jump. This
      holds the pitch still until the layout stops moving — and gets out of the
-     way the moment you scroll yourself. */
+     way the moment you scroll yourself.
+
+     Phones only, deliberately. On a two-column desktop the board sits beside
+     the read rather than under it, so a removal moves the pitch by a few
+     pixels and the compensating scroll is the bigger event: measured at 1440,
+     selling a player scrolled the page 37px under a stationary mouse pointer,
+     and a pointer that has not moved keeps the hover and hit-test state the
+     browser computed before the scroll. The reported symptom was the page
+     "thinking the mouse is higher than it is" and the restore button refusing
+     the next click — which is exactly that. Nothing is lost by skipping it:
+     the desktop jump this was written to absorb is a phone problem. */
   const holdPitch = () => {
+    if (window.matchMedia('(min-width: 1024px)').matches) return
     const at = () => document.querySelector('[data-pitch]')?.getBoundingClientRect().top ?? null
     const before = at()
     if (before == null) return

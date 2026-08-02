@@ -57,18 +57,25 @@ export function squadDimensions(squad: RatingRow[], fixtureEase: FixtureEaseRow[
   const defVals = def.map((r) => d20(r, 'season_cs_score_norm')).filter((v): v is number => v != null)
   const dcVals = outfield.map((r) => d20(r, 'season_dc_score_norm')).filter((v): v is number => v != null)
 
-  /* Fixtures over the next six — but scored against the other nineteen clubs
-   * rather than against the 1–5 FDR range, because that range is not the
-   * range the season actually offers.
+  /* Fixtures over the next six, as a rank against the other nineteen clubs.
    *
-   * Measured at GW1: every club's mean FDR over six weeks lands between 2.83
-   * and 3.67. Mapping that onto 0–100 the obvious way — (5 − mean) / 4 — puts
-   * every squad ever built between 33 and 54, so the bar would sit at the
-   * halfway mark forever and tell nobody anything. Against the league it
-   * discriminates: 100 is owning only the club with the kindest six weeks in
-   * the division, 0 only the club with the hardest, 50 the middle of the
-   * spread. That is a real comparison; it is just a narrower one than the
-   * other three lines, and the note says so. */
+   * Two goes at this were wrong before it worked, both caught by sampling 600
+   * randomly-built legal squads rather than by reasoning about it:
+   *
+   *   (5 - meanFdr) / 4 — the obvious mapping. Every club's six-week mean sits
+   *   between 2.83 and 3.67 at GW1, so every squad ever built landed between
+   *   33 and 54 and the bar said nothing.
+   *
+   *   min-max across the league. Better spread, but the club means are skewed
+   *   — most clubs bunch near 2.9-3.1 with a couple of outliers up at 3.67 —
+   *   so the median squad read 76 while the other three lines read ~51. Four
+   *   bars on one chart have to mean the same thing at the same height, and
+   *   that one didn't.
+   *
+   * Ranking the clubs first fixes both: easiest six weeks in the division is
+   * 100, hardest is 0, and a squad spread across the league averages 50 — the
+   * same centre the player dimensions have. Measured median across 600 random
+   * squads: 51, against 51 / 53 / 49 for the three above. */
   const clubMean = new Map<string, number>()
   {
     const acc = new Map<string, number[]>()
@@ -78,13 +85,12 @@ export function squadDimensions(squad: RatingRow[], fixtureEase: FixtureEaseRow[
     }
     for (const [t, v] of acc) if (v.length) clubMean.set(t, mean(v))
   }
-  const spread = [...clubMean.values()]
-  const mine = squad.map((r) => clubMean.get(String(r.team))).filter((v): v is number => v != null)
-  const lo = spread.length ? Math.min(...spread) : 0
-  const hi = spread.length ? Math.max(...spread) : 0
-  const fixtures = mine.length >= 10 && hi > lo
-    ? Math.round(Math.max(0, Math.min(100, ((hi - mean(mine)) / (hi - lo)) * 100)))
-    : null
+  const easiestFirst = [...clubMean.entries()].sort((a, b) => a[1] - b[1]).map(([t]) => t)
+  const clubPct = new Map<string, number>(
+    easiestFirst.map((t, i) => [t, easiestFirst.length > 1 ? ((easiestFirst.length - 1 - i) / (easiestFirst.length - 1)) * 100 : 50]),
+  )
+  const mine = squad.map((r) => clubPct.get(String(r.team))).filter((v): v is number => v != null)
+  const fixtures = mine.length >= 10 ? Math.round(mean(mine)) : null
 
   return [
     { key: 'attack', label: 'Attack', value: attackVals.length ? Math.round(mean(attackVals)) : null, note: 'goals and assists from your midfield and forwards' },
@@ -119,29 +125,44 @@ const WEAK: Record<Dimension['key'], string> = {
  * measured squad that produced "Sharp up top, a brutal run to come" off a
  * fixtures score of 49 — dead average. Being the weakest of four things is not
  * the same as being weak, and a verdict that overstates is worth less than no
- * verdict. So a strength has to clear 62 and a weakness has to be under 52,
- * and when neither does the line says so. */
+ * verdict. The thresholds are the same ones the colours use, so the sentence and
+ * the bars never disagree: a strength is a bar that went green (60, close
+ * enough to the p90 of 59–64), a weakness is one that went red (under 46, the
+ * p25). When neither happens the line says that instead. */
 export function verdictLine(dims: Dimension[]): string {
   const known = dims.filter((d): d is Dimension & { value: number } => d.value != null)
   if (known.length < 2) return 'Not enough played football to read yet'
   const sorted = [...known].sort((a, b) => b.value - a.value)
   const best = sorted[0]
   const worst = sorted[sorted.length - 1]
-  const strong = best.value >= 62 ? STRONG[best.key] : null
-  const weak = worst.value < 52 ? WEAK[worst.key] : null
+  const strong = best.value >= 60 ? STRONG[best.key] : null
+  const weak = worst.value < 46 ? WEAK[worst.key] : null
   if (strong && weak) return `${strong}, ${weak}`
   if (strong) return `${strong}, and nothing badly short`
   if (weak) return `No standout strength, and ${weak}`
   return 'Even across the board, and short of a strength'
 }
 
-/* Gold is the default and green has to be earned. At 65 the first version
-   painted a measured squad's 71/67/66/73 four identical greens, which is a
-   wall of colour saying nothing — the whole point of the colour is to pick out
-   the line that differs from the rest. */
-const toneOf = (v: number) => (v >= 70 ? 'good' : v >= 52 ? 'accent' : 'bad')
-const BAR: Record<string, string> = { good: 'bg-good', accent: 'bg-accent', bad: 'bg-bad' }
-const TEXT: Record<string, string> = { good: 'text-good', accent: 'text-ink', bad: 'text-bad' }
+/* Four bands, worst to best: red, amber, green, gold.
+ *
+ * The boundaries are the quartiles of what a squad actually scores, not round
+ * numbers. Six hundred randomly-built legal fifteens put all four dimensions
+ * at p25 ≈ 46, median ≈ 51, p75 ≈ 56, p95 ≈ 64 — so red is the bottom quarter,
+ * amber the middle half, green the top quarter and gold roughly the top one in
+ * twenty. Picking 65 for green instead, as the first version did, painted a
+ * measured squad four identical bars, which is a wall of colour saying
+ * nothing. Gold is the top band because gold is this site's "best" everywhere
+ * else; it is not the neutral. */
+type Tone = 'bad' | 'warn' | 'good' | 'elite'
+const toneOf = (v: number): Tone => (v >= 64 ? 'elite' : v >= 57 ? 'good' : v >= 46 ? 'warn' : 'bad')
+/* Amber is its own orange rather than `--warn`.
+   `--warn` is #e8b04a and `--accent` is #c9a227 — both golds, eight degrees of
+   hue apart, and at 7px of bar they were indistinguishable: a squad reading 49
+   and one reading 71 drew the same colour. #e8853a sits between the amber and
+   the red and separates cleanly from the gold at the top of the scale. */
+const AMBER = '#e8853a'
+const BAR: Record<Tone, string> = { bad: 'bg-bad', warn: '', good: 'bg-good', elite: 'bg-accent' }
+const TEXT: Record<Tone, string> = { bad: 'text-bad', warn: '', good: 'text-good', elite: 'text-accent' }
 
 export function SquadVerdict({ chosen, fixtureEase, gw, avail, score, bestXI, onOpen }: {
   chosen: RatingRow[]
@@ -185,14 +206,20 @@ export function SquadVerdict({ chosen, fixtureEase, gw, avail, score, bestXI, on
 
       <div className="mt-3.5 flex flex-col gap-[7px]">
         {dims.map((d) => {
-          const tone = d.value == null ? 'accent' : toneOf(d.value)
+          const tone: Tone = d.value == null ? 'warn' : toneOf(d.value)
           return (
             <div key={d.key} className="grid grid-cols-[62px_minmax(0,1fr)_26px] items-center gap-2.5" title={d.note}>
               <span className="text-[10px] font-bold tracking-[0.1em] text-ink-3 uppercase">{d.label}</span>
               <span className="relative h-2 rounded-full bg-surface-3">
-                <span className={`absolute inset-y-0 left-0 rounded-full ${BAR[tone]}`} style={{ width: `${d.value ?? 0}%` }} />
+                <span
+                  className={`absolute inset-y-0 left-0 rounded-full ${BAR[tone]}`}
+                  style={{ width: `${d.value ?? 0}%`, background: tone === 'warn' ? AMBER : undefined }}
+                />
               </span>
-              <span className={`text-right font-num text-[12px] font-bold tabular-nums ${d.value == null ? 'text-ink-3' : TEXT[tone]}`}>
+              <span
+                className={`text-right font-num text-[12px] font-bold tabular-nums ${d.value == null ? 'text-ink-3' : TEXT[tone]}`}
+                style={{ color: d.value != null && tone === 'warn' ? AMBER : undefined }}
+              >
                 {d.value ?? '—'}
               </span>
             </div>

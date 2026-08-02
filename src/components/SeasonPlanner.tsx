@@ -205,22 +205,6 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
               </span>
             )}
           </div>
-          {week && week.transfers.length > 0 && (
-            <div className="mt-2 flex flex-col gap-1 border-t border-line pt-2">
-              {week.transfers.map((t) => (
-                <div key={t.out} className="flex items-center gap-2 text-sm">
-                  <span className="truncate text-bad">{nameOf(t.out)}</span>
-                  <Icon name="arrow-right" size={13} className="shrink-0 text-ink-3" />
-                  {t.in == null
-                    ? <span className="truncate text-ink-3 italic">pick a {planner.posOf(t.out)} from the list</span>
-                    : <span className="truncate text-good">{nameOf(t.in)}</span>}
-                  <button onClick={() => planner.undoTransfer(t.out)} className="ml-auto shrink-0 text-xs text-ink-3 hover:text-ink">
-                    {t.in == null ? 'keep him' : 'undo'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {subFor != null && week && (
@@ -235,6 +219,13 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
         )}
       </div>
 
+      {/* The pending-transfer list lives BELOW the board, not above it.
+          Above, it grew the header by 37px the instant you sold somebody —
+          measured at 1440 — which pushed the pitch down by the same amount and
+          left the restore button 37px clear of a mouse pointer that had not
+          moved. The one control you want after selling a player is the one to
+          put him back, and it has to still be under the cursor that sold him.
+          Nothing above the board changes height any more, so it isn't. */}
       <Pitch maxWidth={BOARD_W}>
         {(week ? rowsByPos(week.xi).map((row) => row.map((el) => ({ el }))) : partial!.xi).map((row, i) => row.length > 0 && (
           <div key={i} className="flex justify-center gap-1.5 sm:gap-2.5">
@@ -252,6 +243,28 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
               ? card(slot.el, true)
               : <EmptySlot key={`be${j}`} pos={slot.pos} onClick={() => onPickSlot?.(slot.pos)} />))}
       </BenchSpine>
+
+      {week && week.transfers.length > 0 && (
+        <div className="mx-auto mt-2.5" style={{ maxWidth: BOARD_W }}>
+          <div className="rounded-2xl border border-line bg-surface-1/60 px-3 py-2.5">
+            <div className="mb-1.5 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">This week's transfers</div>
+            <div className="flex flex-col gap-1">
+              {week.transfers.map((t) => (
+                <div key={t.out} className="flex items-center gap-2 text-sm">
+                  <span className="truncate text-bad">{nameOf(t.out)}</span>
+                  <Icon name="arrow-right" size={13} className="shrink-0 text-ink-3" />
+                  {t.in == null
+                    ? <span className="truncate text-ink-3 italic">pick a {planner.posOf(t.out)} from the list</span>
+                    : <span className="truncate text-good">{nameOf(t.in)}</span>}
+                  <button onClick={() => planner.undoTransfer(t.out)} className="ml-auto shrink-0 text-xs text-ink-3 hover:text-ink">
+                    {t.in == null ? 'keep him' : 'undo'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Chips sit under the board, not above it. Everything that used to
           stack here — the read, the chips — pushed the eleven you are picking

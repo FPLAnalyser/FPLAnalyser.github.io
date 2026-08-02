@@ -133,9 +133,15 @@ export function SquadStrip() {
           alt=""
           loading="lazy"
           onError={(e) => { e.currentTarget.style.display = 'none' }}
-          className="absolute inset-0 -z-10 size-full object-cover object-center opacity-30"
+          className="absolute inset-0 -z-10 size-full object-cover object-center opacity-25"
         />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-bg-0 via-bg-0/85 to-bg-0/40" />
+        {/* Scrim on both edges, not just the left. The banner is 1392x164 on a
+            desktop, so any photo crops to a thin strip of whatever happened to
+            be in the middle of it — measured with the app screenshot in place,
+            that was a row of fixture chips sitting directly under the two
+            buttons. Fading in from both sides keeps the text end and the
+            button end clean and leaves the picture as texture in between. */}
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-bg-0 via-bg-0/55 to-bg-0" />
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
           <div className="min-w-0 flex-1">
             <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-[0.14em] text-accent uppercase">
