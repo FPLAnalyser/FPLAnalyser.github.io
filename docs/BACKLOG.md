@@ -283,6 +283,27 @@ worth keeping, because most of it was arrived at by being wrong first:
 
 Four things the first real-world use turned up, all now fixed:
 
+- **The armbands are read off the picture.** A dark-purple disc at the card's
+  top-left, near-black with a magenta cast — rgb(37,2,44) against grass at
+  rgb(54,119,77) — carrying a white letter. Found rather than measured off a
+  fixed offset, because the only fixed thing in a screenshot is the card unit.
+  The first attempt took the bounding box of every masked pixel and it worked
+  on the disc sitting against a pale shirt panel and failed on the one against
+  the pitch: a few stray dark pixels down the card edge stretched a 40px circle
+  into a 68x89 box, roundness still passed, and the letter was read out of a
+  crop that was mostly grass. Largest connected blob, not global extent. The
+  letter itself is OCR'd with a two-character whitelist, because an
+  unconstrained read of a lone glyph offers up G, O, U and Y just as readily.
+  Measured: C on Thiago, V on A.Becker, as in the picture.
+
+- **Bench order is FPL's, everywhere.** It used to be stored outfield-first and
+  re-sorted at render time, so the array the planner passed around and the row
+  a reader was looking at disagreed about which slot was the first one. One
+  convention now — reserve keeper first, then the three outfield subs in the
+  order they come on — held by `autoLineup`, the board, the share picture and
+  the importer alike, so nothing has to be translated and the screenshot's
+  bench is stored exactly as drawn.
+
 - **The imported squad arrived as a heap of fifteen names.** The builder then
   ran `autoLineup` over it and picked its own best-rated legal eleven, so a
   reader's benched players started: on the test screenshot Collins and

@@ -74,7 +74,7 @@ export function usePlanner({ base, byEl, startGw, fixtureEase, seed }: {
   /** A lineup to open the first week with instead of auto-picking one —
    *  a squad imported from a screenshot arrives already set out, and
    *  improving on it would silently contradict the picture it came from. */
-  seed?: { xi: number[]; bench: number[] } | null
+  seed?: { xi: number[]; bench: number[]; captain?: number | null; vice?: number | null } | null
 }): Planner {
   const posOf = (el: number) => String(byEl.get(el)?.position ?? 'MID') as Pos
   const ratingOf = (el: number) => (num(byEl.get(el) ?? {}, 'season_overall_score') ?? 0) * 20
@@ -122,10 +122,16 @@ export function usePlanner({ base, byEl, startGw, fixtureEase, seed }: {
       && squad.every((e) => seed.xi.includes(e) || seed.bench.includes(e))
       ? seed : null
     const week: WeekPlan = seeded
-      // Captaincy is the one thing the picture is not read for, so it is still
-      // the best two of the eleven the reader actually picked.
-      ? { transfers: [], xi: [...seeded.xi], bench: [...seeded.bench], chip: null,
-          ...(({ captain, vice }) => ({ captain, vice }))(autoLineup(seeded.xi, posOf, ratingOf)) }
+      /* Armbands come off the picture too, and only fall back to the best two
+       * of the eleven when a disc could not be read — the point of importing a
+       * team is that it arrives as the reader left it, captain included. */
+      ? (() => {
+          const auto = autoLineup(seeded.xi, posOf, ratingOf)
+          const captain = seeded.captain ?? auto.captain
+          const vice = seeded.vice != null && seeded.vice !== captain ? seeded.vice
+            : auto.vice !== captain ? auto.vice : auto.captain
+          return { transfers: [], xi: [...seeded.xi], bench: [...seeded.bench], captain, vice, chip: null }
+        })()
       : prev && prev.xi.length === 11 && [...prev.xi, ...prev.bench].every((e) => squad.includes(e))
       ? { transfers: [], xi: [...prev.xi], bench: [...prev.bench], captain: prev.captain, vice: prev.vice, chip: null }
       : { transfers: [], ...autoLineup(squad, posOf, ratingOf), chip: null }

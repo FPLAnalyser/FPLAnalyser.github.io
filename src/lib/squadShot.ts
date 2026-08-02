@@ -34,6 +34,8 @@ export interface ShotCard {
   /** Three-letter opponent code parsed out of the fixture pill, if it read. */
   opponent: string | null
   venue: 'H' | 'A' | null
+  /** The captain's or vice-captain's disc, if this card wore one. */
+  armband: 'C' | 'V' | null
   nameConf: number
   fixConf: number
 }
@@ -75,7 +77,7 @@ interface Crop { canvas: HTMLCanvasElement; ink: number }
  * as a character — three of fifteen names came back empty that way. Otsu the
  * band, take the minority class as ink, crop to the ink's extent.
  */
-function segment(img: HTMLImageElement | ImageBitmap): { crops: { name: Crop; fixture: Crop; x: number; y: number }[]; unit: number } {
+function segment(img: HTMLImageElement | ImageBitmap): { crops: { name: Crop; fixture: Crop; badge: HTMLCanvasElement | null; x: number; y: number }[]; unit: number } {
   const W = 'naturalWidth' in img ? img.naturalWidth : img.width
   const H = 'naturalHeight' in img ? img.naturalHeight : img.height
   const c = document.createElement('canvas')
@@ -213,6 +215,104 @@ function segment(img: HTMLImageElement | ImageBitmap): { crops: { name: Crop; fi
     return { canvas: cc, ink: count }
   }
 
+  /**
+   * The captain's or vice-captain's disc.
+   *
+   * A small circle at the card's top-left, above the shirt: near-black with a
+   * magenta cast — measured at rgb(37,2,44), (45,6,53), (54,6,58) — carrying a
+   * white letter. Nothing else on the pitch is that colour; the grass is
+   * (54,119,77), so a low green channel with the red and blue lifted well
+   * clear of it isolates the disc on its own.
+   *
+   * Found rather than measured off a fixed offset, because the only fixed
+   * thing in the screenshot is the card unit — everything else scales with the
+   * device. Search a generous window, take the largest blob, then read the
+   * letter out of the middle of it.
+   */
+  const armband = (cardX: number, nameTop: number): HTMLCanvasElement | null => {
+    const x0 = Math.max(0, Math.round(cardX - unit * 0.05))
+    const x1 = Math.min(W - 1, Math.round(cardX + unit * 0.40))
+    const y0 = Math.max(0, Math.round(nameTop - unit * 1.15))
+    const y1 = Math.min(H - 1, Math.round(nameTop - unit * 0.45))
+    if (x1 <= x0 || y1 <= y0) return null
+    const bw = x1 - x0 + 1, bh = y1 - y0 + 1
+    const im = cx.getImageData(x0, y0, bw, bh).data
+    const disc = new Uint8Array(bw * bh)
+    let n = 0
+    for (let i = 0, j = 0; i < im.length; i += 4, j++) {
+      const r = im[i], g = im[i + 1], b = im[i + 2]
+      if (g < 45 && r > g + 15 && b > g + 20 && b > 25) { disc[j] = 1; n++ }
+    }
+    // A disc is about a tenth of the card across; anything much smaller is a
+    // dark seam in a kit, not a badge.
+    if (n < unit * unit * 0.004) return null
+    /* The largest connected blob, not the extent of every matching pixel.
+     *
+     * Taking the whole mask's bounding box worked on the card whose disc sits
+     * against a pale shirt panel and failed on the one whose disc sits against
+     * the pitch: a few stray dark pixels down the card's edge stretched a
+     * 40px circle into a 68x89 box, the roundness test still passed, and the
+     * letter was then read out of a crop that was mostly grass. Blobs are the
+     * thing being looked for, so find blobs. */
+    const mark = new Int32Array(bw * bh).fill(-1)
+    const q = new Int32Array(bw * bh)
+    let bestN = 0, dx0 = 0, dx1 = -1, dy0 = 0, dy1 = -1
+    for (let s = 0; s < disc.length; s++) {
+      if (!disc[s] || mark[s] >= 0) continue
+      let qs = 0, qe = 0
+      q[qe++] = s
+      mark[s] = s
+      let ax0 = s % bw, ax1 = ax0, ay0 = (s / bw) | 0, ay1 = ay0, an = 0
+      while (qs < qe) {
+        const t = q[qs++]
+        an++
+        const tx = t % bw, ty = (t / bw) | 0
+        if (tx < ax0) ax0 = tx
+        if (tx > ax1) ax1 = tx
+        if (ty < ay0) ay0 = ty
+        if (ty > ay1) ay1 = ty
+        if (tx > 0 && disc[t - 1] && mark[t - 1] < 0) { mark[t - 1] = s; q[qe++] = t - 1 }
+        if (tx < bw - 1 && disc[t + 1] && mark[t + 1] < 0) { mark[t + 1] = s; q[qe++] = t + 1 }
+        if (ty > 0 && disc[t - bw] && mark[t - bw] < 0) { mark[t - bw] = s; q[qe++] = t - bw }
+        if (ty < bh - 1 && disc[t + bw] && mark[t + bw] < 0) { mark[t + bw] = s; q[qe++] = t + bw }
+      }
+      if (an > bestN) { bestN = an; dx0 = ax0; dx1 = ax1; dy0 = ay0; dy1 = ay1 }
+    }
+    if (bestN < unit * unit * 0.004) return null
+    const dw = dx1 - dx0 + 1, dh = dy1 - dy0 + 1
+    if (dw < 8 || dh < 8 || Math.abs(dw - dh) > Math.max(6, dw * 0.45)) return null
+    // Inset well inside the circle so its curved edge, and the grass outside
+    // it, never reach the letter.
+    const pad = Math.round(Math.min(dw, dh) * 0.2)
+    const lx0 = dx0 + pad, ly0 = dy0 + pad
+    const lw = dw - pad * 2, lh = dh - pad * 2
+    if (lw < 4 || lh < 4) return null
+    // No threshold to find: the disc is near-black and the letter is white.
+    const ink = new Uint8Array(lw * lh)
+    let ix0 = lw, ix1 = -1, iy0 = lh, iy1 = -1, ink_n = 0
+    for (let y = 0; y < lh; y++) for (let x = 0; x < lw; x++) {
+      const p = ((ly0 + y) * bw + (lx0 + x)) * 4
+      if ((im[p] * 0.299 + im[p + 1] * 0.587 + im[p + 2] * 0.114) > 140) {
+        ink[y * lw + x] = 1; ink_n++
+        if (x < ix0) ix0 = x; if (x > ix1) ix1 = x; if (y < iy0) iy0 = y; if (y > iy1) iy1 = y
+      }
+    }
+    if (ink_n < 6 || ix1 < 0) return null
+    const M = 8, s = Math.max(4, Math.round(140 / Math.max(1, iy1 - iy0 + 1)))
+    const cw = ix1 - ix0 + 1, ch = iy1 - iy0 + 1
+    const cc = document.createElement('canvas')
+    cc.width = (cw + M * 2) * s
+    cc.height = (ch + M * 2) * s
+    const g = cc.getContext('2d')!
+    g.fillStyle = '#fff'
+    g.fillRect(0, 0, cc.width, cc.height)
+    g.fillStyle = '#000'
+    for (let y = iy0; y <= iy1; y++) for (let x = ix0; x <= ix1; x++) {
+      if (ink[y * lw + x]) g.fillRect((x - ix0 + M) * s, (y - iy0 + M) * s, s, s)
+    }
+    return cc
+  }
+
   const crops = cards.map((k) => {
     const bottom = k.y + k.h
     const top = bottom - PILL * 2
@@ -222,6 +322,7 @@ function segment(img: HTMLImageElement | ImageBitmap): { crops: { name: Crop; fi
       y: top,
       name: cut(k.x, k.w, top + inset, PILL - inset * 2),
       fixture: cut(k.x, k.w, top + PILL + inset - 1, PILL - inset * 2),
+      badge: armband(k.x, top),
     }
   })
   crops.sort((a, b) => a.y - b.y || a.x - b.x)
@@ -295,6 +396,15 @@ export async function readSquadScreenshot(file: Blob, onProgress?: ShotProgress)
       const fixRes = await worker.recognize(crops[i].fixture.canvas)
       const fixture = fixRes.data.text.trim().replace(/\s+/g, ' ')
       const m = fixture.toUpperCase().match(FIXTURE_RE)
+      let armband: 'C' | 'V' | null = null
+      if (crops[i].badge) {
+        // One character, and only two it can be. Say so: an unconstrained
+        // read of a lone glyph offers up G, 0, U and Y just as readily.
+        await worker.setParameters({ tessedit_pageseg_mode: '10' as never, tessedit_char_whitelist: 'CV' })
+        const t = (await worker.recognize(crops[i].badge!)).data.text.trim().toUpperCase()
+        await worker.setParameters({ tessedit_pageseg_mode: '7' as never, tessedit_char_whitelist: '' })
+        if (t === 'C' || t === 'V') armband = t
+      }
       if (rows[i] !== lastRow) { colInRow = 0; lastRow = rows[i] }
       cards.push({
         row: rows[i],
@@ -303,6 +413,7 @@ export async function readSquadScreenshot(file: Blob, onProgress?: ShotProgress)
         fixture,
         opponent: m ? m[1] : null,
         venue: m ? (m[2] as 'H' | 'A') : null,
+        armband,
         nameConf: Math.round(nameRes.data.confidence),
         fixConf: Math.round(fixRes.data.confidence),
       })

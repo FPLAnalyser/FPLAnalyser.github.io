@@ -30,4 +30,20 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Fetch odds sample from football-data.co.uk"
-          git push
+          # Push, and if the branch has moved under us, rebase and try again.
+          #
+          # This is exactly how the 1 August refresh was lost. The job syncs to
+          # the branch tip at checkout, then spends eleven minutes mirroring
+          # images before it pushes — and a push that lands inside that window
+          # rejects this one outright, taking the day's injuries, prices and
+          # deadlines with it. The site sat on 31 July data for two days.
+          # Rebase rather than merge: these commits touch only generated files
+          # nobody edits by hand, so there is nothing to conflict with, and the
+          # history stays linear the way the rest of this repo keeps it.
+          for attempt in 1 2 3 4 5; do
+            if git push; then exit 0; fi
+            echo "push rejected (attempt $attempt) — rebasing onto the branch tip"
+            git pull --rebase origin main || exit 1
+          done
+          echo "still could not push after 5 attempts"
+          exit 1

@@ -31,6 +31,8 @@ export interface SlotMatch {
   club: string | null
   read: string
   fixture: string
+  /** The armband the picture put on this card, if any. */
+  armband: 'C' | 'V' | null
   player: RatingRow | null
   distance: number
   /** Which ring the match came from — how much to trust it. */
@@ -156,6 +158,7 @@ interface ReadCard {
   fixture: string
   opponent: string | null
   venue: string | null
+  armband?: 'C' | 'V' | null
 }
 
 /**
@@ -277,6 +280,7 @@ export function matchSquad(
       club,
       read: card.name,
       fixture: card.fixture,
+      armband: card.armband ?? null,
       player: hit?.player ?? null,
       distance: hit?.distance ?? -1,
       how: hit?.how ?? null,

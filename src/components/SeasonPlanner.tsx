@@ -106,11 +106,11 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
   const gwIdx = gws.indexOf(gw)
   const partners = subFor != null && week ? planner.partnersFor(subFor) : []
   const rowsByPos = (list: number[]) => POS_ORDER.map((p) => list.filter((e) => planner.posOf(e) === p))
-  // The reserve keeper always sits in the first bench slot, the way a
-  // teamsheet lists him — the outfield subs come on in the order after.
-  const benchOrder = week
-    ? [...week.bench].sort((a, b) => (planner.posOf(a) === 'GKP' ? -1 : 0) - (planner.posOf(b) === 'GKP' ? -1 : 0))
-    : []
+  // The stored order IS the drawn order — reserve keeper first, the way the
+  // FPL app lists him and the way a teamsheet reads. It used to be sorted
+  // here instead, which left the array and the row disagreeing about which
+  // slot was the first one.
+  const benchOrder = week ? week.bench : []
 
   // Without a full fifteen the planner has nothing to plan, so the board
   // lays the picked players into the same shape and leaves the rest as

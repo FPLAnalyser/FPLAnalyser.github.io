@@ -209,7 +209,7 @@ export default function SquadBuilder() {
   /* The eleven a screenshot arrived with. Held here rather than in the modal
      because the planner needs it after the modal has gone, and dropped the
      moment the squad stops matching it — see `seed` in usePlanner. */
-  const [importedXI, setImportedXI] = useState<{ xi: number[]; bench: number[] } | null>(null)
+  const [importedXI, setImportedXI] = useState<{ xi: number[]; bench: number[]; captain: number | null; vice: number | null } | null>(null)
   // Transfers run through the list beside the board: sell from the pitch and
   // the empty place waits to be filled, or pick the player coming in first
   // and choose who makes way for him.

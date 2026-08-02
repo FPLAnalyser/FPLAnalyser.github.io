@@ -23,7 +23,7 @@ export interface WeekPlan {
    *  either is spent, which one-for-one swapping can never reach. */
   transfers: { out: number; in: number | null }[]
   xi: number[]        // 11 starters
-  bench: number[]     // 4 reserves, ordered (outfield first, then the reserve GK)
+  bench: number[]     // 4 reserves in FPL's own order: reserve GK, then the three outfield subs in the order they come on
   captain: number | null
   vice: number | null
   chip: Chip | null
@@ -147,11 +147,17 @@ export function autoLineup(
   }
   const xi = best?.xi ?? squad.slice(0, 11)
   const xiSet = new Set(xi)
-  // Bench: reserve GK first-in-list convention is the LAST bench slot; order the
-  // three outfield reserves by rating (best sub first).
+  /* Bench order is the FPL app's: reserve keeper first, then the three
+   * outfield subs in the order they come on, best first.
+   *
+   * This used to be stored the other way round and re-sorted at render time,
+   * which meant the array the planner passed around and the row a reader was
+   * looking at disagreed about which slot was which. One convention, held
+   * everywhere — the board, the share picture and a squad read off a
+   * screenshot all mean the same thing by "the first bench slot". */
   const benchOutfield = squad.filter((e) => !xiSet.has(e) && posOf(e) !== 'GKP').sort((a, b) => ratingOf(b) - ratingOf(a))
   const benchGk = squad.filter((e) => !xiSet.has(e) && posOf(e) === 'GKP')
-  const bench = [...benchOutfield, ...benchGk]
+  const bench = [...benchGk, ...benchOutfield]
   const rankedStarters = [...xi].sort((a, b) => ratingOf(b) - ratingOf(a))
   return { xi, bench, captain: rankedStarters[0] ?? null, vice: rankedStarters[1] ?? null }
 }

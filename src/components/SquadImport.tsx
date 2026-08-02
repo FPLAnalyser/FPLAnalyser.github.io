@@ -31,8 +31,9 @@ type Stage = 'pick' | 'reading' | 'confirm'
 export interface ImportedSquad {
   /** All fifteen, in pitch reading order. */
   squad: number[]
-  /** The starting eleven and the bench, when the picture said which was which. */
-  lineup: { xi: number[]; bench: number[] } | null
+  /** How the picture had the team set out: who starts, the bench in the app's
+   *  own order, and the two armbands. */
+  lineup: { xi: number[]; bench: number[]; captain: number | null; vice: number | null } | null
 }
 
 export function SquadImport({ pool, fixtureEase, gw, onApply, onClose }: {
@@ -94,26 +95,35 @@ export function SquadImport({ pool, fixtureEase, gw, onApply, onClose }: {
    * above it are the eleven. That is not a suggestion to be improved on — it
    * is the team the reader picked, and the whole point of importing it.
    *
-   * One difference in convention. The FPL app draws the reserve keeper first
-   * on its bench; here the bench is ordered by substitution priority, so the
-   * keeper goes last and the three outfield reserves keep the order the app
-   * drew them in. */
+   * The bench keeps the order the app drew it in, keeper first — which is the
+   * order this site stores and draws too, so nothing has to be translated. */
   const lineup = useMemo(() => {
     if (rowCount !== 5 || picks.length !== 15 || picks.some((p) => !p)) return null
     const el = (i: number) => Number((picks[i] as RatingRow).element)
     const xi = byRow.slice(0, 4).flatMap(([, idxs]) => idxs.map(el))
-    const benchRow = byRow[4][1].map(el)
-    if (xi.length !== 11 || benchRow.length !== 4) return null
+    const bench = byRow[4][1].map(el)
+    if (xi.length !== 11 || bench.length !== 4) return null
     const posOf = (e: number) => String(picks.find((p) => Number(p?.element) === e)?.position ?? '')
     // A shape our own position data says is illegal means we read a row wrong
     // or disagree with FPL about someone's position. Better to hand back
     // nothing and let the builder auto-pick than to store a broken eleven.
     if (!validXI(xi, posOf as never)) return null
-    const gk = benchRow.filter((e) => posOf(e) === 'GKP')
-    const out = benchRow.filter((e) => posOf(e) !== 'GKP')
-    if (gk.length !== 1) return null
-    return { xi, bench: [...out, ...gk] }
-  }, [byRow, picks, rowCount])
+    if (bench.filter((e) => posOf(e) === 'GKP').length !== 1) return null
+    const armband = (badge: 'C' | 'V') => {
+      const i = slots.findIndex((s) => s.armband === badge)
+      return i >= 0 && picks[i] ? Number((picks[i] as RatingRow).element) : null
+    }
+    // Only from the eleven — the app cannot put an armband on a substitute,
+    // so one there means we misread a badge and should not act on it.
+    const capt = armband('C')
+    const vice = armband('V')
+    return {
+      xi,
+      bench,
+      captain: capt != null && xi.includes(capt) ? capt : null,
+      vice: vice != null && xi.includes(vice) && vice !== capt ? vice : null,
+    }
+  }, [byRow, picks, rowCount, slots])
 
   return createPortal(
     <div className="fixed inset-0 z-[220] grid place-items-center bg-black/70 p-3 backdrop-blur-sm" onClick={onClose}>
