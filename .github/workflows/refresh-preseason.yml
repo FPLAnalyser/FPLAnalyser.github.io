@@ -1,0 +1,104 @@
+name: Refresh pre-season squad data
+
+# Rebuilds site_data/<season>/ from the live FPL API before any football has
+# been played, by carrying last season's ratings onto the new player universe
+# (bootstrap_new_season.py). It needs nothing but the public API and
+# site_data/<prev>/, both of which the runner already has — no Understat, no
+# local data directory, no CSVs.
+#
+# This is what keeps the squad list honest between now and GW1. The daily
+# availability refresh can price a player and flag him fit, but it cannot
+# introduce a club's new signing to the ratings universe, give him a fixture,
+# or carry his last-season numbers across. Run by hand, that job happened
+# whenever someone remembered; the copy that shipped on 23 July was nine
+# players behind the game within a week.
+#
+# TURN THIS OFF once real gameweeks have been played. It writes
+# `provisional: true` and `ratings_season: <prev>` every run, so leaving it
+# scheduled would keep overwriting genuine new-season ratings with carried-over
+# ones. The season's first full pipeline run is its last day of usefulness.
+on:
+  schedule:
+    # 05:40 UTC, twenty minutes ahead of the availability refresh, so the two
+    # never contend for a push and the day's data lands in one deploy.
+    - cron: '40 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-preseason
+  cancel-in-progress: true
+
+env:
+  # Update both of these in the July before a new season starts — the same
+  # edit NEW_SEASON_CHECKLIST.md already asks for.
+  NEW_SEASON: '2026-27'
+  PREV_SEASON: '2025-26'
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      # A re-run replays an old commit; sync to the branch tip so the push
+      # below is always a fast-forward.
+      - run: git fetch origin main && git reset --hard origin/main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Carry last season's ratings onto the new squads
+        run: python bootstrap_new_season.py
+
+      # The API is the only input, so a bad answer from it is the only way this
+      # can go wrong — and it would go wrong silently, by writing a plausible
+      # but empty site. Every other step of the pipeline gates its output; so
+      # does this one. Nothing is committed unless the numbers are sane.
+      - name: GATE — the rebuild has to look like a Premier League season
+        run: |
+          python - <<'PY'
+          import json, os, sys
+          season = os.environ['NEW_SEASON']
+          d = os.path.join('site_data', season)
+          def load(n):
+              with open(os.path.join(d, n + '.json'), encoding='utf-8') as f:
+                  return json.load(f)
+          fails = []
+          ratings = load('ratings')
+          teams = load('teams')
+          fe = load('fixture_ease')
+          meta = load('meta')
+          if len(ratings) < 400:
+              fails.append(f'ratings.json has {len(ratings)} players, expected 400+')
+          if len(teams) != 20:
+              fails.append(f'teams.json has {len(teams)} clubs, expected 20')
+          if len(fe) < 300:
+              fails.append(f'fixture_ease.json has {len(fe)} rows, expected 300+')
+          carried = [r for r in ratings if r.get('season_overall_score') is not None]
+          if len(carried) < 200:
+              fails.append(f'only {len(carried)} players carried a rating, expected 200+')
+          if meta.get('season') != season:
+              fails.append(f"meta.season is {meta.get('season')!r}, expected {season!r}")
+          for f in fails:
+              print('GATE FAIL:', f)
+          if fails:
+              sys.exit(1)
+          print(f'GATE OK — {len(ratings)} players ({len(carried)} rated), {len(teams)} clubs, '
+                f'{len(fe)} fixture rows, next GW {meta.get("next_gw")}')
+          PY
+
+      - name: Commit if changed
+        run: |
+          git add -A site_data
+          if git diff --cached --quiet; then
+            echo "No changes."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Refresh pre-season squads, prices and fixtures from the FPL API"
+          git push

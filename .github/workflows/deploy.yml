@@ -12,7 +12,7 @@ on:
   push:
     branches: [main]
   workflow_run:
-    workflows: ["Refresh availability data", "Refresh odds data"]
+    workflows: ["Refresh availability data", "Refresh odds data", "Refresh pre-season squad data"]
     types: [completed]
   workflow_dispatch:
 

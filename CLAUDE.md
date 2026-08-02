@@ -44,6 +44,7 @@ the pixels, compare against the live thing. Say what you measured.
 
 ## Where things are
 
+- `docs/OPERATING_CALENDAR.md` — what runs on its own, what needs the owner, by when
 - `docs/BACKLOG.md` — what is deliberately not blocking launch, and why
 - `docs/ROLLOUT_BRIEF.md` — the marketing/commercial brief
 - `docs/DOMAIN_CATEGORISATION.md` — corporate filters, and the Gambling risk
