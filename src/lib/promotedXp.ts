@@ -1,10 +1,23 @@
 /* ════════════════════════════════════════════════════════════════════════
-   Supplied GW1 projections for the promoted clubs.
+   Supplied GW1 projections, for players our own engine cannot reach.
 
-   Hull, Coventry and Ipswich have no Premier League record, so the component
-   engine in `xp.ts` has nothing to build a per-90 rate from and returns null
-   for all 82 of their players — no expected points anywhere on the site for
-   three of the twenty clubs, on the gameweek everyone is picking a squad for.
+   Two groups, one mechanism.
+
+   The promoted clubs first. Hull, Coventry and Ipswich have no Premier League
+   record, so the component engine in `xp.ts` has nothing to build a per-90
+   rate from and returns null for all of their players — no expected points
+   anywhere on the site for three of the twenty clubs, on the gameweek
+   everyone is picking a squad for.
+
+   Then the players who fall below the rating floor. A season rating needs 900
+   minutes and 10 starts, and 201 players in the game clear neither — some
+   because they never played in the Premier League last year, most because
+   they did not play enough of it. That is the right gate for a rating and it
+   leaves a hole in the projections: Mosquera at 17.3% ownership was nine
+   starts, one short; Chris Wood was 896 minutes, four short. The twenty most
+   owned of those 201 carry 83% combined ownership between them, and every one
+   of them showed N/A. They are covered here; the tail of fringe players is
+   not, and honestly should not be.
 
    These figures are NOT ours. They are a third party's GW1 projection,
    supplied by hand, and they are held here rather than merged into the
@@ -36,7 +49,7 @@ export const SUPPLIED_XP_GW = 1
 /** Clubs with no Premier League record this season. */
 export const PROMOTED_CLUBS = new Set(['HUL', 'COV', 'IPS'])
 
-const SUPPLIED: ReadonlyArray<readonly [number, number]> = [
+const PROMOTED: ReadonlyArray<readonly [number, number]> = [
   [182, 0.7], // COV DEF Amenda
   [178, 1.0], // COV DEF Bidwell
   [181, 0.3], // COV DEF Brau
@@ -123,6 +136,37 @@ const SUPPLIED: ReadonlyArray<readonly [number, number]> = [
   [564, 0.0], // IPS GKP Scherpen — not yet in ratings.json
 ]
 
+/* The second group: established-club players the 900-minute / 10-start floor
+ * leaves without a projection. Ordered by ownership, which is the only reason
+ * these twenty and not another twenty — each one's absence was visible to a
+ * meaningful share of readers. Verified element by element against the squad
+ * list before being written down; a wrong id here would silently attach one
+ * player's projection to another. */
+const BELOW_FLOOR: ReadonlyArray<readonly [number, number]> = [
+  [11, 3.0],   // ARS DEF Mosquera      17.3% owned — 9 starts, one short of the gate
+  [379, 4.6],  // LIV FWD Isak          11.4% — 694 minutes
+  [272, 0.5],  // FUL FWD Kusi-Asare     8.6% — 49 minutes
+  [489, 1.0],  // NFO MID Yates          7.6% — 602 minutes
+  [111, 0.1],  // BHA GKP Steele         5.0% — no Premier League minutes
+  [26, 4.0],   // ARS FWD Havertz        4.0% — 577 minutes
+  [58, 0.1],   // BOU GKP Forster        3.1% — no Premier League minutes
+  [53, 3.0],   // AVL MID Manzambi       2.7% — no Premier League minutes
+  [504, 2.0],  // BHA DEF Vuskovic       2.7% — no Premier League minutes
+  [515, 3.5],  // TOT MID Maddison       2.4% — 34 minutes
+  [362, 0.7],  // LIV DEF Jacquet        2.3% — no Premier League minutes
+  [539, 0.4],  // SUN DEF O'Nien         2.3% — 565 minutes
+  [149, 2.8],  // CHE DEF Colwill        2.0% — 225 minutes
+  [230, 3.9],  // EVE DEF Branthwaite    2.0% — 678 minutes
+  [490, 2.0],  // NFO FWD Wood           1.8% — 896 minutes, four short of the gate
+  [528, 0.1],  // TOT FWD Scarlett       1.8% — below the floor
+  [555, 0.1],  // CRY GKP Matthews       1.7% — below the floor
+  [38, 0.2],   // AVL DEF A.García       1.5% — below the floor
+  [152, 0.2],  // CHE DEF Palestra       1.5% — below the floor
+  [157, 1.7],  // CHE MID Estêvão        1.5% — below the floor
+]
+
+const SUPPLIED = [...PROMOTED, ...BELOW_FLOOR] as ReadonlyArray<readonly [number, number]>
+
 const BY_ELEMENT = new Map<number, number>(SUPPLIED.map(([el, xp]) => [el, xp]))
 
 /** A supplied GW1 figure, or null where there is none. */
@@ -133,6 +177,9 @@ export function suppliedXp(element: number | null | undefined, gw: number): numb
 
 /** How many players this covers — the /debug page reports it. */
 export const SUPPLIED_XP_COUNT = SUPPLIED.length
+/** Split out so the data notes can name each group rather than one total. */
+export const SUPPLIED_XP_PROMOTED_COUNT = PROMOTED.length
+export const SUPPLIED_XP_FLOOR_COUNT = BELOW_FLOOR.length
 
 /** True when this player's figure for this gameweek is the supplied one
  *  rather than ours. Kept as its own question rather than a field on
