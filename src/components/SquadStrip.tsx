@@ -133,15 +133,29 @@ export function SquadStrip() {
           alt=""
           loading="lazy"
           onError={(e) => { e.currentTarget.style.display = 'none' }}
-          className="absolute inset-0 -z-10 size-full object-cover object-center opacity-25"
+          className="absolute inset-0 -z-10 size-full object-cover object-center opacity-35 md:opacity-45"
         />
         {/* Scrim on both edges, not just the left. The banner is 1392x164 on a
             desktop, so any photo crops to a thin strip of whatever happened to
             be in the middle of it — measured with the app screenshot in place,
             that was a row of fixture chips sitting directly under the two
             buttons. Fading in from both sides keeps the text end and the
-            button end clean and leaves the picture as texture in between. */}
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-bg-0 via-bg-0/55 to-bg-0" />
+            button end clean and leaves the picture as texture in between.
+
+            The source is a dark-theme screenshot, so it arrives at a mean
+            luma of 62 and then gets knocked back twice more by the opacity
+            and this scrim — which read as almost black. The file itself is
+            now lifted to 115, and both this and the opacity are looser to
+            match. The left third stays fully scrimmed, so the headline's
+            contrast is untouched by any of it. */}
+        <div className="absolute inset-0 -z-10 hidden bg-gradient-to-r from-bg-0 via-bg-0/40 to-bg-0 md:block" />
+        {/* Phones get a flat wash instead. The banner is 358x230 there rather
+            than a thin strip, so the photo fills a near-square box and a
+            left-to-right fade leaves the middle — which is where the body copy
+            and both buttons are — completely exposed. Measured at 390 with the
+            fade only: "Build a fifteen" sat over a player's name and two
+            fixture chips. */}
+        <div className="absolute inset-0 -z-10 bg-bg-0/72 md:hidden" />
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
           <div className="min-w-0 flex-1">
             <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-[0.14em] text-accent uppercase">
