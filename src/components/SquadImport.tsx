@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Icon } from './Icon'
 import { TeamBadge } from './badges'
 import { matchSquad, squadProblems, normName, levenshtein, type SlotMatch } from '../lib/squadMatch'
+import { validXI } from '../lib/planner'
 import { readSquadScreenshot, type ShotCard } from '../lib/squadShot'
 import { teamLabel } from '../lib/util'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
@@ -26,11 +27,19 @@ const ROW_LABEL = ['Goalkeeper', 'Defenders', 'Midfielders', 'Forwards', 'Bench'
 
 type Stage = 'pick' | 'reading' | 'confirm'
 
+/** The squad, and the way the picture had it set out. */
+export interface ImportedSquad {
+  /** All fifteen, in pitch reading order. */
+  squad: number[]
+  /** The starting eleven and the bench, when the picture said which was which. */
+  lineup: { xi: number[]; bench: number[] } | null
+}
+
 export function SquadImport({ pool, fixtureEase, gw, onApply, onClose }: {
   pool: RatingRow[]
   fixtureEase: FixtureEaseRow[]
   gw: number
-  onApply: (elements: number[]) => void
+  onApply: (imported: ImportedSquad) => void
   onClose: () => void
 }) {
   const [stage, setStage] = useState<Stage>('pick')
@@ -76,6 +85,35 @@ export function SquadImport({ pool, fixtureEase, gw, onApply, onClose }: {
     return [...m.entries()].sort((a, b) => a[0] - b[0])
   }, [slots])
   const rowCount = byRow.length
+
+  /* Who starts, taken from where they stood on the pitch.
+   *
+   * Without this the builder was handed fifteen names in a heap and picked its
+   * own best-rated legal eleven, which put a reader's benched player in the
+   * side. The picture already says it: the last row is the bench and the four
+   * above it are the eleven. That is not a suggestion to be improved on — it
+   * is the team the reader picked, and the whole point of importing it.
+   *
+   * One difference in convention. The FPL app draws the reserve keeper first
+   * on its bench; here the bench is ordered by substitution priority, so the
+   * keeper goes last and the three outfield reserves keep the order the app
+   * drew them in. */
+  const lineup = useMemo(() => {
+    if (rowCount !== 5 || picks.length !== 15 || picks.some((p) => !p)) return null
+    const el = (i: number) => Number((picks[i] as RatingRow).element)
+    const xi = byRow.slice(0, 4).flatMap(([, idxs]) => idxs.map(el))
+    const benchRow = byRow[4][1].map(el)
+    if (xi.length !== 11 || benchRow.length !== 4) return null
+    const posOf = (e: number) => String(picks.find((p) => Number(p?.element) === e)?.position ?? '')
+    // A shape our own position data says is illegal means we read a row wrong
+    // or disagree with FPL about someone's position. Better to hand back
+    // nothing and let the builder auto-pick than to store a broken eleven.
+    if (!validXI(xi, posOf as never)) return null
+    const gk = benchRow.filter((e) => posOf(e) === 'GKP')
+    const out = benchRow.filter((e) => posOf(e) !== 'GKP')
+    if (gk.length !== 1) return null
+    return { xi, bench: [...out, ...gk] }
+  }, [byRow, picks, rowCount])
 
   return createPortal(
     <div className="fixed inset-0 z-[220] grid place-items-center bg-black/70 p-3 backdrop-blur-sm" onClick={onClose}>
@@ -189,7 +227,7 @@ export function SquadImport({ pool, fixtureEase, gw, onApply, onClose }: {
               </button>
               <button
                 disabled={!canApply}
-                onClick={() => onApply((picks.filter(Boolean) as RatingRow[]).map((p) => Number(p.element)))}
+                onClick={() => onApply({ squad: (picks.filter(Boolean) as RatingRow[]).map((p) => Number(p.element)), lineup })}
                 className="min-h-9 rounded-lg border border-accent bg-accent-soft px-4 text-[13px] font-bold text-accent transition-colors enabled:hover:brightness-110 disabled:cursor-not-allowed disabled:border-line-mid disabled:bg-transparent disabled:text-ink-3"
               >
                 Use this squad

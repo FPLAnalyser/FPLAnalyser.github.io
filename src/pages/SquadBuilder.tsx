@@ -15,7 +15,7 @@ import { Pitch, PitchCard, BenchSpine, CARD_W } from '../components/Pitch'
 import { PlayerCardSheet } from '../components/PlayerCardSheet'
 import { DutyBadges, DutyLegend, dutiesOf } from '../components/DutyBadges'
 import { SquadRatingSheet, squadNarrative } from '../components/SquadRatingSheet'
-import { SquadImport } from '../components/SquadImport'
+import { SquadImport, type ImportedSquad } from '../components/SquadImport'
 import { useCore } from '../lib/useData'
 import { tapHaptic } from '../lib/native'
 import { rasterise } from '../lib/capture'
@@ -206,6 +206,10 @@ export default function SquadBuilder() {
   const [shareOpen, setShareOpen] = useState(false)
   const [ratingOpen, setRatingOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  /* The eleven a screenshot arrived with. Held here rather than in the modal
+     because the planner needs it after the modal has gone, and dropped the
+     moment the squad stops matching it — see `seed` in usePlanner. */
+  const [importedXI, setImportedXI] = useState<{ xi: number[]; bench: number[] } | null>(null)
   // Transfers run through the list beside the board: sell from the pitch and
   // the empty place waits to be filled, or pick the player coming in first
   // and choose who makes way for him.
@@ -288,7 +292,7 @@ export default function SquadBuilder() {
   const complete = total === 15 && SLOTS.every((s) => countByPos[s.pos] === s.count)
   const valid = complete && spent <= BUDGET + 1e-9
 
-  const planner = usePlanner({ base: picked, byEl, startGw: buildGw, fixtureEase })
+  const planner = usePlanner({ base: picked, byEl, startGw: buildGw, fixtureEase, seed: importedXI })
   // The board's week drives what the list is for: before the fifteen exists
   // it's an add list, after it's the transfer market for the week on screen.
   const plannerSquad = complete && planner.week ? planner.squad : picked
@@ -665,7 +669,11 @@ export default function SquadBuilder() {
       {importOpen && (
         <SquadImport
           pool={pool} fixtureEase={fixtureEase} gw={buildGw}
-          onApply={(els) => { setImportOpen(false); setNote(null); tapHaptic('medium'); persist(els) }}
+          onApply={(r: ImportedSquad) => {
+            setImportOpen(false); setNote(null); tapHaptic('medium')
+            setImportedXI(r.lineup)
+            persist(r.squad)
+          }}
           onClose={() => setImportOpen(false)}
         />
       )}

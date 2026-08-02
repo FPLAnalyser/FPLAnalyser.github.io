@@ -66,11 +66,15 @@ export interface Planner {
   fill: (inEl: number) => void
 }
 
-export function usePlanner({ base, byEl, startGw, fixtureEase }: {
+export function usePlanner({ base, byEl, startGw, fixtureEase, seed }: {
   base: number[]
   byEl: Map<number, RatingRow>
   startGw: number
   fixtureEase: FixtureEaseRow[]
+  /** A lineup to open the first week with instead of auto-picking one —
+   *  a squad imported from a screenshot arrives already set out, and
+   *  improving on it would silently contradict the picture it came from. */
+  seed?: { xi: number[]; bench: number[] } | null
 }): Planner {
   const posOf = (el: number) => String(byEl.get(el)?.position ?? 'MID') as Pos
   const ratingOf = (el: number) => (num(byEl.get(el) ?? {}, 'season_overall_score') ?? 0) * 20
@@ -110,7 +114,19 @@ export function usePlanner({ base, byEl, startGw, fixtureEase }: {
     const squad = squadAt(state, gw)
     const prevGw = Object.keys(state.weeks).map(Number).filter((g) => g < gw).sort((a, b) => b - a)[0]
     const prev = prevGw != null ? state.weeks[prevGw] : undefined
-    const week: WeekPlan = prev && prev.xi.length === 11 && [...prev.xi, ...prev.bench].every((e) => squad.includes(e))
+    /* An imported lineup only applies to the week it was imported for, and
+     * only while it is still describing this exact fifteen — one transfer in
+     * the builder and it is a picture of a squad that no longer exists. */
+    const seeded = gw === startGw && seed && seed.xi.length === 11 && seed.bench.length === 4
+      && [...seed.xi, ...seed.bench].every((e) => squad.includes(e))
+      && squad.every((e) => seed.xi.includes(e) || seed.bench.includes(e))
+      ? seed : null
+    const week: WeekPlan = seeded
+      // Captaincy is the one thing the picture is not read for, so it is still
+      // the best two of the eleven the reader actually picked.
+      ? { transfers: [], xi: [...seeded.xi], bench: [...seeded.bench], chip: null,
+          ...(({ captain, vice }) => ({ captain, vice }))(autoLineup(seeded.xi, posOf, ratingOf)) }
+      : prev && prev.xi.length === 11 && [...prev.xi, ...prev.bench].every((e) => squad.includes(e))
       ? { transfers: [], xi: [...prev.xi], bench: [...prev.bench], captain: prev.captain, vice: prev.vice, chip: null }
       : { transfers: [], ...autoLineup(squad, posOf, ratingOf), chip: null }
     persist({ ...state, weeks: { ...state.weeks, [gw]: week } })

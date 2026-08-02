@@ -281,7 +281,21 @@ worth keeping, because most of it was arrived at by being wrong first:
 - **Three UI probes lied before the model was called directly**, which is the
   same lesson as the promoted-club xP work. Stack the crops and look at them.
 
-Three things the first real-world use turned up, all now fixed:
+Four things the first real-world use turned up, all now fixed:
+
+- **The imported squad arrived as a heap of fifteen names.** The builder then
+  ran `autoLineup` over it and picked its own best-rated legal eleven, so a
+  reader's benched players started: on the test screenshot Collins and
+  Szoboszlai were promoted and Cherki and Fofana dropped. The picture already
+  says who starts — the last pitch row is the bench and the four above it are
+  the eleven — so the reader now hands that lineup back and `usePlanner` opens
+  the first week with it instead of auto-picking. The seed only applies to the
+  week it was imported for and only while it still describes that exact
+  fifteen; one transfer in the builder and it is a picture of a squad that no
+  longer exists. One convention differs: the FPL app draws the reserve keeper
+  first, while the bench here is ordered by substitution priority, so the
+  keeper moves to the end and the three outfield reserves keep their drawn
+  order.
 
 - **The app truncates long names on the pitch** — "Dewsbur…", "B.Fernand…" —
   and full-string distance charges a truncation five edits for letters the app
