@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Personalised dashboard — three directions</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Archivo+Black&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-0:#000;--bg-1:#070605;--s1:#16130e;--s2:#201b13;--s3:#2a2318;
+  --ink:#f4efe3;--ink2:#b3ab99;--ink3:#7d7666;
+  --line:#241f17;--line-mid:#332b1f;--line-strong:#4a3f2c;
+  --accent:#c9a227;--accent-2:#e2c06a;--accent-soft:rgba(201,162,39,.13);
+  --good:#3ddc7a;--warn:#e8b04a;--bad:#f0736f;--info:#6ea8ff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg-0);color:var(--ink);font:400 15px/1.5 'Manrope',system-ui,sans-serif;padding:0 0 80px}
+.wrap{max-width:1400px;margin:0 auto;padding:0 16px}
+h1,h2,h3{font-weight:800;letter-spacing:-.01em}
+.display{font-family:'Archivo Black',sans-serif;text-transform:uppercase;letter-spacing:-.01em;font-weight:400}
+.sec{border-top:1px solid var(--line);margin-top:56px;padding-top:28px}
+.sec-k{font:800 10px/1 'Manrope';letter-spacing:.16em;text-transform:uppercase;color:var(--accent-2);margin-bottom:8px}
+.sec h2{font-size:24px;margin-bottom:6px}
+.sec p.lede{color:var(--ink2);font-size:14px;max-width:70ch;margin-bottom:22px}
+.frames{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
+.phone{width:390px;border:1px solid var(--line-mid);border-radius:26px;overflow:hidden;background:var(--bg-1);flex:0 0 auto}
+.desk{flex:1 1 620px;min-width:340px;border:1px solid var(--line-mid);border-radius:14px;overflow:hidden;background:var(--bg-1)}
+.cap{font:700 11px/1 'Manrope';letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);padding:10px 14px;border-bottom:1px solid var(--line);background:var(--s1)}
+.pad{padding:14px}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:14px}
+.k{font:800 10px/1 'Manrope';letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.num{font-family:'Archivo Black',sans-serif;font-weight:400;color:var(--accent-2)}
+.pill{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line-mid);border-radius:999px;padding:4px 10px;font:700 11px/1 'Manrope';color:var(--ink2)}
+.pill.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-2)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border-radius:11px;padding:11px 15px;font:800 13px/1 'Manrope';border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent-2)}
+.btn.ghost{border-color:var(--line-mid);background:transparent;color:var(--ink2)}
+.dot{width:7px;height:7px;border-radius:99px;flex:0 0 auto;margin-top:6px}
+.bar{height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.bar > i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.note{border-left:2px solid var(--accent);padding:2px 0 2px 12px;color:var(--ink2);font-size:13.5px;margin:16px 0 0;max-width:78ch}
+.tag{font:800 9px/1 'Manrope';letter-spacing:.1em;text-transform:uppercase;padding:3px 6px;border-radius:5px}
+.tag.g{background:rgba(61,220,122,.16);color:var(--good)}
+.tag.w{background:rgba(232,176,74,.18);color:var(--warn)}
+.tag.b{background:rgba(240,115,111,.16);color:var(--bad)}
+.shirt{width:100%;aspect-ratio:1/1.06;border-radius:9px;background:linear-gradient(160deg,#243a2c,#16130e);display:grid;place-items:center;font:800 10px/1 'Manrope';color:var(--ink3)}
+.mini{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.pitchbox{background:linear-gradient(175deg,#1f4a30,#153521);border-radius:12px;padding:12px 10px;display:flex;flex-direction:column;gap:9px}
+.row{display:flex;gap:6px;justify-content:center}
+.pl{flex:0 0 58px;text-align:center}
+.pl .sh{height:36px;border-radius:6px;background:rgba(255,255,255,.14);margin-bottom:3px}
+.pl .nm{font:800 8.5px/1.2 'Manrope';color:#fff;background:rgba(0,0,0,.42);border-radius:4px;padding:2px 1px}
+.acc{border:1px solid var(--line);border-radius:12px;background:var(--s1);overflow:hidden}
+.acc + .acc{margin-top:8px}
+.acch{display:flex;align-items:center;gap:10px;padding:12px 13px}
+.accb{border-top:1px solid var(--line);padding:12px 13px;background:rgba(0,0,0,.25)}
+.chev{margin-left:auto;color:var(--ink3);font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+td,th{padding:6px 4px;text-align:left;border-bottom:1px solid var(--line)}
+th{font:800 9.5px/1 'Manrope';letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.right{text-align:right}
+.verdict{display:flex;align-items:center;gap:14px}
+.ring{width:74px;height:74px;border-radius:99px;flex:0 0 auto;display:grid;place-items:center;
+  background:conic-gradient(var(--accent) 0 69%, rgba(255,255,255,.07) 69% 100%);position:relative}
+.ring::after{content:"";position:absolute;inset:7px;border-radius:99px;background:var(--s1)}
+.ring b{position:relative;z-index:1;font-family:'Archivo Black',sans-serif;font-weight:400;font-size:24px;color:var(--accent-2)}
+.lead{font-size:13.5px;color:var(--ink2)}
+.lead b{color:var(--ink)}
+</style></head><body>
+<div class="wrap">
+
+  <div style="padding:34px 0 4px">
+    <div class="sec-k">FPL Analyser — layout study</div>
+    <h1 class="display" style="font-size:34px">Make the squad the subject</h1>
+    <p class="lede" style="margin-top:10px">Three directions for the same problem: people are building draft squads and want them judged. Measured today — the Squad Builder page is <b>9,417px on a phone, 11.2 screens</b>, the full rating breakdown is behind a modal, and <b>424 lines of finished analysis</b> (<code>SquadInsights</code>, <code>TeamPlanning</code>) are mounted on no page at all.</p>
+  </div>
+
+  <!-- ══════════════ A ══════════════ -->
+  <div class="sec">
+    <div class="sec-k">Direction A — your idea 1</div>
+    <h2>Home becomes the dashboard</h2>
+    <p class="lede">The squad lives on the left and never leaves; every tile on the right is an analysis <em>of it</em> rather than a section of a website. Strongest personalisation. The cost is the empty state: every first visit, and every visit from search, opens on a page asking for something the visitor hasn't got.</p>
+    <div class="frames">
+
+      <div class="desk">
+        <div class="cap">Desktop · has a squad</div>
+        <div class="pad" style="display:grid;grid-template-columns:300px 1fr;gap:14px">
+          <div class="card" style="padding:12px">
+            <div class="k" style="margin-bottom:9px">Your squad · GW1</div>
+            <div class="pitchbox" style="margin-bottom:10px">
+              <div class="row"><div class="pl"><div class="sh"></div><div class="nm">A.Becker</div></div></div>
+              <div class="row"><div class="pl"><div class="sh"></div><div class="nm">Lacroix</div></div><div class="pl"><div class="sh"></div><div class="nm">Senesi</div></div><div class="pl"><div class="sh"></div><div class="nm">Guéhi</div></div><div class="pl"><div class="sh"></div><div class="nm">Fofana</div></div></div>
+              <div class="row"><div class="pl"><div class="sh"></div><div class="nm">Saka</div></div><div class="pl"><div class="sh"></div><div class="nm">Wirtz</div></div><div class="pl"><div class="sh"></div><div class="nm">Cherki</div></div><div class="pl"><div class="sh"></div><div class="nm">Bruno G.</div></div></div>
+              <div class="row"><div class="pl"><div class="sh"></div><div class="nm">Thiago Ⓒ</div></div><div class="pl"><div class="sh"></div><div class="nm">J.Pedro</div></div></div>
+            </div>
+            <div class="grid2">
+              <div class="card" style="padding:9px;text-align:center"><div class="num" style="font-size:22px">69</div><div class="k" style="margin-top:2px">Squad</div></div>
+              <div class="card" style="padding:9px;text-align:center"><div class="num" style="font-size:22px">47.1</div><div class="k" style="margin-top:2px">GW1 xP</div></div>
+            </div>
+            <div style="display:flex;gap:7px;margin-top:10px"><span class="btn ghost" style="flex:1;padding:9px">Edit</span><span class="btn" style="flex:1;padding:9px">Share</span></div>
+          </div>
+          <div>
+            <div class="grid2" style="gap:10px">
+              <div class="card" style="padding:12px"><div class="k">Squad analysis</div><div style="font:800 15px/1.2 'Manrope';margin:6px 0 4px">Thin at the back</div><div class="lead">Your defence rates <b>61</b> — bottom quartile. Two of your five start under 60% of games.</div></div>
+              <div class="card" style="padding:12px"><div class="k">Horizon scan</div><div style="font:800 15px/1.2 'Manrope';margin:6px 0 4px">GW4–8 is the wall</div><div class="lead">Six of your eleven hit red fixtures together. <b>Chelsea x3</b> is the pinch point.</div></div>
+              <div class="card" style="padding:12px"><div class="k">Chip analysis</div><div style="font:800 15px/1.2 'Manrope';margin:6px 0 4px">Bench Boost → GW7</div><div class="lead">Your bench projects <b>14.2</b> that week, the season's high.</div></div>
+              <div class="card" style="padding:12px"><div class="k">Captaincy</div><div style="font:800 15px/1.2 'Manrope';margin:6px 0 4px">Thiago, then Saka</div><div class="lead">TOT (H) is the softest defence your XI faces in GW1.</div></div>
+              <div class="card" style="padding:12px"><div class="k">Template risk</div><div style="font:800 15px/1.2 'Manrope';margin:6px 0 4px">You are 71% template</div><div class="lead">Eight of your fifteen are owned by 25%+. Two genuine differentials.</div></div>
+              <div class="card" style="padding:12px"><div class="k">Value</div><div style="font:800 15px/1.2 'Manrope';margin:6px 0 4px">£0.5m idle</div><div class="lead">Upgrading <b>Collins → Rodon</b> frees £0.6m for a 7.5 mid.</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="phone">
+        <div class="cap">Phone · no squad yet — the empty state</div>
+        <div class="pad">
+          <div class="card" style="padding:16px;text-align:center">
+            <div class="k">Start here</div>
+            <div class="display" style="font-size:21px;margin:8px 0 6px">Rate my squad</div>
+            <p class="lead" style="margin-bottom:13px">Import a screenshot from the FPL app, or build a fifteen. Everything below is then about <em>your</em> team.</p>
+            <div style="display:flex;gap:8px"><span class="btn" style="flex:1">Import screenshot</span><span class="btn ghost" style="flex:1">Build one</span></div>
+          </div>
+          <div style="margin-top:12px" class="grid2">
+            <div class="card" style="padding:12px;opacity:.42"><div class="k">Squad analysis</div><div class="lead" style="margin-top:6px">— locked —</div></div>
+            <div class="card" style="padding:12px;opacity:.42"><div class="k">Horizon scan</div><div class="lead" style="margin-top:6px">— locked —</div></div>
+            <div class="card" style="padding:12px;opacity:.42"><div class="k">Chip analysis</div><div class="lead" style="margin-top:6px">— locked —</div></div>
+            <div class="card" style="padding:12px;opacity:.42"><div class="k">Captaincy</div><div class="lead" style="margin-top:6px">— locked —</div></div>
+          </div>
+          <p class="lead" style="margin-top:12px;color:var(--ink3)">Six of the eight tiles are dead on a first visit. That is the whole objection to this direction.</p>
+        </div>
+      </div>
+    </div>
+    <p class="note"><b>Verdict.</b> Beautiful for a returning manager, hostile to a new one — and the front page is also the door search engines walk through. Keep the idea; do not put it on <code>/</code> alone.</p>
+  </div>
+
+  <!-- ══════════════ B ══════════════ -->
+  <div class="sec">
+    <div class="sec-k">Direction B — your idea 2</div>
+    <h2>The Squad Builder becomes the workshop</h2>
+    <p class="lede">The verdict sits directly under the board, never in a modal, and each analysis is an expandable tile. Nothing is duplicated, nothing needs a new empty state, and it is where people already are when they are doing the job.</p>
+    <div class="frames">
+      <div class="phone">
+        <div class="cap">Phone · verdict first, depth on demand</div>
+        <div class="pad">
+          <div class="pitchbox" style="margin-bottom:11px">
+            <div class="row"><div class="pl"><div class="sh"></div><div class="nm">A.Becker</div></div></div>
+            <div class="row"><div class="pl"><div class="sh"></div><div class="nm">Lacroix</div></div><div class="pl"><div class="sh"></div><div class="nm">Senesi</div></div><div class="pl"><div class="sh"></div><div class="nm">Guéhi</div></div><div class="pl"><div class="sh"></div><div class="nm">Fofana</div></div></div>
+            <div class="row"><div class="pl"><div class="sh"></div><div class="nm">Saka</div></div><div class="pl"><div class="sh"></div><div class="nm">Wirtz</div></div><div class="pl"><div class="sh"></div><div class="nm">Cherki</div></div><div class="pl"><div class="sh"></div><div class="nm">Bruno G.</div></div></div>
+            <div class="row"><div class="pl"><div class="sh"></div><div class="nm">Thiago Ⓒ</div></div><div class="pl"><div class="sh"></div><div class="nm">J.Pedro</div></div></div>
+          </div>
+
+          <div class="card" style="padding:13px">
+            <div class="verdict">
+              <div class="ring"><b>69</b></div>
+              <div>
+                <div style="font:800 16px/1.15 'Manrope'">Sharp up top, thin at the back</div>
+                <div class="lead" style="margin-top:4px">Better than <b>78%</b> of squads built here. Projected <b>47.1</b> in GW1.</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:11px;flex-wrap:wrap">
+              <span class="tag g">Attack 81</span><span class="tag w">Defence 61</span><span class="tag g">Value 74</span><span class="tag b">Fixtures 48</span>
+            </div>
+          </div>
+
+          <div style="margin-top:11px">
+            <div class="acc">
+              <div class="acch"><span class="dot" style="background:var(--bad)"></span><div><div style="font:800 13.5px/1.2 'Manrope'">Squad analysis</div><div class="lead" style="font-size:12.5px">Your defence rates 61 — bottom quartile</div></div><span class="chev">▾</span></div>
+              <div class="accb">
+                <table>
+                  <tr><th>Line</th><th class="right">Rating</th><th class="right">vs field</th></tr>
+                  <tr><td>Goalkeeper</td><td class="right">72</td><td class="right" style="color:var(--good)">+6</td></tr>
+                  <tr><td>Defence</td><td class="right">61</td><td class="right" style="color:var(--bad)">−13</td></tr>
+                  <tr><td>Midfield</td><td class="right">79</td><td class="right" style="color:var(--good)">+9</td></tr>
+                  <tr><td>Forwards</td><td class="right">81</td><td class="right" style="color:var(--good)">+11</td></tr>
+                </table>
+                <div class="lead" style="margin-top:9px">Lacroix and Collins both start under 60% of games. The cheapest fix that keeps your XI intact is <b>Collins → Rodon (−£0.5m)</b>.</div>
+              </div>
+            </div>
+            <div class="acc"><div class="acch"><span class="dot" style="background:var(--warn)"></span><div><div style="font:800 13.5px/1.2 'Manrope'">Horizon scan</div><div class="lead" style="font-size:12.5px">GW4–8 is the wall — six of eleven turn red together</div></div><span class="chev">▸</span></div></div>
+            <div class="acc"><div class="acch"><span class="dot" style="background:var(--good)"></span><div><div style="font:800 13.5px/1.2 'Manrope'">Chip analysis</div><div class="lead" style="font-size:12.5px">Bench Boost projects best in GW7</div></div><span class="chev">▸</span></div></div>
+            <div class="acc"><div class="acch"><span class="dot" style="background:var(--ink3)"></span><div><div style="font:800 13.5px/1.2 'Manrope'">Template risk</div><div class="lead" style="font-size:12.5px">71% template · two real differentials</div></div><span class="chev">▸</span></div></div>
+            <div class="acc"><div class="acch"><span class="dot" style="background:var(--ink3)"></span><div><div style="font:800 13.5px/1.2 'Manrope'">Captaincy</div><div class="lead" style="font-size:12.5px">Thiago, then Saka</div></div><span class="chev">▸</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="desk">
+        <div class="cap">Desktop · board left, verdict and tiles right — one screen, no scrolling for the answer</div>
+        <div class="pad" style="display:grid;grid-template-columns:1fr 340px;gap:14px">
+          <div class="pitchbox">
+            <div class="row"><div class="pl"><div class="sh"></div><div class="nm">A.Becker</div></div></div>
+            <div class="row"><div class="pl"><div class="sh"></div><div class="nm">Lacroix</div></div><div class="pl"><div class="sh"></div><div class="nm">Senesi</div></div><div class="pl"><div class="sh"></div><div class="nm">Guéhi</div></div><div class="pl"><div class="sh"></div><div class="nm">Fofana</div></div></div>
+            <div class="row"><div class="pl"><div class="sh"></div><div class="nm">Saka</div></div><div class="pl"><div class="sh"></div><div class="nm">Wirtz</div></div><div class="pl"><div class="sh"></div><div class="nm">Cherki</div></div><div class="pl"><div class="sh"></div><div class="nm">Bruno G.</div></div></div>
+            <div class="row"><div class="pl"><div class="sh"></div><div class="nm">Thiago Ⓒ</div></div><div class="pl"><div class="sh"></div><div class="nm">J.Pedro</div></div></div>
+            <div class="row" style="margin-top:6px;opacity:.72"><div class="pl"><div class="sh"></div><div class="nm">Phillips</div></div><div class="pl"><div class="sh"></div><div class="nm">Collins</div></div><div class="pl"><div class="sh"></div><div class="nm">Szobo.</div></div><div class="pl"><div class="sh"></div><div class="nm">Gyökeres</div></div></div>
+          </div>
+          <div>
+            <div class="card" style="padding:13px">
+              <div class="verdict"><div class="ring"><b>69</b></div><div><div style="font:800 15px/1.15 'Manrope'">Sharp up top, thin at the back</div><div class="lead" style="margin-top:4px">Better than <b>78%</b> of squads built here</div></div></div>
+            </div>
+            <div class="acc" style="margin-top:10px"><div class="acch"><span class="dot" style="background:var(--bad)"></span><div style="font:800 13px/1.2 'Manrope'">Squad analysis</div><span class="chev">▾</span></div>
+              <div class="accb"><div class="k" style="margin-bottom:7px">Defence 61 · bottom quartile</div><div class="bar"><i style="width:61%"></i></div><div class="lead" style="margin-top:8px">Collins → Rodon frees £0.5m and lifts the line to 68.</div></div></div>
+            <div class="acc"><div class="acch"><span class="dot" style="background:var(--warn)"></span><div style="font:800 13px/1.2 'Manrope'">Horizon scan</div><span class="chev">▸</span></div></div>
+            <div class="acc"><div class="acch"><span class="dot" style="background:var(--good)"></span><div style="font:800 13px/1.2 'Manrope'">Chip analysis</div><span class="chev">▸</span></div></div>
+            <div class="acc"><div class="acch"><span class="dot" style="background:var(--ink3)"></span><div style="font:800 13px/1.2 'Manrope'">Template risk</div><span class="chev">▸</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note"><b>Verdict.</b> Cheapest to build, no new empty state, and it fixes the actual measured problem — the verdict is currently a modal at the bottom of an eleven-screen page. This is the one to do first.</p>
+  </div>
+
+  <!-- ══════════════ C ══════════════ -->
+  <div class="sec">
+    <div class="sec-k">Direction C — the recommendation</div>
+    <h2>Home knows whether you have a squad; the builder holds the depth</h2>
+    <p class="lede">Not a third design — B, plus a home page with two states. No squad and it is today's front door with one strong invitation. A squad and the top of home becomes the verdict and the three things to fix, with the tiles below reframed as analyses of <em>your</em> team. Personalisation without an empty dashboard, and without two places showing your XI.</p>
+    <div class="frames">
+      <div class="phone">
+        <div class="cap">Phone · home, first visit</div>
+        <div class="pad">
+          <div class="card" style="padding:15px;background:linear-gradient(160deg,rgba(201,162,39,.14),transparent)">
+            <div class="k">Gameweek 1 · deadline Fri 18:30</div>
+            <div class="display" style="font-size:20px;margin:7px 0 6px">Get your draft rated</div>
+            <p class="lead" style="margin-bottom:12px">Import a screenshot from the FPL app — it reads all fifteen in about eight seconds — or build one here.</p>
+            <div style="display:flex;gap:8px"><span class="btn" style="flex:1">Import screenshot</span><span class="btn ghost" style="flex:1">Build a fifteen</span></div>
+          </div>
+          <div class="grid2" style="margin-top:11px">
+            <div class="card" style="padding:11px"><div class="k">Plan</div><div style="font:800 14px/1.1 'Manrope';margin:5px 0 3px">Fixtures</div><div class="lead" style="font-size:12.5px">Rotation, xG and clean-sheet odds</div></div>
+            <div class="card" style="padding:11px"><div class="k">Explore</div><div style="font:800 14px/1.1 'Manrope';margin:5px 0 3px">Players</div><div class="lead" style="font-size:12.5px">Form, value and shot maps</div></div>
+          </div>
+          <p class="lead" style="margin-top:11px;color:var(--ink3)">Unchanged from today, plus one invitation at the top. Nothing is locked and nothing is empty.</p>
+        </div>
+      </div>
+
+      <div class="phone">
+        <div class="cap">Phone · home, once you have a squad</div>
+        <div class="pad">
+          <div class="card" style="padding:13px">
+            <div class="verdict"><div class="ring"><b>69</b></div>
+              <div><div style="font:800 15.5px/1.15 'Manrope'">Your squad, GW1</div><div class="lead" style="margin-top:3px">Sharp up top, thin at the back. Projected <b>47.1</b>.</div></div></div>
+            <div class="mini" style="margin-top:11px">
+              <div class="shirt">A.BEC</div><div class="shirt">SEN</div><div class="shirt">SAKA</div><div class="shirt">THI Ⓒ</div><div class="shirt">+11</div>
+            </div>
+          </div>
+          <div class="card" style="padding:12px;margin-top:10px">
+            <div class="k" style="margin-bottom:8px">Three things to fix</div>
+            <div style="display:flex;gap:9px;margin-bottom:9px"><span class="dot" style="background:var(--bad)"></span><div class="lead"><b>Defence rates 61.</b> Collins → Rodon frees £0.5m and lifts the line to 68.</div></div>
+            <div style="display:flex;gap:9px;margin-bottom:9px"><span class="dot" style="background:var(--warn)"></span><div class="lead"><b>GW4–8 is a wall.</b> Six of your eleven turn red in the same window.</div></div>
+            <div style="display:flex;gap:9px"><span class="dot" style="background:var(--ink3)"></span><div class="lead"><b>71% template.</b> Two genuine differentials in the fifteen.</div></div>
+            <div style="margin-top:11px"><span class="btn ghost" style="width:100%">Open the workshop →</span></div>
+          </div>
+          <div class="grid2" style="margin-top:11px">
+            <div class="card" style="padding:11px"><div class="k">For your squad</div><div style="font:800 14px/1.1 'Manrope';margin:5px 0 3px">Fixtures</div><div class="lead" style="font-size:12.5px">Your rotation risk, GW1–19</div></div>
+            <div class="card" style="padding:11px"><div class="k">For your squad</div><div style="font:800 14px/1.1 'Manrope';margin:5px 0 3px">Scouting</div><div class="lead" style="font-size:12.5px">Upgrades on your weakest line</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note"><b>Why this one.</b> The squad is the personalisation; everything else derives from it. Home carries the <em>verdict</em>, the builder carries the <em>work</em>, and neither has to pretend the other does not exist. It is also the only version that survives a first-time visitor arriving from Google.</p>
+  </div>
+
+  <div class="sec">
+    <div class="sec-k">Cost, honestly</div>
+    <h2>What each one takes, 19 days out</h2>
+    <div class="grid3" style="margin-top:14px">
+      <div class="card" style="padding:14px"><div class="tag w" style="display:inline-block;margin-bottom:8px">B — do first</div><div class="lead">Mostly re-arrangement. <code>SquadRatingSheet</code> comes out of its modal, <code>SquadInsights</code> and <code>TeamPlanning</code> get mounted at last, the lab's contents become the tiles. Little new logic.</div></div>
+      <div class="card" style="padding:14px"><div class="tag g" style="display:inline-block;margin-bottom:8px">C — then this</div><div class="lead">One new component and a branch on "do we have fifteen". Reuses B's verdict card wholesale.</div></div>
+      <div class="card" style="padding:14px"><div class="tag b" style="display:inline-block;margin-bottom:8px">A — not before launch</div><div class="lead">Rebuilds the front door and needs an empty state designed for six locked tiles. High risk for the one page every visitor sees.</div></div>
+    </div>
+    <p class="note">Everything above draws on analysis that already exists and mostly is not on screen. The percentile — "better than 78% of squads built here" — is the one genuinely new number, and it needs a distribution to compare against: run the rating over a few thousand generated legal squads once, ship the percentile curve as a static file.</p>
+  </div>
+
+</div>
+</body></html>
