@@ -32,7 +32,7 @@ const POS_ORDER = ['GKP', 'DEF', 'MID', 'FWD'] as const
  * dugout beneath it, and every action on a player one tap away. State lives in
  * usePlanner so the list beside the board can transfer into it.
  */
-export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onSold, squadScore, onOpenSquadRating, partialSquad, onRemovePick, onPickSlot, onAutoPick, footer }: {
+export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onSold, squadScore, onOpenSquadRating, partialSquad, onRemovePick, onPickSlot, footer }: {
   planner: Planner
   byEl: Map<number, RatingRow>
   pool: RatingRow[]
@@ -57,8 +57,6 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
    *  one a mistake could only be fixed from the list. */
   onRemovePick?: (el: number) => void
   onPickSlot?: (pos: 'GKP' | 'DEF' | 'MID' | 'FWD') => void
-  /** Auto pick: build the fifteen when short, best XI when complete. */
-  onAutoPick?: () => void
   /** Squad-level actions (share, clear) — under the bench rather than in a
    *  band of their own above the board, which spent a whole section on two
    *  buttons you only reach for once the fifteen is built. */
@@ -298,9 +296,6 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
               >{CHIP_LABEL[c]}</button>
             )
           })}
-          <button onClick={() => { tapHaptic('medium'); (onAutoPick ?? planner.autoXI)() }} className="ml-auto inline-flex min-h-8 items-center gap-1.5 rounded-full bg-accent px-3 text-xs font-bold text-accent-contrast transition-colors hover:bg-accent-strong">
-            <Icon name="bolt" size={12} /> Auto pick
-          </button>
         </div>
       </div>
 

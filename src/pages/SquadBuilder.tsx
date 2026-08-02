@@ -452,6 +452,18 @@ export default function SquadBuilder() {
             {complete && !valid && <span className="text-[13px] font-semibold text-bad">Over budget by £{Math.abs(remaining).toFixed(1)}m</span>}
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <MetricChips metric={metric} onChange={setMetric} />
+              {/* Auto pick used to sit in the chip row under the board, which
+                  is past fifteen cards on a phone and below the fold on a
+                  laptop — a long way from the empty pitch it exists to fill.
+                  It is the fastest route to a squad, so it goes first in the
+                  row of things you do to the squad as a whole. */}
+              <button
+                onClick={() => { tapHaptic('medium'); (complete ? planner.autoXI : autoPick)() }}
+                title={complete ? 'Pick the best eleven from your fifteen' : 'Fill the rest of your fifteen'}
+                className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-accent px-3 text-[12px] font-bold text-accent-contrast transition-colors hover:bg-accent-strong"
+              >
+                <Icon name="bolt" size={13} /> Auto pick
+              </button>
               {/* Typing fifteen names in is the reason people build a fantasy
                   squad here and then never come back with their real one. */}
               <button onClick={() => setImportOpen(true)} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-line-mid px-3 text-[12px] font-semibold text-ink transition-colors hover:border-line-strong">
@@ -477,7 +489,6 @@ export default function SquadBuilder() {
             partialSquad={picked}
             onRemovePick={remove}
             onPickSlot={(p) => focusMarket(p as Pos)}
-            onAutoPick={complete ? planner.autoXI : autoPick}
             /* Share, Clear and the budget warning now ride in the control row
                above the board — see the comment there. */
             footer={null}
