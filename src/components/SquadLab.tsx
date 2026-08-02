@@ -46,7 +46,10 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
   const model = useXpModel()
   const market = useMarketOdds()
   const profiles = useShotProfiles()
-  const [open, setOpen] = useState<Key | null>('advice')
+  /* Nothing open to begin with. The lead card above the rows is already
+     expanded with its full working, so opening a row as well would put two
+     panels on screen before anybody has tapped anything. */
+  const [open, setOpen] = useState<Key | null>(null)
 
   const engine: Engine = useMemo(
     () => ({ fixtureEase, avail, model, market, profiles }),
@@ -68,6 +71,117 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
   if (!template) return null
   const toggle = (k: Key) => { tapHaptic('select'); setOpen((o) => (o === k ? null : k)) }
 
+  /* Six reads, ranked, then the first one gets the top of the panel.
+   *
+   * The lab used to be six equal 98px tiles with a number in each, which asks
+   * the reader to work out which of six things matters this week. It always
+   * knew — every read carries its own tone — it just never said. `rank` is the
+   * tone (a risk beats an opportunity beats an all-clear) and then a fixed
+   * order for ties, running from the decision closest to the deadline to the
+   * one furthest from it. */
+  const reads: Read[] = [
+    {
+      key: 'advice',
+      label: 'The Analyser',
+      value: advice ? (advice.verdict === 'hold' ? 'Hold' : `+${advice.net.toFixed(1)}`) : '—',
+      unit: advice ? (advice.verdict === 'hold' ? 'bank it' : `${advice.moves.length} ${advice.moves.length === 1 ? 'move' : 'moves'}`) : '',
+      head: advice ? advice.headline : 'Transfers',
+      sub: advice ? advice.detail : 'needs a full fifteen',
+      tone: advice?.verdict === 'move' ? 'accent' : 'good',
+      rank: advice?.verdict === 'move' ? 1 : 0,
+    },
+    {
+      key: 'captain',
+      label: 'Captain',
+      value: captain ? String(captain.rows[0].row.web_name) : '—',
+      // No unit: the headline is already "X, 0.7 clear of Y", so "0.7 CLEAR"
+      // under the name repeated the tail of the sentence beside it.
+      unit: '',
+      head: captain ? captain.headline : 'Captain',
+      sub: captain
+        ? (captain.close
+            ? 'Close enough that a late team-sheet could flip it — worth another look before the deadline.'
+            : 'Clear enough that nothing short of an injury should change it.')
+        : 'needs an XI',
+      tone: captain?.close ? 'warn' : 'accent',
+      rank: captain?.close ? 2 : 0,
+    },
+    {
+      key: 'horizon',
+      label: 'Horizon',
+      value: horizon ? `GW${horizon.toughest.gw}` : '—',
+      unit: horizon ? `${horizon.toughest.hard} of 15` : '',
+      head: horizon ? horizon.headline : 'Horizon scan',
+      sub: horizon
+        ? (horizon.toughest.gw - gw >= 2
+            ? `That is ${horizon.toughest.gw - gw} gameweeks away — early enough to be a plan rather than a panic.`
+            : 'That is this week or next, so whatever you do about it you do now.')
+        : 'needs a full squad',
+      tone: horizon && horizon.toughest.hard >= 5 ? 'warn' : 'ink',
+      rank: horizon && horizon.toughest.hard >= 5 ? 2 : 0,
+    },
+    {
+      key: 'chips',
+      label: 'Chips',
+      value: chips ? (chips.best ? (chips.best.chip === 'wildcard' ? 'Wildcard' : `GW${chips.best.gw}`) : 'Hold') : '—',
+      unit: chips?.best ? `+${chips.best.gain.toFixed(0)}` : chips?.weeksLeft != null ? `${chips.weeksLeft} weeks left` : '',
+      head: chips ? chips.headline : 'Chips',
+      sub: chips
+        ? (chips.best
+            ? chips.best.detail
+            : chips.weeksLeft != null && chips.weeksLeft <= 4
+              ? `Only ${chips.weeksLeft} gameweeks left to use your first-half set.`
+              : 'Nothing in range is worth spending one on yet.')
+        : 'needs a full fifteen',
+      tone: chips?.best ? 'accent' : chips && chips.weeksLeft != null && chips.weeksLeft <= 4 ? 'warn' : 'good',
+      rank: chips && chips.weeksLeft != null && chips.weeksLeft <= 4 ? 2 : chips?.best ? 1 : 0,
+    },
+    {
+      key: 'clash',
+      label: 'Clashes',
+      value: horizon ? (horizon.clashes.length ? `−${horizon.clashes.reduce((a, c) => a + c.cost, 0).toFixed(1)}` : 'None') : '—',
+      unit: horizon?.clashes.length ? `${horizon.clashes.length} ${horizon.clashes.length === 1 ? 'fixture' : 'fixtures'}` : '',
+      head: horizon
+        ? (horizon.clashes.length
+            ? `Your own players meet ${horizon.clashes.length === 1 ? 'once' : `${horizon.clashes.length} times`}`
+            : 'No player of yours plays another')
+        : 'Clashes',
+      sub: horizon
+        ? (horizon.clashes.length
+            ? 'A goal from one ends the other’s clean sheet, so the week pays you less than the parts suggest.'
+            : 'Nothing in the next few weeks where one of yours costs another his clean sheet.')
+        : 'needs a full squad',
+      tone: horizon && horizon.clashes.length ? 'warn' : 'good',
+      rank: horizon && horizon.clashes.length ? 1 : 0,
+    },
+    {
+      key: 'template',
+      label: 'Template risk',
+      value: `${template.counts.template} of ${template.rows.length}`,
+      unit: `${template.avgOwn.toFixed(0)}% owned`,
+      head: template.headline,
+      sub: template.tone === 'warn'
+        ? 'A squad this close to the template moves with the crowd — you keep your rank on a bad week and never gain on a good one.'
+        : 'Enough of the field is not in your squad for a good week to move you up.',
+      tone: template.tone === 'warn' ? 'warn' : 'good',
+      rank: template.tone === 'warn' ? 1 : 0,
+    },
+  ]
+  const ordered = [...reads].sort((a, b) => b.rank - a.rank)
+  const lead = ordered[0]
+  const rest = ordered.slice(1)
+
+  /* `bare` drops each panel's own section header when it is the lead card,
+     where the kicker row and the headline above it already say what this is. */
+  const panelFor = (k: Key, bare?: boolean) => (
+    k === 'clash' ? <ClashPanel clashes={horizon?.clashes ?? []} bare={bare} />
+    : k === 'template' ? <TemplatePanel read={template} bare={bare} />
+    : k === 'horizon' ? <HorizonPanel read={horizon} bare={bare} />
+    : k === 'advice' ? <AdvicePanel read={advice} onApply={onApplyMove} bare={bare} />
+    : k === 'captain' ? <CaptainPanel read={captain} gw={gw} bare={bare} />
+    : <ChipsPanel read={chips} bare={bare} />
+  )
+
   return (
     <div className="@container mt-2.5 rounded-2xl border border-line bg-surface-1/60 p-3">
       {/* A title in ink, not an 11px grey uppercase label.
@@ -76,112 +190,86 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
           whatever is above it rather than as the name of the thing itself. */}
       <div className="mb-2.5 flex items-baseline gap-2">
         <h3 className="text-[15px] leading-none font-extrabold text-ink">Squad Lab</h3>
-        <span className="text-[11px] text-ink-3">Tap a tile to open it</span>
+        <span className="text-[11px] text-ink-3">six reads, worst first</span>
       </div>
 
-      {/* Five across only when five across actually fit.
-          These used to be viewport breakpoints, which is the wrong question:
-          the lab does not live in the viewport, it lives in a column that is
-          400px on one screen and 660 on another. On a 1024 laptop the viewport
-          said "large, go to five" and the column handed each tile 70px, so the
-          numbers the lab exists to state were the first thing cut. Measured off
-          the container instead, three roomy tiles over two rows beat five
-          truncated ones on a single line. */}
-      {/* Six tiles, so three across rather than five: five plus one leaves an
-          orphan on its own row, and at 560px five tiles were already handing
-          each one 70px. */}
-      <div className="grid grid-cols-2 gap-2 @[440px]:grid-cols-3">
-        <Tile
-          label="Template" open={open === 'template'} onClick={() => toggle('template')}
-          value={`${template.counts.template} of ${template.rows.length}`}
-          sub={`${template.avgOwn.toFixed(0)}% owned on average`}
-          tone={template.tone === 'warn' ? 'warn' : 'good'}
-        />
-        <Tile
-          label="Horizon" open={open === 'horizon'} onClick={() => toggle('horizon')}
-          value={horizon ? `GW${horizon.toughest.gw}` : '—'}
-          sub={horizon
-            ? `${horizon.toughest.hard} of 15 in a hard game — your toughest of the next ${horizon.weeks.length}`
-            : 'needs a full squad'}
-          tone={horizon && horizon.toughest.hard >= 5 ? 'warn' : 'ink'}
-        />
-        <Tile
-          label="Analyser" open={open === 'advice'} onClick={() => toggle('advice')}
-          value={advice ? (advice.verdict === 'hold' ? 'Hold' : `+${advice.net.toFixed(1)}`) : '—'}
-          sub={advice ? (advice.verdict === 'hold' ? 'no move worth making' : `from ${advice.moves.length} ${advice.moves.length === 1 ? 'move' : 'moves'}`) : 'needs 15 players'}
-          tone={advice?.verdict === 'move' ? 'accent' : 'good'}
-        />
-        <Tile
-          label="Captain" open={open === 'captain'} onClick={() => toggle('captain')}
-          value={captain ? String(captain.rows[0].row.web_name) : '—'}
-          sub={captain ? (captain.close ? `only ${captain.gap.toFixed(1)} clear` : `${captain.gap.toFixed(1)} clear`) : 'needs an XI'}
-          tone={captain?.close ? 'warn' : 'accent'}
-        />
-        <Tile
-          label="Clashes" open={open === 'clash'} onClick={() => toggle('clash')}
-          value={horizon ? (horizon.clashes.length ? `−${horizon.clashes.reduce((a, c) => a + c.cost, 0).toFixed(1)}` : 'None') : '—'}
-          sub={horizon
-            ? (horizon.clashes.length
-                ? `${horizon.clashes.length} ${horizon.clashes.length === 1 ? 'fixture' : 'fixtures'} where your own players meet`
-                : 'no player of yours plays another')
-            : 'needs a full squad'}
-          tone={horizon && horizon.clashes.length ? 'warn' : 'good'}
-        />
-        <Tile
-          label="Chips" open={open === 'chips'} onClick={() => toggle('chips')}
-          value={chips ? (chips.best ? (chips.best.chip === 'wildcard' ? 'Wildcard' : `GW${chips.best.gw}`) : 'Hold') : '—'}
-          sub={chips
-            ? (chips.best
-                ? `${chips.best.label}${chips.best.chip === 'wildcard' ? '' : ` · +${chips.best.gain.toFixed(0)}`}`
-                : chips.weeksLeft != null && chips.weeksLeft <= 4 ? `${chips.weeksLeft} weeks to use your first-half set` : 'none worth playing yet')
-            : 'needs 15 players'}
-          tone={chips?.best ? 'accent' : chips && chips.weeksLeft != null && chips.weeksLeft <= 4 ? 'warn' : 'good'}
-        />
-      </div>
-
-      {open && (
-        <div className="mt-3 border-t border-line pt-3">
-          {open === 'clash' && <ClashPanel clashes={horizon?.clashes ?? []} />}
-          {open === 'template' && <TemplatePanel read={template} />}
-          {open === 'horizon' && <HorizonPanel read={horizon} />}
-          {open === 'advice' && <AdvicePanel read={advice} onApply={onApplyMove} />}
-          {open === 'captain' && <CaptainPanel read={captain} gw={gw} />}
-          {open === 'chips' && <ChipsPanel read={chips} />}
+      {/* The one that matters, open, with its working underneath. */}
+      <div className={`rounded-xl border p-3 ${
+        lead.tone === 'warn' ? 'border-warn/50 bg-warn/[0.06]' : lead.tone === 'accent' ? 'border-accent/55 bg-accent-soft/45' : 'border-good/40 bg-good/[0.05]'
+      }`}>
+        <div className="mb-1.5 flex items-center gap-2">
+          <span className={`size-2 shrink-0 rounded-full ${DOT[lead.tone]}`} />
+          <span className={`text-[10px] font-bold tracking-[0.13em] uppercase ${TEXT[lead.tone]}`}>
+            {lead.tone === 'warn' ? 'Needs attention' : lead.tone === 'accent' ? 'Worth doing' : 'All clear'}
+          </span>
+          <span className="ml-auto text-[10px] font-semibold tracking-[0.12em] text-ink-3 uppercase">{lead.label}</span>
         </div>
-      )}
+        <h4 className="text-[15px] leading-tight font-extrabold text-ink @[440px]:text-base">{lead.head}</h4>
+        <p className="mt-1 text-[12.5px] leading-snug text-ink-2">{lead.sub}</p>
+        <div className="mt-3 border-t border-line/70 pt-3">{panelFor(lead.key, true)}</div>
+      </div>
+
+      {/* The other five as rows. A 98px tile can carry a number or a reason,
+          never both — measured, "B.Fernandes" alone wanted 101px of it. A row
+          carries the label, the sentence and the number, and still fits a
+          column that is 400px on one screen and 660 on another. */}
+      <div className="mt-2.5 overflow-hidden rounded-xl border border-line">
+        {rest.map((r) => (
+          <div key={r.key} className="border-b border-line last:border-b-0">
+            <button
+              onClick={() => toggle(r.key)}
+              aria-expanded={open === r.key}
+              className={`grid w-full grid-cols-[8px_minmax(0,1fr)_auto] items-center gap-2.5 px-3 py-2.5 text-left transition-colors ${
+                open === r.key ? 'bg-accent-soft/35' : 'hover:bg-surface-2/50'
+              }`}
+            >
+              <span className={`size-2 rounded-full ${DOT[r.tone]}`} />
+              <span className="min-w-0">
+                {/* Wraps rather than truncating. Measured at 390px the
+                    template headline wanted 492px against 209 available, so
+                    `truncate` cut a sentence in half — which is the thing this
+                    layout exists to stop doing. No `block` alongside it:
+                    `line-clamp-2` works by setting `display: -webkit-box`, and
+                    `block` won the cascade, so the clamp did nothing and the
+                    template row ran to three lines. */}
+                <span className="line-clamp-2 text-[13.5px] leading-snug font-bold text-ink">{r.head}</span>
+                <span className="block truncate text-[11.5px] text-ink-3">{r.label}</span>
+              </span>
+              <span className="flex shrink-0 items-center gap-1.5 text-right">
+                <span>
+                  {/* 9ch cut "B.Fernandes" at 103px against 90. */}
+                  <span className={`font-display block max-w-[120px] truncate text-[15px] leading-none ${TEXT[r.tone]}`}>{r.value}</span>
+                  {r.unit && <span className="mt-1 block text-[9.5px] font-semibold tracking-[0.09em] text-ink-3 uppercase">{r.unit}</span>}
+                </span>
+                <Icon name="chevron-right" size={13} className={`text-ink-3 transition-transform ${open === r.key ? 'rotate-90' : ''}`} />
+              </span>
+            </button>
+            {open === r.key && (
+              <div className="border-t border-line bg-surface-2/30 px-3 py-3">{panelFor(r.key)}</div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
 
-function Tile({ label, value, sub, tone, open, onClick }: {
-  label: string; value: string; sub: string; tone: 'good' | 'warn' | 'accent' | 'ink'; open: boolean; onClick: () => void
-}) {
-  const c = tone === 'warn' ? 'text-warn' : tone === 'good' ? 'text-good' : tone === 'accent' ? 'text-accent' : 'text-ink'
-  return (
-    <button
-      onClick={onClick}
-      aria-expanded={open}
-      className={`rounded-xl border p-2 text-left transition-colors ${
-        open ? 'border-accent bg-accent-soft/40' : 'border-line bg-surface-1/60 hover:border-line-strong'
-      }`}
-    >
-      <div className="flex items-center gap-1">
-        <span className="text-[10px] font-semibold tracking-[0.12em] text-ink-3 uppercase">{label}</span>
-        <Icon
-          name="chevron-right"
-          size={11}
-          className={`ml-auto shrink-0 text-ink-3 transition-transform ${open ? 'rotate-90' : ''}`}
-        />
-      </div>
-      {/* The value drops to 15px in the five-across layout. The longest thing
-          a tile ever states is a captain's name, and "B.Fernandes" measured
-          101px against 98px of tile — three pixels from readable, which
-          truncate resolves by cutting the name rather than the number. */}
-      <div className={`font-display mt-1 truncate text-base leading-none @[560px]:text-[15px] ${c}`}>{value}</div>
-      <div className="mt-1 line-clamp-2 text-[10.5px] leading-tight text-ink-3">{sub}</div>
-    </button>
-  )
+interface Read {
+  key: Key
+  label: string
+  /** The sentence — what this read concluded, not what it is called. */
+  head: string
+  sub: string
+  value: string
+  unit: string
+  tone: Tone
+  /** 2 a risk, 1 an opportunity, 0 an all-clear. Ties break on array order. */
+  rank: number
 }
+
+type Tone = 'good' | 'warn' | 'accent' | 'ink'
+const DOT: Record<Tone, string> = { good: 'bg-good', warn: 'bg-warn', accent: 'bg-accent', ink: 'bg-ink-3' }
+const TEXT: Record<Tone, string> = { good: 'text-good', warn: 'text-warn', accent: 'text-accent', ink: 'text-ink' }
 
 const Head = ({ title, note }: { title: string; note: string }) => (
   <div className="mb-2.5">
@@ -202,11 +290,11 @@ const BAND_STYLE = {
   punt: { bar: 'bg-good', label: 'Punt' },
 } as const
 
-function TemplatePanel({ read }: { read: TemplateRead }) {
+function TemplatePanel({ read, bare }: { read: TemplateRead; bare?: boolean }) {
   const max = Math.max(...read.rows.map((r) => r.own), 1)
   return (
     <div>
-      <Head title="Template &amp; differential" note="How much of your squad is everyone else's squad" />
+      {!bare && <Head title="Template &amp; differential" note="How much of your squad is everyone else's squad" />}
 
       <div className="mb-3 flex flex-wrap gap-1.5">
         {(['template', 'balanced', 'punt'] as const).map((b) => (
@@ -260,7 +348,7 @@ function TemplatePanel({ read }: { read: TemplateRead }) {
 
 /* ── 2 · horizon scanning ────────────────────────────────────────────────── */
 
-function HorizonPanel({ read }: { read: HorizonRead | null }) {
+function HorizonPanel({ read, bare }: { read: HorizonRead | null; bare?: boolean }) {
   if (!read) return <div className="py-4 text-center text-xs text-ink-3">Complete your fifteen to scan the horizon.</div>
   // A fifteen spread across ten clubs has a genuinely smoother schedule than
   // any one of them, so plotted from zero these bars would look identical.
@@ -275,7 +363,7 @@ function HorizonPanel({ read }: { read: HorizonRead | null }) {
   const notable = read.toughest.hard >= 3
   return (
     <div>
-      <Head title="Horizon scanning" note={`What your fifteen face over the next ${read.weeks.length} gameweeks`} />
+      {!bare && <Head title="Horizon scanning" note={`What your fifteen face over the next ${read.weeks.length} gameweeks`} />}
 
       {/* The conclusion first.
           This used to sit at the very bottom, under the bars, the hard counts,
@@ -285,9 +373,14 @@ function HorizonPanel({ read }: { read: HorizonRead | null }) {
           fifteen face a hard game"), and a reader had to get past six other
           things to reach it. Chart underneath, as evidence for a claim already
           made. */}
-      <div className="mb-3 rounded-xl border border-line-mid bg-surface-2/60 px-3 py-2.5 text-[13.5px] leading-relaxed font-semibold text-ink">
-        {read.headline}
-      </div>
+      {/* …but not twice. As the lead card of the lab this same sentence is
+          already the heading two lines above, so printing it here as well put
+          it on screen verbatim in two places. */}
+      {!bare && (
+        <div className="mb-3 rounded-xl border border-line-mid bg-surface-2/60 px-3 py-2.5 text-[13.5px] leading-relaxed font-semibold text-ink">
+          {read.headline}
+        </div>
+      )}
 
       <div className="relative flex h-[96px] items-center gap-1.5">
         <span className="absolute inset-x-0 top-1/2 h-px bg-line-strong" />
@@ -381,11 +474,11 @@ function HorizonPanel({ read }: { read: HorizonRead | null }) {
  *  rather than the calendar — and buried at the bottom of a panel that already
  *  carries a chart, a hard-fixture strip, a hardest-fixture list and a
  *  blanks-and-doubles line, it was the sixth thing on screen. */
-function ClashPanel({ clashes }: { clashes: Clash[] }) {
+function ClashPanel({ clashes, bare }: { clashes: Clash[]; bare?: boolean }) {
   const total = clashes.reduce((a, c) => a + c.cost, 0)
   return (
     <div>
-      <Head title="Your players cost each other" note="Where an attacker of yours ends a defender of yours' clean sheet" />
+      {!bare && <Head title="Your players cost each other" note="Where an attacker of yours ends a defender of yours' clean sheet" />}
       {!clashes.length ? (
         <div className="rounded-xl border border-good/35 bg-good/5 px-3 py-2.5 text-[13.5px] font-semibold text-ink">
           Nothing in the next few weeks. No attacker of yours meets a defender of yours, so nobody in the fifteen is
@@ -428,12 +521,12 @@ function ClashPanel({ clashes }: { clashes: Clash[] }) {
 
 /* ── 3 · the Analyser's recommendation ───────────────────────────────────── */
 
-function AdvicePanel({ read, onApply }: { read: Recommendation | null; onApply?: (outEl: number, inEl: number) => void }) {
+function AdvicePanel({ read, onApply, bare }: { read: Recommendation | null; onApply?: (outEl: number, inEl: number) => void; bare?: boolean }) {
   if (!read) return <div className="py-4 text-center text-xs text-ink-3">Complete your fifteen for a recommendation.</div>
   const hold = read.verdict === 'hold'
   return (
     <div>
-      <Head title="The Analyser's recommendation" note={`Judged over the next ${read.weeks} gameweeks, not just this one`} />
+      {!bare && <Head title="The Analyser's recommendation" note={`Judged over the next ${read.weeks} gameweeks, not just this one`} />}
 
       <div className={`rounded-xl border p-3 ${hold ? 'border-good/40 bg-good/5' : 'border-accent/40 bg-accent-soft/40'}`}>
         <div className="flex items-center gap-2">
@@ -496,13 +589,13 @@ function MoveRow({ move, step, free, onApply }: { move: Move; step: number; free
 
 /* ── 4 · captain ladder ──────────────────────────────────────────────────── */
 
-function CaptainPanel({ read, gw }: { read: CaptainLadder | null; gw: number }) {
+function CaptainPanel({ read, gw, bare }: { read: CaptainLadder | null; gw: number; bare?: boolean }) {
   if (!read) return <div className="py-4 text-center text-xs text-ink-3">Pick your eleven to rank the armband.</div>
   const max = Math.max(...read.rows.map((r) => r.xp), 1)
   const shown = read.rows.slice(0, 8)
   return (
     <div>
-      <Head title={`Captain ladder · GW${gw}`} note="Ranked on projected points; judged on how often each one actually tops your XI" />
+      {!bare && <Head title={`Captain ladder · GW${gw}`} note="Ranked on projected points; judged on how often each one actually tops your XI" />}
 
       <div className="mb-1 flex items-center gap-2 px-1 text-[10px] font-semibold tracking-[0.12em] text-ink-3 uppercase">
         <span className="w-[18px] shrink-0" />
@@ -572,16 +665,18 @@ const CHIP_NOTE: Record<ChipKey, string> = {
   wildcard: 'Rebuild the fifteen, no hits',
 }
 
-function ChipsPanel({ read }: { read: ChipPlan | null }) {
+function ChipsPanel({ read, bare }: { read: ChipPlan | null; bare?: boolean }) {
   if (!read) return <div className="py-4 text-center text-xs text-ink-3">Complete your fifteen to plan your chips.</div>
   return (
     <div>
-      <Head
-        title="Chip planning"
-        note={read.weeksLeft != null
-          ? `Best week in the ${read.span} left this half, valued against playing normally — your first-half set expires after GW${FIRST_HALF_LAST}`
-          : `Best week in the ${read.span} left this season, valued against playing that week normally`}
-      />
+      {!bare && (
+        <Head
+          title="Chip planning"
+          note={read.weeksLeft != null
+            ? `Best week in the ${read.span} left this half, valued against playing normally — your first-half set expires after GW${FIRST_HALF_LAST}`
+            : `Best week in the ${read.span} left this season, valued against playing that week normally`}
+        />
+      )}
 
       <div className="flex flex-col gap-2">
         {read.advice.map((a) => <ChipRow key={a.chip} a={a} best={read.best?.chip === a.chip} />)}
