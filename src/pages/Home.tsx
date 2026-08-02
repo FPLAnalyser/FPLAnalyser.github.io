@@ -53,16 +53,16 @@ interface HomeWin {
 // pages underneath, closing on the page that looks back.
 const WINDOWS: HomeWin[] = [
   // Top row
-  { key: 'preview', to: '/preview', kicker: 'This week', title: 'GW Preview', desc: 'The whole gameweek before the deadline — captain, chips, every fixture and who is missing.', stat: 'Before the deadline' },
-  { key: 'squad', to: '/squad', kicker: 'Build', title: 'Squad Builder', desc: 'Draft an XI and plan the season week by week.', stat: '£100.0m' },
-  { key: 'fixtures', to: '/fixtures', kicker: 'Plan', title: 'Fixtures', desc: 'Our own fixture rating and rotation planner.', stat: 'Next 6 GWs' },
-  { key: 'players', to: '/players', kicker: 'Explore', title: 'Players', desc: 'Every player rated 0–100 — form, value, fixtures and the editorial player hero.', stat: '600+ rated' },
+  { key: 'preview', to: '/preview', kicker: 'This week', title: 'GW Preview', desc: 'The whole gameweek before the deadline — captain, chips, every fixture and who is missing.', stat: 'Captain, chips and who is out' },
+  { key: 'squad', to: '/squad', kicker: 'Build', title: 'Squad Builder', desc: 'Draft an XI and plan the season week by week.', stat: 'Import your side, plan 38 weeks' },
+  { key: 'fixtures', to: '/fixtures', kicker: 'Plan', title: 'Fixtures', desc: 'Our own fixture rating and rotation planner.', stat: 'Rotation, xG and clean-sheet odds' },
+  { key: 'players', to: '/players', kicker: 'Explore', title: 'Players', desc: 'Every player rated 0–100 — form, value, fixtures and the editorial player hero.', stat: 'Form, value and shot maps' },
   // Bottom row
-  { key: 'scouting', to: '/scout', kicker: 'Discover', title: 'Scouting', desc: 'Filter the market for your next differential.', stat: 'Find gems' },
-  { key: 'teams', to: '/teams', kicker: 'Explore', title: 'Teams', desc: 'Attack, defence and set-piece ratings for all 20 clubs, with matchup previews.', stat: '20 clubs' },
-  { key: 'myteam', to: '/loadteam', kicker: 'Track', title: 'My Team', desc: 'Link your side for a live rated breakdown.', stat: 'Live GW1',
+  { key: 'scouting', to: '/scout', kicker: 'Discover', title: 'Scouting', desc: 'Filter the market for your next differential.', stat: 'Per-90 ranks against their peers' },
+  { key: 'teams', to: '/teams', kicker: 'Explore', title: 'Teams', desc: 'Attack, defence and set-piece ratings for all 20 clubs, with matchup previews.', stat: 'Attack, defence and set pieces' },
+  { key: 'myteam', to: '/loadteam', kicker: 'Track', title: 'My Team', desc: 'Link your side for a live rated breakdown.', stat: 'Your XI rated and picked apart',
     ghost: { text: '★', style: { right: '6%', top: '6%', fontSize: 'clamp(44px,6vw,84px)', WebkitTextStroke: '2px color-mix(in srgb, var(--accent) 18%, transparent)' } } },
-  { key: 'review', to: '/review', kicker: 'Look back', title: 'GW Review', desc: 'What the gameweek actually did — hauls, captain calls and where the model missed.', stat: 'Recapping the GW' },
+  { key: 'review', to: '/review', kicker: 'Look back', title: 'GW Review', desc: 'What the gameweek actually did — hauls, captain calls and where the model missed.', stat: 'From GW1: where the model missed' },
 ]
 
 function ArrowRight() {
@@ -109,9 +109,22 @@ function WindowCard({ w }: { w: HomeWin }) {
         <span className="mb-1 inline-flex items-center gap-1.5 text-[0.58rem] font-extrabold tracking-[0.16em] text-accent-2 uppercase">◆ {w.kicker}</span>
         <h2 className="font-display text-lg leading-[0.95] text-white uppercase md:text-xl">{w.title}</h2>
         <div className="mt-2 mb-2.5 h-0.5 w-7 rounded-full" style={{ background: 'linear-gradient(90deg, var(--accent-2), var(--accent-strong))' }} />
+        {/* Two lines, not one truncated one.
+            A single line has 104px on an iPhone 13 and 70px on a 320px phone —
+            about twelve characters — which is enough for a label and not
+            enough for a reason. "Next 6 GWs" told a reader what the page was
+            called; it did not tell them the rotation planner, the projected xG
+            and the clean-sheet odds are behind it. Wrapping buys ~38
+            characters on a phone and the whole line on a desktop, which is the
+            difference between naming the page and selling it. */}
         <div className="flex items-center justify-between gap-1.5">
-          <span className="truncate text-[11px] font-bold text-[#e9e4d8]">{w.stat}</span>
-          <span className="grid size-7 shrink-0 place-items-center rounded-full border border-white/20 bg-white/10 text-accent-2 backdrop-blur-sm"><ArrowRight /></span>
+          <span className="line-clamp-2 text-[11px] leading-[1.25] font-bold text-balance text-[#e9e4d8]">{w.stat}</span>
+          {/* Hidden below 390px. It is decoration — the whole tile is the
+              button — and it costs 34px of a line that has 70px to give at
+              320px and 90px at 360, which is the difference between the copy
+              fitting and being cut off mid-word. 390 is where the line reaches
+              104px and can carry both. */}
+          <span className="hidden size-7 shrink-0 place-items-center rounded-full border border-white/20 bg-white/10 text-accent-2 backdrop-blur-sm min-[390px]:grid"><ArrowRight /></span>
         </div>
       </div>
     </button>
