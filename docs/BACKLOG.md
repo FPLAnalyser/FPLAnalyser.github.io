@@ -197,7 +197,52 @@ appear, and that is exactly where hiding them is wrong.
 Still to do, and only you can: **re-run the ratings pipeline before launch and
 again close to the GW1 deadline.** The feed can now name a new player, but it
 carries no minutes, no xG and no rates, so until the pipeline runs he is a name
-with N/A beside it. The pipeline still has no schedule of its own.
+with N/A beside it.
+
+### Put the data pipeline on a schedule
+
+Measured, not assumed. Two path defaults were stopping the chain from running
+anywhere but one desk, and both are now fixed: `scouting_percentiles.py`
+defaulted its input to `~/Desktop/fpl-analyser/…` while every other step used
+`FPL_DATA_DIR`, and `run_pipeline.sh` defaulted `FPL_REPO_DIR` to the same
+place instead of to its own checkout. With those two lines changed the whole
+reprocess half runs on repo state alone:
+
+```
+rolling_calculations.py   44s      persona_assignment.py     11s
+advanced_metrics.py        9s      scouting_percentiles.py    8s
+fpl_analyser_rating.py    13s      build_site_data.py         4s
+```
+
+**89 seconds, six steps, all green**, on a machine that had never seen the
+Google Drive folder. Only pandas and numpy are needed.
+
+Two phases, and the first one is free:
+
+**Before GW1.** `bootstrap_new_season.py` needs *only* the public FPL API and
+`site_data/2025-26/`, which is committed. It is what produced the live
+`site_data/2026-27/` on 23 July, by hand. It can run on a schedule today with
+no new inputs — the availability refresh already proves the FPL API answers a
+GitHub runner every morning at 06:00. That alone keeps prices, ownership,
+fixtures and the carried ratings current without anyone opening a laptop.
+
+**After GW1.** The full chain also needs `pull_understat_data.py` and
+`pull_pl_stats.py` (both public sources) and then `enrich_player_gw.py`. Three
+things stand in the way, none of them hard:
+
+1. **The repo's CSVs are 2025-26.** `fixtures_enriched.csv` holds 380 finished
+   fixtures ending 24 May 2026, and `season_summary.csv` has Isak at element
+   499 where the 26/27 game has him at 379. The new season's inputs only exist
+   on one machine. Either commit them or have the workflow derive them from
+   bootstrap-static and `fixtures/`, which is where they come from anyway.
+2. **`rolling_4gw.csv` and `rolling_6gw.csv` are 11MB each and tracked.**
+   Recommitting them on every run would add ~22MB of history a day to a pack
+   that is already 174MB. They are derived — regenerate them in the job and
+   ignore them; commit `site_data/` and the small inputs only.
+3. **`join_uncertain.csv` needs a human after GW1.** Element ids reset every
+   season, so the first enrich of a new season throws up ambiguous joins that
+   have to be resolved by eye once. That step cannot be scheduled; everything
+   downstream of it can.
 
 ### Load a squad into the Squad Builder without typing it
 Fifteen players entered by hand is a lot of taps before the builder gives
@@ -235,6 +280,27 @@ worth keeping, because most of it was arrived at by being wrong first:
   match him and say *club differs*, not to fail.
 - **Three UI probes lied before the model was called directly**, which is the
   same lesson as the promoted-club xP work. Stack the crops and look at them.
+
+Three things the first real-world use turned up, all now fixed:
+
+- **The app truncates long names on the pitch** — "Dewsbur…", "B.Fernand…" —
+  and full-string distance charges a truncation five edits for letters the app
+  chose not to draw, so two correct players came back unrecognised. The read is
+  now also scored against the candidate's opening letters, and where the app
+  marked the name cut (two dots or more; one is an abbreviation, "Bruno G.")
+  the prefix reading is simply taken as right. Both resolve at distance 0 and 1.
+- **NFKD does not decompose ß.** Groß normalised to "gro", three letters
+  against a five-letter read, so a correct match arrived two edits out wearing
+  a warning. ß, ø, đ, ł, æ, œ and þ now expand the way a reader would write
+  them. The recogniser's own confusions get the same treatment as *alternative
+  readings* rather than rewrites: "Grofl" is scored as itself and as "Gross",
+  best wins, so a genuine "Fletcher" is untouched.
+- **Absolute distance was the wrong confidence signal.** Two edits out of a
+  ten-man pool whose runner-up is six edits away is not doubtful, it is the
+  only candidate — and warning about it teaches readers to ignore warnings. A
+  match is now flagged on the *gap* to the second-best, not on its own score.
+  Below five letters the allowance shrinks with the read and below three there
+  is nothing to go on: a two-letter read had been landing on a real player.
 
 Known limits, none of them blocking: it wants the **Pick Team** screen (the
 Transfers screen shows price where the fixture goes, which costs the club clue

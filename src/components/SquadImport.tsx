@@ -219,14 +219,14 @@ function SlotRow({ slot, player, pool, open, onToggle, onPick }: {
    * something is off. A name matched outside its club means the screenshot
    * and our data disagree about where he plays — nearly always a transfer the
    * daily feed hasn't caught, and worth saying so rather than a bare warning. */
-  const sure = !!player && slot.distance === 0 && (slot.how === 'club+pos' || slot.how === 'club')
+  const sure = !!player && (slot.distance === 0 || slot.clear) && (slot.how === 'club+pos' || slot.how === 'club')
   const flag = !player
     ? null
     : slot.how === 'name'
       ? { text: 'club differs', why: slot.club ? `The screenshot has him playing for ${teamLabel(slot.club)}; our data has ${teamLabel(String(player.team))}.` : 'Matched on name alone.' }
-      : slot.distance > 0
-        ? { text: 'check', why: `The name read as "${slot.read}" — close, not exact.` }
-        : null
+      : sure
+        ? null
+        : { text: 'check', why: `The name read as "${slot.read}", and more than one ${slot.club ? teamLabel(slot.club) : ''} player is close to it.`.replace('  ', ' ') }
   const tone = !player ? 'border-bad/50 bg-bad/8' : sure ? 'border-line' : 'border-warn/45 bg-warn/8'
 
   const options = useMemo(() => {

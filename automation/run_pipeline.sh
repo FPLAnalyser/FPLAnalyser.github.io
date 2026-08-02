@@ -16,7 +16,9 @@
 
 set -euo pipefail
 
-REPO_DIR="${FPL_REPO_DIR:-$HOME/Desktop/fpl-analyser}"
+# Default to the checkout this script lives in, so it runs on a build machine
+# as well as on the desk it was written at. FPL_REPO_DIR still overrides.
+REPO_DIR="${FPL_REPO_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 LOG_DIR="$REPO_DIR/automation/logs"
 LOG_FILE="$LOG_DIR/pipeline_$(date +%Y%m%d_%H%M%S).log"
 PYTHON="${FPL_PYTHON:-python3}"

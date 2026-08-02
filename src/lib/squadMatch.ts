@@ -35,18 +35,68 @@ export interface SlotMatch {
   distance: number
   /** Which ring the match came from — how much to trust it. */
   how: 'club+pos' | 'club' | 'name' | null
+  /** No other player in the pool came close, so a fuzzy read is still safe. */
+  clear: boolean
+  /** The app cut the name short, so the read is a prefix by design. */
+  truncated: boolean
   /** Nearest few players, for the correction picker. */
   alternatives: RatingRow[]
+}
+
+/* Letters NFKD leaves alone.
+ *
+ * Decomposition splits é into e + a combining accent, which the next line
+ * strips — but ß, ø, đ, ł and the ligatures are single code points with no
+ * decomposition, so `[^a-z]` simply deleted them. Groß normalised to "gro",
+ * three letters against an OCR read of five, and a correct match came back
+ * two edits out and wearing a warning. These are the expansions a reader
+ * would write by hand. */
+const FOLD: Record<string, string> = {
+  ß: 'ss', æ: 'ae', œ: 'oe', ø: 'o', å: 'a', đ: 'd', ð: 'd', þ: 'th',
+  ł: 'l', ħ: 'h', ı: 'i', ŋ: 'n', ʼ: '', ß̩: 'ss',
 }
 
 /** Fold accents and punctuation away: the OCR drops diacritics and the app
  *  abbreviates, so comparing anything but bare letters just adds noise. */
 export function normName(s: string): string {
   return s
+    .toLowerCase()
+    .replace(/[ßæœøåđðþłħıŋʼ]/g, (c) => FOLD[c] ?? c)
     .normalize('NFKD')
     .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
     .replace(/[^a-z]/g, '')
+}
+
+/* Letter pairs the recogniser reliably confuses, and what they were.
+ *
+ * The English model has no ß in its character set, so it draws Groß's as the
+ * nearest shapes it does have and returns "Grofl" — two edits from "Gross",
+ * which is inside the threshold but close enough to a second Brighton
+ * midfielder to be worth a warning nobody wants to read. `rn` for `m` is the
+ * oldest confusion in OCR and costs nothing to carry.
+ *
+ * These are applied as *alternative readings*, never as a rewrite: the read is
+ * scored against the original spelling and each variant, and the best wins. So
+ * a genuine "Fletcher" still scores zero against itself and only gains the
+ * chance to also match a name spelt "Sstcher", of which there are none. */
+const CONFUSIONS: [RegExp, string][] = [[/fl/g, 'ss'], [/fi/g, 'ss'], [/rn/g, 'm']]
+
+/** The read, plus every single-confusion rewrite of it. */
+export function readings(target: string): string[] {
+  const out = [target]
+  for (const [re, to] of CONFUSIONS) {
+    const v = target.replace(re, to)
+    if (v !== target && !out.includes(v)) out.push(v)
+  }
+  return out
+}
+
+/** Did the app cut this name short? The pitch pill has a fixed width and the
+ *  FPL app ellipsises anything longer — "Dewsbur…", "B.Fernand…" — so the read
+ *  is a prefix, not a misreading, and has to be matched as one. Two dots or
+ *  more: one trailing dot is an abbreviation ("Bruno G."), not a truncation. */
+export function looksTruncated(read: string): boolean {
+  return /(\.\s*){2,}$|…\s*$/.test(read.trim())
 }
 
 export function levenshtein(a: string, b: string): number {
@@ -148,9 +198,30 @@ export function matchSquad(
     const pos = posForRow(card.row, rowCount, card.col)
     const club = card.opponent && card.venue ? (byFixture.get(`${card.opponent}|${card.venue}`) ?? null) : null
     const target = normName(card.name)
+    const cut = looksTruncated(card.name) && target.length >= 5
+
+    /* Distance from the read to one player's name.
+     *
+     * Two ways to be close and they are not interchangeable. A misreading
+     * differs all the way along — "Grofl" for "Groß". A truncation agrees
+     * perfectly and then stops — "Dewsbur" for "Dewsbury-Hall" — and full-
+     * string distance charges it five edits for the letters the app chose not
+     * to draw, which put a correct match out of reach of any sane threshold.
+     * So also score against the candidate's opening letters, and take the
+     * better of the two. The +1 when the app did not mark the name as cut
+     * keeps a genuine full-string match ahead of a prefix that merely starts
+     * the same way; when it did mark it, the prefix reading is simply right. */
+    const forms = readings(target)
+    const one = (t: string, cand: string) => {
+      const full = levenshtein(t, cand)
+      if (cand.length <= t.length) return full
+      const pref = levenshtein(t, cand.slice(0, t.length))
+      return cut ? pref : Math.min(full, pref + 1)
+    }
+    const score = (cand: string) => Math.min(...forms.map((t) => one(t, cand)))
 
     const rank = (subset: typeof normed) => {
-      const scored = subset.map((x) => ({ player: x.p, distance: levenshtein(target, x.n) }))
+      const scored = subset.map((x) => ({ player: x.p, distance: score(x.n) }))
       scored.sort((a, b) => a.distance - b.distance)
       return scored
     }
@@ -161,13 +232,28 @@ export function matchSquad(
       { list: rank(pos ? normed.filter((x) => x.p.position === pos) : normed), max: 1, how: 'name' },
     ]
 
-    let hit: { player: RatingRow; distance: number; how: SlotMatch['how'] } | null = null
+    let hit: { player: RatingRow; distance: number; how: SlotMatch['how']; clear: boolean } | null = null
     for (const r of rings) {
       const top = r.list[0]
-      // An empty read matches nothing: distance then just measures name length
-      // and the shortest name in the pool "wins".
-      if (!target || !top || top.distance > r.max) continue
-      hit = { player: top.player, distance: top.distance, how: r.how }
+      /* An empty read matches nothing: distance then just measures name length
+       * and the shortest name in the pool "wins". A very short one is barely
+       * better — two letters sat two edits from a real player and would have
+       * been applied. Below five letters the allowance shrinks with the read,
+       * and below three there is nothing to go on at all. */
+      const max = target.length < 3 ? -1 : Math.min(r.max, target.length - 3)
+      if (!target || !top || top.distance > max) continue
+      /* How alone the winner is, which is a better confidence signal than its
+       * own distance. Two edits out of a ten-man pool where the runner-up is
+       * six edits away is not a doubtful match — it is the only candidate, and
+       * warning about it trains readers to ignore the warnings. Two edits with
+       * a runner-up at three is a genuine coin-toss and must be flagged. */
+      const runnerUp = r.list.find((c) => c.player.element !== top.player.element)
+      hit = {
+        player: top.player,
+        distance: top.distance,
+        how: r.how,
+        clear: !runnerUp || runnerUp.distance - top.distance >= 3,
+      }
       break
     }
 
@@ -194,6 +280,8 @@ export function matchSquad(
       player: hit?.player ?? null,
       distance: hit?.distance ?? -1,
       how: hit?.how ?? null,
+      clear: hit?.clear ?? false,
+      truncated: cut,
       alternatives,
     }
   })

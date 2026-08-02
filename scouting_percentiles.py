@@ -11,8 +11,11 @@ import numpy as np
 import os
 
 DATA_DIR = os.environ.get("FPL_DATA_DIR") or "./data"
-ENRICHED_FILE = os.environ.get("FPL_ENRICHED_FILE") or os.path.expanduser(
-    "~/Desktop/fpl-analyser/player_gw_enriched.csv")
+# Every other script in the chain defaults this to DATA_DIR; this one pointed at
+# one developer's Desktop, so the chain ran everywhere except where the data
+# actually was. It is the only step that cannot run on a build machine.
+ENRICHED_FILE = os.environ.get("FPL_ENRICHED_FILE") or os.path.join(
+    DATA_DIR, "player_gw_enriched.csv")
 SEASON_SUMMARY_FILE = os.path.join(DATA_DIR, "season_summary.csv")
 OUTPUT_DIR = DATA_DIR
 
