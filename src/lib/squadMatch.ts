@@ -69,6 +69,37 @@ export function normName(s: string): string {
     .replace(/[^a-z]/g, '')
 }
 
+/* One glyph that we expand into two letters, and the bill for it.
+ *
+ * ß, æ, œ and þ are single characters the English model has no shape for, so
+ * it draws one approximate shape and moves on. Folding them to "ss", "ae",
+ * "oe", "th" is right for a reader but wrong for a comparison: it charges the
+ * recogniser for a letter it was never shown. Groß folds to "gross", five
+ * letters against a four-letter read, and both goes at this have now been the
+ * same bug — "Grofl" the first time, "Grol" the second. Enumerating what ß
+ * looks like when it comes back wrong is a losing game; between them it has
+ * come back as fl, fi, l, b, B, p, k and 13.
+ *
+ * So don't. Put a wildcard where the glyph was and charge nothing for whatever
+ * one character the model drew there. Three names in the whole pool carry one
+ * of these letters and exactly one carries ß, so this widens almost nothing:
+ * no other name in the game even begins "gro". */
+const WIDE_FOLD = /[ßæœþ]/
+export const WILD = '\u0001'
+
+/** The candidate's name with each two-letter fold replaced by a wildcard, or
+ *  null when the name has none — which is nearly all of them. */
+export function wildName(s: string): string | null {
+  const low = s.toLowerCase()
+  if (!WIDE_FOLD.test(low)) return null
+  return low
+    .replace(/[ßæœþ]/g, WILD)
+    .replace(/[øåđðłħıŋʼ]/g, (c) => FOLD[c] ?? c)
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(new RegExp('[^a-z' + WILD + ']', 'g'), '')
+}
+
 /* Letter pairs the recogniser reliably confuses, and what they were.
  *
  * The English model has no ß in its character set, so it draws Groß's as the
@@ -101,6 +132,8 @@ export function looksTruncated(read: string): boolean {
   return /(\.\s*){2,}$|…\s*$/.test(read.trim())
 }
 
+/** Edit distance. A WILD in `b` matches any single character for free — see
+ *  `wildName` for why the candidate side is where that belongs. */
 export function levenshtein(a: string, b: string): number {
   const m = a.length
   const n = b.length
@@ -112,7 +145,8 @@ export function levenshtein(a: string, b: string): number {
   for (let i = 1; i <= m; i++) {
     cur[0] = i
     for (let j = 1; j <= n; j++) {
-      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
+      const same = a[i - 1] === b[j - 1] || b[j - 1] === WILD
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (same ? 0 : 1))
     }
     const t = prev
     prev = cur
@@ -195,7 +229,7 @@ export function matchSquad(
     const n = pairs.filter((k) => m.has(k)).length
     if (n > hits) { byFixture = m; hits = n }
   }
-  const normed = pool.map((p) => ({ p, n: normName(String(p.web_name)) }))
+  const normed = pool.map((p) => ({ p, n: normName(String(p.web_name)), w: wildName(String(p.web_name)) }))
 
   return cards.map((card, index) => {
     const pos = posForRow(card.row, rowCount, card.col)
@@ -222,9 +256,13 @@ export function matchSquad(
       return cut ? pref : Math.min(full, pref + 1)
     }
     const score = (cand: string) => Math.min(...forms.map((t) => one(t, cand)))
+    /* The wildcard form only ever helps, never hurts: it is the same name with
+     * one glyph excused, so its distance is at most the folded form's. */
+    const best = (x: { n: string; w: string | null }) =>
+      x.w ? Math.min(score(x.n), score(x.w)) : score(x.n)
 
     const rank = (subset: typeof normed) => {
-      const scored = subset.map((x) => ({ player: x.p, distance: score(x.n) }))
+      const scored = subset.map((x) => ({ player: x.p, distance: best(x) }))
       scored.sort((a, b) => a.distance - b.distance)
       return scored
     }
