@@ -70,9 +70,13 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
 
   return (
     <div className="@container mt-2.5 rounded-2xl border border-line bg-surface-1/60 p-3">
-      <div className="mb-2 flex items-center gap-2">
-        <span className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Squad lab</span>
-        <span className="text-[11px] text-ink-3">Tap a tile</span>
+      {/* A title in ink, not an 11px grey uppercase label.
+          The lab is six pieces of analysis and it was announced in the same
+          type as a table's column header, which reads as a caption for
+          whatever is above it rather than as the name of the thing itself. */}
+      <div className="mb-2.5 flex items-baseline gap-2">
+        <h3 className="text-[15px] leading-none font-extrabold text-ink">Squad Lab</h3>
+        <span className="text-[11px] text-ink-3">Tap a tile to open it</span>
       </div>
 
       {/* Five across only when five across actually fit.

@@ -530,6 +530,15 @@ body {
   linear-gradient(160deg, #1c160c, #0a0806); }
 .hw-compare { background: linear-gradient(120deg, #141009, #0a0806); }
 
+/* The home page's import invitation. Not a tile — it is a wide banner with
+   live text over it, so the wash is far gentler than `.hw-*` above and the
+   photo (if `public/home/import.jpg` exists) is laid over it at 30% with a
+   left-to-right scrim. Both themes: the scrim uses --bg-0, so on light it
+   fades to paper rather than to black. */
+.hw-invite { background:
+  radial-gradient(120% 140% at 88% 50%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 62%),
+  color-mix(in srgb, var(--accent) 7%, var(--surface-1)); }
+
 /* ════════════════════════════════════════════════════════════════════════
    Section hero banners — each section opens with its home-tile photo as a
    slim banner (tile → page continuity). Stadium variant for team pages.

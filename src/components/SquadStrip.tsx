@@ -122,22 +122,35 @@ export function SquadStrip() {
      anything here. Not sticky: a banner pinned over a first-time visitor's
      screen is an advert. It just goes first. */
   if (!squad || !read) {
+    /* The photo is optional and behaves like the tiles': drop a file at
+       `public/home/import.jpg` and it appears; until then the gradient stands
+       on its own and nothing breaks. Same `onError` hide the WindowCard uses,
+       so a 404 costs a request and no layout. */
     return (
-      <div className="mb-4 overflow-hidden rounded-2xl border border-accent/30 bg-accent-soft/40 p-4 md:mb-5 md:p-5">
+      <div className="hw-invite relative isolate mb-4 overflow-hidden rounded-2xl border border-accent/30 p-4 md:mb-5 md:p-5">
+        <img
+          src={`${import.meta.env.BASE_URL}home/import.jpg`}
+          alt=""
+          loading="lazy"
+          onError={(e) => { e.currentTarget.style.display = 'none' }}
+          className="absolute inset-0 -z-10 size-full object-cover object-center opacity-30"
+        />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-bg-0 via-bg-0/85 to-bg-0/40" />
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
           <div className="min-w-0 flex-1">
             <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-[0.14em] text-accent uppercase">
               <Icon name="camera" size={13} /> Start here
             </div>
             <h2 className="text-lg font-extrabold tracking-[-0.01em] text-ink md:text-xl">Get your draft rated</h2>
-            <p className="mt-1.5 max-w-[62ch] text-[13.5px] leading-relaxed text-ink-2">
-              Screenshot the Pick Team screen in the FPL app and drop it in. It reads all fifteen in about eight
-              seconds, then tells you what your squad is good at, where it is thin, and the cheapest thing to fix.
+            <p className="mt-1.5 max-w-[52ch] text-[13.5px] leading-relaxed text-ink-2">
+              Screenshot your team from the FPL app and get instant analysis.
             </p>
           </div>
           <div className="flex shrink-0 gap-2">
+            {/* Straight to the picker, not to an empty board with the same
+                button on it. */}
             <button
-              onClick={() => navigate('/squad')}
+              onClick={() => navigate('/squad', { state: { openImport: true } })}
               className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-accent bg-accent-soft px-4 text-[13.5px] font-bold text-accent transition-colors hover:brightness-110 md:flex-none"
             >
               <Icon name="camera" size={15} /> Import a screenshot

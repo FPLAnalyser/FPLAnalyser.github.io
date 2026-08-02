@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
 import { SectionBanner } from '../components/SectionBanner'
 import { PageSkeleton } from '../components/Skeleton'
@@ -14,7 +14,8 @@ import { Icon } from '../components/Icon'
 import { Pitch, PitchCard, BenchSpine, CARD_W } from '../components/Pitch'
 import { PlayerCardSheet } from '../components/PlayerCardSheet'
 import { DutyBadges, DutyLegend, dutiesOf } from '../components/DutyBadges'
-import { SquadRatingSheet, squadNarrative } from '../components/SquadRatingSheet'
+import { SquadRatingSheet } from '../components/SquadRatingSheet'
+import { SquadVerdict } from '../components/SquadVerdict'
 import { SquadImport, type ImportedSquad } from '../components/SquadImport'
 import { useCore } from '../lib/useData'
 import { tapHaptic } from '../lib/native'
@@ -206,6 +207,19 @@ export default function SquadBuilder() {
   const [shareOpen, setShareOpen] = useState(false)
   const [ratingOpen, setRatingOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+
+  /* Arriving from the home page's "Import a screenshot" opens the picker
+     straight away. It used to land here on an empty board with the same
+     button to press again, which is one tap of nothing between wanting the
+     thing and getting it. The state is cleared on arrival so going back and
+     forward, or refreshing, doesn't reopen the sheet over a squad. */
+  const location = useLocation()
+  useEffect(() => {
+    if ((location.state as { openImport?: boolean } | null)?.openImport) {
+      setImportOpen(true)
+      navigate('.', { replace: true, state: null })
+    }
+  }, [location.state, navigate])
   /* The eleven a screenshot arrived with. Held here rather than in the modal
      because the planner needs it after the modal has gone, and dropped the
      moment the squad stops matching it — see `seed` in usePlanner. */
@@ -473,7 +487,14 @@ export default function SquadBuilder() {
             which is the behaviour the market had before the read arrived. */}
         <div ref={marketRef} className="mt-8 min-w-0 scroll-mt-20 lg:mt-0">
           <div className="mb-4 flex flex-col gap-3">
-            <SquadRead chosen={liveChosen} fixtureEase={fixtureEase} gw={liveGw} avail={avail} onOpen={() => setRatingOpen(true)} />
+            {/* Nothing until the fifteen exists. A verdict on nine players is
+                a verdict on a squad that isn't the one being built. */}
+            {complete && (
+              <SquadVerdict
+                chosen={liveChosen} fixtureEase={fixtureEase} gw={liveGw} avail={avail}
+                score={liveScore} bestXI={liveBestXI} onOpen={() => setRatingOpen(true)}
+              />
+            )}
             {complete && (
               <SquadLab
                 squad={liveChosen} xi={liveXI} pool={pool} fixtureEase={fixtureEase} avail={avail}
@@ -690,37 +711,6 @@ export default function SquadBuilder() {
 
 /** The squad's character, on the page rather than behind a button: the three
  *  most telling lines, with the rest a click away. */
-function SquadRead({ chosen, fixtureEase, gw, avail, onOpen }: {
-  chosen: RatingRow[]; fixtureEase: FixtureEaseRow[]; gw: number; avail: Availability; onOpen: () => void
-}) {
-  const lines = useMemo(() => squadNarrative(chosen, fixtureEase, gw, avail), [chosen, fixtureEase, gw, avail])
-  if (!lines.length) return null
-  // Warnings first — a risk you haven't seen is worth more than a strength
-  // you already know about.
-  const order = { warn: 0, good: 1, flat: 2 } as Record<string, number>
-  const top = [...lines].sort((a, b) => order[a.tone] - order[b.tone]).slice(0, 3)
-  const dot = { good: 'bg-good', warn: 'bg-warn', flat: 'bg-ink-3' } as Record<string, string>
-  return (
-    <div className="mt-3 rounded-2xl border border-line bg-surface-1/60 p-3">
-      <div className="mb-2 flex items-center gap-2">
-        <span className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">The read on your squad</span>
-        <button onClick={onOpen} className="ml-auto text-xs font-semibold text-accent hover:underline">Full breakdown →</button>
-      </div>
-      <div className="flex flex-col gap-2">
-        {top.map((l, i) => (
-          <button key={i} onClick={onOpen} className="flex gap-2 text-left transition-colors hover:opacity-80">
-            <span className={`mt-1.5 size-1.5 shrink-0 rounded-full ${dot[l.tone]}`} />
-            <span className="min-w-0 text-sm">
-              <span className="font-semibold text-ink">{l.head}</span>
-              <span className="text-ink-2"> — {l.body}</span>
-            </span>
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 /** "Who makes way?" — the other half of a transfer when you start from the
  *  player coming in. Only same-position squad members can answer, so those
  *  are the only ones offered, each with the reason it can't be them if so. */
