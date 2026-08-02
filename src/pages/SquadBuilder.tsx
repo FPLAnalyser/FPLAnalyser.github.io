@@ -15,6 +15,7 @@ import { Pitch, PitchCard, BenchSpine, CARD_W } from '../components/Pitch'
 import { PlayerCardSheet } from '../components/PlayerCardSheet'
 import { DutyBadges, DutyLegend, dutiesOf } from '../components/DutyBadges'
 import { SquadRatingSheet, squadNarrative } from '../components/SquadRatingSheet'
+import { SquadImport } from '../components/SquadImport'
 import { useCore } from '../lib/useData'
 import { tapHaptic } from '../lib/native'
 import { rasterise } from '../lib/capture'
@@ -204,6 +205,7 @@ export default function SquadBuilder() {
   const [showFilters, setShowFilters] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [ratingOpen, setRatingOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   // Transfers run through the list beside the board: sell from the pitch and
   // the empty place waits to be filled, or pick the player coming in first
   // and choose who makes way for him.
@@ -421,6 +423,11 @@ export default function SquadBuilder() {
             {complete && !valid && <span className="text-[13px] font-semibold text-bad">Over budget by £{Math.abs(remaining).toFixed(1)}m</span>}
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <MetricChips metric={metric} onChange={setMetric} />
+              {/* Typing fifteen names in is the reason people build a fantasy
+                  squad here and then never come back with their real one. */}
+              <button onClick={() => setImportOpen(true)} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-line-mid px-3 text-[12px] font-semibold text-ink transition-colors hover:border-line-strong">
+                <Icon name="camera" size={13} /> Import
+              </button>
               {total > 0 && (
                 <>
                   <button onClick={() => setShareOpen(true)} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-line-mid px-3 text-[12px] font-semibold text-ink transition-colors hover:border-line-strong">
@@ -652,6 +659,14 @@ export default function SquadBuilder() {
         <SquadRatingSheet
           chosen={liveChosen} pool={pool} squadScore={liveScore} bestXI={liveBestXI}
           fixtureEase={fixtureEase} gw={liveGw} avail={avail} onClose={() => setRatingOpen(false)}
+        />
+      )}
+
+      {importOpen && (
+        <SquadImport
+          pool={pool} fixtureEase={fixtureEase} gw={buildGw}
+          onApply={(els) => { setImportOpen(false); setNote(null); tapHaptic('medium'); persist(els) }}
+          onClose={() => setImportOpen(false)}
         />
       )}
 

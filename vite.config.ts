@@ -63,7 +63,11 @@ export default defineConfig({
         // megabytes. Precaching means pushing all of them to a phone on the
         // first visit for the sake of the handful it will actually draw, so
         // they are fetched on demand and kept once seen (below) instead.
-        globIgnores: ['**/img/players/**', '**/img/badges/**'],
+        // The screenshot reader's engine is 4MB of WASM and language data that
+        // only a reader who opens the importer ever needs. Precaching it would
+        // push it to every phone on the first visit; the runtime rule below
+        // keeps it once it has actually been fetched.
+        globIgnores: ['**/img/players/**', '**/img/badges/**', '**/ocr/**'],
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,
         runtimeCaching: [
@@ -79,6 +83,18 @@ export default defineConfig({
               // the corrected images are actually fetched.
               cacheName: 'club-and-player-images-v2',
               expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 60 },
+            },
+          },
+          {
+            // The OCR engine is versioned by the package it came from and
+            // never changes under the same filename, so cache-first. Kept for
+            // a year: a manager who imports a squad in August will import
+            // another in May, and 4MB is not something to fetch twice.
+            urlPattern: /\/ocr\/[^/]+$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'ocr-engine',
+              expiration: { maxEntries: 6, maxAgeSeconds: 60 * 60 * 24 * 365 },
             },
           },
           {

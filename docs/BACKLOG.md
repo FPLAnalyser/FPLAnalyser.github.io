@@ -208,14 +208,49 @@ anything back, and it is the main reason someone bounces off it.
 and tested. Feeding that into the builder's state is a small piece of work and
 gets a perfect fifteen every time. Do this one.
 
-**Then, maybe, the screenshot.** Upload a screenshot from the FPL app and have
-it read the squad — nice magic, and worth having if people ask. Tesseract.js in
-the browser is roughly 2MB of WASM, which is real weight for a route that also
-has to work on a phone. The hard part is not reading the text: FPL screenshots
-vary by device, theme, scroll position and language, surnames truncate on the
-pitch, and a misread substitutes the wrong player *silently*, which is worse
-than failing. It needs a confirm-and-correct step, and that step eats a good
-deal of the convenience it was bought for. Not before launch.
+**The screenshot reader is built** — `src/lib/squadShot.ts` (segment + OCR),
+`src/lib/squadMatch.ts` (matching), `src/components/SquadImport.tsx` (the
+confirm screen), behind *Import* on the Squad Builder's control row. Measured
+end to end against a real iPhone screenshot: **15/15 correct in 8.4s**, both
+uncertain slots flagged rather than applied silently. What made it work is
+worth keeping, because most of it was arrived at by being wrong first:
+
+- **Crop the ink, not the bounding box.** The white pill's connected component
+  stops at its coloured outline, so a bbox crop carries a few pixels of outline
+  down each side — Tesseract reads that as a `|`, and at psm 7 it refused three
+  of fifteen names outright and returned confidence 0. Otsu the band, take the
+  extent of the ink, and every name reads.
+- **Ink is the minority class, not the darker one.** Deciding it from the
+  pill's mean luminance failed on the one card it mattered for: a flagged
+  player's pill is dark red with white type, and a sample at the pill's centre
+  lands mostly on the glyphs, reads "light", and turns the background into ink.
+- **The fixture pill names the club.** Every (opponent, venue) pair in a
+  gameweek belongs to exactly one club, so three capital letters that OCR never
+  gets wrong cut the pool from 560 players to about ten — which is why "Gueéhi"
+  and "Jodo Pedro" still land on the right man.
+- **Three widening rings, each held to a stricter distance.** Club+position,
+  then club, then name alone. The last one exists because the screenshot can
+  know more than we do: Lacroix's card said Chelsea while both our snapshot and
+  the daily feed still had him at Palace, and the right answer there is to
+  match him and say *club differs*, not to fail.
+- **Three UI probes lied before the model was called directly**, which is the
+  same lesson as the promoted-club xP work. Stack the crops and look at them.
+
+Known limits, none of them blocking: it wants the **Pick Team** screen (the
+Transfers screen shows price where the fixture goes, which costs the club clue
+and falls back to name-only matching); it has only been measured against the
+FPL app's **light** theme; and a screenshot taken after a deadline shows the
+week being played rather than the week being picked — handled by trying the
+weeks either side and keeping whichever accounts for more cards, but only
+where `fixture_ease.json` still carries that week.
+
+The engine is vendored under `public/ocr/` — see the README there for what each
+file is and why. It is excluded from the precache and fetched only when the
+importer is opened: about 4.5MB the first time, then kept on the device.
+
+**Team ID is still the better path when it exists.** My Team already reads a
+live squad through the Worker (`fetchPicksCached`), which is exact rather than
+inferred. Feeding that into the builder's state remains worth doing.
 
 ### The rest of the stadium photos
 `StadiumBanner` on a club page loads `public/stadiums/<TEAM>.jpg` over a
