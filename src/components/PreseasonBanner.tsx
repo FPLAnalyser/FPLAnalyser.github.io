@@ -24,9 +24,13 @@ export function PreseasonBanner() {
       <div className="mx-auto flex max-w-6xl items-center gap-2.5 px-3 py-2 text-[13px] text-ink-2 md:px-6">
         <span className="text-accent"><Icon name="info" size={15} /></span>
         <span>
+          {/* The promoted clubs' gameweek 1 figures used to be called out here
+              too. It is a caveat about eighty-odd players in a banner that
+              every reader meets before anything else, and the data notes are
+              one tap away and say it properly — this line is for what changes
+              how the whole site reads, which is the carry-over. */}
           <b className="text-ink">Pre-season {info.label}.</b> Fixtures, squads and prices are live — player ratings are carried over from{' '}
-          <b className="text-ink">{short(info.ratings_season)}</b> until games are played. New signings show N/A, and the promoted clubs
-          carry a supplied gameweek 1 projection rather than one of ours — see <Link to="/legal" className="underline decoration-dotted underline-offset-2 hover:text-ink">the data notes</Link>.
+          <b className="text-ink">{short(info.ratings_season)}</b> until games are played. New signings show N/A — see <Link to="/legal" className="underline decoration-dotted underline-offset-2 hover:text-ink">the data notes</Link>.
         </span>
         {/* Sized to WCAG 2.2 AA's 24px minimum — it was 17×18. */}
         <button onClick={dismiss} aria-label="Dismiss" className="ml-auto grid size-6 shrink-0 place-items-center text-lg leading-none text-ink-3 hover:text-ink">×</button>
