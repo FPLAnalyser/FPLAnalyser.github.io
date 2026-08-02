@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../components/Icon'
 import { useSeason } from '../lib/season'
+import { SquadStrip } from '../components/SquadStrip'
 
 function Hero() {
   const { info } = useSeason()
@@ -171,6 +172,9 @@ export default function Home() {
       >
         {WINDOWS.map((w) => <WindowCard key={w.key} w={w} />)}
       </div>
+      {/* Renders nothing until there are fifteen, so a first visit is exactly
+          the page it is today. */}
+      <SquadStrip />
     </div>
   )
 }

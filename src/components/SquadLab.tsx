@@ -22,7 +22,7 @@ import type { FixtureEaseRow, RatingRow } from '../lib/types'
    seventy, and every headline stays on screen whichever one you open.
    ════════════════════════════════════════════════════════════════════════ */
 
-type Key = 'template' | 'horizon' | 'advice' | 'captain' | 'chips'
+type Key = 'template' | 'horizon' | 'advice' | 'captain' | 'chips' | 'clash'
 
 export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, freeTransfers, unlimitedTransfers, onApplyMove, chipSpentAt }: {
   squad: RatingRow[]
@@ -83,7 +83,10 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
           numbers the lab exists to state were the first thing cut. Measured off
           the container instead, three roomy tiles over two rows beat five
           truncated ones on a single line. */}
-      <div className="grid grid-cols-2 gap-2 @[440px]:grid-cols-3 @[560px]:grid-cols-5">
+      {/* Six tiles, so three across rather than five: five plus one leaves an
+          orphan on its own row, and at 560px five tiles were already handing
+          each one 70px. */}
+      <div className="grid grid-cols-2 gap-2 @[440px]:grid-cols-3">
         <Tile
           label="Template" open={open === 'template'} onClick={() => toggle('template')}
           value={`${template.counts.template} of ${template.rows.length}`}
@@ -111,6 +114,16 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
           tone={captain?.close ? 'warn' : 'accent'}
         />
         <Tile
+          label="Clashes" open={open === 'clash'} onClick={() => toggle('clash')}
+          value={horizon ? (horizon.clashes.length ? `−${horizon.clashes.reduce((a, c) => a + c.cost, 0).toFixed(1)}` : 'None') : '—'}
+          sub={horizon
+            ? (horizon.clashes.length
+                ? `${horizon.clashes.length} ${horizon.clashes.length === 1 ? 'fixture' : 'fixtures'} where your own players meet`
+                : 'no player of yours plays another')
+            : 'needs a full squad'}
+          tone={horizon && horizon.clashes.length ? 'warn' : 'good'}
+        />
+        <Tile
           label="Chips" open={open === 'chips'} onClick={() => toggle('chips')}
           value={chips ? (chips.best ? (chips.best.chip === 'wildcard' ? 'Wildcard' : `GW${chips.best.gw}`) : 'Hold') : '—'}
           sub={chips
@@ -124,6 +137,7 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
 
       {open && (
         <div className="mt-3 border-t border-line pt-3">
+          {open === 'clash' && <ClashPanel clashes={horizon?.clashes ?? []} />}
           {open === 'template' && <TemplatePanel read={template} />}
           {open === 'horizon' && <HorizonPanel read={horizon} />}
           {open === 'advice' && <AdvicePanel read={advice} onApply={onApplyMove} />}
@@ -259,6 +273,18 @@ function HorizonPanel({ read }: { read: HorizonRead | null }) {
     <div>
       <Head title="Horizon scanning" note={`What your fifteen face over the next ${read.weeks.length} gameweeks`} />
 
+      {/* The conclusion first.
+          This used to sit at the very bottom, under the bars, the hard counts,
+          the hardest-fixture chips, the blanks and doubles and the clash list —
+          in 12px muted type, as a footnote. It is the one sentence the whole
+          panel exists to produce ("GW6 is the week to plan for, nine of your
+          fifteen face a hard game"), and a reader had to get past six other
+          things to reach it. Chart underneath, as evidence for a claim already
+          made. */}
+      <div className="mb-3 rounded-xl border border-line-mid bg-surface-2/60 px-3 py-2.5 text-[13.5px] leading-relaxed font-semibold text-ink">
+        {read.headline}
+      </div>
+
       <div className="relative flex h-[96px] items-center gap-1.5">
         <span className="absolute inset-x-0 top-1/2 h-px bg-line-strong" />
         {read.weeks.map((w, i) => {
@@ -334,28 +360,42 @@ function HorizonPanel({ read }: { read: HorizonRead | null }) {
         </div>
       )}
 
-      {read.clashes.length > 0 && <ClashList clashes={read.clashes.slice(0, 3)} />}
 
       <Readout>
-        {read.headline}. Each bar is your best eleven's projected points for that week — not a difficulty colour —
-        so it already accounts for who you actually own, who's fit, and what the bookmakers make of each fixture.
+        Each bar is your best eleven's projected points for that week — not a difficulty colour — so it already
+        accounts for who you actually own, who's fit, and what the bookmakers make of each fixture.
       </Readout>
     </div>
   )
 }
 
 /** Your own attacker against your own defence — the only pairing that really
- *  cannibalises, since two defences can both keep a clean sheet in a 0-0. */
-function ClashList({ clashes }: { clashes: Clash[] }) {
+ *  cannibalises, since two defences can both keep a clean sheet in a 0-0.
+ *
+ *  Its own tab rather than a footnote on the horizon panel. It answers a
+ *  different question from "when is my hard week" — it is about the fifteen
+ *  rather than the calendar — and buried at the bottom of a panel that already
+ *  carries a chart, a hard-fixture strip, a hardest-fixture list and a
+ *  blanks-and-doubles line, it was the sixth thing on screen. */
+function ClashPanel({ clashes }: { clashes: Clash[] }) {
+  const total = clashes.reduce((a, c) => a + c.cost, 0)
   return (
-    <div className="mt-3 rounded-xl border border-bad/35 bg-bad/5 p-2.5">
-      <div className="flex items-center gap-1.5">
-        <Icon name="alert" size={12} className="text-bad" />
-        <span className="text-[10px] font-semibold tracking-[0.12em] text-bad uppercase">Your players cost each other</span>
-      </div>
-      <div className="mt-2 flex flex-col gap-2">
+    <div>
+      <Head title="Your players cost each other" note="Where an attacker of yours ends a defender of yours' clean sheet" />
+      {!clashes.length ? (
+        <div className="rounded-xl border border-good/35 bg-good/5 px-3 py-2.5 text-[13.5px] font-semibold text-ink">
+          Nothing in the next few weeks. No attacker of yours meets a defender of yours, so nobody in the fifteen is
+          scoring at another's expense.
+        </div>
+      ) : (
+        <>
+          <div className="mb-3 rounded-xl border border-line-mid bg-surface-2/60 px-3 py-2.5 text-[13.5px] leading-relaxed font-semibold text-ink">
+            {clashes.length === 1 ? 'One fixture' : `${clashes.length} fixtures`} where your own players meet — about{' '}
+            <span className="text-bad">{total.toFixed(1)} points</span> of clean sheet at risk from your own attack.
+          </div>
+          <div className="flex flex-col gap-2.5">
         {clashes.map((c, i) => (
-          <div key={i} className="text-xs">
+          <div key={i} className="rounded-xl border border-bad/35 bg-bad/5 p-2.5 text-xs">
             <div className="flex flex-wrap items-baseline gap-x-1.5">
               <span className="font-semibold text-ink">GW{c.gw}</span>
               <span className="text-ink-2">{c.fixture}</span>
@@ -370,7 +410,14 @@ function ClashList({ clashes }: { clashes: Clash[] }) {
             </div>
           </div>
         ))}
-      </div>
+          </div>
+          <Readout>
+            Two defences can both keep a clean sheet in a 0-0, so defenders never really cannibalise. An attacker
+            against your own defence is the one pairing that does, and it is the cost nobody prices in when they
+            buy the third player from a club.
+          </Readout>
+        </>
+      )}
     </div>
   )
 }
