@@ -219,7 +219,11 @@ export function SquadRatingSheet({ chosen, pool, squadScore, bestXI, fixtureEase
     // used to grow, and on a phone the overflow ran off the TOP — taking the
     // close button with it, which left no way out but a refresh.
     <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="flex max-h-[88dvh] w-full max-w-[620px] flex-col overflow-hidden rounded-2xl border border-line bg-surface-1" onClick={(e) => e.stopPropagation()}>
+      {/* 620px was a phone sheet that happened to also open on a desktop. The
+          panel is four position bars, a Def Con line, a list of narrative
+          sentences and two columns of names — all of which read better with
+          room, and none of which needs more than a comfortable measure. */}
+      <div className="flex max-h-[90dvh] w-full max-w-[760px] flex-col overflow-hidden rounded-2xl border border-line bg-surface-1" onClick={(e) => e.stopPropagation()}>
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-line p-4">
           <div>
             <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Squad rating</div>

@@ -122,28 +122,15 @@ export function SquadStrip() {
      anything here. Not sticky: a banner pinned over a first-time visitor's
      screen is an advert. It just goes first. */
   if (!squad || !read) {
-    /* The photo is optional and behaves like the tiles': drop a file at
-       `public/home/import.jpg` and it appears; until then the gradient stands
-       on its own and nothing breaks. Same `onError` hide the WindowCard uses,
-       so a 404 costs a request and no layout.
-
-       It is a picture in the banner, not the banner's background. Stretched
-       across the whole thing it had to be held down under an opacity and a
-       scrim to keep the copy readable, and at 1392x164 on a desktop the part
-       that survived `object-cover` was a random horizontal slice — two goes at
-       choosing which slice, and it still read as wallpaper. Bounded, it is
-       just a photograph: a full-width band above the copy on a phone, a
-       thumbnail beside it from md, and nothing sits on top of it either way. */
+    /* No photograph. Three goes at one: as a full-bleed background it had to
+       sit under an opacity and a scrim to keep the copy readable and still
+       read as wallpaper, and bounded — a band on a phone, a thumbnail on a
+       desktop — it was a screenshot of this site's own board, which is a
+       picture of the thing you have not done yet rather than a reason to do
+       it. The gradient carries the card on its own. */
     return (
       <div className="hw-invite relative mb-4 overflow-hidden rounded-2xl border border-accent/30 p-4 md:mb-5 md:p-5">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-5">
-          <img
-            src={`${import.meta.env.BASE_URL}home/import.jpg`}
-            alt=""
-            loading="lazy"
-            onError={(e) => { e.currentTarget.style.display = 'none' }}
-            className="h-[74px] w-full rounded-xl border border-line-mid object-cover object-center md:h-[88px] md:w-[132px] md:shrink-0"
-          />
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
           <div className="min-w-0 flex-1">
             <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-[0.14em] text-accent uppercase">
               <Icon name="camera" size={13} /> Start here

@@ -50,6 +50,10 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
      expanded with its full working, so opening a row as well would put two
      panels on screen before anybody has tapped anything. */
   const [open, setOpen] = useState<Key | null>(null)
+  /* The lead card opens with the panel showing, and closes to its headline —
+     on a phone the horizon chart is 300px of a column you may be scrolling
+     past to reach the market. */
+  const [leadOpen, setLeadOpen] = useState(true)
 
   const engine: Engine = useMemo(
     () => ({ fixtureEase, avail, model, market, profiles }),
@@ -167,9 +171,13 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
       rank: template.tone === 'warn' ? 1 : 0,
     },
   ]
-  const ordered = [...reads].sort((a, b) => b.rank - a.rank)
-  const lead = ordered[0]
-  const rest = ordered.slice(1)
+  /* Horizon leads, always. Ranking picked whichever read had the worst tone
+     that week, so the top of the panel changed shape every time the data
+     moved — and the one thing a manager plans around is which week is coming
+     for them. It is fixed. The ranking still orders the five rows behind it,
+     so the next-worst thing is still the next thing you see. */
+  const lead = reads.find((r) => r.key === 'horizon')!
+  const rest = reads.filter((r) => r.key !== 'horizon').sort((a, b) => b.rank - a.rank)
 
   /* `bare` drops each panel's own section header when it is the lead card,
      where the kicker row and the headline above it already say what this is. */
@@ -188,25 +196,31 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
           The lab is six pieces of analysis and it was announced in the same
           type as a table's column header, which reads as a caption for
           whatever is above it rather than as the name of the thing itself. */}
-      <div className="mb-2.5 flex items-baseline gap-2">
-        <h3 className="text-[15px] leading-none font-extrabold text-ink">Squad Lab</h3>
-        <span className="text-[11px] text-ink-3">six reads, worst first</span>
+      <div className="mb-2.5">
+        <h3 className="text-base leading-none font-extrabold text-ink">Squad Lab</h3>
       </div>
 
-      {/* The one that matters, open, with its working underneath. */}
-      <div className={`rounded-xl border p-3 ${
+      {/* The week you are planning around, open, with its working underneath. */}
+      <div className={`overflow-hidden rounded-xl border ${
         lead.tone === 'warn' ? 'border-warn/50 bg-warn/[0.06]' : lead.tone === 'accent' ? 'border-accent/55 bg-accent-soft/45' : 'border-good/40 bg-good/[0.05]'
       }`}>
-        <div className="mb-1.5 flex items-center gap-2">
-          <span className={`size-2 shrink-0 rounded-full ${DOT[lead.tone]}`} />
-          <span className={`text-[10px] font-bold tracking-[0.13em] uppercase ${TEXT[lead.tone]}`}>
-            {lead.tone === 'warn' ? 'Needs attention' : lead.tone === 'accent' ? 'Worth doing' : 'All clear'}
-          </span>
-          <span className="ml-auto text-[10px] font-semibold tracking-[0.12em] text-ink-3 uppercase">{lead.label}</span>
-        </div>
-        <h4 className="text-[15px] leading-tight font-extrabold text-ink @[440px]:text-base">{lead.head}</h4>
-        <p className="mt-1 text-[12.5px] leading-snug text-ink-2">{lead.sub}</p>
-        <div className="mt-3 border-t border-line/70 pt-3">{panelFor(lead.key, true)}</div>
+        <button
+          onClick={() => { tapHaptic('select'); setLeadOpen((o) => !o) }}
+          aria-expanded={leadOpen}
+          className="w-full p-3 text-left"
+        >
+          <div className="mb-1.5 flex items-center gap-2">
+            <span className={`size-2 shrink-0 rounded-full ${DOT[lead.tone]}`} />
+            <span className={`text-[12px] font-bold tracking-[0.13em] uppercase ${TEXT[lead.tone]}`}>
+              {lead.tone === 'warn' ? 'Needs attention' : lead.tone === 'accent' ? 'Worth doing' : 'All clear'}
+            </span>
+            <span className="ml-auto text-[12px] font-semibold tracking-[0.12em] text-ink-3 uppercase">{lead.label}</span>
+            <Icon name="chevron-right" size={14} className={`shrink-0 text-ink-3 transition-transform ${leadOpen ? 'rotate-90' : ''}`} />
+          </div>
+          <h4 className="text-base leading-tight font-extrabold text-ink @[440px]:text-[17px]">{lead.head}</h4>
+          <p className="mt-1 text-[13.5px] leading-snug text-ink-2">{lead.sub}</p>
+        </button>
+        {leadOpen && <div className="border-t border-line/70 px-3 pt-3 pb-3">{panelFor(lead.key, true)}</div>}
       </div>
 
       {/* The other five as rows. A 98px tile can carry a number or a reason,
@@ -232,14 +246,14 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
                     `line-clamp-2` works by setting `display: -webkit-box`, and
                     `block` won the cascade, so the clamp did nothing and the
                     template row ran to three lines. */}
-                <span className="line-clamp-2 text-[13.5px] leading-snug font-bold text-ink">{r.head}</span>
-                <span className="block truncate text-[11.5px] text-ink-3">{r.label}</span>
+                <span className="line-clamp-2 text-[14.5px] leading-snug font-bold text-ink">{r.head}</span>
+                <span className="block truncate text-[12px] text-ink-3">{r.label}</span>
               </span>
               <span className="flex shrink-0 items-center gap-1.5 text-right">
                 <span>
                   {/* 9ch cut "B.Fernandes" at 103px against 90. */}
-                  <span className={`font-display block max-w-[120px] truncate text-[15px] leading-none ${TEXT[r.tone]}`}>{r.value}</span>
-                  {r.unit && <span className="mt-1 block text-[9.5px] font-semibold tracking-[0.09em] text-ink-3 uppercase">{r.unit}</span>}
+                  <span className={`font-display block max-w-[130px] truncate text-base leading-none ${TEXT[r.tone]}`}>{r.value}</span>
+                  {r.unit && <span className="mt-1 block text-[10.5px] font-semibold tracking-[0.09em] text-ink-3 uppercase">{r.unit}</span>}
                 </span>
                 <Icon name="chevron-right" size={13} className={`text-ink-3 transition-transform ${open === r.key ? 'rotate-90' : ''}`} />
               </span>
@@ -273,13 +287,13 @@ const TEXT: Record<Tone, string> = { good: 'text-good', warn: 'text-warn', accen
 
 const Head = ({ title, note }: { title: string; note: string }) => (
   <div className="mb-2.5">
-    <div className="text-sm font-bold text-ink">{title}</div>
-    <div className="text-xs text-ink-3">{note}</div>
+    <div className="text-[15px] font-bold text-ink">{title}</div>
+    <div className="text-[12.5px] text-ink-3">{note}</div>
   </div>
 )
 
 const Readout = ({ children }: { children: React.ReactNode }) => (
-  <div className="mt-3 border-l-2 border-accent pl-2.5 text-xs text-ink-2">{children}</div>
+  <div className="mt-3 border-l-2 border-accent pl-2.5 text-[13px] leading-relaxed text-ink-2">{children}</div>
 )
 
 /* ── 1 · template & differential ─────────────────────────────────────────── */
@@ -298,7 +312,7 @@ function TemplatePanel({ read, bare }: { read: TemplateRead; bare?: boolean }) {
 
       <div className="mb-3 flex flex-wrap gap-1.5">
         {(['template', 'balanced', 'punt'] as const).map((b) => (
-          <span key={b} className="inline-flex items-center gap-1.5 rounded-full border border-line-mid px-2.5 py-1 text-[11px]">
+          <span key={b} className="inline-flex items-center gap-1.5 rounded-full border border-line-mid px-2.5 py-1 text-[12px]">
             <span className={`size-2 rounded-full ${BAND_STYLE[b].bar}`} />
             <span className="font-semibold text-ink">{read.counts[b]}</span>
             <span className="text-ink-3">
@@ -312,7 +326,7 @@ function TemplatePanel({ read, bare }: { read: TemplateRead; bare?: boolean }) {
 
       <div className="flex flex-col gap-1">
         {read.rows.map(({ row, own, band }) => (
-          <div key={num(row, 'element')} className="flex items-center gap-2 text-xs">
+          <div key={num(row, 'element')} className="flex items-center gap-2 text-[13px]">
             <TeamBadge team={String(row.team)} size={14} />
             <span className="w-[86px] shrink-0 truncate font-medium text-ink">{String(row.web_name)}</span>
             <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-surface-3">
@@ -328,7 +342,7 @@ function TemplatePanel({ read, bare }: { read: TemplateRead; bare?: boolean }) {
           <div className="text-[10px] font-semibold tracking-[0.12em] text-ink-3 uppercase">The bets you're making by leaving them out</div>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {read.missing.map(({ row, own }) => (
-              <span key={num(row, 'element')} className="inline-flex items-center gap-1.5 rounded-lg border border-line-mid px-2 py-1 text-[11px]">
+              <span key={num(row, 'element')} className="inline-flex items-center gap-1.5 rounded-lg border border-line-mid px-2 py-1 text-[12px]">
                 <TeamBadge team={String(row.team)} size={12} />
                 <span className="font-medium text-ink">{String(row.web_name)}</span>
                 <span className="tabular-nums text-bad">{own.toFixed(0)}%</span>
@@ -349,7 +363,7 @@ function TemplatePanel({ read, bare }: { read: TemplateRead; bare?: boolean }) {
 /* ── 2 · horizon scanning ────────────────────────────────────────────────── */
 
 function HorizonPanel({ read, bare }: { read: HorizonRead | null; bare?: boolean }) {
-  if (!read) return <div className="py-4 text-center text-xs text-ink-3">Complete your fifteen to scan the horizon.</div>
+  if (!read) return <div className="py-4 text-center text-[13px] text-ink-3">Complete your fifteen to scan the horizon.</div>
   // A fifteen spread across ten clubs has a genuinely smoother schedule than
   // any one of them, so plotted from zero these bars would look identical.
   // They're drawn as a deviation from your own average week instead — the
@@ -435,7 +449,7 @@ function HorizonPanel({ read, bare }: { read: HorizonRead | null; bare?: boolean
       </div>
 
       {read.hardest.length > 0 && (
-        <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px]">
           <span className="font-semibold text-ink-3">GW{read.toughest.gw} is hardest for</span>
           {read.hardest.map((h) => (
             <span key={h.team} className="inline-flex items-center gap-1 rounded-md border border-line-mid px-1.5 py-0.5">
@@ -447,7 +461,7 @@ function HorizonPanel({ read, bare }: { read: HorizonRead | null; bare?: boolean
       )}
 
       {read.weeks.some((w) => w.blanks || w.doubles) && (
-        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-ink-3">
+        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-ink-3">
           {read.weeks.filter((w) => w.doubles).map((w) => (
             <span key={`d${w.gw}`} className="text-good">GW{w.gw}: {w.doubles} double{w.doubles > 1 ? 's' : ''}</span>
           ))}
@@ -492,7 +506,7 @@ function ClashPanel({ clashes, bare }: { clashes: Clash[]; bare?: boolean }) {
           </div>
           <div className="flex flex-col gap-2.5">
         {clashes.map((c, i) => (
-          <div key={i} className="rounded-xl border border-bad/35 bg-bad/5 p-2.5 text-xs">
+          <div key={i} className="rounded-xl border border-bad/35 bg-bad/5 p-2.5 text-[13px]">
             <div className="flex flex-wrap items-baseline gap-x-1.5">
               <span className="font-semibold text-ink">GW{c.gw}</span>
               <span className="text-ink-2">{c.fixture}</span>
@@ -522,7 +536,7 @@ function ClashPanel({ clashes, bare }: { clashes: Clash[]; bare?: boolean }) {
 /* ── 3 · the Analyser's recommendation ───────────────────────────────────── */
 
 function AdvicePanel({ read, onApply, bare }: { read: Recommendation | null; onApply?: (outEl: number, inEl: number) => void; bare?: boolean }) {
-  if (!read) return <div className="py-4 text-center text-xs text-ink-3">Complete your fifteen for a recommendation.</div>
+  if (!read) return <div className="py-4 text-center text-[13px] text-ink-3">Complete your fifteen for a recommendation.</div>
   const hold = read.verdict === 'hold'
   return (
     <div>
@@ -533,7 +547,7 @@ function AdvicePanel({ read, onApply, bare }: { read: Recommendation | null; onA
           <Icon name={hold ? 'check' : 'bolt'} size={14} className={hold ? 'text-good' : 'text-accent'} />
           <span className={`text-sm font-bold ${hold ? 'text-good' : 'text-accent'}`}>{read.headline}</span>
         </div>
-        <div className="mt-1 text-xs text-ink-2">{read.detail}</div>
+        <div className="mt-1 text-[13px] text-ink-2">{read.detail}</div>
       </div>
 
       {read.moves.length > 0 && (
@@ -554,7 +568,7 @@ function AdvicePanel({ read, onApply, bare }: { read: Recommendation | null; onA
 function MoveRow({ move, step, free, onApply }: { move: Move; step: number; free: boolean; onApply?: (outEl: number, inEl: number) => void }) {
   return (
     <div className="rounded-xl border border-line bg-surface-1/60 p-2.5">
-      <div className="flex items-center gap-2 text-xs">
+      <div className="flex items-center gap-2 text-[13px]">
         <span className="font-num grid size-5 shrink-0 place-items-center rounded-md bg-surface-3 text-[10px] font-bold text-ink-2">{step}</span>
         <span className="truncate text-bad">{String(move.out.web_name)}</span>
         <Icon name="arrow-right" size={12} className="shrink-0 text-ink-3" />
@@ -562,7 +576,7 @@ function MoveRow({ move, step, free, onApply }: { move: Move; step: number; free
         <span className="truncate font-semibold text-good">{String(move.in.web_name)}</span>
         <span className="font-num ml-auto shrink-0 tabular-nums text-accent">+{move.gain.toFixed(1)}</span>
       </div>
-      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 pl-7 text-[11px] text-ink-3">
+      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 pl-7 text-[12px] text-ink-3">
         <span>{move.reason}</span>
         <span>·</span>
         <span>{teamLabel(String(move.in.team))}</span>
@@ -590,7 +604,7 @@ function MoveRow({ move, step, free, onApply }: { move: Move; step: number; free
 /* ── 4 · captain ladder ──────────────────────────────────────────────────── */
 
 function CaptainPanel({ read, gw, bare }: { read: CaptainLadder | null; gw: number; bare?: boolean }) {
-  if (!read) return <div className="py-4 text-center text-xs text-ink-3">Pick your eleven to rank the armband.</div>
+  if (!read) return <div className="py-4 text-center text-[13px] text-ink-3">Pick your eleven to rank the armband.</div>
   const max = Math.max(...read.rows.map((r) => r.xp), 1)
   const shown = read.rows.slice(0, 8)
   return (
@@ -608,7 +622,7 @@ function CaptainPanel({ read, gw, bare }: { read: CaptainLadder | null; gw: numb
 
       <div className="flex flex-col gap-0.5">
         {shown.map((r, i) => (
-          <div key={num(r.row, 'element')} className={`flex items-center gap-2 rounded-lg px-1 py-1.5 text-xs ${i === 0 ? 'bg-accent-soft/50 ring-1 ring-accent/40' : ''}`}>
+          <div key={num(r.row, 'element')} className={`flex items-center gap-2 rounded-lg px-1 py-1.5 text-[13px] ${i === 0 ? 'bg-accent-soft/50 ring-1 ring-accent/40' : ''}`}>
             <span className={`grid size-[18px] shrink-0 place-items-center rounded-md text-[10px] font-bold ${
               i === 0 ? 'bg-accent text-accent-contrast' : i === 1 ? 'bg-surface-3 text-ink-2' : 'text-ink-3'
             }`}>{i === 0 ? 'C' : i === 1 ? 'V' : ''}</span>
@@ -623,7 +637,7 @@ function CaptainPanel({ read, gw, bare }: { read: CaptainLadder | null; gw: numb
         ))}
       </div>
 
-      <div className={`mt-2.5 flex items-start gap-2 rounded-xl border p-2.5 text-xs ${
+      <div className={`mt-2.5 flex items-start gap-2 rounded-xl border p-2.5 text-[13px] ${
         read.close ? 'border-warn/40 bg-warn/5' : 'border-good/35 bg-good/5'
       }`}>
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-[0.1em] uppercase ${
@@ -639,7 +653,7 @@ function CaptainPanel({ read, gw, bare }: { read: CaptainLadder | null; gw: numb
       {shown.some((r) => r.note) && (
         <div className="mt-2 flex flex-col gap-1">
           {shown.filter((r) => r.note).slice(0, 3).map((r) => (
-            <div key={`n${num(r.row, 'element')}`} className="flex gap-1.5 text-[11px]">
+            <div key={`n${num(r.row, 'element')}`} className="flex gap-1.5 text-[12px]">
               <span className={`mt-1 size-1.5 shrink-0 rounded-full ${r.matchup > 1 ? 'bg-good' : 'bg-warn'}`} />
               <span className="text-ink-3"><span className="font-medium text-ink-2">{String(r.row.web_name)}</span> — {r.note}</span>
             </div>
@@ -666,7 +680,7 @@ const CHIP_NOTE: Record<ChipKey, string> = {
 }
 
 function ChipsPanel({ read, bare }: { read: ChipPlan | null; bare?: boolean }) {
-  if (!read) return <div className="py-4 text-center text-xs text-ink-3">Complete your fifteen to plan your chips.</div>
+  if (!read) return <div className="py-4 text-center text-[13px] text-ink-3">Complete your fifteen to plan your chips.</div>
   return (
     <div>
       {!bare && (
@@ -683,7 +697,7 @@ function ChipsPanel({ read, bare }: { read: ChipPlan | null; bare?: boolean }) {
       </div>
 
       {read.weeksLeft != null && read.weeksLeft <= 6 && read.advice.some((a) => a.spentAt == null) && (
-        <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-warn/40 bg-warn/5 p-2.5 text-xs">
+        <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-warn/40 bg-warn/5 p-2.5 text-[13px]">
           <Icon name="clock" size={13} className="shrink-0 text-warn" />
           <span className="text-ink-2">
             Your first-half chips have to be played by <span className="font-semibold text-ink">GW{FIRST_HALF_LAST}</span> — a
@@ -709,12 +723,12 @@ function ChipRow({ a, best }: { a: ChipAdvice; best: boolean }) {
           : a.worthIt ? 'border-line-strong' : 'border-line'
     }`}>
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-        <span className={`text-xs font-bold ${best ? 'text-accent' : 'text-ink'}`}>{a.label}</span>
+        <span className={`text-[13px] font-bold ${best ? 'text-accent' : 'text-ink'}`}>{a.label}</span>
         {spent
-          ? <span className="text-[11px] text-ink-3">played in GW{a.spentAt}</span>
+          ? <span className="text-[12px] text-ink-3">played in GW{a.spentAt}</span>
           : a.worthIt && a.gw != null
             ? <span className="rounded-md bg-accent/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-accent uppercase">GW{a.gw}</span>
-            : <span className="text-[11px] text-ink-3">hold</span>}
+            : <span className="text-[12px] text-ink-3">hold</span>}
         {/* The wildcard is never a points figure, and a free hit is decided
             on the shape of the week rather than the gap — so its number is
             the size of the prize, shown only once the week justifies one. */}
@@ -724,7 +738,7 @@ function ChipRow({ a, best }: { a: ChipAdvice; best: boolean }) {
           </span>
         )}
       </div>
-      <div className="mt-0.5 text-[11px] leading-tight text-ink-3">
+      <div className="mt-0.5 text-[12px] leading-tight text-ink-3">
         {spent ? CHIP_NOTE[a.chip] : a.detail}
       </div>
     </div>
