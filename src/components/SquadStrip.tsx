@@ -12,20 +12,20 @@ import type { FixtureEaseRow, RatingRow } from '../lib/types'
 /**
  * The front page's one personal thing, in whichever of two states applies.
  *
- * **No squad — the invitation** (`slot="top"`). The strongest hook this site
+ * **No squad — the invitation.** The strongest hook this site
  * has is that it will read a screenshot of your team in about eight seconds
  * and tell you what is wrong with it, and until now the front page never said
  * so. This is the banner that does, and it goes *above* the tiles: measured at
  * 390px it otherwise landed 2,100px down the page, below all eight of them,
  * which is not where you put the first thing a visitor should do.
  *
- * **A squad — the summary** (`slot="bottom"`). Once fifteen exist the
- * invitation is nonsense, so the strip takes over — the rating, what the week
- * projects, what is in the bank, one tap back to the board — and it sits after
- * the grid and sticks, because by then it is your data rather than a pitch.
+ * **A squad — the summary.** Once fifteen exist the invitation is nonsense, so
+ * the strip takes over — the rating, what the week projects, what is in the
+ * bank, one tap back to the board — pinned under the header and over the
+ * tiles, where it stays for the whole page.
  *
- * Two mounts rather than one because the two states want different places in
- * the page. Each returns null in the other's state, so exactly one renders.
+ * Both states render in the same slot, above the grid — one component, one
+ * mount, whichever of the two it turns out to be.
  *
  * The projection is read from the planner's own stored week rather than
  * recomputed, because two numbers for the same thing on two pages is worse
@@ -39,7 +39,7 @@ const ovOf = (r: RatingRow): number | null => {
   return s == null ? null : Math.round(Math.max(0, Math.min(100, s * 20)))
 }
 
-export function SquadStrip({ slot = 'bottom' }: { slot?: 'top' | 'bottom' }) {
+export function SquadStrip() {
   const navigate = useNavigate()
   const { data } = useCore()
   const avail = useAvailability()
@@ -122,7 +122,6 @@ export function SquadStrip({ slot = 'bottom' }: { slot?: 'top' | 'bottom' }) {
      anything here. Not sticky: a banner pinned over a first-time visitor's
      screen is an advert. It just goes first. */
   if (!squad || !read) {
-    if (slot !== 'top') return null
     return (
       <div className="mb-4 overflow-hidden rounded-2xl border border-accent/30 bg-accent-soft/40 p-4 md:mb-5 md:p-5">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
@@ -155,18 +154,20 @@ export function SquadStrip({ slot = 'bottom' }: { slot?: 'top' | 'bottom' }) {
     )
   }
 
-  if (slot !== 'bottom') return null
-
   return (
-    /* Above the bottom bar, not behind it.
-       The nav is `fixed … bottom-0 z-[150]` and 57px tall, and `main` already
-       reserves 76px for it — so a strip pinned to `bottom-0` renders in that
-       reserved gap and is completely covered on a phone. It sits at 76px on
-       mobile and at 0 from `md`, where the bar is gone. */
+    /* Pinned under the header, over the tiles.
+       It used to sit after the grid and stick to the bottom, which meant your
+       own squad was the last thing on the page and only appeared once you had
+       scrolled past everything else. It now leads the page and stays put.
+
+       `top` is the header's own height so the two never overlap: the nav is
+       `sticky top-0 z-[100]`, h-14 on mobile and 70px from md, plus its 1px
+       bottom border and whatever the notch takes — 56 and 70 left a hairline
+       of the strip behind that border. z-30 keeps it under the header, so it
+       slides beneath rather than over it on the way up. */
     <div
       data-squad-strip
-      className="sticky z-30 -mx-4 mt-4 border-t border-line-mid bg-bg-0/92 px-4 py-2.5 backdrop-blur-md md:-mx-6 md:bottom-0 md:px-6 lg:mx-0 lg:rounded-2xl lg:border lg:border-line-mid"
-      style={{ bottom: 'calc(env(safe-area-inset-bottom) + 76px)' }}
+      className="sticky top-[calc(env(safe-area-inset-top)_+_57px)] z-30 -mx-4 mb-4 border-b border-line-mid bg-bg-0/92 px-4 py-2.5 backdrop-blur-md md:-mx-6 md:top-[calc(env(safe-area-inset-top)_+_71px)] md:px-6 lg:mx-0 lg:rounded-2xl lg:border lg:border-line-mid"
     >
       <button
         onClick={() => navigate('/squad')}
