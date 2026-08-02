@@ -226,6 +226,24 @@ const CAT_LABEL: Record<Cat, string> = {
   setpiece: 'set pieces',
 }
 
+/* The same channel said two ways, because one phrase cannot serve both
+   halves of the sentence: a defence gives up chances *down* a flank, a player
+   takes his *from* one. */
+const CONCEDE_AT: Record<Cat | 'header', string> = {
+  left: 'down the attacking left',
+  centre: 'through the middle',
+  right: 'down the attacking right',
+  setpiece: 'from set pieces',
+  header: 'to headers',
+}
+const TAKES_AT: Record<Cat | 'header', string> = {
+  left: 'from the left',
+  centre: 'from central positions',
+  right: 'from the right',
+  setpiece: 'from set pieces',
+  header: 'with his head',
+}
+
 function channelOf(zone: string): Exclude<Cat, 'setpiece'> {
   if (/-(wl|el)/.test(zone) || /-l($|-)/.test(zone)) return 'left'
   if (/-(wr|er)/.test(zone) || /-r($|-)/.test(zone)) return 'right'
@@ -2093,12 +2111,27 @@ function MatchupExplorer({ ratings, league }: { ratings: RatingRow[]; league: st
         if (c.pShare >= 0.15 && (!best || c.pShare * rel > best.pShare * ((best.oShare - best.lShare) / Math.max(best.lShare, 0.02)))) best = c
       }
 
+      /* Two sentences, two named subjects.
+       *
+       * This read "OPP concede 24% of xG from the attacking right (league
+       * 19%) — 39% of their threat comes from there", and a reader has no way
+       * to know that the first "their" is the defence and the second is the
+       * player. Both subjects are named now.
+       *
+       * The player goes first. Naming the defence first was clear but put the
+       * same clause at the front of every row — nine of the twelve rows
+       * against Spurs are the same header weakness, so nine rows opened with
+       * the same fourteen words and the thing that distinguishes them was at
+       * the end. The row is about the player; it starts with him. */
       const why = best && (best.oShare - best.lShare) / Math.max(best.lShare, 0.02) > 0.08
-        ? `${opp} concede ${(best.oShare * 100).toFixed(0)}% of xG ${best.cat === 'header' ? 'from headers' : `from ${CAT_LABEL[best.cat as Cat]}`} (league ${(best.lShare * 100).toFixed(0)}%) — ${(best.pShare * 100).toFixed(0)}% of their threat comes from there.`
+        ? `Takes ${(best.pShare * 100).toFixed(0)}% of his chances ${TAKES_AT[best.cat]} — and ${teamLabel(opp)} give up ${(best.oShare * 100).toFixed(0)}% of their xG ${CONCEDE_AT[best.cat]}, against ${(best.lShare * 100).toFixed(0)}% league-wide.`
         : ''
       out.push({ r, uplift, xg: p.totalXg, why })
     }
-    // Rank by uplift, favouring players with real attacking volume.
+    /* Rank by fit AND volume: a perfect profile on somebody who barely
+       shoots is not an edge. That has always been the order, but only the fit
+       was on screen, so a +9% sat above a +10% and looked like a mistake. The
+       volume is now shown beside it. */
     out.sort((a, b) => b.uplift * Math.sqrt(b.xg) - a.uplift * Math.sqrt(a.xg))
     return out.slice(0, 12)
   }, [opp, playerShotsQ.data, teamProfiles, leagueProfile, headShareByEl, ratings])
@@ -2169,8 +2202,13 @@ function MatchupExplorer({ ratings, league }: { ratings: RatingRow[]; league: st
             </div>
 
           {results.length > 0 && (
+            <>
+            <p className="mb-1.5 text-xs text-ink-3">
+              Ranked by fit <span className="text-ink-2">×</span> volume — a profile that suits the weakness perfectly is
+              worth nothing on a player who barely shoots, so the season xG beside each fit is part of the order.
+            </p>
             <div className="overflow-hidden rounded-xl border border-line">
-              {results.map(({ r, uplift, why }, i) => (
+              {results.map(({ r, uplift, xg, why }, i) => (
                 <button
                   key={r.element}
                   onClick={() => navigate(playerHref(String(r.web_name), num(r, 'code')))}
@@ -2183,13 +2221,17 @@ function MatchupExplorer({ ratings, league }: { ratings: RatingRow[]; league: st
                     <span className="flex items-center gap-1.5 text-[11px] text-ink-3"><TeamBadge team={String(r.team)} size={11} />{r.team} · £{r.price}m</span>
                     {why && <span className="mt-0.5 block text-xs text-ink-2">{why}</span>}
                   </span>
-                  <span className={`shrink-0 font-num text-sm font-semibold tabular-nums ${uplift > 0 ? 'text-good' : 'text-ink-3'}`}>
-                    {uplift > 0 ? '+' : ''}{(uplift * 100).toFixed(0)}%
-                    <span className="ml-1 text-[10px] font-normal text-ink-3">fit</span>
+                  <span className="shrink-0 text-right">
+                    <span className={`block font-num text-sm font-semibold tabular-nums ${uplift > 0 ? 'text-good' : 'text-ink-3'}`}>
+                      {uplift > 0 ? '+' : ''}{(uplift * 100).toFixed(0)}%
+                      <span className="ml-1 text-[10px] font-normal text-ink-3">fit</span>
+                    </span>
+                    <span className="block text-[10.5px] text-ink-3">{xg.toFixed(1)} xG</span>
                   </span>
                 </button>
               ))}
             </div>
+            </>
           )}
           </Exportable>
           )}

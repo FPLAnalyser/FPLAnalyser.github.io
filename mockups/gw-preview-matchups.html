@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GW Preview — matchup edges, three ways</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Archivo+Black&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-0:#000;--bg-1:#070605;--s1:#16130e;--s2:#201b13;--s3:#2a2318;
+  --ink:#f4efe3;--ink2:#b3ab99;--ink3:#7d7666;
+  --line:#241f17;--line-mid:#332b1f;
+  --accent:#c9a227;--accent-2:#e2c06a;--accent-soft:rgba(201,162,39,.13);
+  --good:#3ddc7a;--warn:#e8853a;--bad:#f0736f;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg-0);color:var(--ink);font:400 15px/1.5 'Manrope',system-ui,sans-serif;padding:26px 0 90px}
+.wrap{max-width:1500px;margin:0 auto;padding:0 18px}
+h1{font-size:26px;font-weight:800;letter-spacing:-.02em}
+.sec{border-top:1px solid var(--line);margin-top:44px;padding-top:24px}
+.sec-k{font:800 10px/1 'Manrope';letter-spacing:.16em;text-transform:uppercase;color:var(--accent-2);margin-bottom:8px}
+.sec h2{font-size:22px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px}
+.lede{color:var(--ink2);font-size:14px;max-width:84ch;margin-bottom:20px}
+.frames{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+.col{width:460px;flex:0 0 auto;border:1px solid var(--line-mid);border-radius:16px;overflow:hidden;background:var(--bg-1)}
+.wide{width:950px}
+.cap{font:700 10.5px/1.35 'Manrope';letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);padding:9px 13px;border-bottom:1px solid var(--line);background:var(--s1)}
+.pad{padding:14px}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:13px}
+.k{font:800 10px/1 'Manrope';letter-spacing:.13em;text-transform:uppercase;color:var(--ink3)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:10px;padding:9px 13px;font:800 12px/1 'Manrope';border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent-2)}
+.note{border-left:2px solid var(--accent);padding:2px 0 2px 12px;color:var(--ink2);font-size:13.5px;margin-top:18px;max-width:90ch}
+.tag{font:800 9.5px/1 'Manrope';letter-spacing:.08em;text-transform:uppercase;padding:4px 7px;border-radius:5px;display:inline-block}
+.tag.g{background:rgba(61,220,122,.16);color:var(--good)}
+.tag.b{background:rgba(240,115,111,.16);color:var(--bad)}
+.tag.n{background:rgba(255,255,255,.07);color:var(--ink2)}
+.crest{width:17px;height:17px;border-radius:4px;display:inline-grid;place-items:center;font:800 8px/1 'Manrope';background:var(--s3);color:var(--ink2);flex:0 0 auto}
+
+/* P1 */
+.p1h{display:flex;align-items:baseline;gap:9px;margin-bottom:10px}
+.p1h h3{font:800 16px/1 'Manrope'}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lane{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.lanehead{padding:8px 11px;font:800 10.5px/1 'Manrope';letter-spacing:.12em;text-transform:uppercase;border-bottom:1px solid var(--line)}
+.lane.up .lanehead{color:var(--good);background:rgba(61,220,122,.07)}
+.lane.dn .lanehead{color:var(--bad);background:rgba(240,115,111,.06)}
+.prow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:9px 11px;border-bottom:1px solid var(--line)}
+.prow:last-child{border-bottom:0}
+.prow .nm{font:800 13.5px/1.2 'Manrope'}
+.prow .sub{font-size:11.5px;color:var(--ink3);margin-top:2px;display:flex;align-items:center;gap:5px}
+.prow .why{font-size:12px;color:var(--ink2);margin-top:4px;line-height:1.35}
+.prow .val{font:800 14px/1 'Manrope';text-align:right}
+.prow .val s{display:block;font:600 10px/1.6 'Manrope';color:var(--ink3);text-decoration:none}
+
+/* P2 */
+.fx{border:1px solid var(--line);border-radius:12px;background:var(--s1);padding:12px;margin-bottom:9px}
+.fxh{display:flex;align-items:center;gap:8px;font:800 14px/1 'Manrope';margin-bottom:9px}
+.fxh .t{font-size:11px;color:var(--ink3);margin-left:auto;font-weight:600}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.side{border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:rgba(0,0,0,.24)}
+.side .k{margin-bottom:5px;display:block}
+.side .nm{font:800 13.5px/1.2 'Manrope'}
+.side .why{font-size:11.5px;color:var(--ink2);margin-top:4px;line-height:1.35}
+.bar{height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:7px}
+.bar>i{display:block;height:100%;border-radius:99px}
+.bar>i.g{background:var(--good)} .bar>i.b{background:var(--bad)}
+
+/* P3 */
+.inline{display:flex;gap:8px;align-items:flex-start;padding:9px 11px;border-top:1px dashed var(--line-mid);font-size:12.5px;color:var(--ink2);line-height:1.4}
+.dot{width:7px;height:7px;border-radius:99px;flex:0 0 auto;margin-top:5px}
+</style></head><body>
+<div class="wrap">
+  <h1>GW Preview — matchup edges, three ways</h1>
+  <p class="lede" style="margin-top:8px">
+    Every number below is the real GW1 computation: 92 attackers with 20+ shots on record, each scored against the
+    club they actually face. Fit is how much of a player's own shot profile lands where that defence is weakest
+    relative to the league, weighted by how much threat he has to redirect. The spread across a whole gameweek runs
+    <b>−9% to +15%</b>, so this is a tie-breaker between two players you already fancy, not a reason to captain
+    somebody. Any version of this needs to say so on the page.
+  </p>
+
+  <!-- ─────────────────────────── P1 ─────────────────────────── -->
+  <div class="sec">
+    <div class="sec-k">◆ P1</div>
+    <h2>Two lanes: the fixture helps, the fixture hurts</h2>
+    <p class="lede">
+      One section, whole round, ranked. The cheapest to build — it is the Matchup Explorer's own list run over all ten
+      games instead of one opponent — and the only one that answers "who should I be looking at this week" without
+      making the reader scan ten fixtures.
+    </p>
+    <div class="frames">
+      <div class="col wide">
+        <div class="cap">P1 · one section, both directions</div>
+        <div class="pad">
+          <div class="p1h">
+            <h3>Who the fixture suits</h3>
+            <span style="font-size:11.5px;color:var(--ink3)">GW1 · 92 attackers scored against the defence they face</span>
+          </div>
+          <div class="split">
+            <div class="lane up">
+              <div class="lanehead">↑ The fixture helps</div>
+              <div class="prow">
+                <div>
+                  <div class="nm">Mitoma</div>
+                  <div class="sub"><span class="crest">BHA</span> Brighton v Aston Villa · £6.0m</div>
+                  <div class="why">Villa give up 20% more of their xG down the attacking left than the league. Mitoma takes 79% of his chances from there.</div>
+                </div>
+                <div class="val" style="color:var(--good)">+14%<s>4.8 xG</s></div>
+              </div>
+              <div class="prow">
+                <div>
+                  <div class="nm">Grealish</div>
+                  <div class="sub"><span class="crest">MCI</span> Man City v Bournemouth · £6.5m</div>
+                  <div class="why">Bournemouth concede 38% more from set pieces than the league. 71% of Grealish's threat is left-sided delivery.</div>
+                </div>
+                <div class="val" style="color:var(--good)">+15%<s>3.1 xG</s></div>
+              </div>
+              <div class="prow">
+                <div>
+                  <div class="nm">Haaland</div>
+                  <div class="sub"><span class="crest">MCI</span> Man City v Bournemouth · £15.5m</div>
+                  <div class="why">A small central edge on the largest shot volume in the league — 25.8 xG of it.</div>
+                </div>
+                <div class="val" style="color:var(--good)">+5%<s>25.8 xG</s></div>
+              </div>
+              <div class="prow">
+                <div>
+                  <div class="nm">Adli</div>
+                  <div class="sub"><span class="crest">BOU</span> Bournemouth v Man City · £5.0m</div>
+                  <div class="why">City give up 29% more down the attacking right than the league. Adli takes 53% of his chances from there.</div>
+                </div>
+                <div class="val" style="color:var(--good)">+9%<s>3.6 xG</s></div>
+              </div>
+              <div class="prow">
+                <div>
+                  <div class="nm">Igor Jesus</div>
+                  <div class="sub"><span class="crest">NFO</span> Forest v Leeds · £6.0m</div>
+                  <div class="why">Leeds concede 8% above league through the middle, where Igor Jesus takes most of his shots.</div>
+                </div>
+                <div class="val" style="color:var(--good)">+7%<s>6.4 xG</s></div>
+              </div>
+            </div>
+            <div class="lane dn">
+              <div class="lanehead">↓ The fixture hurts</div>
+              <div class="prow">
+                <div>
+                  <div class="nm">Kroupi Jr</div>
+                  <div class="sub"><span class="crest">BOU</span> Bournemouth v Man City · £7.5m</div>
+                  <div class="why">City are the league's tightest in the channels he uses. Nothing in his profile finds a soft edge.</div>
+                </div>
+                <div class="val" style="color:var(--bad)">−9%<s>7.3 xG</s></div>
+              </div>
+              <div class="prow">
+                <div>
+                  <div class="nm">Iwobi</div>
+                  <div class="sub"><span class="crest">FUL</span> Fulham v Chelsea · £5.5m</div>
+                  <div class="why">Chelsea concede less than the league everywhere Iwobi shoots from.</div>
+                </div>
+                <div class="val" style="color:var(--bad)">−9%<s>2.4 xG</s></div>
+              </div>
+              <div class="prow">
+                <div>
+                  <div class="nm">Richarlison</div>
+                  <div class="sub"><span class="crest">TOT</span> Spurs v Brentford · £6.0m</div>
+                  <div class="why">Brentford's shape denies the central and left areas he works in.</div>
+                </div>
+                <div class="val" style="color:var(--bad)">−8%<s>9.9 xG</s></div>
+              </div>
+              <div class="prow">
+                <div>
+                  <div class="nm">Gakpo</div>
+                  <div class="sub"><span class="crest">LIV</span> Liverpool v Newcastle · £7.0m</div>
+                  <div class="why">Newcastle are 5% below league through the middle — the one channel Gakpo relies on.</div>
+                </div>
+                <div class="val" style="color:var(--bad)">−7%<s>9.8 xG</s></div>
+              </div>
+              <div class="prow">
+                <div>
+                  <div class="nm">Woltemade</div>
+                  <div class="sub"><span class="crest">NEW</span> Newcastle v Liverpool · £6.0m</div>
+                  <div class="why">Liverpool concede below league centrally, where his shots come from.</div>
+                </div>
+                <div class="val" style="color:var(--bad)">−6%<s>7.5 xG</s></div>
+              </div>
+            </div>
+          </div>
+          <p style="margin-top:11px;font-size:12px;color:var(--ink3)">
+            Fit = how much of a player's shot profile lands where this defence is weakest, against the league.
+            Ranked by fit × season xG. Pre-season this reads last season's shots — it says so.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────── P2 ─────────────────────────── -->
+  <div class="sec">
+    <div class="sec-k">◆ P2</div>
+    <h2>One line per fixture, both sides of it</h2>
+    <p class="lede">
+      The Preview already walks the round fixture by fixture, so this sits inside that rhythm: for each game, the
+      man each defence is least equipped to handle. Reads as match analysis rather than a leaderboard, and it never
+      shows the same player twice. Costs more vertical space, and on a quiet fixture it has to be able to say
+      "nothing to separate them" rather than manufacture an edge.
+    </p>
+    <div class="frames">
+      <div class="col">
+        <div class="cap">P2 · inside the fixture list</div>
+        <div class="pad">
+          <div class="fx">
+            <div class="fxh"><span class="crest">BHA</span> Brighton <span style="color:var(--ink3);font-weight:600">v</span> Aston Villa <span class="crest">AVL</span><span class="t">Sat 15:00</span></div>
+            <div class="duo">
+              <div class="side">
+                <span class="k" style="color:var(--good)">Brighton's edge</span>
+                <div class="nm">Mitoma <span style="font-weight:600;color:var(--ink3);font-size:11.5px">£6.0m</span></div>
+                <div class="why">Villa give up 20% more down the attacking left than the league; 79% of his chances come from there.</div>
+                <div class="bar"><i class="g" style="width:78%"></i></div>
+              </div>
+              <div class="side">
+                <span class="k" style="color:var(--bad)">Villa's edge</span>
+                <div class="nm">Watkins <span style="font-weight:600;color:var(--ink3);font-size:11.5px">£8.0m</span></div>
+                <div class="why">Nothing in Brighton's shape suits him — his channels are the ones they defend best.</div>
+                <div class="bar"><i class="b" style="width:18%"></i></div>
+              </div>
+            </div>
+          </div>
+          <div class="fx">
+            <div class="fxh"><span class="crest">MCI</span> Man City <span style="color:var(--ink3);font-weight:600">v</span> Bournemouth <span class="crest">BOU</span><span class="t">Sat 15:00</span></div>
+            <div class="duo">
+              <div class="side">
+                <span class="k" style="color:var(--good)">City's edge</span>
+                <div class="nm">Grealish <span style="font-weight:600;color:var(--ink3);font-size:11.5px">£6.5m</span></div>
+                <div class="why">Bournemouth concede 38% more from set pieces than the league.</div>
+                <div class="bar"><i class="g" style="width:84%"></i></div>
+              </div>
+              <div class="side">
+                <span class="k" style="color:var(--good)">Bournemouth's edge</span>
+                <div class="nm">Adli <span style="font-weight:600;color:var(--ink3);font-size:11.5px">£5.0m</span></div>
+                <div class="why">City give up 29% more down the attacking right; he takes 53% of his chances there.</div>
+                <div class="bar"><i class="g" style="width:62%"></i></div>
+              </div>
+            </div>
+          </div>
+          <div class="fx">
+            <div class="fxh"><span class="crest">LIV</span> Liverpool <span style="color:var(--ink3);font-weight:600">v</span> Newcastle <span class="crest">NEW</span><span class="t">Sun 16:30</span></div>
+            <div class="duo">
+              <div class="side">
+                <span class="k" style="color:var(--good)">Liverpool's edge</span>
+                <div class="nm">Wirtz <span style="font-weight:600;color:var(--ink3);font-size:11.5px">£7.5m</span></div>
+                <div class="why">Newcastle give up 27% more down the attacking right than the league.</div>
+                <div class="bar"><i class="g" style="width:52%"></i></div>
+              </div>
+              <div class="side">
+                <span class="k" style="color:var(--ink3)">Newcastle's edge</span>
+                <div class="nm" style="color:var(--ink2)">None worth naming</div>
+                <div class="why">No Newcastle attacker's profile finds a soft edge in this defence.</div>
+                <div class="bar"><i style="width:6%;background:var(--ink3)"></i></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────── P3 ─────────────────────────── -->
+      <div class="col">
+        <div class="cap">P3 · a line inside what is already there</div>
+        <div class="pad">
+          <p style="font-size:12.5px;color:var(--ink3);margin-bottom:10px">
+            No new section at all. The Preview's existing fixture block gains one sentence when — and only when —
+            the matchup actually says something. On most games it says nothing and takes no space.
+          </p>
+          <div class="fx" style="padding:0">
+            <div style="padding:12px 12px 9px">
+              <div class="fxh" style="margin-bottom:6px"><span class="crest">BHA</span> Brighton <span style="color:var(--ink3);font-weight:600">v</span> Aston Villa <span class="crest">AVL</span><span class="t">Sat 15:00</span></div>
+              <div style="display:flex;gap:14px;font-size:12.5px;color:var(--ink2)">
+                <span><b style="color:var(--ink)">1.62</b> xG</span><span><b style="color:var(--ink)">1.18</b> xGA</span><span><b style="color:var(--ink)">31%</b> CS</span>
+              </div>
+            </div>
+            <div class="inline"><span class="dot" style="background:var(--good)"></span>
+              <span><b style="color:var(--ink)">Matchup.</b> Villa give up a fifth more of their xG down the attacking left than the league does, and 79% of <b style="color:var(--ink)">Mitoma</b>'s chances come from exactly there.</span>
+            </div>
+          </div>
+          <div class="fx" style="padding:0">
+            <div style="padding:12px 12px 9px">
+              <div class="fxh" style="margin-bottom:6px"><span class="crest">MCI</span> Man City <span style="color:var(--ink3);font-weight:600">v</span> Bournemouth <span class="crest">BOU</span><span class="t">Sat 15:00</span></div>
+              <div style="display:flex;gap:14px;font-size:12.5px;color:var(--ink2)">
+                <span><b style="color:var(--ink)">2.41</b> xG</span><span><b style="color:var(--ink)">0.79</b> xGA</span><span><b style="color:var(--ink)">52%</b> CS</span>
+              </div>
+            </div>
+            <div class="inline"><span class="dot" style="background:var(--good)"></span>
+              <span><b style="color:var(--ink)">Matchup.</b> Bournemouth concede over a third more of their xG from set pieces than the league — a game for <b style="color:var(--ink)">Grealish</b>'s delivery, and for anyone who attacks a corner.</span>
+            </div>
+          </div>
+          <div class="fx" style="padding:0">
+            <div style="padding:12px 12px 9px">
+              <div class="fxh" style="margin-bottom:6px"><span class="crest">FUL</span> Fulham <span style="color:var(--ink3);font-weight:600">v</span> Chelsea <span class="crest">CHE</span><span class="t">Sun 14:00</span></div>
+              <div style="display:flex;gap:14px;font-size:12.5px;color:var(--ink2)">
+                <span><b style="color:var(--ink)">1.04</b> xG</span><span><b style="color:var(--ink)">1.55</b> xGA</span><span><b style="color:var(--ink)">24%</b> CS</span>
+              </div>
+            </div>
+            <div class="inline"><span class="dot" style="background:var(--bad)"></span>
+              <span><b style="color:var(--ink)">Matchup.</b> Chelsea concede below the league average everywhere <b style="color:var(--ink)">Iwobi</b> shoots from — his worst fixture of the round on profile.</span>
+            </div>
+          </div>
+          <div class="fx" style="padding:0">
+            <div style="padding:12px 12px 9px">
+              <div class="fxh" style="margin-bottom:6px"><span class="crest">EVE</span> Everton <span style="color:var(--ink3);font-weight:600">v</span> Crystal Palace <span class="crest">CRY</span><span class="t">Sat 15:00</span></div>
+              <div style="display:flex;gap:14px;font-size:12.5px;color:var(--ink2)">
+                <span><b style="color:var(--ink)">1.21</b> xG</span><span><b style="color:var(--ink)">1.09</b> xGA</span><span><b style="color:var(--ink)">33%</b> CS</span>
+              </div>
+            </div>
+            <div style="padding:9px 11px;border-top:1px dashed var(--line-mid);font-size:12px;color:var(--ink3)">No matchup edge either way — the line simply isn't there.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <b>Where I'd go.</b> <b>P1</b> if this is meant to change what you buy: it is one section, it ranks the whole
+      round, and it is the least new code because the Matchup Explorer already computes exactly this — the only
+      change is looping over ten opponents instead of one. <b>P3</b> if it is meant to make the Preview read better,
+      because it costs nothing on the games where there is nothing to say. <b>P2</b> is the handsomest and the one
+      I'd resist: forcing a named man onto both sides of ten fixtures means inventing an edge nineteen times out of
+      twenty, and the whole spread is fifteen points of percentage.
+      <br><br>
+      <b>P1 + P3 together</b> is the pair that works — the section for the reader who wants a shortlist, the line for
+      the reader already scrolling the fixtures. And whichever ships, the caveat goes on the page: pre-season these
+      are last season's shots, and a ±10% modifier is a tie-breaker, not a captain pick.
+    </div>
+  </div>
+</div>
+</body></html>
