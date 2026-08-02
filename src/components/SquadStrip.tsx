@@ -10,18 +10,26 @@ import { pointsHit } from '../lib/planner'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
 /**
- * The squad you already built, pinned to the bottom of the front page.
+ * The front page's one personal thing, in whichever of two states applies.
  *
- * The site's job is to tell a manager something about *his* team, and until
- * now the front page did not know he had one — you built fifteen in the Squad
- * Builder and the home page still opened with a hero and eight tiles, as
- * though you had arrived for the first time. This is the smallest honest
- * version of making it personal: the rating, what it projects this week, and
- * one tap back to the board.
+ * **No squad — the invitation** (`slot="top"`). The strongest hook this site
+ * has is that it will read a screenshot of your team in about eight seconds
+ * and tell you what is wrong with it, and until now the front page never said
+ * so. This is the banner that does, and it goes *above* the tiles: measured at
+ * 390px it otherwise landed 2,100px down the page, below all eight of them,
+ * which is not where you put the first thing a visitor should do.
  *
- * It renders nothing at all until there are fifteen. A stranger from a search
- * result sees the page exactly as it is today, which is the whole reason this
- * is a strip and not a dashboard.
+ * **A squad — the summary** (`slot="bottom"`). Once fifteen exist the
+ * invitation is nonsense, so the strip takes over — the rating, what the week
+ * projects, what is in the bank, one tap back to the board — and it sits after
+ * the grid and sticks, because by then it is your data rather than a pitch.
+ *
+ * Two mounts rather than one because the two states want different places in
+ * the page. Each returns null in the other's state, so exactly one renders.
+ *
+ * The projection is read from the planner's own stored week rather than
+ * recomputed, because two numbers for the same thing on two pages is worse
+ * than one number in one place — see the comment where it is calculated.
  */
 
 const STORE_KEY = 'fpl_squad_build'
@@ -31,7 +39,7 @@ const ovOf = (r: RatingRow): number | null => {
   return s == null ? null : Math.round(Math.max(0, Math.min(100, s * 20)))
 }
 
-export function SquadStrip() {
+export function SquadStrip({ slot = 'bottom' }: { slot?: 'top' | 'bottom' }) {
   const navigate = useNavigate()
   const { data } = useCore()
   const avail = useAvailability()
@@ -110,7 +118,44 @@ export function SquadStrip() {
     }
   }, [squad, data, avail, model, market])
 
-  if (!squad || !read) return null
+  /* No fifteen yet — the invitation, which is the whole point of putting
+     anything here. Not sticky: a banner pinned over a first-time visitor's
+     screen is an advert. It just goes first. */
+  if (!squad || !read) {
+    if (slot !== 'top') return null
+    return (
+      <div className="mb-4 overflow-hidden rounded-2xl border border-accent/30 bg-accent-soft/40 p-4 md:mb-5 md:p-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
+          <div className="min-w-0 flex-1">
+            <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-[0.14em] text-accent uppercase">
+              <Icon name="camera" size={13} /> Start here
+            </div>
+            <h2 className="text-lg font-extrabold tracking-[-0.01em] text-ink md:text-xl">Get your draft rated</h2>
+            <p className="mt-1.5 max-w-[62ch] text-[13.5px] leading-relaxed text-ink-2">
+              Screenshot the Pick Team screen in the FPL app and drop it in. It reads all fifteen in about eight
+              seconds, then tells you what your squad is good at, where it is thin, and the cheapest thing to fix.
+            </p>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <button
+              onClick={() => navigate('/squad')}
+              className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-accent bg-accent-soft px-4 text-[13.5px] font-bold text-accent transition-colors hover:brightness-110 md:flex-none"
+            >
+              <Icon name="camera" size={15} /> Import a screenshot
+            </button>
+            <button
+              onClick={() => navigate('/squad')}
+              className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-line-mid px-4 text-[13.5px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink md:flex-none"
+            >
+              Build a fifteen
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (slot !== 'bottom') return null
 
   return (
     /* Above the bottom bar, not behind it.
@@ -135,9 +180,23 @@ export function SquadStrip() {
           <span className="metallic-num font-num relative z-[1] text-[17px] leading-none font-extrabold tabular-nums">{read.score ?? '—'}</span>
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[10px] font-bold tracking-[0.14em] text-ink-3 uppercase">Your squad · gameweek {read.gw}</span>
+          {/* "gameweek" spelled out wraps to two lines at 320px and makes the
+              strip 71px instead of 62px, for a word nobody needs. */}
+          <span className="block truncate text-[10px] font-bold tracking-[0.14em] text-ink-3 uppercase">
+            Your squad · <span className="min-[390px]:hidden">GW</span><span className="hidden min-[390px]:inline">gameweek</span> {read.gw}
+          </span>
+          {/* Short words below 390px. Measured at 320: the line wants 204px and
+              the disc, the Open chip and the gutters leave it 140, so "47.6
+              projected · £0.0m in the bank" was being ellipsised mid-word.
+              "47.6 pts · £0.0m bank" is 126px and says the same thing. */}
           <span className="block truncate text-[13px] text-ink-2">
-            <b className="text-ink">{read.xp.toFixed(1)}</b> projected · <b className="text-ink">£{read.bank.toFixed(1)}m</b> in the bank
+            <b className="text-ink">{read.xp.toFixed(1)}</b>
+            <span className="min-[390px]:hidden"> pts</span>
+            <span className="hidden min-[390px]:inline"> projected</span>
+            {' · '}
+            <b className="text-ink">£{read.bank.toFixed(1)}m</b>
+            <span className="min-[390px]:hidden"> bank</span>
+            <span className="hidden min-[390px]:inline"> in the bank</span>
           </span>
           {/* Crests only above the narrowest phones — below 360 the row and the
               button together leave the line nothing to give. */}

@@ -165,6 +165,9 @@ export default function Home() {
   return (
     <div ref={rootRef} className="mx-auto w-full max-w-[1760px] px-4 pt-5 pb-6 md:px-6 md:pt-6 lg:pb-0">
       <Hero />
+      {/* The invitation, and only when there is no squad — the first thing a
+          new visitor should do belongs before eight tiles, not after them. */}
+      <SquadStrip slot="top" />
       <div
         ref={gridRef}
         style={gridH ? { height: gridH } : undefined}
@@ -172,9 +175,8 @@ export default function Home() {
       >
         {WINDOWS.map((w) => <WindowCard key={w.key} w={w} />)}
       </div>
-      {/* Renders nothing until there are fifteen, so a first visit is exactly
-          the page it is today. */}
-      <SquadStrip />
+      {/* And the summary, only once there are fifteen. */}
+      <SquadStrip slot="bottom" />
     </div>
   )
 }

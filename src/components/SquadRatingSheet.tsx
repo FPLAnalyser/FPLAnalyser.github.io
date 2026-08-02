@@ -83,11 +83,14 @@ export function squadNarrative(chosen: RatingRow[], fixtureEase: FixtureEaseRow[
   }
 
   // Def Con — the newest points route, and the easiest one to over-buy.
+  //
+  // Only the over-bought case is stated here. The good case used to be too,
+  // and now says the same names as the Def Con block above it in the sheet —
+  // which scores the whole squad rather than just counting specialists, so it
+  // is the better place for it.
   const dc = outfield.filter((r) => dim(r, 'season_dc_score_norm') >= 75)
   if (dc.length >= 5) {
     out.push({ tone: 'warn', head: `${dc.length} built on Def Con`, body: `${dc.map((r) => r.web_name).join(', ')}. A lot of your ceiling rests on the +2 threshold, which pays the same in a 4-0 win as a 0-3 loss — safe, but it doesn't win you a gameweek.` })
-  } else if (dc.length >= 3) {
-    out.push({ tone: 'good', head: `${dc.length} Def Con specialists`, body: `${dc.map((r) => r.web_name).join(', ')} hit the threshold often enough to score without a clean sheet.` })
   }
 
   // Club stacking — fine when it's the right club, expensive when it blanks.
@@ -181,6 +184,36 @@ export function SquadRatingSheet({ chosen, pool, squadScore, bestXI, fixtureEase
     [chosen],
   )
 
+  /* Def Con, as a squad-level line rather than a per-player column.
+   *
+   * The +2 for hitting the defensive-contribution threshold is the newest
+   * route to points in the game and the one people most often own by accident
+   * — you can end up with six grinders and no idea, because nothing on the
+   * board adds them up. This does, on the same bar-and-tick as the positions
+   * above: your outfielders' mean against the mean of the best equally-many
+   * available, so it reads as a gap rather than a compliment.
+   *
+   * Outfielders only. Goalkeepers have no defensive-contribution threshold in
+   * FPL, so including them would drag the mean toward a number that cannot be
+   * acted on. */
+  const defcon = useMemo(() => {
+    const mine = chosen.filter((r) => r.position !== 'GKP' && num(r, 'season_dc_score_norm') != null)
+    if (mine.length < 5) return null
+    const best = pool
+      .filter((r) => r.position !== 'GKP' && bool(r, 'season_ok') && num(r, 'season_dc_score_norm') != null)
+      .map((r) => dim(r, 'season_dc_score_norm'))
+      .sort((a, b) => b - a)
+      .slice(0, mine.length)
+    return {
+      n: mine.length,
+      mine: Math.round(mean(mine.map((r) => dim(r, 'season_dc_score_norm')))),
+      best: best.length ? Math.round(mean(best)) : null,
+      // 75 is the same threshold squadNarrative uses to call somebody a
+      // specialist, so the count here and the line below it agree.
+      specialists: mine.filter((r) => dim(r, 'season_dc_score_norm') >= 75).map((r) => String(r.web_name)),
+    }
+  }, [chosen, pool])
+
   return createPortal(
     // The panel scrolls inside itself and never grows past the viewport. It
     // used to grow, and on a phone the overflow ran off the TOP — taking the
@@ -232,6 +265,35 @@ export function SquadRatingSheet({ chosen, pool, squadScore, bestXI, fixtureEase
                 how far under it you are, so it is a gap to close rather than a pat on the back.
               </div>
             </div>
+
+            {/* def con */}
+            {defcon && (
+              <div>
+                <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Defensive contributions</div>
+                <div className="grid grid-cols-[104px_minmax(0,1fr)_98px] items-center gap-3">
+                  <span className="text-[13px] font-medium text-ink-2">Def Con<span className="text-ink-3"> ({defcon.n})</span></span>
+                  <span className="relative h-2.5 rounded-full bg-surface-3">
+                    <span className="absolute inset-y-0 left-0 rounded-full bg-accent" style={{ width: `${defcon.mine}%` }} />
+                    {defcon.best != null && (
+                      <span className="absolute inset-y-[-3px] w-px bg-ink-2" style={{ left: `${defcon.best}%` }} title={`Best ${defcon.n} available average ${defcon.best}`} />
+                    )}
+                  </span>
+                  <span className="text-right font-num text-[13px] font-bold tabular-nums text-ink">
+                    {defcon.mine}
+                    {defcon.best != null && (
+                      <span className={`ml-1.5 whitespace-nowrap text-[11px] font-semibold ${defcon.mine >= defcon.best ? 'text-good' : 'text-ink-3'}`}>
+                        {defcon.mine >= defcon.best ? 'at the ceiling' : `${defcon.mine - defcon.best} vs best`}
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <div className="mt-2 text-xs text-ink-3">
+                  {defcon.specialists.length
+                    ? <>Your {defcon.n} outfielders average {defcon.mine} on defensive work. <b className="font-semibold text-ink-2">{defcon.specialists.join(', ')}</b> {defcon.specialists.length === 1 ? 'clears' : 'clear'} the threshold often enough to score without a clean sheet — that is +2 a week each, in wins and defeats alike.</>
+                    : <>Your {defcon.n} outfielders average {defcon.mine} on defensive work, and none of them clears the threshold often enough to bank on. It is the cheapest floor in the game and you have none of it.</>}
+                </div>
+              </div>
+            )}
 
             {/* the character */}
             {lines.length > 0 && (
