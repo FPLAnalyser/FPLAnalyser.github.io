@@ -102,13 +102,39 @@ export function distanceYards(x: number | string, y: number | string): number {
   return Math.sqrt(depthM * depthM + widthOffsetM * widthOffsetM) * YD_PER_M
 }
 
-/** Plot/zone position: X clamped to the attacking half, Y mirrored for "against". */
-export function toPitch(x: number | string, y: number | string, mode?: ShotMode): { cx: number; cy: number } {
+/** Plot/zone position, always in the attacking side's frame.
+ *
+ *  `cx` runs left-to-right as the attacking side sees it, which means it runs
+ *  the OPPOSITE way to Understat's `y`. This was `clampedY * 68`, and every
+ *  left/right label downstream came out reversed — the matchup explorer said
+ *  Newcastle concede down the attacking left and then named Saka, a right
+ *  winger, as the man who would enjoy it.
+ *
+ *  Measured across the season's shots, xG-weighted mean of `y - 0.5`:
+ *
+ *      Doku    +0.108   Mitoma  +0.104   Grealish +0.098   — left wingers
+ *      Saka    -0.082   Kudus   -0.077   Amad     -0.045   — right wingers
+ *
+ *  So high `y` is the attacker's LEFT, and `cx` has to be `1 - y` for
+ *  `classifyZone`'s `wl`/`l` to mean what they say. The player scatter map has
+ *  always drawn it that way (`playerToPitch`), so the team zone map and the
+ *  player map were mirror images of each other until now.
+ *
+ *  There is no longer a mirror for shots conceded either. Those arrive in the
+ *  shooter's frame — verified: all 22 of Manchester United's shots at Arsenal
+ *  appear with identical (x, y) in both MUN's shots_for and ARS's
+ *  shots_conceded — and flipping them would put the Teams page in one frame
+ *  and the matchup explorer, which speaks of "the attacking left", in another.
+ *  One frame for the whole site: left and right are the attacker's.
+ *
+ *  The flip was also being used as a workaround. The player zone map called
+ *  `analyse(shots, 'against')` on a player's OWN shots, with a comment saying
+ *  it "plots player_shots coordinates correctly" — which it did, by cancelling
+ *  the reversed base against itself. Both halves of that are gone. */
+export function toPitch(x: number | string, y: number | string): { cx: number; cy: number } {
   const clampedX = Math.max(0.5, Math.min(1, Number(x)))
   const clampedY = Math.max(0, Math.min(1, Number(y)))
-  let cx = clampedY * 68
-  if (mode === 'against') cx = 68 - cx
-  return { cx, cy: (1 - clampedX) * 105 }
+  return { cx: (1 - clampedY) * 68, cy: (1 - clampedX) * 105 }
 }
 
 export function classifyZone(cx: number, cy: number): string {
@@ -146,7 +172,7 @@ export interface Analysis {
   avgDistance: number
 }
 
-export function analyse(shots: ShotEvent[], mode?: ShotMode): Analysis {
+export function analyse(shots: ShotEvent[]): Analysis {
   const zones: Record<string, ZoneAgg> = {}
   Object.keys(ZONE_META).forEach((k) => { zones[k] = emptyAgg() })
   const dates = new Set<string>()
@@ -155,7 +181,7 @@ export function analyse(shots: ShotEvent[], mode?: ShotMode): Analysis {
   for (const s of shots) {
     if (s.situation === 'Penalty') continue
     dates.add(String(s.kickoff_date))
-    const { cx, cy } = toPitch(s.x, s.y, mode)
+    const { cx, cy } = toPitch(s.x, s.y)
     const key = classifyZone(cx, cy)
     const z = zones[key]
     const xg = Number(s.xg) || 0

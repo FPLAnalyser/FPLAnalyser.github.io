@@ -79,7 +79,7 @@ function StatGrid({ cards }: { cards: { value: string; label: string }[] }) {
 
 /* ── Shared zone-grid pitch (heatmap + labels + tooltip + optional scatter) ── */
 interface ZoneTip { key: string; x: number; y: number }
-function ZonePitch({ analysis, metric, scatter, scatterMode }: { analysis: Analysis; metric: Metric; scatter?: ShotEvent[]; scatterMode?: ShotMode }) {
+function ZonePitch({ analysis, metric, scatter }: { analysis: Analysis; metric: Metric; scatter?: ShotEvent[] }) {
   const [tip, setTip] = useState<ZoneTip | null>(null)
   const pitchRef = useRef<HTMLDivElement>(null)
   const mm = METRIC_META[metric]
@@ -100,7 +100,7 @@ function ZonePitch({ analysis, metric, scatter, scatterMode }: { analysis: Analy
           {scatter && (
             <g>
               {scatter.map((s, i) => {
-                const { cx, cy } = toPitch(s.x, s.y, scatterMode)
+                const { cx, cy } = toPitch(s.x, s.y)
                 return <circle key={i} className="shotmap-scatter" cx={cx} cy={cy} r={0.55} />
               })}
             </g>
@@ -183,7 +183,7 @@ export function TeamShotMap({ team }: { team: string }) {
   const teamShots = (active.data?.[team] ?? []) as ShotEvent[]
 
   const slice = useMemo(() => venueFilterShots(windowShots(teamShots, win), venue), [teamShots, win, venue])
-  const analysis = useMemo(() => analyse(slice, mode), [slice, mode])
+  const analysis = useMemo(() => analyse(slice), [slice])
 
   const selectMode = (m: ShotMode) => { if (m === 'for') setWantFor(true); setMode(m) }
 
@@ -214,7 +214,7 @@ export function TeamShotMap({ team }: { team: string }) {
         <Segmented options={[{ id: 'all', label: 'All' }, { id: 'H', label: 'Home' }, { id: 'A', label: 'Away' }]} value={venue} onChange={setVenue} />
       </div>
       <ZoneNarrative lines={narrative} />
-      <ZonePitch analysis={analysis} metric={metric} scatter={slice.filter((s) => s.situation !== 'Penalty')} scatterMode={mode} />
+      <ZonePitch analysis={analysis} metric={metric} scatter={slice.filter((s) => s.situation !== 'Penalty')} />
       <p className="mt-3 text-xs text-ink-3">% = share of {METRIC_META[metric].noun} by zone · shading follows the same share</p>
     </div>
   )
@@ -228,8 +228,7 @@ export function PlayerZoneMap({ element, name }: { element: number; name: string
   const shots = ((q.data?.[String(element)] ?? []) as ShotEvent[]).filter((s) => s.situation !== 'Penalty')
 
   const slice = useMemo(() => windowShots(shots, win), [shots, win])
-  // 'against' selects the x-flip branch that plots player_shots coordinates correctly (see legacy note).
-  const analysis = useMemo(() => analyse(slice, 'against'), [slice])
+  const analysis = useMemo(() => analyse(slice), [slice])
 
   if (q.loading && !q.data) return <div className="py-6 text-sm text-ink-2">Loading shot data…</div>
   if (!q.loading && shots.length === 0) return <div className="py-6 text-sm text-ink-2">No non-penalty shots recorded for this player yet.</div>
@@ -253,9 +252,6 @@ export function PlayerZoneMap({ element, name }: { element: number; name: string
 const RESULT_LABEL: Record<string, string> = { Goal: 'Goal', SavedShot: 'Saved', BlockedShot: 'Blocked', MissedShots: 'Off target', ShotOnPost: 'Hit post', OwnGoal: 'Own goal' }
 const SITUATION_LABEL: Record<string, string> = { OpenPlay: 'Open play', FromCorner: 'From corner', SetPiece: 'Set piece', DirectFreekick: 'Free kick', Penalty: 'Penalty' }
 const radiusFor = (xg: number) => Math.min(3.4, 0.7 + Math.sqrt(Math.max(0, Number(xg) || 0)) * 3.0)
-function playerToPitch(x: number | string, y: number | string) {
-  return { cx: (1 - Math.max(0, Math.min(1, Number(y)))) * 68, cy: (1 - Math.max(0.5, Math.min(1, Number(x)))) * 105 }
-}
 function pDist(x: number | string, y: number | string) {
   const depthM = (1 - Number(x)) * 105, widthM = (Number(y) - 0.5) * 68
   return Math.sqrt(depthM * depthM + widthM * widthM) * YD_PER_M
@@ -318,7 +314,12 @@ export function PlayerScatterMap({ element }: { element: number }) {
             <PitchChrome />
             <g>
               {ordered.map(({ s, i, isRecent }) => {
-                const { cx, cy } = playerToPitch(s.x, s.y)
+                /* `toPitch`, not a second copy of it. This file carried its
+                   own `playerToPitch` with the lateral axis the right way
+                   round while `shotzones.toPitch` had it reversed — which is
+                   how the two maps came to be mirror images of each other, and
+                   how the left/right labels stayed wrong for so long. */
+                const { cx, cy } = toPitch(s.x, s.y)
                 const r = radiusFor(Number(s.xg))
                 return (
                   <g key={i}>
