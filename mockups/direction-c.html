@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Direction C — home knows, the builder works</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Archivo+Black&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-0:#000;--bg-1:#070605;--s1:#16130e;--s2:#201b13;--s3:#2a2318;
+  --ink:#f4efe3;--ink2:#b3ab99;--ink3:#7d7666;
+  --line:#241f17;--line-mid:#332b1f;
+  --accent:#c9a227;--accent-2:#e2c06a;--accent-soft:rgba(201,162,39,.13);
+  --good:#3ddc7a;--warn:#e8b04a;--bad:#f0736f;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg-0);color:var(--ink);font:400 15px/1.5 'Manrope',system-ui,sans-serif;padding-bottom:90px}
+.wrap{max-width:1560px;margin:0 auto;padding:0 18px}
+.display{font-family:'Archivo Black',sans-serif;text-transform:uppercase;letter-spacing:-.01em;font-weight:400}
+.sec{border-top:1px solid var(--line);margin-top:52px;padding-top:26px}
+.sec-k{font:800 10px/1 'Manrope';letter-spacing:.16em;text-transform:uppercase;color:var(--accent-2);margin-bottom:8px}
+.sec h2{font-size:23px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px}
+.lede{color:var(--ink2);font-size:14px;max-width:76ch;margin-bottom:20px}
+.frames{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
+.phone{width:390px;flex:0 0 auto;border:1px solid var(--line-mid);border-radius:24px;overflow:hidden;background:var(--bg-1)}
+.desk{flex:1 1 700px;min-width:360px;border:1px solid var(--line-mid);border-radius:14px;overflow:hidden;background:var(--bg-1)}
+.cap{font:700 10.5px/1.35 'Manrope';letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);padding:9px 13px;border-bottom:1px solid var(--line);background:var(--s1)}
+.pad{padding:13px}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:13px}
+.k{font:800 9.5px/1 'Manrope';letter-spacing:.13em;text-transform:uppercase;color:var(--ink3)}
+.num{font-family:'Archivo Black',sans-serif;font-weight:400;color:var(--accent-2)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:11px;padding:10px 14px;font:800 12.5px/1 'Manrope';border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent-2)}
+.btn.ghost{border-color:var(--line-mid);background:transparent;color:var(--ink2)}
+.chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line-mid);border-radius:999px;padding:5px 10px;font:700 11px/1 'Manrope';color:var(--ink2)}
+.chip.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-2)}
+.dot{width:7px;height:7px;border-radius:99px;flex:0 0 auto}
+.bar{height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.bar > i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+.bar > i.bad{background:linear-gradient(90deg,#8f2f2c,#f0736f)}
+.bar > i.good{background:linear-gradient(90deg,#1d7a49,#3ddc7a)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.note{border-left:2px solid var(--accent);padding:2px 0 2px 12px;color:var(--ink2);font-size:13.5px;margin-top:16px;max-width:80ch}
+.tag{font:800 9px/1 'Manrope';letter-spacing:.09em;text-transform:uppercase;padding:4px 7px;border-radius:5px;display:inline-block}
+.tag.g{background:rgba(61,220,122,.16);color:var(--good)}
+.tag.w{background:rgba(232,176,74,.18);color:var(--warn)}
+.tag.b{background:rgba(240,115,111,.16);color:var(--bad)}
+.tag.n{background:rgba(255,255,255,.07);color:var(--ink2)}
+.pitchbox{background:linear-gradient(175deg,#20502f,#143020);border-radius:12px;padding:12px 8px;display:flex;flex-direction:column;gap:8px}
+.row{display:flex;gap:5px;justify-content:center}
+.pl{flex:0 0 56px;text-align:center;position:relative}
+.pl .sh{height:34px;border-radius:6px;background:rgba(255,255,255,.15);margin-bottom:3px}
+.pl .nm{font:800 8.5px/1.25 'Manrope';color:#fff;background:rgba(0,0,0,.5);border-radius:4px;padding:2px 1px;white-space:nowrap;overflow:hidden}
+.pl .fx{font:700 7.5px/1.2 'Manrope';color:#cfcabc;background:rgba(0,0,0,.34);border-radius:0 0 4px 4px;padding:1px}
+.pl .ar{position:absolute;top:-4px;left:-3px;width:15px;height:15px;border-radius:99px;background:#3d0c3d;color:#fff;font:800 8px/15px 'Manrope';text-align:center}
+.subs{border-top:1px dashed rgba(255,255,255,.16);margin-top:3px;padding-top:8px}
+.acc{border:1px solid var(--line);border-radius:12px;background:var(--s1);overflow:hidden}
+.acc + .acc{margin-top:7px}
+.acch{display:flex;align-items:center;gap:9px;padding:11px 12px}
+.accb{border-top:1px solid var(--line);padding:11px 12px;background:rgba(0,0,0,.26)}
+.chev{margin-left:auto;color:var(--ink3);font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+td,th{padding:5px 3px;text-align:left;border-bottom:1px solid var(--line)}
+th{font:800 9px/1 'Manrope';letter-spacing:.07em;text-transform:uppercase;color:var(--ink3)}
+.right{text-align:right}
+.ring{width:66px;height:66px;border-radius:99px;flex:0 0 auto;display:grid;place-items:center;position:relative;
+  background:conic-gradient(var(--accent) 0 69%, rgba(255,255,255,.07) 69% 100%)}
+.ring::after{content:"";position:absolute;inset:6px;border-radius:99px;background:var(--s1)}
+.ring b{position:relative;z-index:1;font-family:'Archivo Black',sans-serif;font-weight:400;font-size:22px;color:var(--accent-2)}
+.ring.sm{width:52px;height:52px}.ring.sm b{font-size:17px}
+.lead{font-size:13px;color:var(--ink2);line-height:1.45}
+.lead b{color:var(--ink)}
+.sticky{position:sticky;bottom:0;background:rgba(10,8,5,.94);border-top:1px solid var(--line-mid);backdrop-filter:blur(8px);padding:9px 12px;display:flex;align-items:center;gap:11px}
+.mkt{display:flex;align-items:center;gap:9px;padding:8px 4px;border-bottom:1px solid var(--line)}
+.mkt .sq{width:26px;height:26px;border-radius:6px;background:var(--s3);flex:0 0 auto}
+.new{outline:1px dashed rgba(226,192,106,.5);outline-offset:3px;border-radius:13px}
+.newlbl{font:800 8.5px/1 'Manrope';letter-spacing:.1em;text-transform:uppercase;color:var(--accent-2);margin-bottom:5px;display:block}
+.deltas{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:11px;margin-top:14px}
+</style></head><body>
+<div class="wrap">
+
+<div style="padding:32px 0 2px">
+  <div class="sec-k">FPL Analyser — Direction C</div>
+  <h1 class="display" style="font-size:32px">Home carries the verdict.<br>The builder carries the work.</h1>
+  <p class="lede" style="margin-top:11px">Everything dashed in gold is new. Everything else is on the site today, moved. The six analyses already compute — <code>templateRead</code>, <code>horizonRead</code>, <code>recommend</code>, <code>captainLadder</code>, <code>ChipAdvice</code>, <code>bestXiXp</code> — they are just folded into a panel instead of being the point of the page.</p>
+</div>
+
+<!-- ════════════════ HOME — EMPTY ════════════════ -->
+<div class="sec">
+  <div class="sec-k">Home · state 1</div>
+  <h2>No squad yet — today's front door, plus one invitation</h2>
+  <p class="lede">A stranger from Google sees what they see now. Nothing is locked, nothing is empty, and the one thing added is the single strongest hook the site has: eight seconds from a screenshot to a rated squad.</p>
+  <div class="frames">
+    <div class="phone">
+      <div class="cap">Phone · first visit</div>
+      <div class="pad">
+        <div class="new" style="margin-bottom:12px">
+          <span class="newlbl">New</span>
+          <div class="card" style="padding:15px;background:linear-gradient(155deg,rgba(201,162,39,.15),transparent)">
+            <div class="k">Gameweek 1 · deadline 21 Aug, 18:30</div>
+            <div class="display" style="font-size:20px;margin:8px 0 6px">Get your draft rated</div>
+            <p class="lead" style="margin-bottom:12px">Screenshot the Pick Team screen in the FPL app. It reads all fifteen in about eight seconds and tells you what is wrong with them.</p>
+            <div style="display:flex;gap:8px"><span class="btn" style="flex:1">Import a screenshot</span><span class="btn ghost" style="flex:1">Build a fifteen</span></div>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="card" style="padding:11px"><div class="k" style="color:var(--accent-2)">◆ This week</div><div class="display" style="font-size:15px;margin:5px 0 4px">GW Preview</div><div class="lead" style="font-size:12.5px">Check your captain and the injury list</div></div>
+          <div class="card" style="padding:11px"><div class="k" style="color:var(--accent-2)">◆ Plan</div><div class="display" style="font-size:15px;margin:5px 0 4px">Fixtures</div><div class="lead" style="font-size:12.5px">See the bad run before it arrives</div></div>
+          <div class="card" style="padding:11px"><div class="k" style="color:var(--accent-2)">◆ Explore</div><div class="display" style="font-size:15px;margin:5px 0 4px">Players</div><div class="lead" style="font-size:12.5px">Work out who is worth the money</div></div>
+          <div class="card" style="padding:11px"><div class="k" style="color:var(--accent-2)">◆ Discover</div><div class="display" style="font-size:15px;margin:5px 0 4px">Scouting</div><div class="lead" style="font-size:12.5px">Find the ones nobody owns yet</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="desk">
+      <div class="cap">Desktop · first visit — the invitation is a band, the tiles are unchanged</div>
+      <div class="pad">
+        <div class="new" style="margin-bottom:12px">
+          <span class="newlbl">New</span>
+          <div class="card" style="padding:16px 18px;display:flex;align-items:center;gap:20px;background:linear-gradient(100deg,rgba(201,162,39,.15),transparent 70%)">
+            <div style="flex:1 1 auto">
+              <div class="k">Gameweek 1 · deadline 21 Aug, 18:30</div>
+              <div class="display" style="font-size:22px;margin:7px 0 5px">Get your draft rated</div>
+              <p class="lead" style="max-width:52ch">Screenshot the Pick Team screen in the FPL app — it reads all fifteen in about eight seconds — or build one here and find out what is wrong with it.</p>
+            </div>
+            <div style="display:flex;gap:9px;flex:0 0 auto"><span class="btn">Import a screenshot</span><span class="btn ghost">Build a fifteen</span></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px">
+          <div class="card" style="padding:11px"><div class="k" style="color:var(--accent-2)">◆ This week</div><div class="display" style="font-size:15px;margin:5px 0 4px">GW Preview</div><div class="lead" style="font-size:12.5px">Check your captain and the injury list</div></div>
+          <div class="card" style="padding:11px"><div class="k" style="color:var(--accent-2)">◆ Build</div><div class="display" style="font-size:15px;margin:5px 0 4px">Squad Builder</div><div class="lead" style="font-size:12.5px">Find out if your draft is any good</div></div>
+          <div class="card" style="padding:11px"><div class="k" style="color:var(--accent-2)">◆ Plan</div><div class="display" style="font-size:15px;margin:5px 0 4px">Fixtures</div><div class="lead" style="font-size:12.5px">See the bad run before it arrives</div></div>
+          <div class="card" style="padding:11px"><div class="k" style="color:var(--accent-2)">◆ Explore</div><div class="display" style="font-size:15px;margin:5px 0 4px">Players</div><div class="lead" style="font-size:12.5px">Work out who is worth the money</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ HOME — HAS SQUAD ════════════════ -->
+<div class="sec">
+  <div class="sec-k">Home · state 2</div>
+  <h2>Once you have a fifteen, the front page is about it</h2>
+  <p class="lede">The verdict, the fifteen, and the three things to fix — above everything else. Then the same tiles, with the ones that can be about your squad saying so. No second pitch to maintain, no empty dashboard, and a stranger never sees this state.</p>
+  <div class="frames">
+    <div class="phone">
+      <div class="cap">Phone · returning manager</div>
+      <div class="pad">
+        <div class="new" style="margin-bottom:11px">
+          <span class="newlbl">New — the verdict</span>
+          <div class="card" style="padding:13px">
+            <div style="display:flex;align-items:center;gap:13px">
+              <div class="ring"><b>69</b></div>
+              <div style="min-width:0">
+                <div class="k">Your squad · gameweek 1</div>
+                <div style="font:800 15.5px/1.2 'Manrope';margin:3px 0 3px">Sharp up top, thin at the back</div>
+                <div class="lead">Better than <b>78%</b> of squads built here. Projected <b>47.1</b>.</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:5px;margin-top:10px;flex-wrap:wrap">
+              <span class="tag g">Attack 81</span><span class="tag b">Defence 61</span><span class="tag g">Value 74</span><span class="tag w">Fixtures 58</span>
+            </div>
+            <div class="pitchbox" style="margin-top:11px;padding:9px 6px">
+              <div class="row"><div class="pl"><div class="sh"></div><div class="nm">A.Becker</div></div></div>
+              <div class="row"><div class="pl"><div class="sh"></div><div class="nm">Lacroix</div></div><div class="pl"><div class="sh"></div><div class="nm">Senesi</div></div><div class="pl"><div class="sh"></div><div class="nm">Guéhi</div></div><div class="pl"><div class="sh"></div><div class="nm">Fofana</div></div></div>
+              <div class="row"><div class="pl"><div class="sh"></div><div class="nm">Saka</div></div><div class="pl"><div class="sh"></div><div class="nm">Wirtz</div></div><div class="pl"><div class="sh"></div><div class="nm">Cherki</div></div><div class="pl"><div class="sh"></div><div class="nm">Bruno G.</div></div></div>
+              <div class="row"><div class="pl"><div class="ar">C</div><div class="sh"></div><div class="nm">Thiago</div></div><div class="pl"><div class="sh"></div><div class="nm">J.Pedro</div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="new" style="margin-bottom:11px">
+          <span class="newlbl">New — what to do about it</span>
+          <div class="card" style="padding:12px">
+            <div class="k" style="margin-bottom:9px">Three things to fix</div>
+            <div style="display:flex;gap:9px;margin-bottom:10px"><span class="dot" style="background:var(--bad);margin-top:5px"></span><div class="lead"><b>Your defence rates 61</b> — bottom quartile. Collins → Rodon frees £0.5m and lifts the line to 68.</div></div>
+            <div style="display:flex;gap:9px;margin-bottom:10px"><span class="dot" style="background:var(--warn);margin-top:5px"></span><div class="lead"><b>GW4–8 is a wall.</b> Six of your eleven turn red in the same window — Chelsea x3 is the pinch point.</div></div>
+            <div style="display:flex;gap:9px"><span class="dot" style="background:var(--ink3);margin-top:5px"></span><div class="lead"><b>71% template.</b> Two genuine differentials in the fifteen; the field will move with you.</div></div>
+            <span class="btn ghost" style="width:100%;margin-top:11px">Open the workshop →</span>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="card" style="padding:11px"><div class="k" style="color:var(--accent-2)">◆ For your squad</div><div class="display" style="font-size:15px;margin:5px 0 4px">Fixtures</div><div class="lead" style="font-size:12.5px">Your rotation risk, GW1–19</div></div>
+          <div class="card" style="padding:11px"><div class="k" style="color:var(--accent-2)">◆ For your squad</div><div class="display" style="font-size:15px;margin:5px 0 4px">Scouting</div><div class="lead" style="font-size:12.5px">Upgrades on your weakest line</div></div>
+          <div class="card" style="padding:11px"><div class="k" style="color:var(--accent-2)">◆ This week</div><div class="display" style="font-size:15px;margin:5px 0 4px">GW Preview</div><div class="lead" style="font-size:12.5px">Check your captain and the injury list</div></div>
+          <div class="card" style="padding:11px"><div class="k" style="color:var(--accent-2)">◆ Explore</div><div class="display" style="font-size:15px;margin:5px 0 4px">Players</div><div class="lead" style="font-size:12.5px">Work out who is worth the money</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="desk">
+      <div class="cap">Desktop · verdict left, the three fixes right, tiles below — one screen</div>
+      <div class="pad">
+        <div class="new" style="margin-bottom:12px">
+          <span class="newlbl">New</span>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
+            <div class="card" style="padding:14px">
+              <div style="display:flex;align-items:center;gap:14px">
+                <div class="ring"><b>69</b></div>
+                <div><div class="k">Your squad · gameweek 1</div>
+                  <div style="font:800 16px/1.2 'Manrope';margin:4px 0 3px">Sharp up top, thin at the back</div>
+                  <div class="lead">Better than <b>78%</b> of squads built here · projected <b>47.1</b> · £0.5m in the bank</div></div>
+              </div>
+              <div style="display:flex;gap:5px;margin-top:11px;flex-wrap:wrap">
+                <span class="tag g">Attack 81</span><span class="tag b">Defence 61</span><span class="tag g">Value 74</span><span class="tag w">Fixtures 58</span><span class="tag n">71% template</span>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:12px"><span class="btn" style="flex:1">Open the workshop</span><span class="btn ghost" style="flex:1">Share</span></div>
+            </div>
+            <div class="card" style="padding:14px">
+              <div class="k" style="margin-bottom:10px">Three things to fix</div>
+              <div style="display:flex;gap:9px;margin-bottom:11px"><span class="dot" style="background:var(--bad);margin-top:5px"></span><div class="lead"><b>Your defence rates 61</b> — bottom quartile. Collins → Rodon frees £0.5m and lifts the line to 68.</div></div>
+              <div style="display:flex;gap:9px;margin-bottom:11px"><span class="dot" style="background:var(--warn);margin-top:5px"></span><div class="lead"><b>GW4–8 is a wall.</b> Six of your eleven turn red together — Chelsea x3 is the pinch point.</div></div>
+              <div style="display:flex;gap:9px"><span class="dot" style="background:var(--ink3);margin-top:5px"></span><div class="lead"><b>71% template.</b> Two genuine differentials; the field will move with you.</div></div>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px">
+          <div class="card" style="padding:11px"><div class="k" style="color:var(--accent-2)">◆ For your squad</div><div class="display" style="font-size:15px;margin:5px 0 4px">Fixtures</div><div class="lead" style="font-size:12.5px">Your rotation risk, GW1–19</div></div>
+          <div class="card" style="padding:11px"><div class="k" style="color:var(--accent-2)">◆ For your squad</div><div class="display" style="font-size:15px;margin:5px 0 4px">Scouting</div><div class="lead" style="font-size:12.5px">Upgrades on your weakest line</div></div>
+          <div class="card" style="padding:11px"><div class="k" style="color:var(--accent-2)">◆ This week</div><div class="display" style="font-size:15px;margin:5px 0 4px">GW Preview</div><div class="lead" style="font-size:12.5px">Check your captain and the injury list</div></div>
+          <div class="card" style="padding:11px"><div class="k" style="color:var(--accent-2)">◆ Explore</div><div class="display" style="font-size:15px;margin:5px 0 4px">Teams</div><div class="lead" style="font-size:12.5px">Know which defences leak</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="note"><b>The switch is one test.</b> Fifteen picked, or not. No new empty state to design, because the empty state is the page that already exists.</p>
+</div>
+
+<!-- ════════════════ SQUAD BUILDER ════════════════ -->
+<div class="sec">
+  <div class="sec-k">Squad Builder · the workshop</div>
+  <h2>Verdict under the board, analysis on tap, market last</h2>
+  <p class="lede">Today the board is at 683px, the read is a three-line teaser, the full breakdown is a modal, and the page runs to <b>9,417px — 11.2 phone screens</b>. Here the verdict sits directly under the fifteen it describes, the six analyses are tiles you open rather than a panel you scroll past, and a sticky bar keeps the rating on screen while you shop.</p>
+  <div class="frames">
+
+    <div class="phone">
+      <div class="cap">Phone · build → verdict → depth → market</div>
+      <div class="pad" style="padding-bottom:0">
+        <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+          <span class="chip on">Rating</span><span class="chip">£</span><span class="chip">xP</span><span class="chip">Import</span><span class="chip">Share</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
+          <span style="color:var(--ink3)">‹</span><span class="display" style="font-size:17px">Gameweek 1</span><span style="color:var(--accent-2)">›</span>
+        </div>
+        <div class="pitchbox" style="margin-bottom:11px">
+          <div class="row"><div class="pl"><div class="ar">V</div><div class="sh"></div><div class="nm">A.Becker</div><div class="fx">NEW (A)</div></div></div>
+          <div class="row"><div class="pl"><div class="sh"></div><div class="nm">Lacroix</div><div class="fx">EVE (A)</div></div><div class="pl"><div class="sh"></div><div class="nm">Senesi</div><div class="fx">BRE (A)</div></div><div class="pl"><div class="sh"></div><div class="nm">Guéhi</div><div class="fx">BOU (H)</div></div><div class="pl"><div class="sh"></div><div class="nm">Fofana</div><div class="fx">FUL (A)</div></div></div>
+          <div class="row"><div class="pl"><div class="sh"></div><div class="nm">Saka</div><div class="fx">COV (H)</div></div><div class="pl"><div class="sh"></div><div class="nm">Wirtz</div><div class="fx">NEW (A)</div></div><div class="pl"><div class="sh"></div><div class="nm">Cherki</div><div class="fx">BOU (H)</div></div><div class="pl"><div class="sh"></div><div class="nm">Bruno G.</div><div class="fx">LIV (H)</div></div></div>
+          <div class="row"><div class="pl"><div class="ar">C</div><div class="sh"></div><div class="nm">Thiago</div><div class="fx">TOT (H)</div></div><div class="pl"><div class="sh"></div><div class="nm">J.Pedro</div><div class="fx">FUL (A)</div></div></div>
+          <div class="row subs"><div class="pl"><div class="sh"></div><div class="nm">Phillips</div></div><div class="pl"><div class="sh"></div><div class="nm">Collins</div></div><div class="pl"><div class="sh"></div><div class="nm">Szobo.</div></div><div class="pl"><div class="sh"></div><div class="nm">Gyökeres</div></div></div>
+        </div>
+
+        <div class="new" style="margin-bottom:11px">
+          <span class="newlbl">Moved out of the modal</span>
+          <div class="card" style="padding:13px">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="ring"><b>69</b></div>
+              <div><div style="font:800 15px/1.2 'Manrope'">Sharp up top, thin at the back</div>
+                <div class="lead" style="margin-top:3px">Better than <b>78%</b> of squads built here</div></div>
+            </div>
+            <div style="margin-top:11px;display:flex;flex-direction:column;gap:7px">
+              <div style="display:grid;grid-template-columns:64px 1fr 30px;gap:8px;align-items:center"><span class="k">Attack</span><span class="bar"><i class="good" style="width:81%"></i></span><b style="font-size:12px;text-align:right">81</b></div>
+              <div style="display:grid;grid-template-columns:64px 1fr 30px;gap:8px;align-items:center"><span class="k">Defence</span><span class="bar"><i class="bad" style="width:61%"></i></span><b style="font-size:12px;text-align:right;color:var(--bad)">61</b></div>
+              <div style="display:grid;grid-template-columns:64px 1fr 30px;gap:8px;align-items:center"><span class="k">Value</span><span class="bar"><i class="good" style="width:74%"></i></span><b style="font-size:12px;text-align:right">74</b></div>
+              <div style="display:grid;grid-template-columns:64px 1fr 30px;gap:8px;align-items:center"><span class="k">Fixtures</span><span class="bar"><i style="width:58%"></i></span><b style="font-size:12px;text-align:right">58</b></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="new">
+          <span class="newlbl">Six tiles — all of it already computes</span>
+          <div class="acc">
+            <div class="acch"><span class="dot" style="background:var(--bad)"></span><div><div style="font:800 13px/1.2 'Manrope'">Squad analysis</div><div class="lead" style="font-size:12px">Your defence rates 61 — bottom quartile</div></div><span class="chev">▾</span></div>
+            <div class="accb">
+              <table>
+                <tr><th>Line</th><th class="right">You</th><th class="right">Field</th></tr>
+                <tr><td>Goalkeeper</td><td class="right">72</td><td class="right" style="color:var(--good)">+6</td></tr>
+                <tr><td>Defence</td><td class="right" style="color:var(--bad)">61</td><td class="right" style="color:var(--bad)">−13</td></tr>
+                <tr><td>Midfield</td><td class="right">79</td><td class="right" style="color:var(--good)">+9</td></tr>
+                <tr><td>Forwards</td><td class="right">81</td><td class="right" style="color:var(--good)">+11</td></tr>
+              </table>
+              <div class="lead" style="margin-top:9px">Lacroix and Collins both start under 60% of games. The cheapest fix that keeps your XI intact is <b>Collins → Rodon (−£0.5m)</b>, which takes the line to 68.</div>
+              <div style="display:flex;gap:7px;margin-top:10px"><span class="btn ghost" style="flex:1;padding:8px">Make the swap</span><span class="btn ghost" style="flex:1;padding:8px">See all defenders</span></div>
+            </div>
+          </div>
+          <div class="acc"><div class="acch"><span class="dot" style="background:var(--warn)"></span><div><div style="font:800 13px/1.2 'Manrope'">Horizon scan</div><div class="lead" style="font-size:12px">GW4–8 — six of eleven turn red together</div></div><span class="chev">▸</span></div></div>
+          <div class="acc"><div class="acch"><span class="dot" style="background:var(--good)"></span><div><div style="font:800 13px/1.2 'Manrope'">Chip analysis</div><div class="lead" style="font-size:12px">Bench Boost peaks in GW7 · +14.2</div></div><span class="chev">▸</span></div></div>
+          <div class="acc"><div class="acch"><span class="dot" style="background:var(--ink3)"></span><div><div style="font:800 13px/1.2 'Manrope'">Captaincy</div><div class="lead" style="font-size:12px">Thiago, then Saka — TOT (H) is the softest</div></div><span class="chev">▸</span></div></div>
+          <div class="acc"><div class="acch"><span class="dot" style="background:var(--ink3)"></span><div><div style="font:800 13px/1.2 'Manrope'">Template risk</div><div class="lead" style="font-size:12px">71% template · two real differentials</div></div><span class="chev">▸</span></div></div>
+          <div class="acc"><div class="acch"><span class="dot" style="background:var(--ink3)"></span><div><div style="font:800 13px/1.2 'Manrope'">Transfer plan</div><div class="lead" style="font-size:12px">Three moves worth taking a hit for</div></div><span class="chev">▸</span></div></div>
+        </div>
+
+        <div style="margin-top:13px">
+          <div class="k" style="margin-bottom:8px">The market</div>
+          <div class="mkt"><span class="sq"></span><div style="flex:1"><b style="font-size:13px">Rodon</b><div class="lead" style="font-size:11.5px">DEF · Leeds · £4.5m</div></div><b style="color:var(--accent-2)">71</b></div>
+          <div class="mkt"><span class="sq"></span><div style="flex:1"><b style="font-size:13px">Van de Ven</b><div class="lead" style="font-size:11.5px">DEF · Spurs · £5.0m</div></div><b style="color:var(--accent-2)">70</b></div>
+          <div class="mkt"><span class="sq"></span><div style="flex:1"><b style="font-size:13px">Gvardiol</b><div class="lead" style="font-size:11.5px">DEF · Man City · £6.0m</div></div><b style="color:var(--accent-2)">76</b></div>
+        </div>
+      </div>
+      <div class="new" style="margin:0"><div class="sticky">
+        <div class="ring sm"><b>69</b></div>
+        <div style="flex:1"><div class="k">Your squad</div><div class="lead" style="font-size:12px"><b>47.1</b> projected · <b>£0.5m</b> bank · 15/15</div></div>
+        <span class="btn" style="padding:8px 12px">Verdict ↑</span>
+      </div></div>
+    </div>
+
+    <div class="desk">
+      <div class="cap">Desktop · board and verdict on one screen — no scrolling to find out if it is any good</div>
+      <div class="pad">
+        <div style="display:grid;grid-template-columns:1fr 372px;gap:13px">
+          <div>
+            <div style="display:flex;gap:6px;margin-bottom:9px"><span class="chip on">Rating</span><span class="chip">£</span><span class="chip">xP</span><span class="chip">Import</span><span class="chip">Share</span><span class="chip">Clear</span></div>
+            <div class="pitchbox">
+              <div class="row"><div class="pl"><div class="ar">V</div><div class="sh"></div><div class="nm">A.Becker</div><div class="fx">NEW (A)</div></div></div>
+              <div class="row"><div class="pl"><div class="sh"></div><div class="nm">Lacroix</div><div class="fx">EVE (A)</div></div><div class="pl"><div class="sh"></div><div class="nm">Senesi</div><div class="fx">BRE (A)</div></div><div class="pl"><div class="sh"></div><div class="nm">Guéhi</div><div class="fx">BOU (H)</div></div><div class="pl"><div class="sh"></div><div class="nm">Fofana</div><div class="fx">FUL (A)</div></div></div>
+              <div class="row"><div class="pl"><div class="sh"></div><div class="nm">Saka</div><div class="fx">COV (H)</div></div><div class="pl"><div class="sh"></div><div class="nm">Wirtz</div><div class="fx">NEW (A)</div></div><div class="pl"><div class="sh"></div><div class="nm">Cherki</div><div class="fx">BOU (H)</div></div><div class="pl"><div class="sh"></div><div class="nm">Bruno G.</div><div class="fx">LIV (H)</div></div></div>
+              <div class="row"><div class="pl"><div class="ar">C</div><div class="sh"></div><div class="nm">Thiago</div><div class="fx">TOT (H)</div></div><div class="pl"><div class="sh"></div><div class="nm">J.Pedro</div><div class="fx">FUL (A)</div></div></div>
+              <div class="row subs"><div class="pl"><div class="sh"></div><div class="nm">Phillips</div></div><div class="pl"><div class="sh"></div><div class="nm">Collins</div></div><div class="pl"><div class="sh"></div><div class="nm">Szobo.</div></div><div class="pl"><div class="sh"></div><div class="nm">Gyökeres</div></div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:11px">
+              <div class="card" style="padding:10px;text-align:center"><div class="num" style="font-size:19px">47.1</div><div class="k" style="margin-top:2px">Projected</div></div>
+              <div class="card" style="padding:10px;text-align:center"><div class="num" style="font-size:19px">60</div><div class="k" style="margin-top:2px">GW rating</div></div>
+              <div class="card" style="padding:10px;text-align:center"><div class="num" style="font-size:19px">£0.5m</div><div class="k" style="margin-top:2px">In the bank</div></div>
+              <div class="card" style="padding:10px;text-align:center"><div class="num" style="font-size:19px">0</div><div class="k" style="margin-top:2px">Transfers</div></div>
+            </div>
+          </div>
+          <div class="new" style="margin:0">
+            <span class="newlbl">The whole right column</span>
+            <div class="card" style="padding:13px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <div class="ring"><b>69</b></div>
+                <div><div style="font:800 14.5px/1.2 'Manrope'">Sharp up top, thin at the back</div><div class="lead" style="margin-top:3px">Better than <b>78%</b> of squads built here</div></div>
+              </div>
+              <div style="margin-top:11px;display:flex;flex-direction:column;gap:6px">
+                <div style="display:grid;grid-template-columns:62px 1fr 28px;gap:8px;align-items:center"><span class="k">Attack</span><span class="bar"><i class="good" style="width:81%"></i></span><b style="font-size:12px;text-align:right">81</b></div>
+                <div style="display:grid;grid-template-columns:62px 1fr 28px;gap:8px;align-items:center"><span class="k">Defence</span><span class="bar"><i class="bad" style="width:61%"></i></span><b style="font-size:12px;text-align:right;color:var(--bad)">61</b></div>
+                <div style="display:grid;grid-template-columns:62px 1fr 28px;gap:8px;align-items:center"><span class="k">Value</span><span class="bar"><i class="good" style="width:74%"></i></span><b style="font-size:12px;text-align:right">74</b></div>
+                <div style="display:grid;grid-template-columns:62px 1fr 28px;gap:8px;align-items:center"><span class="k">Fixtures</span><span class="bar"><i style="width:58%"></i></span><b style="font-size:12px;text-align:right">58</b></div>
+              </div>
+            </div>
+            <div class="acc" style="margin-top:9px">
+              <div class="acch"><span class="dot" style="background:var(--bad)"></span><div style="font:800 12.5px/1.2 'Manrope'">Squad analysis</div><span class="chev">▾</span></div>
+              <div class="accb">
+                <div class="lead">Lacroix and Collins start under 60% of games. <b>Collins → Rodon (−£0.5m)</b> lifts the line to 68 and keeps your XI intact.</div>
+                <div style="display:flex;gap:7px;margin-top:9px"><span class="btn ghost" style="flex:1;padding:7px">Make the swap</span><span class="btn ghost" style="flex:1;padding:7px">All defenders</span></div>
+              </div>
+            </div>
+            <div class="acc"><div class="acch"><span class="dot" style="background:var(--warn)"></span><div style="font:800 12.5px/1.2 'Manrope'">Horizon scan</div><span class="chev">▸</span></div></div>
+            <div class="acc"><div class="acch"><span class="dot" style="background:var(--good)"></span><div style="font:800 12.5px/1.2 'Manrope'">Chip analysis</div><span class="chev">▸</span></div></div>
+            <div class="acc"><div class="acch"><span class="dot" style="background:var(--ink3)"></span><div style="font:800 12.5px/1.2 'Manrope'">Captaincy</div><span class="chev">▸</span></div></div>
+            <div class="acc"><div class="acch"><span class="dot" style="background:var(--ink3)"></span><div style="font:800 12.5px/1.2 'Manrope'">Template risk</div><span class="chev">▸</span></div></div>
+            <div class="acc"><div class="acch"><span class="dot" style="background:var(--ink3)"></span><div style="font:800 12.5px/1.2 'Manrope'">Transfer plan</div><span class="chev">▸</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="note"><b>The sticky bar is the one that serves the stated job.</b> People build a draft and want it rated — so while they are twenty rows into the market list, the rating and the projection stay on screen and move as they swap. Every edit gets an answer without a scroll.</p>
+</div>
+
+<!-- ════════════════ WHAT CHANGES ════════════════ -->
+<div class="sec">
+  <div class="sec-k">The delta</div>
+  <h2>What is actually new</h2>
+  <div class="deltas">
+    <div class="card" style="padding:13px"><span class="tag g">Moved, not built</span><div class="lead" style="margin-top:8px"><code>SquadRatingSheet</code> out of its modal and under the board. <code>SquadLab</code>'s contents become the six tiles. <code>SquadInsights</code> and <code>TeamPlanning</code> — 424 lines already written, currently mounted nowhere — become two of them.</div></div>
+    <div class="card" style="padding:13px"><span class="tag w">New, small</span><div class="lead" style="margin-top:8px">The home verdict card and its "three things to fix", reusing the builder's verdict component. One branch on "have we got fifteen". The sticky bar on the builder.</div></div>
+    <div class="card" style="padding:13px"><span class="tag b">New, needs data</span><div class="lead" style="margin-top:8px"><b>"Better than 78% of squads built here."</b> Needs a distribution: run the existing rating over a few thousand generated legal squads once, ship the percentile curve as a static file. It is the line that turns a rating into a verdict.</div></div>
+  </div>
+  <p class="note">Nothing above needs a new model. The only genuinely new number is the percentile, and the only genuinely new layout is a card that already exists in another shape.</p>
+</div>
+
+</div></body></html>
