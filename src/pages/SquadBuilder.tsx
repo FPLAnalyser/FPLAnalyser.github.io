@@ -475,6 +475,7 @@ export default function SquadBuilder() {
             squadScore={liveScore}
             onOpenSquadRating={() => setRatingOpen(true)}
             partialSquad={picked}
+            onRemovePick={remove}
             onPickSlot={(p) => focusMarket(p as Pos)}
             onAutoPick={complete ? planner.autoXI : autoPick}
             /* Share, Clear and the budget warning now ride in the control row
@@ -643,6 +644,19 @@ export default function SquadBuilder() {
                       className="grid size-8 shrink-0 place-items-center rounded-lg border border-good/50 text-good transition-colors hover:bg-good/10"
                     >
                       <Icon name="undo" size={15} />
+                    </button>
+                  ) : !complete && inSquad ? (
+                    /* Already picked, and the fifteen isn't finished. The tick
+                       used to stay put and go grey, which reads as broken —
+                       the button was the one that put him in, so it should be
+                       the one that takes him out. Red arrow pointing back at
+                       the market, the same direction the player is going. */
+                    <button
+                      onClick={() => remove(r.element)}
+                      title="Take him out of your squad"
+                      className="grid size-8 shrink-0 place-items-center rounded-lg border border-bad/55 text-bad transition-colors hover:bg-bad/10"
+                    >
+                      <Icon name="arrow-right" size={15} className="rotate-180" />
                     </button>
                   ) : (
                     <button

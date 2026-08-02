@@ -32,7 +32,7 @@ const POS_ORDER = ['GKP', 'DEF', 'MID', 'FWD'] as const
  * dugout beneath it, and every action on a player one tap away. State lives in
  * usePlanner so the list beside the board can transfer into it.
  */
-export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onSold, squadScore, onOpenSquadRating, partialSquad, onPickSlot, onAutoPick, footer }: {
+export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onSold, squadScore, onOpenSquadRating, partialSquad, onRemovePick, onPickSlot, onAutoPick, footer }: {
   planner: Planner
   byEl: Map<number, RatingRow>
   pool: RatingRow[]
@@ -50,6 +50,12 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
    *  lays out whoever has been picked against empty slots — same page,
    *  same furniture, just not full yet. */
   partialSquad?: number[]
+  /** Drop a player from a squad that isn't fifteen yet. There is no transfer
+   *  to make and nothing to undo — he simply comes off the board again, which
+   *  is why this is separate from the sell path below. Without it the × only
+   *  ever appeared once the fifteen was complete, so while you were building
+   *  one a mistake could only be fixed from the list. */
+  onRemovePick?: (el: number) => void
   onPickSlot?: (pos: 'GKP' | 'DEF' | 'MID' | 'FWD') => void
   /** Auto pick: build the fifteen when short, best XI when complete. */
   onAutoPick?: () => void
@@ -153,12 +159,17 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
       element={el}
       transferred={!!week?.transfers.some((t) => t.in === el)}
       sold={planner.pendingOut.includes(el)}
-      onSell={week ? () => {
-        const isSold = planner.pendingOut.includes(el)
-        tapHaptic(isSold ? 'light' : 'medium')
-        if (isSold) planner.undoTransfer(el)
-        else { planner.sell(el); onSold?.(el) }
-      } : undefined}
+      onSell={week
+        ? () => {
+            const isSold = planner.pendingOut.includes(el)
+            tapHaptic(isSold ? 'light' : 'medium')
+            if (isSold) planner.undoTransfer(el)
+            else { planner.sell(el); onSold?.(el) }
+          }
+        : onRemovePick
+          ? () => { tapHaptic('light'); onRemovePick(el) }
+          : undefined}
+      sellVerb={week ? 'Sell' : 'Remove'}
       bench={onBench && !benchBoost}
       highlight={subFor != null && partners.includes(el)}
       dimmed={subFor != null && !partners.includes(el) && el !== subFor}
@@ -409,7 +420,7 @@ function Stat({ label, value, tone, sub, onClick }: { label: string; value: stri
     : <div className={cls}>{inner}</div>
 }
 
-function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner, flag, name, code, element, transferred, bench, highlight, dimmed, picked, sold, onSell }: {
+function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner, flag, name, code, element, transferred, bench, highlight, dimmed, picked, sold, onSell, sellVerb = 'Sell' }: {
   onOpen: () => void; captain: boolean; vice: boolean; tripleCap?: boolean; fixtures: FixtureEaseRow[]; rating: number
   corner: string; flag?: AvailBadgeInfo | null
   name: string; code: number | null; element: number; transferred: boolean; bench?: boolean
@@ -418,6 +429,9 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
    *  of the team is still readable while you decide who takes his place. */
   sold?: boolean
   onSell?: () => void
+  /** "Sell" once the fifteen exists and the money goes to the bank; "Remove"
+   *  while you are still picking one, where nothing is being sold to anybody. */
+  sellVerb?: 'Sell' | 'Remove'
 }) {
   const next = fixtures[0]
   const [bg, fg] = next ? (FDR_COLORS[next.fdr] || FDR_COLORS[3]) : ['#39424E', '#E8EDF3']
@@ -426,8 +440,10 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
       {onSell && (
         <button
           onClick={(ev) => { ev.stopPropagation(); onSell() }}
-          aria-label={sold ? `Keep ${name}` : `Sell ${name}`}
-          title={sold ? `Keep ${name}` : `Sell ${name} — his fee goes into the bank`}
+          aria-label={sold ? `Keep ${name}` : `${sellVerb} ${name}`}
+          title={sold
+            ? `Keep ${name}`
+            : sellVerb === 'Remove' ? `Remove ${name} from your squad` : `Sell ${name} — his fee goes into the bank`}
           /* Top-right, hanging off the card. This is only safe because the
              armband moved inside: it was the one thing overhanging a card's
              left edge, and two six-pixel overhangs don't fit a six-pixel gap.
