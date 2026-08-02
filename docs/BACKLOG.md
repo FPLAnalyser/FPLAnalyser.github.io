@@ -199,6 +199,49 @@ again close to the GW1 deadline.** The feed can now name a new player, but it
 carries no minutes, no xG and no rates, so until the pipeline runs he is a name
 with N/A beside it.
 
+### The image mirror was warning about a problem it was creating
+
+Kept because the diagnosis is the useful part. `mirror_assets.py` was ending
+every run with `WARNING: 1692 requests were refused by the host, not 404s` and
+taking **11m 48s** of a job whose actual work — `refresh_availability.py` —
+takes **one second**. It read as a blocked host.
+
+It was not. The numbers account for themselves exactly:
+
+```
+settled at premierleague25 : 470 x 3 =  1410   probes pl26, then breaks at pl25
+settled at legacy          :   8 x 6 =    48
+no photo at all            :  86 x 8 =   688   never breaks early
+                              total    2146    at 330ms each = 708s
+requests to premierleague26          =  1692   ... which is the "blocked" count
+```
+
+Every single refusal was a probe at `premierleague26`, a bucket the league has
+not published yet. The host answers a bucket that does not exist with a **5xx,
+not a 404**, and `fetch()` counts only 5xx and dead connections as blocked — so
+the script generated its own alarm, 1692 times a morning, and spent eleven
+minutes doing it. That window is also what lost two days of availability data
+to a rejected push.
+
+Three changes, each measured against a stubbed host:
+
+- **Probe the speculative bucket once per run, not once per player.** A bucket
+  is published or it is not; that is one question, not 564. Eight sample codes
+  spread through the list, stop at the first image.
+- **Remember which players have no photo and re-check weekly.** FPL lists a
+  player the day he signs and the photo follows whenever it follows — 86 of
+  them were being re-probed in full every morning for an answer that had not
+  changed since July.
+- **Give up after 60 refusals with nothing fetched**, and only warn when
+  refusals exceed a quarter of what was asked. A host that is genuinely
+  refusing will refuse the next thousand too.
+
+Measured: **2146 requests a run → 52**, and 2 once every player is on the
+newest bucket. The day `premierleague26` does appear it costs 1168 requests
+once, then drops back. A genuinely blocked host now stops after 108 requests
+and says so; the probe's own refusals no longer count toward that, because
+asking the question cannot be evidence for the answer being bad news.
+
 ### Put the data pipeline on a schedule
 
 Measured, not assumed. Two path defaults were stopping the chain from running
