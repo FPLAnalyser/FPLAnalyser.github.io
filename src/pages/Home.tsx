@@ -53,16 +53,16 @@ interface HomeWin {
 // pages underneath, closing on the page that looks back.
 const WINDOWS: HomeWin[] = [
   // Top row
-  { key: 'preview', to: '/preview', kicker: 'This week', title: 'GW Preview', desc: 'The whole gameweek before the deadline — captain, chips, every fixture and who is missing.', stat: 'Captain, chips and who is out' },
-  { key: 'squad', to: '/squad', kicker: 'Build', title: 'Squad Builder', desc: 'Draft an XI and plan the season week by week.', stat: 'Import your side, plan 38 weeks' },
-  { key: 'fixtures', to: '/fixtures', kicker: 'Plan', title: 'Fixtures', desc: 'Our own fixture rating and rotation planner.', stat: 'Rotation, xG and clean-sheet odds' },
-  { key: 'players', to: '/players', kicker: 'Explore', title: 'Players', desc: 'Every player rated 0–100 — form, value, fixtures and the editorial player hero.', stat: 'Form, value and shot maps' },
+  { key: 'preview', to: '/preview', kicker: 'This week', title: 'GW Preview', desc: 'The whole gameweek before the deadline — captain, chips, every fixture and who is missing.', stat: 'Check your captain and the injury list' },
+  { key: 'squad', to: '/squad', kicker: 'Build', title: 'Squad Builder', desc: 'Draft an XI and plan the season week by week.', stat: 'Find out if your draft is any good' },
+  { key: 'fixtures', to: '/fixtures', kicker: 'Plan', title: 'Fixtures', desc: 'Our own fixture rating and rotation planner.', stat: 'See the bad run before it arrives' },
+  { key: 'players', to: '/players', kicker: 'Explore', title: 'Players', desc: 'Every player rated 0–100 — form, value, fixtures and the editorial player hero.', stat: 'Work out who is worth the money' },
   // Bottom row
-  { key: 'scouting', to: '/scout', kicker: 'Discover', title: 'Scouting', desc: 'Filter the market for your next differential.', stat: 'Per-90 ranks against their peers' },
-  { key: 'teams', to: '/teams', kicker: 'Explore', title: 'Teams', desc: 'Attack, defence and set-piece ratings for all 20 clubs, with matchup previews.', stat: 'Attack, defence and set pieces' },
-  { key: 'myteam', to: '/loadteam', kicker: 'Track', title: 'My Team', desc: 'Link your side for a live rated breakdown.', stat: 'Your XI rated and picked apart',
+  { key: 'scouting', to: '/scout', kicker: 'Discover', title: 'Scouting', desc: 'Filter the market for your next differential.', stat: 'Find the ones nobody owns yet' },
+  { key: 'teams', to: '/teams', kicker: 'Explore', title: 'Teams', desc: 'Attack, defence and set-piece ratings for all 20 clubs, with matchup previews.', stat: 'Know which defences leak' },
+  { key: 'myteam', to: '/loadteam', kicker: 'Track', title: 'My Team', desc: 'Link your side for a live rated breakdown.', stat: 'Rate the side you already own',
     ghost: { text: '★', style: { right: '6%', top: '6%', fontSize: 'clamp(44px,6vw,84px)', WebkitTextStroke: '2px color-mix(in srgb, var(--accent) 18%, transparent)' } } },
-  { key: 'review', to: '/review', kicker: 'Look back', title: 'GW Review', desc: 'What the gameweek actually did — hauls, captain calls and where the model missed.', stat: 'From GW1: where the model missed' },
+  { key: 'review', to: '/review', kicker: 'Look back', title: 'GW Review', desc: 'What the gameweek actually did — hauls, captain calls and where the model missed.', stat: 'From GW1, where we got it wrong' },
 ]
 
 function ArrowRight() {
@@ -115,8 +115,14 @@ function WindowCard({ w }: { w: HomeWin }) {
             enough for a reason. "Next 6 GWs" told a reader what the page was
             called; it did not tell them the rotation planner, the projected xG
             and the clean-sheet odds are behind it. Wrapping buys ~38
-            characters on a phone and the whole line on a desktop, which is the
-            difference between naming the page and selling it. */}
+            characters on a phone and the whole line on a desktop.
+
+            What goes in it is the question a reader arrived with, not a list
+            of what the page contains. The title already says what the page is
+            called; a second inventory underneath it — "rotation, xG and
+            clean-sheet odds" — is a spec sheet, and nobody opens a page
+            because of its spec sheet. They open it because they want to know
+            whether their draft is any good. */}
         <div className="flex items-center justify-between gap-1.5">
           <span className="line-clamp-2 text-[11px] leading-[1.25] font-bold text-balance text-[#e9e4d8]">{w.stat}</span>
           {/* Hidden below 390px. It is decoration — the whole tile is the
