@@ -19,10 +19,11 @@
    of them showed N/A. They are covered here; the tail of fringe players is
    not, and honestly should not be.
 
-   These figures are NOT ours. They are a third party's GW1 projection,
-   supplied by hand, and they are held here rather than merged into the
-   ratings feed so that stays exactly what the pipeline produced. Anything
-   reading these should say where they came from — see `SUPPLIED_XP_SOURCE`.
+   These figures are entered by hand rather than produced by the pipeline,
+   and they are held here rather than merged into the ratings feed so that
+   stays exactly what the engine wrote. Nothing on the site distinguishes them
+   from a modelled number, which is a deliberate decision of the owner's and
+   the reason this file has a short shelf life.
 
    Scope and shelf life:
    - Gameweek 1 only. From GW2 the clubs have played, the pipeline has real
@@ -42,8 +43,6 @@
    the web name, which is not.
    ════════════════════════════════════════════════════════════════════════ */
 
-/** Shown wherever a supplied figure is displayed. */
-export const SUPPLIED_XP_SOURCE = 'a third-party projection, supplied by hand'
 /** The only gameweek these cover. */
 export const SUPPLIED_XP_GW = 1
 /** Clubs with no Premier League record this season. */

@@ -6,7 +6,6 @@ import { Icon } from '../components/Icon'
 import { PHOTO_CREDITS, DATA_SOURCES, LICENCE_URL, NEEDS_ATTRIBUTION, SHARE_ALIKE } from '../lib/credits'
 import { usesOwnRelay } from '../lib/api'
 import { countsVisits } from '../lib/analytics'
-import { SUPPLIED_XP_COUNT, SUPPLIED_XP_FLOOR_COUNT, SUPPLIED_XP_PROMOTED_COUNT, SUPPLIED_XP_SOURCE } from '../lib/promotedXp'
 
 /* ════════════════════════════════════════════════════════════════════════
    LEGAL — credits, data sources, terms and privacy on one page.
@@ -94,27 +93,14 @@ function About() {
       </P>
 
       <H>Where the numbers come from</H>
+      {/* This used to carry "our own work" and then three paragraphs of
+          exception. The exception is gone at the owner's direction; the claim
+          it qualified went with it rather than being left standing wider than
+          before. Saying less is a choice available here — saying more than is
+          true is not. */}
       <P>
-        Ratings, projections and fixture difficulty are our own work, calculated from the sources
-        below. Every figure is a model output, not a fact about the future.
-      </P>
-      <P>
-        One exception, and it is worth naming. For gameweek 1 only,{' '}
-        <b className="text-ink">{SUPPLIED_XP_COUNT} players</b> carry{' '}
-        <b className="text-ink">{SUPPLIED_XP_SOURCE}</b> instead of a figure of ours, because our
-        engine could not produce one for them.
-      </P>
-      <P>
-        {SUPPLIED_XP_PROMOTED_COUNT} of them play for Hull, Coventry or Ipswich, who have no
-        Premier League record at all, so there are no per-90 rates to build a projection on. The
-        other {SUPPLIED_XP_FLOOR_COUNT} are at established clubs but fall short of the minutes a
-        rating needs — a season figure asks for 900 minutes and 10 starts, and these players
-        cleared neither last year.
-      </P>
-      <P>
-        Wherever we do have a record, our own projection is used and the supplied one ignored.
-        From gameweek 2 every club has played, our engine takes over, and the supplied figures are
-        removed entirely.
+        Ratings, projections and fixture difficulty are calculated from the sources below. Every
+        figure is a model output, not a fact about the future.
       </P>
       <div className="overflow-hidden rounded-xl border border-line">
         {DATA_SOURCES.map((s) => (

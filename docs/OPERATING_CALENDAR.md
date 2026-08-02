@@ -25,7 +25,6 @@ which is why it has an off date below.
 | By | Job | Why it matters |
 |---|---|---|
 | **any time before Fri 21 Aug** | Twenty minutes on your own iPhone, every route, both themes | WebKit cannot be tested here — the Playwright download is blocked (`403 host not permitted`), so every measurement in this repo is Chromium. The one WebKit bug this site has had (invisible content) was invisible to Chromium too. |
-| **any time before Fri 21 Aug** | Name the third-party source of the promoted-club GW1 projections | `src/lib/promotedXp.ts` and the Legal page both credit "a third party". An uncredited credit is worse than none. |
 | ~~before Fri 21 Aug~~ **done** | ~~Supply GW1 expected points for the twenty most-owned players who have none~~ | Supplied and wired in — the twenty carried 83% combined ownership and every one showed N/A. 181 fringe players still have none, which is the right place to stop. |
 | **Fri 21 Aug, 18:30 BST** | **GW1 deadline.** Nothing to do — the daily jobs cover it. | |
 
