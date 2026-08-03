@@ -133,7 +133,28 @@ function segment(img: HTMLImageElement | ImageBitmap): { crops: { name: Crop; fi
   for (const k of big) widths.set(k.w, (widths.get(k.w) ?? 0) + 1)
   const unit = [...widths.entries()].sort((a, b) => b[1] - a[1])[0][0]
   const cards = big.filter((k) => Math.abs(k.w - unit) <= Math.max(4, unit * 0.02))
-  const PILL = Math.round(unit * PILL_RATIO)
+
+  /* One pill's height, measured rather than assumed.
+   *
+   * It used to come off the width via PILL_RATIO, which holds on the Pick Team
+   * screen and does not hold on the share/export image: there the block was 51px
+   * for a 138px card, against the 62px the ratio predicts. An 11px overshoot
+   * across two pills lifts the name band off the pill and onto the shirt above,
+   * so ten of fifteen names came back mangled — and on one card the shirt was
+   * dark enough to outvote the pill and invert the ink, handing Tesseract white
+   * type knocked out of a black slab.
+   *
+   * A card's block is the two pills stacked, so half its height is one pill.
+   * Not per-card, though: a white kit flood-fills straight into the block (two
+   * cards here measured 130px against 51), so take the median over the squad
+   * and let the merged ones ride on it. The bottom edge is unaffected by the
+   * merge — both cards in that row ended at the same y — so cropping upward
+   * from the bottom stays correct. */
+  const halves = cards
+    .map((k) => k.h / 2)
+    .filter((v) => v > unit * 0.10 && v < unit * 0.35)
+    .sort((a, b) => a - b)
+  const PILL = Math.round(halves.length ? halves[halves.length >> 1] : unit * PILL_RATIO)
 
   const cut = (x: number, w: number, yy: number, hh: number): Crop => {
     const IN = Math.max(3, Math.round(w * 0.036))
@@ -198,20 +219,51 @@ function segment(img: HTMLImageElement | ImageBitmap): { crops: { name: Crop; fi
     const s = Math.max(2, Math.min(6, Math.round(120 / Math.max(1, y1 - y0 + 1))))
     const bw = x1 - x0 + 1
     const bh = y1 - y0 + 1
+
+    /* Stretch the contrast, then let the browser resample — do NOT paint the
+     * binarised mask.
+     *
+     * Painting the mask as s×s blocks was meant to keep anti-aliased haloes
+     * away from the recogniser, and on a Pick Team screenshot it costs nothing.
+     * On the share/export image the type is about ten pixels tall, and there a
+     * hard threshold shuts the counters in a, e, o and g: measured on that
+     * file, "Kayode" came back "Tv Och" and "Szoboszlai" "Srobosziai" off
+     * perfectly well-placed crops. The half-lit edge pixels are not noise at
+     * that size, they are most of what distinguishes one round letter from
+     * another.
+     *
+     * So map the two Otsu classes onto black and white — which also flips a
+     * light-on-dark pill the right way up, since the ramp runs ink→paper
+     * whichever order those two sit in — and keep everything in between. */
+    let inkSum = 0, papSum = 0
+    for (let j = 0; j < g0.length; j++) (ink[j] ? (inkSum += g0[j]) : (papSum += g0[j]))
+    const inkMean = count ? inkSum / count : 0
+    const papMean = g0.length > count ? papSum / (g0.length - count) : 255
+    const span = papMean - inkMean || 1
+    const flat = document.createElement('canvas')
+    flat.width = bw
+    flat.height = bh
+    const fg = flat.getContext('2d')!
+    const out = fg.createImageData(bw, bh)
+    for (let yy2 = y0; yy2 <= y1; yy2++) {
+      for (let xx = x0; xx <= x1; xx++) {
+        const v = Math.max(0, Math.min(255, ((g0[yy2 * pw + xx] - inkMean) / span) * 255))
+        const o = ((yy2 - y0) * bw + (xx - x0)) * 4
+        out.data[o] = out.data[o + 1] = out.data[o + 2] = v
+        out.data[o + 3] = 255
+      }
+    }
+    fg.putImageData(out, 0, 0)
+
     const cc = document.createElement('canvas')
     cc.width = (bw + M * 2) * s
     cc.height = (bh + M * 2) * s
     const g = cc.getContext('2d')!
     g.fillStyle = '#fff'
     g.fillRect(0, 0, cc.width, cc.height)
-    // Paint the binarised ink rather than resampling the original, so no
-    // anti-aliased halo round a glyph ever reaches the recogniser.
-    g.fillStyle = '#000'
-    for (let yy2 = y0; yy2 <= y1; yy2++) {
-      for (let xx = x0; xx <= x1; xx++) {
-        if (ink[yy2 * pw + xx]) g.fillRect((xx - x0 + M) * s, (yy2 - y0 + M) * s, s, s)
-      }
-    }
+    g.imageSmoothingEnabled = true
+    g.imageSmoothingQuality = 'high'
+    g.drawImage(flat, M * s, M * s, bw * s, bh * s)
     return { canvas: cc, ink: count }
   }
 
@@ -392,7 +444,21 @@ export async function readSquadScreenshot(file: Blob, onProgress?: ShotProgress)
     let lastRow = -1
     for (let i = 0; i < crops.length; i++) {
       onProgress?.('Reading the names', 15 + Math.round((i / crops.length) * 80))
-      const nameRes = await worker.recognize(crops[i].name.canvas)
+      let nameRes = await worker.recognize(crops[i].name.canvas)
+      /* psm 7 says "one line of type", which every crop is, and it is the right
+       * default. It does occasionally decide a short crop is something other
+       * than a line and return a single character for it — measured on the
+       * share/export image, a clean, plainly legible "Kerkez" came back as "4"
+       * at 95 confidence. psm 6 read it correctly and agreed with psm 7 on the
+       * other fourteen names, so it makes a good second opinion. Only reach for
+       * it when the first read is too short to be a surname; on a normal card
+       * this costs nothing. */
+      if (nameRes.data.text.replace(/[^A-Za-z]/g, '').length < 3) {
+        await worker.setParameters({ tessedit_pageseg_mode: '6' as never })
+        const alt = await worker.recognize(crops[i].name.canvas)
+        await worker.setParameters({ tessedit_pageseg_mode: '7' as never })
+        if (alt.data.text.replace(/[^A-Za-z]/g, '').length >= 3) nameRes = alt
+      }
       const fixRes = await worker.recognize(crops[i].fixture.canvas)
       const fixture = fixRes.data.text.trim().replace(/\s+/g, ' ')
       const m = fixture.toUpperCase().match(FIXTURE_RE)
