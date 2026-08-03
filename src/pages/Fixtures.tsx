@@ -879,18 +879,19 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
   const better = (a: number, b: number) => (rateOn === 'diff' ? a - b : b - a)
   const rateFmt = (v: number) => (rateOn === 'diff' ? v.toFixed(1) : rateOn === 'xg' ? v.toFixed(1) : `${Math.round(v * 100)}%`)
 
-  /* Only the size of the combinations we suggest. It no longer truncates what
-     you have locked: choosing to *see* pairs is not a decision to throw away
-     the fourth club you picked. */
-  const changeSize = (n: (typeof ROT_SIZES)[number]) => setSize(n)
+  const changeSize = (n: (typeof ROT_SIZES)[number]) => {
+    setSize(n)
+    setTeams((s) => s.slice(0, n))
+  }
 
-  /* Once you have locked a rotation, the rotation is what you locked — `size`
-     is only the size of the combinations we suggest while you have not. It
-     used to be a hard ceiling on locking too, so adding a club past it meant
-     going back to a control you had no reason to think was involved.
-     Deriving it rather than ratcheting a number up as clubs are added is what
-     keeps "start 4 of 2" from surviving an unlock. */
-  const effSize = teams.length >= 2 ? teams.length : size
+  /* How many clubs the rotation is *aiming* for — the target you set, or the
+     number you have already locked if you went past it. Two jobs used to be
+     tangled here: `size` also capped locking, so the club past it silently
+     refused to select. It no longer caps anything, but it stays the target,
+     because "rotate 3, I have locked 2, find me the third" is the whole
+     question this planner exists to answer and a rotation derived from the
+     locks alone cannot express it. */
+  const effSize = Math.max(size, teams.length)
   /* Clamped rather than stored, so unlocking down to a smaller rotation cannot
      strand "start 4 of 2" — a state the Start pills could not even show. */
   const startK = Math.min(startKRaw, Math.max(1, effSize - 1))
@@ -938,12 +939,16 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
 
   // Top rotating groups of size N, ranked by the start-K combined difficulty.
   const topGroups = useMemo(() => {
+    // Nothing to suggest once the rotation is full, and enumerating it anyway
+    // is not free: locking a big rotation would have us build every k-subset
+    // of twenty clubs to then discard all but the one already on screen.
+    if (teams.length >= effSize) return []
     // Ruled-out clubs never enter the pool, and every suggestion has to carry
     // the ones already picked — "I know I want an Arsenal defender, show me
     // who partners them" is the question this answers.
     const pool = allTeams.filter((t) => !excluded.includes(t) && qualifies(t))
     const out: { group: string[]; combined: number; home: number }[] = []
-    for (const group of combos(pool, size)) {
+    for (const group of combos(pool, effSize)) {
       if (!teams.every((t) => group.includes(t))) continue
       const c = startKAvg(group, startK)
       if (c == null) continue
@@ -970,7 +975,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
     }
     return spread
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allTeams, excluded, teams, size, startK, gws, cellFor, pickBy, filtering, rateOn])
+  }, [allTeams, excluded, teams, effSize, startK, gws, cellFor, pickBy, filtering, rateOn])
 
   const headCls = 'px-2 py-2 text-center text-[11px] font-semibold tracking-wide text-ink-3 uppercase'
   const wide = useWide()
@@ -1263,9 +1268,20 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
 
       {/* The rotations board's own heading is inside the captured node and
           already names the settings, so no `ident` — it would print twice. */}
-      {teams.length < 2 ? (
+      {/* Suggestions until the rotation is actually full. This used to cut over
+          at two clubs, so asking to rotate three and locking two dropped you
+          straight onto the board for the pair — the one moment you most want a
+          recommendation, since the question is now narrow enough to have a
+          real answer: which single club completes *these two* best. The engine
+          could always answer it (every group it builds contains the locked
+          clubs); nothing ever asked. */}
+      {teams.length < effSize ? (
         <div>
-          <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Top rotations · start {startK} of {size} · next {gws.length} · {LENS_LABEL_ROT[lens]}</div>
+          <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">
+            {teams.length
+              ? `Best ${effSize - teams.length === 1 ? 'club' : `${effSize - teams.length} clubs`} to add · start ${startK} of ${effSize}`
+              : `Top rotations · start ${startK} of ${effSize}`} · next {gws.length} · {LENS_LABEL_ROT[lens]}
+          </div>
           <div className="overflow-hidden rounded-xl border border-line">
             {topGroups.map((g, i) => {
               const key = g.group.join('')
@@ -1286,7 +1302,11 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
                 {/* Short codes on a phone: five full club names do not fit a
                     390px row, and the badge already carries the identity. */}
                 <span className="flex flex-1 flex-wrap items-center gap-x-2 gap-y-1 font-medium text-ink">
-                  {g.group.map((t, k) => (
+                  {/* Locked clubs first, so the one being suggested is always
+                      last and the eight rows differ only in their final name.
+                      Alphabetical order buried it mid-row on any group whose
+                      candidate sorted early. */}
+                  {[...g.group].sort((a, z) => Number(teams.includes(z)) - Number(teams.includes(a))).map((t, k) => (
                     <span key={t} className="flex items-center gap-1.5">{k > 0 && <span className="text-ink-3">+</span>}<TeamBadge team={t} size={16} />{wide ? teamLabel(t) : t}</span>
                   ))}
                 </span>
