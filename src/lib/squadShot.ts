@@ -298,14 +298,28 @@ function segment(img: HTMLImageElement | ImageBitmap): { crops: { name: Crop; fi
     // A disc is about a tenth of the card across; anything much smaller is a
     // dark seam in a kit, not a badge.
     if (n < unit * unit * 0.004) return null
-    /* The largest connected blob, not the extent of every matching pixel.
+    /* The most disc-shaped connected blob — not the biggest, and not the
+     * bounding box of every matching pixel.
      *
      * Taking the whole mask's bounding box worked on the card whose disc sits
      * against a pale shirt panel and failed on the one whose disc sits against
      * the pitch: a few stray dark pixels down the card's edge stretched a
      * 40px circle into a 68x89 box, the roundness test still passed, and the
-     * letter was then read out of a crop that was mostly grass. Blobs are the
-     * thing being looked for, so find blobs. */
+     * letter was then read out of a crop that was mostly grass.
+     *
+     * Taking the largest blob then failed on dark-red kits. Man Utd, Liverpool
+     * and Sunderland shirts all throw a shadow that clears the colour mask, and
+     * measured on one screenshot it came to 49x39 against the real disc's
+     * 29x29 — twice the area, so it won, and a vice-captaincy landed on the
+     * wrong player.
+     *
+     * The disc's size is the thing that actually holds still: 28-30px across on
+     * two screenshots whose card unit was 195, and 20px on one whose unit was
+     * 138. That is 0.14-0.16 of the unit every time, so ask for that, round,
+     * and reasonably solid — a circle fills about 0.79 of its box before the
+     * letter is knocked out of it. */
+    const rMin = unit * 0.10
+    const rMax = unit * 0.21
     const mark = new Int32Array(bw * bh).fill(-1)
     const q = new Int32Array(bw * bh)
     let bestN = 0, dx0 = 0, dx1 = -1, dy0 = 0, dy1 = -1
@@ -328,23 +342,41 @@ function segment(img: HTMLImageElement | ImageBitmap): { crops: { name: Crop; fi
         if (ty > 0 && disc[t - bw] && mark[t - bw] < 0) { mark[t - bw] = s; q[qe++] = t - bw }
         if (ty < bh - 1 && disc[t + bw] && mark[t + bw] < 0) { mark[t + bw] = s; q[qe++] = t + bw }
       }
+      const aw = ax1 - ax0 + 1, ah = ay1 - ay0 + 1
+      const round = Math.min(aw, ah) / Math.max(aw, ah)
+      const fill = an / (aw * ah)
+      if (aw < rMin || aw > rMax || ah < rMin || ah > rMax) continue
+      if (aw < 8 || ah < 8 || round < 0.8 || fill < 0.45) continue
       if (an > bestN) { bestN = an; dx0 = ax0; dx1 = ax1; dy0 = ay0; dy1 = ay1 }
     }
     if (bestN < unit * unit * 0.004) return null
     const dw = dx1 - dx0 + 1, dh = dy1 - dy0 + 1
-    if (dw < 8 || dh < 8 || Math.abs(dw - dh) > Math.max(6, dw * 0.45)) return null
     // Inset well inside the circle so its curved edge, and the grass outside
     // it, never reach the letter.
     const pad = Math.round(Math.min(dw, dh) * 0.2)
     const lx0 = dx0 + pad, ly0 = dy0 + pad
     const lw = dw - pad * 2, lh = dh - pad * 2
     if (lw < 4 || lh < 4) return null
-    // No threshold to find: the disc is near-black and the letter is white.
+    /* The letter is the bright part of the disc, found relative to the disc
+     * rather than against a fixed level. A flat `> 140` worked on a crisp
+     * screenshot and silently dropped every badge on the share/export image,
+     * whose glyphs render dimmer than that — which looked like the crosses
+     * being rejected on purpose when it was really the reader going blind. */
+    let lo = 255, hi = 0
+    for (let y = 0; y < lh; y++) for (let x = 0; x < lw; x++) {
+      const p = ((ly0 + y) * bw + (lx0 + x)) * 4
+      const v = im[p] * 0.299 + im[p + 1] * 0.587 + im[p + 2] * 0.114
+      if (v < lo) lo = v
+      if (v > hi) hi = v
+    }
+    // Too little separation and there is no glyph in there, just flat colour.
+    if (hi - lo < 40) return null
+    const lit = lo + (hi - lo) * 0.55
     const ink = new Uint8Array(lw * lh)
     let ix0 = lw, ix1 = -1, iy0 = lh, iy1 = -1, ink_n = 0
     for (let y = 0; y < lh; y++) for (let x = 0; x < lw; x++) {
       const p = ((ly0 + y) * bw + (lx0 + x)) * 4
-      if ((im[p] * 0.299 + im[p + 1] * 0.587 + im[p + 2] * 0.114) > 140) {
+      if ((im[p] * 0.299 + im[p + 1] * 0.587 + im[p + 2] * 0.114) > lit) {
         ink[y * lw + x] = 1; ink_n++
         if (x < ix0) ix0 = x; if (x > ix1) ix1 = x; if (y < iy0) iy0 = y; if (y > iy1) iy1 = y
       }
@@ -464,9 +496,17 @@ export async function readSquadScreenshot(file: Blob, onProgress?: ShotProgress)
       const m = fixture.toUpperCase().match(FIXTURE_RE)
       let armband: 'C' | 'V' | null = null
       if (crops[i].badge) {
-        // One character, and only two it can be. Say so: an unconstrained
-        // read of a lone glyph offers up G, 0, U and Y just as readily.
-        await worker.setParameters({ tessedit_pageseg_mode: '10' as never, tessedit_char_whitelist: 'CV' })
+        /* One character, from a small alphabet. Say so: an unconstrained read
+         * of a lone glyph offers up G, 0, U and Y just as readily.
+         *
+         * X is in the list without being an answer. The share/export image puts
+         * a remove badge on every card that is the same plum colour, the same
+         * shape and — measured — the same 0.145 of the card unit as the armband
+         * disc, so shape alone cannot tell them apart. Whitelisting only CV
+         * forces each of those crosses to come back as a C or a V, which is
+         * fifteen spurious captaincies on one picture. Offer the engine the
+         * right answer and it takes it. */
+        await worker.setParameters({ tessedit_pageseg_mode: '10' as never, tessedit_char_whitelist: 'CVX' })
         const t = (await worker.recognize(crops[i].badge!)).data.text.trim().toUpperCase()
         await worker.setParameters({ tessedit_pageseg_mode: '7' as never, tessedit_char_whitelist: '' })
         if (t === 'C' || t === 'V') armband = t
