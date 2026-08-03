@@ -104,6 +104,33 @@ jobs:
             echo "MIRROR_REPO is set but MIRROR_TOKEN is not — nothing to push with." >&2
             exit 1
           fi
+
+          # git reports a missing repo and an unauthorised one identically, both
+          # "Repository not found", which leaves you guessing between a repo that
+          # was never created and a token that cannot see it. Asking the API
+          # twice — once anonymously, once as the token — separates them.
+          code() { curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$@"; }
+          API="https://api.github.com/repos/${MIRROR_REPO}"
+          anon=$(code "$API")
+          auth=$(code -H "Authorization: Bearer ${MIRROR_TOKEN}" "$API")
+          echo "repo visibility: anonymous=${anon} as-token=${auth}"
+          if [ "$auth" != "200" ]; then
+            if [ "$anon" = "200" ]; then
+              echo "::error::${MIRROR_REPO} exists and is public, but MIRROR_TOKEN cannot see it. The token is the problem, not the repo: check its Resource owner is the org and not a personal account (this cannot be changed after creation — reissue), that the org has approved it under Settings -> Personal access tokens -> Pending requests, and that the repo is in its selected-repositories list."
+            elif [ "$anon" = "403" ]; then
+              echo "::error::Anonymous check was rate-limited, so this is inconclusive; the token still cannot read ${MIRROR_REPO}. Re-run, and if it persists treat it as a token problem."
+            else
+              echo "::error::Neither anonymously (${anon}) nor with the token (${auth}) can ${MIRROR_REPO} be read. Most likely it does not exist under that exact name — check it is named mirror03.github.io, owned by the org rather than a personal account, and public."
+            fi
+            exit 1
+          fi
+          # 200 but read-only is the other silent trap: the push would 403 with
+          # nothing explaining why.
+          if [ "$(curl -sS -H "Authorization: Bearer ${MIRROR_TOKEN}" "$API" \
+                  | python3 -c 'import json,sys; print(json.load(sys.stdin).get("permissions",{}).get("push"))')" != "True" ]; then
+            echo "::error::MIRROR_TOKEN can read ${MIRROR_REPO} but not write to it. Set its Contents permission to Read and write."
+            exit 1
+          fi
           # Load-bearing. dist/CNAME claims fplanalyser.co.uk, and GitHub lets
           # exactly one Pages site hold a domain: publishing it here would pull
           # the domain off the real site and take fplanalyser.co.uk down.
