@@ -775,7 +775,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
   const [needPos, setNeedPos] = useState<'any' | 'GKP' | 'DEF' | 'MID' | 'FWD'>('any')
   const [maxPrice, setMaxPrice] = useState<number | null>(null)
   const [size, setSize] = useState<(typeof ROT_SIZES)[number]>(2)
-  const [startK, setStartK] = useState(1)
+  const [startKRaw, setStartKRaw] = useState(1)
   const [windowN, setWindowN] = useState<(typeof ROT_WINDOWS)[number]>(6)
   const [lens, setLens] = useState<Lens>('defence')
   /* What the board ranks and rings on. Difficulty is a blend; rotating
@@ -879,11 +879,21 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
   const better = (a: number, b: number) => (rateOn === 'diff' ? a - b : b - a)
   const rateFmt = (v: number) => (rateOn === 'diff' ? v.toFixed(1) : rateOn === 'xg' ? v.toFixed(1) : `${Math.round(v * 100)}%`)
 
-  const changeSize = (n: (typeof ROT_SIZES)[number]) => {
-    setSize(n)
-    setTeams((s) => s.slice(0, n))
-    setStartK((k) => Math.min(k, n - 1))
-  }
+  /* Only the size of the combinations we suggest. It no longer truncates what
+     you have locked: choosing to *see* pairs is not a decision to throw away
+     the fourth club you picked. */
+  const changeSize = (n: (typeof ROT_SIZES)[number]) => setSize(n)
+
+  /* Once you have locked a rotation, the rotation is what you locked — `size`
+     is only the size of the combinations we suggest while you have not. It
+     used to be a hard ceiling on locking too, so adding a club past it meant
+     going back to a control you had no reason to think was involved.
+     Deriving it rather than ratcheting a number up as clubs are added is what
+     keeps "start 4 of 2" from surviving an unlock. */
+  const effSize = teams.length >= 2 ? teams.length : size
+  /* Clamped rather than stored, so unlocking down to a smaller rotation cannot
+     strand "start 4 of 2" — a state the Start pills could not even show. */
+  const startK = Math.min(startKRaw, Math.max(1, effSize - 1))
 
   // Best-first fixtures for a group in one gameweek, under whichever lens is
   // selected. This used to be difficulty only, which left the suggestions
@@ -968,7 +978,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
    *  untouched, in which case the first one shows. */
   const [openGroup, setOpenGroup] = useState<string | null>(null)
   const pill = (active: boolean) => `min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${active ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`
-  const startOpts = Array.from({ length: size - 1 }, (_, i) => i + 1) // 1 … N-1
+  const startOpts = Array.from({ length: Math.max(1, effSize - 1) }, (_, i) => i + 1) // 1 … N-1
 
   /** Who the exported board is about. The clubs, the settings and the number
    *  they earned — a grid of fixtures with no header is unreadable once it
@@ -1114,19 +1124,22 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
     <div>
       <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold tracking-wide text-ink-2 uppercase">
         Rotation Planner
-        <InfoTip text="Difficulty is our own rating — opponent strength on our team Attack/Defence ratings, in the lens you choose. Set how many teams are in the rotation and how many you start each week; we always start the ones with the kindest fixtures." />
+        <InfoTip text="Difficulty is our own rating — opponent strength on our team Attack/Defence ratings, in the lens you choose. Lock in as many clubs as you want to rotate and set how many you start each week; we always start the ones with the kindest fixtures. Rotate sets the size of the suggested combinations — it does not limit how many you can lock." />
       </h2>
-      <p className="mb-3 text-sm text-ink-3">Choose the rotation size, how many to start, the window and the lens — then tap teams, or pick a top combination.</p>
+      <p className="mb-3 text-sm text-ink-3">Choose how many to start each week, the window and the lens — then lock in as many clubs as you want to rotate, or pick a top combination.</p>
 
       {/* Controls */}
       <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-3">
         <div className="flex items-center gap-1.5">
           <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Rotate</span>
-          {ROT_SIZES.map((n) => <button key={n} onClick={() => changeSize(n)} className={pill(size === n)}>{n}</button>)}
+          {/* Reads the live rotation, not the stored suggestion size, so it
+              cannot say 2 while five clubs are locked. Past the largest pill
+              nothing is lit, which is the truth rather than a wrong number. */}
+          {ROT_SIZES.map((n) => <button key={n} onClick={() => changeSize(n)} className={pill(effSize === n)}>{n}</button>)}
         </div>
         <div className="flex items-center gap-1.5">
           <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Start</span>
-          {startOpts.map((k) => <button key={k} onClick={() => setStartK(k)} className={pill(startK === k)}>{k}</button>)}
+          {startOpts.map((k) => <button key={k} onClick={() => setStartKRaw(k)} className={pill(startK === k)}>{k}</button>)}
         </div>
         <div className="flex items-center gap-1.5">
           <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Window</span>
@@ -1218,11 +1231,13 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
           const on = teams.includes(t)
           const out = excluded.includes(t)
           const ok = qualifies(t)
-          const full = (!on && !out && teams.length >= size) || (!on && !out && !ok)
+          /* Only ever disabled for not fielding anyone you could buy. How many
+             clubs are already locked is not a reason to refuse another one. */
+          const full = !on && !out && !ok
           const cycle = () => {
             if (on) { setTeams(teams.filter((x) => x !== t)); setExcluded([...excluded, t]); return }
             if (out) { setExcluded(excluded.filter((x) => x !== t)); return }
-            if (teams.length < size) setTeams([...teams, t])
+            setTeams([...teams, t])
           }
           return (
             <button
