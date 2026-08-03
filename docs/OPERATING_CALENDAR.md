@@ -26,7 +26,7 @@ which is why it has an off date below.
 |---|---|---|
 | **any time before Fri 21 Aug** | Twenty minutes on your own iPhone, every route, both themes | WebKit cannot be tested here — the Playwright download is blocked (`403 host not permitted`), so every measurement in this repo is Chromium. The one WebKit bug this site has had (invisible content) was invisible to Chromium too. |
 | ~~before Fri 21 Aug~~ **done** | ~~Supply GW1 expected points for the twenty most-owned players who have none~~ | Supplied and wired in — the twenty carried 83% combined ownership and every one showed N/A. 181 fringe players still have none, which is the right place to stop. |
-| **any time** | Stand up the github.io mirror — five steps in `docs/DOMAIN_CATEGORISATION.md` | `fplanalyser.co.uk` is blocked as gambling on at least one corporate network, and the github.io address redirects to it, so the site is currently unreachable from that machine by either route. The pipeline is already written and skips itself until you set `MIRROR_REPO`. Do not miss step 5 — without it the mirror loads but every live call fails. |
+| **any time** | Finish standing up the mirror at `mirror03.github.io` — steps 2–4 in `docs/DOMAIN_CATEGORISATION.md`, plus a Worker redeploy | `fplanalyser.co.uk` is blocked as gambling on at least one corporate network, and the github.io address redirects to it, so the site is unreachable from that machine by either route. The pipeline is written and skips itself until you set `MIRROR_REPO`. The Worker redeploy is not optional — without it the mirror loads but every live call fails. |
 | **Fri 21 Aug, 18:30 BST** | **GW1 deadline.** Nothing to do — the daily jobs cover it. | |
 
 ## The first real gameweek

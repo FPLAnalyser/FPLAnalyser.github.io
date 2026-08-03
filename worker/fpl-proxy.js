@@ -32,6 +32,10 @@ const ORIGINS = [
   'https://fplanalyser.co.uk',
   'https://www.fplanalyser.co.uk',
   'https://fplanalyser.github.io',
+  // The github.io mirror, for networks that filter the custom domain. Same
+  // build, different origin — so it needs listing here or every live call from
+  // it fails CORS. See docs/DOMAIN_CATEGORISATION.md.
+  'https://mirror03.github.io',
   'http://localhost:4173',
   'http://localhost:4177',
   'http://localhost:5173',

@@ -130,25 +130,31 @@ the custom domain too. A second repo on this account would inherit the
 redirect and land straight back on the blocked domain. A free org gets its own
 `<org>.github.io` and escapes it.
 
-One-time setup, all of it owner-side:
+The mirror lives at **https://mirror03.github.io** — organisation `mirror03`,
+repo `mirror03/mirror03.github.io`. One-time setup, all of it owner-side:
 
-1. Create a free organisation. **The name is public and sits in the URL** — keep
-   it brand-neutral, same rules as everywhere else in this repo.
-2. In it, create a **public** repo named exactly `<org>.github.io`, then
-   Settings → Pages → Source: *Deploy from a branch*, `main`, `/` (root).
-3. Give this repo write access to it — a fine-grained PAT scoped to that one
-   repo with **Contents: Read and write**, stored here as the secret
-   `MIRROR_TOKEN`. Fine-grained tokens expire (366 days maximum), and an
-   expired one means a silently stale mirror, so either diarise the renewal or
-   use a deploy key, which does not expire.
-4. Set the repository variable `MIRROR_REPO` to `<org>/<org>.github.io`. The
-   job is skipped entirely while that is unset, so nothing breaks in the
+1. ~~Create a free organisation~~ — done, `mirror03`. Set your membership to
+   private under Org → People: public membership links the org back to the
+   account, which is the thread the rename was meant to cut.
+2. In it, a **public** repo named exactly `mirror03.github.io`, initialised
+   with a README so `main` exists, then Settings → Pages → Source: *Deploy from
+   a branch*, `main`, `/` (root).
+3. A fine-grained PAT with **Resource owner: mirror03** — not the personal
+   account, which is the easy mistake — scoped to that one repo, permission
+   **Contents: Read and write**, stored on this repo as the secret
+   `MIRROR_TOKEN`. If it comes back *pending approval*, clear it at Org →
+   Settings → Personal access tokens → Pending requests. These expire at 366
+   days maximum and an expired one means a silently stale mirror, so diarise
+   the renewal or swap to a deploy key, which does not expire.
+4. Set the repository variable `MIRROR_REPO` to `mirror03/mirror03.github.io`.
+   The job is skipped entirely while that is unset, so nothing breaks in the
    meantime.
-5. Add `https://<org>.github.io` to `ORIGINS` in `worker/fpl-proxy.js` and
-   redeploy the Worker. **Skip this and the mirror renders but every live call
-   fails** — injuries, suspensions, set-piece order, deadlines and Load Your
-   Team all go through that relay, and it echoes back the first allowed origin
-   for anything it does not recognise, which the browser then rejects.
+5. ~~Add the origin to the Worker~~ — `https://mirror03.github.io` is in
+   `ORIGINS` in `worker/fpl-proxy.js`. **The Worker still has to be
+   redeployed for that to take effect**, and until it is the mirror renders but
+   every live call fails: injuries, suspensions, set-piece order, deadlines and
+   Load Your Team all go through that relay, and it echoes back the first
+   allowed origin for anything it does not recognise, which the browser rejects.
 
 Two things the job takes care of, both worth knowing if it is ever rewritten:
 it deletes `dist/CNAME` before pushing, because GitHub lets exactly one Pages
