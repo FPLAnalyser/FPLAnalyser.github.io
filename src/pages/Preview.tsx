@@ -8,14 +8,16 @@ import { InfoTip } from '../components/InfoTip'
 import { Icon } from '../components/Icon'
 import { PageSkeleton } from '../components/Skeleton'
 import { Exportable } from '../components/ExportPanel'
-import { useCore } from '../lib/useData'
+import { useCore, useLazyTable } from '../lib/useData'
 import { useAvailability, availFor, notPlaying, penaltyDuty, type TeamRecord } from '../lib/availability'
 import { useMarketOdds, useXpModel, useShotProfiles, xpForGw } from '../lib/xp'
 import { num } from '../lib/rows'
 import { teamLabel, playerHref, derbyName, teamColors } from '../lib/util'
 import { resolveFixture, kitBackground, kitOutline } from '../lib/kits'
 import { useTheme } from '../lib/theme'
-import type { RatingRow } from '../lib/types'
+import { CARD_UPLIFT, edgeFor, edgeSentence, profileOf, type Edge, type Profile } from '../lib/matchup'
+import { str } from '../lib/rows'
+import type { RatingRow, Row } from '../lib/types'
 
 /* ════════════════════════════════════════════════════════════════════════
    PREVIEW — the whole gameweek on one screen, before the deadline.
@@ -193,6 +195,87 @@ export default function Preview() {
     fixed.sort((x, y) => (x.k ?? '').localeCompare(y.k ?? '') || y.total - x.total)
     return { matches: fixed, sides }
   }, [market, data?.fixtureEase, gw, avail.fixtures, teamShorts])
+
+  /* ── Matchups: whose shot profile the opposing defence is least built for.
+     ────────────────────────────────────────────────────────────────────────
+     Same computation as the Fixtures page's explorer, over the whole round
+     instead of one opponent — `lib/matchup` so there is one of it. Three
+     lazy tables, none of them small, so they load after the page rather than
+     with it: the round reads perfectly well without this and it arrives when
+     it arrives. */
+  const concededQ = useLazyTable<Record<string, Row[]>>('shots_conceded')
+  const playerShotsQ = useLazyTable<Record<string, Row[]>>('player_shots')
+  const scoutQ = useLazyTable<Row[]>('scouting')
+
+  const leagueProfile = useMemo(
+    () => profileOf(Object.values(concededQ.data ?? {}).flat(), true),
+    [concededQ.data],
+  )
+  const teamProfiles = useMemo(() => {
+    const m = new Map<string, Profile>()
+    for (const [t, list] of Object.entries(concededQ.data ?? {})) m.set(t, profileOf(list, true))
+    return m
+  }, [concededQ.data])
+  /* Headed share comes from the scouting table, not the shot events: shot
+     events carry no body-part field, so reading headers off them returns zero
+     for everybody and the whole header route vanishes without saying so. */
+  const headShareByEl = useMemo(() => {
+    const m = new Map<number, number>()
+    for (const r of scoutQ.data ?? []) {
+      if ((str(r, 'window') || 'season') !== 'season') continue
+      const el = num(r, 'element')
+      const shots = num(r, 'shots_per90')
+      const headed = num(r, 'headed_shots_per90')
+      if (el != null && shots && headed != null && shots > 0) m.set(el, headed / shots)
+    }
+    return m
+  }, [scoutQ.data])
+
+  const edges = useMemo(() => {
+    if (!playerShotsQ.data || leagueProfile.totalXg <= 0) return []
+    const oppOf = new Map<string, string>()
+    for (const m of matches) { oppOf.set(m.h, m.a); oppOf.set(m.a, m.h) }
+    const out: Edge[] = []
+    for (const r of ratings) {
+      if (r.position !== 'MID' && r.position !== 'FWD') continue
+      const opp = oppOf.get(String(r.team))
+      if (!opp) continue
+      const p = availFor(avail, num(r, 'element'), num(r, 'code'))
+      if (p && notPlaying(p.status)) continue
+      const e = edgeFor(r, playerShotsQ.data[String(r.element)], teamProfiles.get(opp), leagueProfile, opp, headShareByEl.get(Number(r.element)))
+      if (e) out.push(e)
+    }
+    out.sort((a, b) => b.score - a.score)
+    return out
+  }, [playerShotsQ.data, teamProfiles, leagueProfile, headShareByEl, ratings, matches, avail])
+
+  /** The one line a fixture card earns — the best edge in that game, either
+   *  side of it, and only when it clears the bar. Most fixtures get nothing,
+   *  which is the point. */
+  const edgeByFixture = useMemo(() => {
+    const m = new Map<string, { e: Edge; why: string }>()
+    for (const e of edges) {
+      if (e.uplift < CARD_UPLIFT) continue
+      const why = edgeSentence(e, teamLabel(e.opp), false)
+      if (!why) continue
+      const key = [String(e.player.team), e.opp].sort().join('|')
+      const cur = m.get(key)
+      if (!cur || e.score > cur.e.score) m.set(key, { e, why })
+    }
+    return m
+  }, [edges])
+
+  /* Four each way. Six was tested and the lane ran past the 427px the left
+     column has spare, which is the whole reason this section fits where it
+     does. */
+  const gainers = useMemo(
+    () => edges.filter((e) => e.uplift > 0 && edgeSentence(e, teamLabel(e.opp))).slice(0, 4),
+    [edges],
+  )
+  const losers = useMemo(
+    () => [...edges].reverse().filter((e) => e.uplift < 0).slice(0, 4),
+    [edges],
+  )
 
   /* Expected points for THIS gameweek, from the site's own per-gameweek model:
      goal, assist, clean sheet, saves, defensive contribution, bonus and
@@ -497,6 +580,23 @@ export default function Preview() {
                       <span className="text-[12px]">{m.total.toFixed(2)} goals expected</span>
                       <span>Clean Sheet <b className={`text-[17px] font-extrabold ${csTone(m.csa)}`}>{pc(m.csa)}</b></span>
                     </div>
+                    {/* One line about the matchup, and only where the shot
+                        profiles actually say something — most fixtures get
+                        nothing and take no extra height for it. Inside the
+                        button rather than under it so the whole card stays one
+                        tap target. */}
+                    {(() => {
+                      const hit = edgeByFixture.get([m.h, m.a].sort().join('|'))
+                      if (!hit) return null
+                      return (
+                        <div className="mt-2.5 flex gap-2 border-t border-dashed border-line-mid pt-2.5 text-left text-[12px] leading-snug text-ink-2">
+                          <span className="mt-[5px] size-1.5 shrink-0 rounded-full bg-good" />
+                          <span>
+                            <b className="font-bold text-ink">{String(hit.e.player.web_name)}.</b> {hit.why}
+                          </span>
+                        </div>
+                      )
+                    })()}
                   </button>
                   {isOpen && (
                     <div className="mt-3 grid grid-cols-1 gap-4 border-t border-line-mid pt-3 lg:grid-cols-[1.4fr_1fr]">
@@ -760,6 +860,31 @@ export default function Preview() {
               </div>
             </Section>
 
+            {/* Who the fixture suits, in the space the top ten leaves behind.
+                Measured on the live page at 1440 and 1760: the left column
+                runs out at the tenth row and Team news carries on for another
+                427px, so this costs the page no height at all — everything
+                below it was already there. It reads as the shortlist you check
+                after the captain call rather than before it, which is the
+                right order for a tie-breaker.
+
+                A whole round spreads about -9% to +15%, so the note under it
+                says what the number is worth. On a phone the columns stack and
+                this simply lands between the two lists. */}
+            {gainers.length > 0 && (
+              <Section gw={gw} label="Who the fixture suits" name="matchups" className="lg:col-start-1" share={false} tip="Where each defence gives up its expected goals — left, central or right channel, set pieces, headers — against the league average, and which attackers' own shot profiles land there. Ranked by that fit multiplied by the player's season expected goals, because a profile that suits a weakness perfectly is worth nothing on somebody who barely shoots. Every shot this season, penalties excluded.">
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  <MatchupLane title="The fixture helps" tone="good" rows={gainers} />
+                  <MatchupLane title="The fixture hurts" tone="bad" rows={losers} />
+                </div>
+                <p className="mt-2 text-[11.5px] leading-snug text-ink-3">
+                  Fit is how much of a player's shot profile lands where this defence is weakest, against the league.
+                  Across a whole round the spread is about &minus;9% to +15% &mdash; a tie-breaker between two players you
+                  already fancy, not a reason to captain somebody.
+                </p>
+              </Section>
+            )}
+
             {/* One list, not two. "Who steps up" and "Team news" were the same
                 players sorted differently — the same name appeared in both
                 columns, once with a replacement and once without, which read
@@ -893,6 +1018,57 @@ const outTone = (status: string) => (status === 'd' ? 'text-warn' : 'text-bad')
  *  making a section shareable costs no height — and the export is the block
  *  itself, headed and footed by the exporter, not a screenshot of the page
  *  around it. */
+/** One side of the matchup shortlist. Name, the fixture, the fit and the
+ *  volume it is weighted by — the volume is on screen because it is half the
+ *  ranking, and leaving it off is what made a +9% appear above a +10%. */
+function MatchupLane({ title, tone, rows }: { title: string; tone: 'good' | 'bad'; rows: Edge[] }) {
+  const navigate = useNavigate()
+  if (!rows.length) return null
+  return (
+    <div className="overflow-hidden rounded-xl border border-line">
+      <div className={`border-b border-line px-3 py-2 text-[10.5px] font-extrabold tracking-[0.12em] uppercase ${
+        tone === 'good' ? 'bg-good/[0.07] text-good' : 'bg-bad/[0.06] text-bad'
+      }`}>
+        {tone === 'good' ? '\u2191' : '\u2193'} {title}
+      </div>
+      {rows.map((e) => {
+        /* Only the good lane gets a sentence. On the other side there is no
+           single category to name — the profile just misses everywhere — so
+           four rows produced four copies of the same clause. It is said once,
+           under the lane, instead. */
+        const why = tone === 'good' ? edgeSentence(e, teamLabel(e.opp), false) : null
+        return (
+          <button
+            key={String(e.player.element)}
+            onClick={() => navigate(playerHref(String(e.player.web_name), num(e.player, 'code')))}
+            className="flex w-full items-start gap-2.5 border-b border-line px-3 py-2.5 text-left transition-colors last:border-0 hover:bg-surface-2/50"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[13.5px] font-bold text-ink">{String(e.player.web_name)}</span>
+              <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-ink-3">
+                <TeamBadge team={String(e.player.team)} size={11} />
+                {e.player.team} v {e.opp} · £{e.player.price}m
+              </span>
+              {why && <span className="mt-1 block text-[11.5px] leading-snug text-ink-2">{why}</span>}
+            </span>
+            <span className="shrink-0 text-right">
+              <span className={`block font-num text-[13px] font-extrabold tabular-nums ${tone === 'good' ? 'text-good' : 'text-bad'}`}>
+                {e.uplift > 0 ? '+' : ''}{(e.uplift * 100).toFixed(0)}%
+              </span>
+              <span className="block text-[10px] text-ink-3">{e.xg.toFixed(1)} xG</span>
+            </span>
+          </button>
+        )
+      })}
+      {tone === 'bad' && (
+        <div className="border-t border-line px-3 py-2 text-[11px] leading-snug text-ink-3">
+          These defences give up less than the league average in the areas each of these men shoots from.
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Section({ gw, label, tip, name, className, share = true, children }: {
   gw: number
   label: string

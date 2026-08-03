@@ -9,7 +9,9 @@ import { InfoTip } from '../components/InfoTip'
 import { Icon } from '../components/Icon'
 import { PageSkeleton } from '../components/Skeleton'
 import { useCore, useLazyTable } from '../lib/useData'
-import { classifyZone, toPitch } from '../lib/shotzones'
+import {
+  CAT_LABEL, edgeFor, edgeSentence, profileOf, type Cat, type Profile,
+} from '../lib/matchup'
 import { Exportable } from '../components/ExportPanel'
 import { useWide } from '../lib/useWide'
 import { num, str } from '../lib/rows'
@@ -213,67 +215,6 @@ function fixtureRead(
   }
 
   return bits.join(' ')
-}
-
-/* Shot-profile categories used to match player strengths to opponent
-   weaknesses. Channels come from the shot-zone geometry (attacker's view);
-   set-piece from the shot situation. Penalties are excluded throughout. */
-type Cat = 'left' | 'centre' | 'right' | 'setpiece'
-const CAT_LABEL: Record<Cat, string> = {
-  left: 'the attacking left',
-  centre: 'central areas',
-  right: 'the attacking right',
-  setpiece: 'set pieces',
-}
-
-/* The same channel said two ways, because one phrase cannot serve both
-   halves of the sentence: a defence gives up chances *down* a flank, a player
-   takes his *from* one. */
-const CONCEDE_AT: Record<Cat | 'header', string> = {
-  left: 'down the attacking left',
-  centre: 'through the middle',
-  right: 'down the attacking right',
-  setpiece: 'from set pieces',
-  header: 'to headers',
-}
-const TAKES_AT: Record<Cat | 'header', string> = {
-  left: 'from the left',
-  centre: 'from central positions',
-  right: 'from the right',
-  setpiece: 'from set pieces',
-  header: 'with his head',
-}
-
-function channelOf(zone: string): Exclude<Cat, 'setpiece'> {
-  if (/-(wl|el)/.test(zone) || /-l($|-)/.test(zone)) return 'left'
-  if (/-(wr|er)/.test(zone) || /-r($|-)/.test(zone)) return 'right'
-  return 'centre'
-}
-const isSetPiece = (sit: unknown) => sit === 'SetPiece' || sit === 'FromCorner' || sit === 'DirectFreekick'
-
-interface Profile { shares: Record<Cat, number>; headShare: number | null; totalXg: number }
-
-/** xG-weighted share of each category for a list of shots (penalties excluded). */
-function profileOf(shots: Row[], withHead: boolean): Profile {
-  const acc: Record<Cat, number> = { left: 0, centre: 0, right: 0, setpiece: 0 }
-  let total = 0
-  let headXg = 0
-  for (const s of shots) {
-    if (s.situation === 'Penalty') continue
-    const xg = Number(s.xg) || 0
-    if (!xg) continue
-    total += xg
-    if (isSetPiece(s.situation)) acc.setpiece += xg
-    // Both player shots and shots-conceded are recorded in the attacking
-    // team's frame — no mirroring, so channel labels line up on both sides.
-    const { cx, cy } = toPitch(s.x as number, s.y as number)
-    acc[channelOf(classifyZone(cx, cy))] += xg
-    if (withHead && s.shot_type === 'Head') headXg += xg
-  }
-  const shares = Object.fromEntries(
-    (Object.keys(acc) as Cat[]).map((k) => [k, total > 0 ? acc[k] / total : 0]),
-  ) as Record<Cat, number>
-  return { shares, headShare: withHead && total > 0 ? headXg / total : null, totalXg: total }
 }
 
 export default function Fixtures() {
@@ -2086,47 +2027,12 @@ function MatchupExplorer({ ratings, league }: { ratings: RatingRow[]; league: st
 
     const out: { r: RatingRow; uplift: number; xg: number; why: string }[] = []
     for (const [elStr, shots] of Object.entries(playerShotsQ.data)) {
-      const el = Number(elStr)
-      const r = ratingByEl.get(el)
+      const r = ratingByEl.get(Number(elStr))
       if (!r || r.team === opp) continue
       if (r.position !== 'MID' && r.position !== 'FWD') continue
-      if (!Array.isArray(shots) || shots.length < 20) continue // need a real sample
-      const p = profileOf(shots, false)
-      if (p.totalXg <= 0) continue
-
-      // Uplift: how much of this player's shot profile lands where the
-      // opponent is weakest relative to the league.
-      const cats: { cat: Cat | 'header'; pShare: number; oShare: number; lShare: number }[] = (
-        Object.keys(CAT_LABEL) as Cat[]
-      ).map((c) => ({ cat: c, pShare: p.shares[c], oShare: oProf.shares[c], lShare: leagueProfile.shares[c] }))
-      const pHead = headShareByEl.get(el)
-      if (pHead != null && oProf.headShare != null && leagueProfile.headShare) {
-        cats.push({ cat: 'header', pShare: pHead, oShare: oProf.headShare, lShare: leagueProfile.headShare })
-      }
-      let uplift = 0
-      let best: (typeof cats)[number] | null = null
-      for (const c of cats) {
-        const rel = (c.oShare - c.lShare) / Math.max(c.lShare, 0.02)
-        uplift += c.pShare * rel
-        if (c.pShare >= 0.15 && (!best || c.pShare * rel > best.pShare * ((best.oShare - best.lShare) / Math.max(best.lShare, 0.02)))) best = c
-      }
-
-      /* Two sentences, two named subjects.
-       *
-       * This read "OPP concede 24% of xG from the attacking right (league
-       * 19%) — 39% of their threat comes from there", and a reader has no way
-       * to know that the first "their" is the defence and the second is the
-       * player. Both subjects are named now.
-       *
-       * The player goes first. Naming the defence first was clear but put the
-       * same clause at the front of every row — nine of the twelve rows
-       * against Spurs are the same header weakness, so nine rows opened with
-       * the same fourteen words and the thing that distinguishes them was at
-       * the end. The row is about the player; it starts with him. */
-      const why = best && (best.oShare - best.lShare) / Math.max(best.lShare, 0.02) > 0.08
-        ? `Takes ${(best.pShare * 100).toFixed(0)}% of his chances ${TAKES_AT[best.cat]} — and ${teamLabel(opp)} give up ${(best.oShare * 100).toFixed(0)}% of their xG ${CONCEDE_AT[best.cat]}, against ${(best.lShare * 100).toFixed(0)}% league-wide.`
-        : ''
-      out.push({ r, uplift, xg: p.totalXg, why })
+      const e = edgeFor(r, shots as Row[], oProf, leagueProfile, opp, headShareByEl.get(Number(elStr)))
+      if (!e) continue
+      out.push({ r, uplift: e.uplift, xg: e.xg, why: edgeSentence(e, teamLabel(opp), false) ?? "" })
     }
     /* Rank by fit AND volume: a perfect profile on somebody who barely
        shoots is not an edge. That has always been the order, but only the fit
