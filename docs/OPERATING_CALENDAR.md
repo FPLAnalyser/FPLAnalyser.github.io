@@ -14,7 +14,7 @@ Nothing below needs a laptop open. All four are GitHub Actions on `main`.
 | 05:40 daily | Refresh pre-season squad data | Rebuilds `site_data/<season>/` from the FPL API — new signings, prices, ownership, fixtures, carried ratings. **Pre-season only; turn off after GW1.** |
 | 06:00 daily | Refresh availability data | Injuries, suspensions, chance-of-playing, set-piece order, deadlines. Also mirrors any new crests and headshots. |
 | 06:20 daily | Refresh odds data | Per-fixture goal expectancies from bookmaker odds. |
-| on every push | Deploy to GitHub Pages | Rebuilds and publishes. Fires on the three above as well as on your own pushes. |
+| on every push | Deploy to GitHub Pages | Rebuilds and publishes. Fires on the three above as well as on your own pushes. Also mirrors the same build to a plain `github.io` address for networks that block the domain — dormant until you set it up, see below. |
 
 The pre-season refresh writes `provisional: true` and `ratings_season: 2025-26`
 every run. That is correct now and wrong the moment real 2026-27 numbers exist,
@@ -26,6 +26,7 @@ which is why it has an off date below.
 |---|---|---|
 | **any time before Fri 21 Aug** | Twenty minutes on your own iPhone, every route, both themes | WebKit cannot be tested here — the Playwright download is blocked (`403 host not permitted`), so every measurement in this repo is Chromium. The one WebKit bug this site has had (invisible content) was invisible to Chromium too. |
 | ~~before Fri 21 Aug~~ **done** | ~~Supply GW1 expected points for the twenty most-owned players who have none~~ | Supplied and wired in — the twenty carried 83% combined ownership and every one showed N/A. 181 fringe players still have none, which is the right place to stop. |
+| **any time** | Stand up the github.io mirror — five steps in `docs/DOMAIN_CATEGORISATION.md` | `fplanalyser.co.uk` is blocked as gambling on at least one corporate network, and the github.io address redirects to it, so the site is currently unreachable from that machine by either route. The pipeline is already written and skips itself until you set `MIRROR_REPO`. Do not miss step 5 — without it the mirror loads but every live call fails. |
 | **Fri 21 Aug, 18:30 BST** | **GW1 deadline.** Nothing to do — the daily jobs cover it. | |
 
 ## The first real gameweek

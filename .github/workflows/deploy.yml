@@ -49,6 +49,13 @@ jobs:
           # fork, a local build and a preview are all genuinely uncounted, and
           # the privacy notice says so because it reads the same flag.
           VITE_GOATCOUNTER: ${{ vars.VITE_GOATCOUNTER }}
+      # Same tree the mirror job publishes. One day of retention: this runs on
+      # every data refresh, several times a day, and the artefact is 37 MB.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 1
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -63,3 +70,55 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # A second copy of the same build, published on a plain github.io address.
+  #
+  # fplanalyser.co.uk is miscategorised as gambling by at least one corporate
+  # web filter (docs/DOMAIN_CATEGORISATION.md), so on some office networks the
+  # site is simply unreachable — and because the custom domain is set on this
+  # account's *user* Pages site, GitHub redirects fplanalyser.github.io to it,
+  # which means the github.io address is blocked by proxy. It cascades to every
+  # project site on the account too, so the mirror has to live under a separate
+  # org to escape it.
+  #
+  # Deliberately not a fallback the app knows about: same artefact, no code
+  # path, nothing to keep in sync. It goes stale only if this job fails, and it
+  # cannot take the real deploy down with it — `deploy` does not need it.
+  mirror:
+    needs: build
+    # Unset the variable and the mirror quietly stops being a thing.
+    if: ${{ vars.MIRROR_REPO != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Publish to the mirror
+        env:
+          MIRROR_REPO: ${{ vars.MIRROR_REPO }}
+          MIRROR_TOKEN: ${{ secrets.MIRROR_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${MIRROR_TOKEN}" ]; then
+            echo "MIRROR_REPO is set but MIRROR_TOKEN is not — nothing to push with." >&2
+            exit 1
+          fi
+          # Load-bearing. dist/CNAME claims fplanalyser.co.uk, and GitHub lets
+          # exactly one Pages site hold a domain: publishing it here would pull
+          # the domain off the real site and take fplanalyser.co.uk down.
+          rm -f dist/CNAME
+          test ! -e dist/CNAME
+          touch dist/.nojekyll
+          # index.html keeps its canonical -> fplanalyser.co.uk, so search
+          # engines fold the mirror into the real domain rather than competing.
+          cd dist
+          git init -q
+          git config user.name 'FPL Analyser'
+          git config user.email '224126997+FPLAnalyser@users.noreply.github.com'
+          git add -A
+          git commit -q -m "Build ${GITHUB_SHA}"
+          # Force: the mirror is build output, not history worth keeping.
+          git push -q --force \
+            "https://x-access-token:${MIRROR_TOKEN}@github.com/${MIRROR_REPO}.git" \
+            HEAD:main

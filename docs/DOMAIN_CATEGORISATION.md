@@ -110,3 +110,52 @@ call, not something to solicit.
   protocol versions or cipher suites. The only lever would be moving the
   hosting behind Cloudflare, which is a post-launch decision and wants evidence
   from analytics first, not one anecdote.
+
+---
+
+## While it is still blocked: the mirror
+
+Re-categorisation is the real fix but it is not in our gift, and Zscaler — the
+filter most likely to be in the way — only takes submissions from inside its
+own network. So the same build is also published to a plain `github.io`
+address, which measured clean on a corporate network that blocks the custom
+domain. The `mirror` job in `.github/workflows/deploy.yml` does it on every
+deploy; there is no second build and no code path in the app, so the only way
+the mirror goes stale is if that job fails.
+
+**It has to live under a separate organisation.** A custom domain set on an
+account's *user* Pages site cascades: GitHub redirects `fplanalyser.github.io`
+to `fplanalyser.co.uk`, and every project site on the account is served under
+the custom domain too. A second repo on this account would inherit the
+redirect and land straight back on the blocked domain. A free org gets its own
+`<org>.github.io` and escapes it.
+
+One-time setup, all of it owner-side:
+
+1. Create a free organisation. **The name is public and sits in the URL** — keep
+   it brand-neutral, same rules as everywhere else in this repo.
+2. In it, create a **public** repo named exactly `<org>.github.io`, then
+   Settings → Pages → Source: *Deploy from a branch*, `main`, `/` (root).
+3. Give this repo write access to it — a fine-grained PAT scoped to that one
+   repo with **Contents: Read and write**, stored here as the secret
+   `MIRROR_TOKEN`. Fine-grained tokens expire (366 days maximum), and an
+   expired one means a silently stale mirror, so either diarise the renewal or
+   use a deploy key, which does not expire.
+4. Set the repository variable `MIRROR_REPO` to `<org>/<org>.github.io`. The
+   job is skipped entirely while that is unset, so nothing breaks in the
+   meantime.
+5. Add `https://<org>.github.io` to `ORIGINS` in `worker/fpl-proxy.js` and
+   redeploy the Worker. **Skip this and the mirror renders but every live call
+   fails** — injuries, suspensions, set-piece order, deadlines and Load Your
+   Team all go through that relay, and it echoes back the first allowed origin
+   for anything it does not recognise, which the browser then rejects.
+
+Two things the job takes care of, both worth knowing if it is ever rewritten:
+it deletes `dist/CNAME` before pushing, because GitHub lets exactly one Pages
+site hold a domain and publishing that file on the mirror would pull
+`fplanalyser.co.uk` off the real site; and it leaves the canonical tag pointing
+at `fplanalyser.co.uk`, so search engines fold the mirror into the real domain
+instead of ranking it as a duplicate.
+
+The mirror is a workaround, not a second home. When the category clears, unset
+`MIRROR_REPO` and the whole thing stops.
