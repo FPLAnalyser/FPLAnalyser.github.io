@@ -723,7 +723,11 @@ type Side = 'defence' | 'attack'
 const SIDE_RATES: Record<Side, GridMode[]> = { defence: ['diff', 'cs'], attack: ['diff', 'xg'] }
 const SIDE_POS: Record<Side, ('GKP' | 'DEF' | 'MID' | 'FWD')[]> = {
   defence: ['GKP', 'DEF', 'MID'],
-  attack: ['DEF', 'MID', 'FWD'],
+  /* No defenders. An attacking rotation is bought for goals, and a defender's
+     attacking score is a different claim on a different scale — it surfaced
+     centre-halves as a club's best attacking option, which is not the player
+     anyone is rotating for. */
+  attack: ['MID', 'FWD'],
 }
 /** What to show about the club's best player at that position, per side.
  *  A keeper's job is saves; a defender's extra points come from defensive
@@ -736,7 +740,6 @@ const POS_METRIC: Record<Side, Record<string, { key: string; label: string }>> =
     MID: { key: 'season_dc_score', label: 'Def Con' },
   },
   attack: {
-    DEF: { key: 'season_attacking_score', label: 'Attacking' },
     MID: { key: 'season_goal_score', label: 'Goal threat' },
     FWD: { key: 'season_goal_score', label: 'Goal threat' },
   },
@@ -834,7 +837,9 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
      board because the desktop table needs the same two things and had neither —
      the band was inside a component that only rendered under `!wide`. */
   const bandLabel = needPos === 'any'
-    ? (side === 'defence' ? 'Def Con' : 'Attack')
+    // Both attacking positions now score on the same metric, so the generic
+    // label can name it rather than hedging with "Attack".
+    ? (side === 'defence' ? 'Def Con' : 'Goal threat')
     : POS_METRIC[side][needPos]?.label ?? ''
   /** Where each club places on the band metric inside THIS rotation. */
   const bandRank = (group: string[]) => {
