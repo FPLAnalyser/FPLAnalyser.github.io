@@ -828,6 +828,24 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
   }, [ratings, side, needPos, maxPrice])
   const dcMax = useMemo(() => Math.max(1, ...[...dcBy.values()].map((l) => l[0]?.score ?? 0)), [dcBy])
 
+  /* One label for the band, since a mixed group would otherwise need one per
+     column. With a position chosen it is that position's metric; with "Anyone"
+     it is whatever the side implies most of the time. Hoisted out of the phone
+     board because the desktop table needs the same two things and had neither —
+     the band was inside a component that only rendered under `!wide`. */
+  const bandLabel = needPos === 'any'
+    ? (side === 'defence' ? 'Def Con' : 'Attack')
+    : POS_METRIC[side][needPos]?.label ?? ''
+  /** Where each club places on the band metric inside THIS rotation. */
+  const bandRank = (group: string[]) => {
+    const m = new Map<string, number>()
+    ;[...group]
+      .map((t) => ({ t, s: dcBy.get(t)?.[0]?.score ?? -1 }))
+      .sort((a, b) => b.s - a.s)
+      .forEach((x, i) => m.set(x.t, i))
+    return m
+  }
+
   /** The best player each club can offer inside the budget — highest rated,
    *  not cheapest: at a fixed price cap you want the best man available at
    *  that price, and the whole point of the cap is that it is already set. */
@@ -934,6 +952,9 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
   const startByGw = new Map<number, Set<string>>()
   for (const gw of gws) startByGw.set(gw, new Set(rankGw(teams, gw).slice(0, startK).map((x) => x.t)))
 
+  // Once for the table, not once per row.
+  const dcRank = bandRank(teams)
+
   const rotAvg = startKAvg(teams, startK)
   const fixedAvg = teams.length ? fixedKAvg(teams, startK) : null
 
@@ -1021,18 +1042,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
      six-cell strip could hold. Shared by the open suggestion and the planner
      proper, so they cannot disagree about who starts. */
   const rotationBoard = (group: string[]) => {
-    // One label for the band, since a mixed group would otherwise need one per
-    // column. With a position chosen it is that position's metric; with
-    // "Anyone" it is whatever the side implies most of the time.
-    // Where each club places on the band metric inside THIS rotation.
-    const rank = new Map<string, number>()
-    ;[...group]
-      .map((t) => ({ t, s: dcBy.get(t)?.[0]?.score ?? -1 }))
-      .sort((a, b) => b.s - a.s)
-      .forEach((x, i) => rank.set(x.t, i))
-    const bandLabel = needPos === 'any'
-      ? (side === 'defence' ? 'Def Con' : 'Attack')
-      : POS_METRIC[side][needPos]?.label ?? ''
+    const rank = bandRank(group)
     const starters = (gw: number) => {
       const ranked = group
         .map((t) => ({ t, v: rateVal(t, gw) }))
@@ -1376,6 +1386,14 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
                 <tr className="border-b border-line bg-surface-1">
                   <th className="sticky left-0 z-10 bg-surface-1 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-ink-3 uppercase">Team</th>
                   {gws.map((gw) => <th key={gw} className={headCls}>GW{gw}</th>)}
+                  {/* The same band the phone board carries under its fixtures.
+                      Clubs are rows here rather than columns, so it is a column
+                      rather than a strip — and it sits beside the club whose
+                      fixtures it qualifies. */}
+                  {/* headCls centres, and the cells under this one are left
+                      aligned — so it gets its own alignment rather than the
+                      shared class. */}
+                  <th className="px-3 py-2 text-left text-[11px] font-semibold tracking-wide whitespace-nowrap text-ink-3 uppercase">{bandLabel}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1398,6 +1416,22 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
                         </td>
                       )
                     })}
+                    {(() => {
+                      const best = dcBy.get(t)?.[0]
+                      if (!best) return <td className="px-3 py-2 text-center text-[11px] text-ink-3">{maxPrice != null ? 'None in budget' : '—'}</td>
+                      return (
+                        <td className="px-3 py-2" title={`${best.name} (${best.pos})${best.price != null ? ` £${best.price}m` : ''} — ${best.label} ${best.score.toFixed(0)} of 100`}>
+                          <span className="block text-[12px] leading-tight font-bold whitespace-nowrap text-ink">{best.name}</span>
+                          <span className="block text-[10px] leading-tight text-ink-3">{best.pos}{best.price != null ? ` £${best.price}m` : ''} · {best.score.toFixed(0)}</span>
+                          {/* Gold, silver, bronze by rank inside this rotation,
+                              exactly as on the phone: which of these clubs has
+                              the better man at the job. */}
+                          <span className="mt-1 block h-[4px] w-full max-w-[90px] overflow-hidden rounded-full bg-surface-3">
+                            <span className="block h-full rounded-full" style={{ width: `${Math.round((best.score / dcMax) * 100)}%`, background: MEDAL[Math.min(2, dcRank.get(t) ?? 2)] }} />
+                          </span>
+                        </td>
+                      )
+                    })()}
                   </tr>
                 ))}
                 <tr className="bg-surface-1/60">
@@ -1414,6 +1448,9 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
                       </td>
                     )
                   })}
+                  {/* Keeps the row's cell count matching the header now that a
+                      band column exists; nothing to start in it. */}
+                  <td />
                 </tr>
               </tbody>
             </table>
