@@ -30,15 +30,21 @@ import type { FixtureEaseRow, RatingRow, Row } from '../lib/types'
    and drew thirty-eight columns, which is a spreadsheet rather than a read —
    the half is the unit people plan chips and wildcards around. */
 const winLabel = (w: number) => `Next ${w}`
+/** Longest window the difficulty and projection grids offer on a phone. */
+const MOBILE_WINDOW_CAP = 12
 
 /* One slider, the same shape as the Scouting filters, shared by the difficulty
    grid, the goals and clean sheets grid and the rotation planner. It replaced
    fixed presets, which could only ever offer a handful of the lengths the data
    supports and had already drifted into two vocabularies — everything counting
    forward from now except "To GW19", which counted to a fixed gameweek. */
-function WindowPicker({ value, max, onChange }: {
+function WindowPicker({ value, max, total, onChange }: {
   value: number
   max: number
+  /** Gameweeks that actually exist, when the slider's ceiling is lower than
+   *  that — a phone caps these grids at 12, and "all" against the cap rather
+   *  than the season claimed the whole of it while showing 12 of 38. */
+  total?: number
   onChange: (n: number) => void
 }) {
   /* The thumb moves on every step; the board only redraws when you let go.
@@ -54,7 +60,7 @@ function WindowPicker({ value, max, onChange }: {
     <label className="block min-w-[200px] flex-1 sm:max-w-[280px]">
       <div className="mb-1 flex items-center justify-between text-xs text-ink-2">
         <span>Window</span>
-        <span className="font-num tabular-nums text-ink">{winLabel(pos)}{pos === max ? ' · all' : ''}</span>
+        <span className="font-num tabular-nums text-ink">{winLabel(pos)}{pos === (total ?? max) ? ' · all' : ''}</span>
       </div>
       <input
         type="range"
@@ -276,6 +282,7 @@ export default function Fixtures() {
   // and having them compare notes.
   // Not the preset union any more — a custom window is any number of weeks.
   const [windowN, setWindowN] = useState<number>(6)
+  const wide = useWide()
   const [lens, setLens] = useState<Lens>('defence')
   // The grid mode is no longer a control — it follows the tab. Only the two
   // projections are a choice, and only inside their own tab.
@@ -343,6 +350,14 @@ export default function Fixtures() {
   const fixtureEase = data.fixtureEase
   const hasFixtures = fixtureEase.length > 0
   const horizon = hasFixtures ? new Set(fixtureEase.map((f) => f.gw)).size : 0
+  /* A phone shows these two as cards and a ladder rather than the wide grid,
+     and past a dozen gameweeks that is a very long scroll for a view you read
+     by comparing columns. The rotation planner is left uncapped: its board is
+     one row per gameweek by design, so length costs nothing there.
+     Clamped rather than written back to state, so a window set on a desktop
+     survives a narrow screen and comes back when there is room for it. */
+  const winMax = Math.max(1, wide ? horizon : Math.min(MOBILE_WINDOW_CAP, horizon))
+  const effWindow = Math.min(windowN, winMax)
 
   return (
     <PageShell>
@@ -357,7 +372,7 @@ export default function Fixtures() {
             <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-3">
               {/* Wraps: the presets plus Custom and its box do not fit one
                   phone row, and an unwrapped row pushed the page sideways. */}
-              <WindowPicker value={windowN} max={Math.max(1, horizon)} onChange={setWindowN} />
+              <WindowPicker value={effWindow} max={winMax} total={horizon} onChange={setWindowN} />
               {view === 'projections' && (
                 <div className="flex items-center gap-1.5">
                   <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Show</span>
@@ -395,13 +410,13 @@ export default function Fixtures() {
                 </div>
               )}
             </div>
-            {horizon < windowN ? (
-              <p className="mb-3 -mt-1 text-xs text-ink-3">The data pipeline currently publishes {horizon} gameweeks ahead — showing all {horizon}.</p>
-            ) : null}
+            {/* The note that used to sit here — "the pipeline publishes N
+                gameweeks ahead" — could no longer fire once the slider took
+                its ceiling from the published fixtures. */}
             <MarketNote market={marketStrength} />
 
-            <Exportable title={`${mode === 'diff' ? 'Fixture difficulty' : mode === 'xg' ? 'Projected xG' : 'Clean sheet odds'} — ${winLabel(windowN).toLowerCase()}`}>
-            <FixtureGrid key={mode} fixtureEase={fixtureEase} windowN={windowN} lens={lens} mode={mode} baselines={baselines} leagueBase={leagueBase} profiles={profiles} league={league} />
+            <Exportable title={`${mode === 'diff' ? 'Fixture difficulty' : mode === 'xg' ? 'Projected xG' : 'Clean sheet odds'} — ${winLabel(effWindow).toLowerCase()}`}>
+            <FixtureGrid key={mode} fixtureEase={fixtureEase} windowN={effWindow} lens={lens} mode={mode} baselines={baselines} leagueBase={leagueBase} profiles={profiles} league={league} />
             </Exportable>
           </>
         ) : (
