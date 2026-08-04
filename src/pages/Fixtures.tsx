@@ -1,4 +1,4 @@
-import { Fragment, useId, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PageShell, EmptyState } from '../components/PageShell'
 import { SectionBanner } from '../components/SectionBanner'
@@ -29,72 +29,46 @@ import type { FixtureEaseRow, RatingRow, Row } from '../lib/types'
    19 is the sentinel for "to the halfway point". Rest of season replaced it
    and drew thirty-eight columns, which is a spreadsheet rather than a read —
    the half is the unit people plan chips and wildcards around. */
-const WINDOWS = [6, 8, 10] as const
 const winLabel = (w: number) => `Next ${w}`
 
-const pillCls = (active: boolean) =>
-  `min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${
-    active ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
-  }`
-
-/* Preset windows plus any number you like. Shared by the difficulty grid, the
-   goals and clean sheets grid and the rotation planner, so the three cannot
-   drift into different vocabularies — which they had already started to, one
-   counting forward and one ("To GW19") counting to a fixed gameweek.
-   Everything downstream just takes the first N gameweeks, so a free count is
-   the honest control; the presets are shortcuts, not the range. */
-function WindowPicker({ presets, value, max, onChange }: {
-  presets: readonly number[]
+/* One slider, the same shape as the Scouting filters, shared by the difficulty
+   grid, the goals and clean sheets grid and the rotation planner. It replaced
+   fixed presets, which could only ever offer a handful of the lengths the data
+   supports and had already drifted into two vocabularies — everything counting
+   forward from now except "To GW19", which counted to a fixed gameweek. */
+function WindowPicker({ value, max, onChange }: {
   value: number
   max: number
   onChange: (n: number) => void
 }) {
-  // A value off the presets means custom, but the flag is kept as well so the
-  // input still appears when you tap Custom while sitting on, say, 8 — and
-  // does not vanish again the moment you type a number that is a preset.
-  const [custom, setCustom] = useState(false)
-  const [draft, setDraft] = useState(String(value))
-  const on = custom || !presets.includes(value)
-  // Two of these render on the page across tabs; a hardcoded id would tie the
-  // wrong label to the wrong box.
-  const inputId = useId()
+  /* The thumb moves on every step; the board only redraws when you let go.
+     Scouting can commit live because filtering a player list is cheap — here a
+     whole-season window with a five-club rotation and nothing locked takes the
+     better part of a second to score, and paying that on all 38 steps of a drag
+     would lock the page up. */
+  const [pos, setPos] = useState(value)
+  useEffect(() => setPos(value), [value])
+  const commit = () => { if (pos !== value) onChange(pos) }
 
-  const commit = (raw: string) => {
-    const n = Number.parseInt(raw, 10)
-    // Snap past the ceiling straight away rather than on blur. Typing 60 into a
-    // 38-gameweek season otherwise left the box reading 60 over a board showing
-    // 38 — the control stating something the page was not doing.
-    setDraft(Number.isFinite(n) && n > max ? String(max) : raw)
-    if (Number.isFinite(n)) onChange(Math.max(1, Math.min(max, n)))
-  }
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Window</span>
-      {presets.map((w) => (
-        <button key={w} onClick={() => { setCustom(false); onChange(w) }} className={pillCls(!on && value === w)}>{winLabel(w)}</button>
-      ))}
-      <button onClick={() => { setCustom(true); setDraft(String(value)) }} className={pillCls(on)}>Custom</button>
-      {on && (
-        <span className="flex items-center gap-1.5">
-          <label htmlFor={inputId} className="sr-only">Number of gameweeks</label>
-          <input
-            id={inputId}
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={max}
-            value={draft}
-            onChange={(e) => commit(e.target.value)}
-            // Empty and out-of-range drafts are allowed while typing — the
-            // committed value is already clamped — but the box should not be
-            // left showing something the grid is not doing.
-            onBlur={() => setDraft(String(value))}
-            className="font-num min-h-9 w-16 rounded-full border border-accent bg-surface-1 px-3 text-center text-sm font-semibold tabular-nums text-accent"
-          />
-          <span className="text-[11px] text-ink-3">of {max}</span>
-        </span>
-      )}
-    </div>
+    <label className="block min-w-[200px] flex-1 sm:max-w-[280px]">
+      <div className="mb-1 flex items-center justify-between text-xs text-ink-2">
+        <span>Window</span>
+        <span className="font-num tabular-nums text-ink">{winLabel(pos)}{pos === max ? ' · all' : ''}</span>
+      </div>
+      <input
+        type="range"
+        min={1}
+        max={Math.max(1, max)}
+        step={1}
+        value={pos}
+        onChange={(e) => setPos(Number(e.target.value))}
+        onPointerUp={commit}
+        onKeyUp={commit}
+        onBlur={commit}
+        className="w-full accent-[var(--accent)]"
+      />
+    </label>
   )
 }
 
@@ -383,7 +357,7 @@ export default function Fixtures() {
             <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-3">
               {/* Wraps: the presets plus Custom and its box do not fit one
                   phone row, and an unwrapped row pushed the page sideways. */}
-              <WindowPicker presets={WINDOWS} value={windowN} max={Math.max(1, horizon)} onChange={setWindowN} />
+              <WindowPicker value={windowN} max={Math.max(1, horizon)} onChange={setWindowN} />
               {view === 'projections' && (
                 <div className="flex items-center gap-1.5">
                   <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Show</span>
@@ -753,7 +727,6 @@ function combos<T>(arr: T[], k: number): T[][] {
 }
 
 const ROT_SIZES = [2, 3, 4, 5] as const
-const ROT_WINDOWS = [4, 6, 8] as const
 const LENS_LABEL_ROT: Record<Lens, string> = { overall: 'Overall', attack: 'Attack', defence: 'Defence' }
 /** Gold, silver, bronze — the site already speaks in medals on the podium and
  *  the tier cards, so the band borrows the same language rather than inventing
@@ -1214,7 +1187,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
           <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Start</span>
           {startOpts.map((k) => <button key={k} onClick={() => setStartKRaw(k)} className={pill(startK === k)}>{k}</button>)}
         </div>
-        <WindowPicker presets={ROT_WINDOWS} value={windowN} max={Math.max(1, maxWindow)} onChange={setWindowN} />
+        <WindowPicker value={windowN} max={Math.max(1, maxWindow)} onChange={setWindowN} />
         {/* Defence or attack, and nothing else. Overall is a blend, which is
             what you pick when you have not decided — and it left the two
             controls below offering options that made no sense together, like
