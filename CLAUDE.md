@@ -13,7 +13,14 @@ several times a day, so **fetch and rebase before pushing** rather than merging
 — the history is linear and worth keeping that way.
 
 Verify against the *refreshed* data after rebasing, not the data you tested
-with earlier: `npx tsc --noEmit`, `npm run build`, then load every route.
+with earlier: `npm run typecheck`, `npm run build`, then load every route.
+
+**Not `npx tsc --noEmit`.** The root `tsconfig.json` is `"files": []` plus
+project references, so bare `tsc` resolves it, finds nothing to check and exits
+0 — it will sit there reporting success over a file with an unterminated
+function. Only `tsc -b`, which both scripts above use, follows the references.
+Also note `$?` after a pipeline is the *last* command's status, so
+`tsc | head; echo $?` reports head. Use `${PIPESTATUS[0]}` or don't pipe.
 
 ## Identity
 

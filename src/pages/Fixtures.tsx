@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PageShell, EmptyState } from '../components/PageShell'
 import { SectionBanner } from '../components/SectionBanner'
@@ -29,55 +29,98 @@ import type { FixtureEaseRow, RatingRow, Row } from '../lib/types'
    19 is the sentinel for "to the halfway point". Rest of season replaced it
    and drew thirty-eight columns, which is a spreadsheet rather than a read —
    the half is the unit people plan chips and wildcards around. */
-const winLabel = (w: number) => `Next ${w}`
-/** Longest window the difficulty and projection grids offer on a phone. */
+/** The stretch of gameweeks a view is reading, and one you have taken out. */
+export interface GwWindow { from: number; to: number; skip: number | null }
+
+const winLabel = (w: GwWindow) => `GW${w.from}\u2013GW${w.to}`
+/** Longest span the difficulty and projection grids offer on a phone. */
 const MOBILE_WINDOW_CAP = 12
 
-/* One slider, the same shape as the Scouting filters, shared by the difficulty
-   grid, the goals and clean sheets grid and the rotation planner. It replaced
-   fixed presets, which could only ever offer a handful of the lengths the data
-   supports and had already drifted into two vocabularies — everything counting
-   forward from now except "To GW19", which counted to a fixed gameweek. */
-function WindowPicker({ value, max, total, onChange }: {
-  value: number
-  max: number
-  /** Gameweeks that actually exist, when the slider's ceiling is lower than
-   *  that — a phone caps these grids at 12, and "all" against the cap rather
-   *  than the season claimed the whole of it while showing 12 of 38. */
-  total?: number
-  onChange: (n: number) => void
-}) {
-  /* The thumb moves on every step; the board only redraws when you let go.
-     Scouting can commit live because filtering a player list is cheap — here a
-     whole-season window with a five-club rotation and nothing locked takes the
-     better part of a second to score, and paying that on all 38 steps of a drag
-     would lock the page up. */
-  const [pos, setPos] = useState(value)
-  useEffect(() => setPos(value), [value])
-  const commit = () => { if (pos !== value) onChange(pos) }
-
-  return (
-    <label className="block min-w-[200px] flex-1 sm:max-w-[280px]">
-      <div className="mb-1 flex items-center justify-between text-xs text-ink-2">
-        <span>Window</span>
-        <span className="font-num tabular-nums text-ink">{winLabel(pos)}{pos === (total ?? max) ? ' · all' : ''}</span>
-      </div>
-      <input
-        type="range"
-        min={1}
-        max={Math.max(1, max)}
-        step={1}
-        value={pos}
-        onChange={(e) => setPos(Number(e.target.value))}
-        onPointerUp={commit}
-        onKeyUp={commit}
-        onBlur={commit}
-        className="w-full accent-[var(--accent)]"
-      />
-    </label>
-  )
+/** The gameweeks a window actually covers: inside the range, minus the one
+ *  you are chipping. Everything that reads a window goes through here so the
+ *  grid, the planner and their exports cannot disagree about which weeks count. */
+export function gwsIn(all: number[], w: GwWindow): number[] {
+  return all.filter((g) => g >= w.from && g <= w.to && g !== w.skip)
 }
 
+/* A range, not a length. "Next six" cannot say GW5 to GW10, and planning a
+   wildcard or a chip is exactly the case where you want to look at a stretch
+   that does not start from now.
+
+   Two inputs rather than one dual-thumb track: overlaying two sliders and
+   splitting the hits between their thumbs depends on pointer-events behaviour
+   this repo cannot test on WebKit, and the one WebKit bug the site has had was
+   invisible to Chromium too. Two labelled thumbs are plain, reachable by
+   keyboard, and cannot silently trap a thumb at an end. */
+function WindowPicker({ value, all, maxSpan, onChange }: {
+  value: GwWindow
+  /** Every gameweek the fixtures reach, ascending. */
+  all: number[]
+  /** Longest span this view will show. Undefined means the whole range. */
+  maxSpan?: number
+  onChange: (w: GwWindow) => void
+}) {
+  const lo = all[0] ?? 1
+  const hi = all[all.length - 1] ?? 1
+  const [drag, setDrag] = useState<GwWindow | null>(null)
+  const w = drag ?? value
+  const span = w.to - w.from + 1
+
+  /** Keep the pair legal: ends stay ordered, the span honours the cap, and a
+   *  skipped week that falls outside the range stops being skipped. */
+  const settle = (next: GwWindow, moved: 'from' | 'to'): GwWindow => {
+    let { from, to } = next
+    if (from > to) { if (moved === 'from') to = from; else from = to }
+    if (maxSpan && to - from + 1 > maxSpan) {
+      if (moved === 'from') to = from + maxSpan - 1
+      else from = to - maxSpan + 1
+    }
+    from = Math.max(lo, Math.min(hi, from)); to = Math.max(lo, Math.min(hi, to))
+    const skip = next.skip != null && next.skip >= from && next.skip <= to ? next.skip : null
+    return { from, to, skip }
+  }
+  const move = (moved: 'from' | 'to', n: number) => setDrag(settle({ ...w, [moved]: n }, moved))
+  const commit = () => { if (drag) { onChange(drag); setDrag(null) } }
+  const inRange = all.filter((g) => g >= w.from && g <= w.to)
+
+  return (
+    <div className="flex min-w-[230px] flex-1 flex-col gap-1 sm:max-w-[320px]">
+      <div className="flex items-baseline justify-between text-xs text-ink-2">
+        <span>Window</span>
+        <span className="font-num tabular-nums text-ink">
+          {winLabel(w)}
+          <span className="text-ink-3"> · {span - (w.skip != null ? 1 : 0)} {span - (w.skip != null ? 1 : 0) === 1 ? 'week' : 'weeks'}</span>
+        </span>
+      </div>
+      {([['from', 'First'], ['to', 'Last']] as const).map(([k, lab]) => (
+        <label key={k} className="flex items-center gap-2">
+          <span className="w-8 shrink-0 text-[10px] tracking-[0.1em] text-ink-3 uppercase">{lab}</span>
+          <input
+            type="range" min={lo} max={hi} step={1} value={w[k]}
+            onChange={(e) => move(k, Number(e.target.value))}
+            onPointerUp={commit} onKeyUp={commit} onBlur={commit}
+            aria-label={`${lab} gameweek`}
+            className="w-full accent-[var(--accent)]"
+          />
+        </label>
+      ))}
+      {/* Chipping a week does not just skip a fixture, it removes that week from
+          every number the view derives — so it belongs beside the range rather
+          than in a legend somewhere. */}
+      <label className="mt-0.5 flex items-center gap-2">
+        <span className="w-8 shrink-0 text-[10px] tracking-[0.1em] text-ink-3 uppercase">Chip</span>
+        <select
+          value={value.skip ?? ''}
+          onChange={(e) => onChange({ ...value, skip: e.target.value === '' ? null : Number(e.target.value) })}
+          className="min-h-8 min-w-0 flex-1 appearance-none rounded-full border border-line-mid bg-surface-1 px-3 text-[12px] text-ink-2"
+        >
+          <option value="">No free hit</option>
+          {inRange.map((g) => <option key={g} value={g}>Free hit GW{g}</option>)}
+        </select>
+      </label>
+    </div>
+  )
+}
 /* Difficulty and the two projections were one grid behind a "Show" toggle,
    which buried them: they answer a different question (who is best in the
    league at this) and want different controls, and a toggle two rows down is
@@ -280,8 +323,9 @@ export default function Fixtures() {
   // Six on every screen. The grid scrolls sideways on a phone, which is a
   // smaller cost than opening two different people on two different windows
   // and having them compare notes.
-  // Not the preset union any more — a custom window is any number of weeks.
-  const [windowN, setWindowN] = useState<number>(6)
+  // A range now, not a count: the planning question is often "GW5 to GW10",
+  // which a next-N control cannot ask.
+  const [win, setWin] = useState<GwWindow>({ from: 1, to: 6, skip: null })
   const wide = useWide()
   const [lens, setLens] = useState<Lens>('defence')
   // The grid mode is no longer a control — it follows the tab. Only the two
@@ -349,15 +393,22 @@ export default function Fixtures() {
 
   const fixtureEase = data.fixtureEase
   const hasFixtures = fixtureEase.length > 0
-  const horizon = hasFixtures ? new Set(fixtureEase.map((f) => f.gw)).size : 0
   /* A phone shows these two as cards and a ladder rather than the wide grid,
      and past a dozen gameweeks that is a very long scroll for a view you read
      by comparing columns. The rotation planner is left uncapped: its board is
      one row per gameweek by design, so length costs nothing there.
      Clamped rather than written back to state, so a window set on a desktop
      survives a narrow screen and comes back when there is room for it. */
-  const winMax = Math.max(1, wide ? horizon : Math.min(MOBILE_WINDOW_CAP, horizon))
-  const effWindow = Math.min(windowN, winMax)
+  const allGws = useMemo(
+    () => [...new Set(fixtureEase.map((f) => f.gw))].sort((a, b) => a - b),
+    [fixtureEase],
+  )
+  const maxSpan = wide ? undefined : MOBILE_WINDOW_CAP
+  // Clamped where it is read rather than written back, so a span set at a desk
+  // survives a narrow screen and returns intact when there is room again.
+  const shownWin: GwWindow = maxSpan && win.to - win.from + 1 > maxSpan
+    ? { ...win, to: win.from + maxSpan - 1 } : win
+  const gridGws = useMemo(() => gwsIn(allGws, shownWin), [allGws, shownWin])
 
   return (
     <PageShell>
@@ -372,7 +423,7 @@ export default function Fixtures() {
             <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-3">
               {/* Wraps: the presets plus Custom and its box do not fit one
                   phone row, and an unwrapped row pushed the page sideways. */}
-              <WindowPicker value={effWindow} max={winMax} total={horizon} onChange={setWindowN} />
+              <WindowPicker value={shownWin} all={allGws} maxSpan={maxSpan} onChange={setWin} />
               {view === 'projections' && (
                 <div className="flex items-center gap-1.5">
                   <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Show</span>
@@ -415,8 +466,8 @@ export default function Fixtures() {
                 its ceiling from the published fixtures. */}
             <MarketNote market={marketStrength} />
 
-            <Exportable title={`${mode === 'diff' ? 'Fixture difficulty' : mode === 'xg' ? 'Projected xG' : 'Clean sheet odds'} — ${winLabel(effWindow).toLowerCase()}`}>
-            <FixtureGrid key={mode} fixtureEase={fixtureEase} windowN={effWindow} lens={lens} mode={mode} baselines={baselines} leagueBase={leagueBase} profiles={profiles} league={league} />
+            <Exportable title={`${mode === 'diff' ? 'Fixture difficulty' : mode === 'xg' ? 'Projected xG' : 'Clean sheet odds'} — ${winLabel(shownWin)}${shownWin.skip != null ? `, free hit GW${shownWin.skip}` : ''}`}>
+            <FixtureGrid key={mode} fixtureEase={fixtureEase} gws={gridGws} lens={lens} mode={mode} baselines={baselines} leagueBase={leagueBase} profiles={profiles} league={league} />
             </Exportable>
           </>
         ) : (
@@ -818,7 +869,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
   const [maxPrice, setMaxPrice] = useState<number | null>(null)
   const [size, setSize] = useState<(typeof ROT_SIZES)[number]>(2)
   const [startKRaw, setStartKRaw] = useState(1)
-  const [windowN, setWindowN] = useState<number>(6)
+  const [win, setWin] = useState<GwWindow>({ from: 1, to: 6, skip: null })
   const [lens, setLens] = useState<Lens>('defence')
   /* What the board ranks and rings on. Difficulty is a blend; rotating
      defenders you want the clean-sheet projection and rotating attackers you
@@ -838,8 +889,6 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
   }
 
   const allTeams = useMemo(() => [...new Set(fixtureEase.map((f) => f.team))].sort(), [fixtureEase])
-  /** How far the published fixtures reach — the ceiling on a custom window. */
-  const maxWindow = useMemo(() => new Set(fixtureEase.map((f) => f.gw)).size, [fixtureEase])
 
   /** Every club's best Defensive Contribution players. DC points land whether
    *  or not the clean sheet does, so two clubs with the same fixtures are not
@@ -911,7 +960,8 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
 
   const filtering = needPos !== 'any' || maxPrice != null
   const qualifies = (t: string) => !filtering || !!pickBy.get(t)
-  const gws = useMemo(() => [...new Set(fixtureEase.map((f) => f.gw))].sort((a, b) => a - b).slice(0, windowN), [fixtureEase, windowN])
+  const allGws = useMemo(() => [...new Set(fixtureEase.map((f) => f.gw))].sort((a, b) => a - b), [fixtureEase])
+  const gws = useMemo(() => gwsIn(allGws, win), [allGws, win])
 
   // A team's (easier, if a double) fixture + our difficulty for one gameweek, in
   // the selected lens. Cached; the cache resets when the lens/window change.
@@ -1202,7 +1252,7 @@ function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialT
           <span className="mr-1 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Start</span>
           {startOpts.map((k) => <button key={k} onClick={() => setStartKRaw(k)} className={pill(startK === k)}>{k}</button>)}
         </div>
-        <WindowPicker value={windowN} max={Math.max(1, maxWindow)} onChange={setWindowN} />
+        <WindowPicker value={win} all={allGws} onChange={setWin} />
         {/* Defence or attack, and nothing else. Overall is a blend, which is
             what you pick when you have not decided — and it left the two
             controls below offering options that made no sense together, like
@@ -1542,10 +1592,10 @@ function MarketNote({ market }: { market: MarketOdds | null }) {
    lens. Click any GW header (or the Run column) to rank teams by that week; tap a
    team to expand a scouting read of where its upcoming opponents are weak. */
 function FixtureGrid({
-  fixtureEase, windowN, lens, mode, baselines, leagueBase, profiles, league,
+  fixtureEase, gws, lens, mode, baselines, leagueBase, profiles, league,
 }: {
   fixtureEase: FixtureEaseRow[]
-  windowN: number
+  gws: number[]
   lens: Lens
   mode: GridMode
   baselines: Map<string, TeamBase>
@@ -1562,15 +1612,6 @@ function FixtureGrid({
   const [dir, setDir] = useState<'asc' | 'desc'>(mode === 'diff' ? 'asc' : 'desc')
   const [open, setOpen] = useState<string | null>(null)
 
-  const gws = useMemo(
-    // "To GW19" is a destination, not a count: mid-season it must still stop at
-    // the halfway point rather than draw nineteen weeks from wherever you are.
-    () => {
-      const all = [...new Set(fixtureEase.map((f) => f.gw))].sort((a, b) => a - b)
-      return all.slice(0, windowN)
-    },
-    [fixtureEase, windowN],
-  )
   const gwSet = useMemo(() => new Set(gws), [gws])
 
   // One place where a fixture becomes numbers, so the difficulty grid, the two
