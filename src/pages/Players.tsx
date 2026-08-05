@@ -337,6 +337,10 @@ function PointsEngine({ r }: { r: RatingRow }) {
   const segments = parts
     .filter(([, v]) => (v ?? 0) > 0.01)
     .map(([label, v], i) => ({ label: `${label} — ${(v as number).toFixed(2)}`, value: v as number, color: CHART_COLORS[i % CHART_COLORS.length] }))
+  /* Goals conceded are a deduction, so they cannot be a slice of a bar that
+     shows where points come FROM. Stated underneath instead, which is also the
+     only way the parts still add up to the total above. */
+  const conceded = num(r, 'season_xpts_conceded')
   const delta = ppg != null ? ppg - xpg : null
   const sustain =
     delta == null ? null
@@ -355,6 +359,12 @@ function PointsEngine({ r }: { r: RatingRow }) {
         <div className="mt-4">
           <div className="mb-2 text-[11px] tracking-wide text-ink-3 uppercase">Where the expected points come from</div>
           <ConcentrationBar segments={segments} />
+          {conceded != null && conceded < -0.005 && (
+            <div className="mt-2 flex items-center gap-1.5 text-[12px] text-ink-2">
+              <span className="inline-block size-2 rounded-full bg-bad/70" />
+              Goals conceded &minus; {Math.abs(conceded).toFixed(2)} — a keeper or defender drops a point for every two conceded, already taken off the total above.
+            </div>
+          )}
         </div>
       )}
       {sustain && (

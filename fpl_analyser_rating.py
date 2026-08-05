@@ -1,4 +1,5 @@
 import json
+import math
 import pandas as pd
 import numpy as np
 import os
@@ -137,11 +138,28 @@ MIN_SHOTS = {"season": 10, "gw4": 4}
 # Sustainability is inherent: it prices xG/xA, not realized finishing streaks.
 # headline = percentile of (xPts/game × start_rate^AVAIL_EXP) within position.
 # Value and the finance ratios (Sortino etc.) stay OUT — surfaced separately.
-GOAL_VALUE = {"GKP": 6, "DEF": 6, "MID": 5, "FWD": 4}   # FPL pts per goal
+GOAL_VALUE = {"GKP": 10, "DEF": 6, "MID": 5, "FWD": 4}  # FPL pts per goal
 CS_VALUE = {"GKP": 4, "DEF": 4, "MID": 1, "FWD": 0}     # FPL pts per clean sheet
 ASSIST_VALUE = 3
 DC_PTS = 2                # defensive-contribution threshold bonus
 SAVE_PTS_PER_SAVE = 1 / 3
+
+
+def exp_floor_div(lam, div):
+    """E[floor(K / div)] for K ~ Poisson(lam) — vectorised over a Series.
+
+    The two thresholded sources are both floors: a goalkeeper or defender drops
+    a point per TWO conceded, a keeper gains one per THREE saves. Dividing a
+    mean by the divisor is not the same number and is not a small difference —
+    the discarded remainder averages (div-1)/2, so saves/3 overstates a keeper
+    by about a third of a point every game at any realistic save rate.
+    """
+    lam = pd.Series(lam).astype(float).clip(lower=0)
+    out = pd.Series(0.0, index=lam.index)
+    base = np.exp(-lam)
+    for k in range(div, 25):
+        out = out + base * np.power(lam, k) / math.factorial(k) * (k // div)
+    return out
 APPEARANCE_PTS = 2.0      # a starter's appearance points
 AVAIL_EXP = 0.75          # availability curve: ×start_rate^0.75 — missing games
                           # always cost rating, but never more than the points
@@ -529,13 +547,19 @@ def calc_xpts(prefix):
     # P(clean sheet): Poisson zero from xGC blended with the realized CS rate
     cs_prob = pd.Series(np.where(xgc > 0, 0.5 * np.exp(-xgc) + 0.5 * mcol("cs_rate"),
                                  mcol("cs_rate")), index=df.index)
+    isgk_def = df["position"].isin(["GKP", "DEF"])
     comp = {
         "goal": mcol("xg") * df["position"].map(GOAL_VALUE) * mg,
         "assist": mcol("xa") * ASSIST_VALUE * mc,
         "cs": cs_prob * df["position"].map(CS_VALUE) * md,
         "dc": mcol("dc_hit") * DC_PTS,
+        # A goalkeeper or defender loses a point per two conceded. It was
+        # missing entirely, so the model paid the backline for clean sheets and
+        # never charged them for the games they concede — which flattered a
+        # keeper by about eight rating points and a defender by two.
+        "conceded": pd.Series(np.where(isgk_def, -exp_floor_div(xgc, 2), 0.0), index=df.index),
         "save": pd.Series(np.where(df["position"] == "GKP",
-                                   mcol("saves") * SAVE_PTS_PER_SAVE, 0.0), index=df.index),
+                                   exp_floor_div(mcol("saves"), 3), 0.0), index=df.index),
         "bonus": mcol("bonus"),
     }
     xpg = sum(comp.values()) + APPEARANCE_PTS

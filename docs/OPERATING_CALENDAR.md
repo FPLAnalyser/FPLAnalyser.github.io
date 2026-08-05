@@ -40,6 +40,7 @@ throws up ambiguous name joins that have to be resolved by eye.
 | **Mon 24 Aug** (after GW1 is played) | `python enrich_player_gw.py`, then work through `data/join_uncertain.csv`. Expect a burst — transfers in and three promoted squads. Add fixes to `data/player_overrides.csv`, re-run, then `python review_joins.py` and check `data/join_coverage_report.csv` reads above 95% joined minutes. |
 | **Mon 24 Aug** | Run the rest of the chain: `./automation/run_pipeline.sh --no-push`, eyeball the log for `GATE FAIL`, then run it again without the flag. |
 | **Mon 24 Aug** | **Disable "Refresh pre-season squad data"** in the Actions tab. It would otherwise overwrite the real ratings with carried-over ones the next morning. |
+| **Mon 24 Aug**, after that run | `git rm automation/apply_conceded_and_saves.py`. It back-fills the goals-conceded deduction and floored save points into published ratings, which `fpl_analyser_rating.py` now models itself — so the first full pipeline run makes it dead weight, and leaving it invites someone to apply the correction twice. |
 
 ## Each gameweek after that
 
