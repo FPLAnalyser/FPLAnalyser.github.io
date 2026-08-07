@@ -23,9 +23,23 @@ Sources:
   2. football-data.co.uk fixtures.csv (free, keyless) as fallback.
 
 Output: site_data/<newest season>/odds.json
-  { generated_at, source, matches: [{gw, h, a, lh, la, src}] }
+  { generated_at, source,
+    matches:  [{gw, h, a, lh, la, src}],
+    strength: {SHORT: {att, def, n}} }
 with h/a as FPL team ids and src listing the markets that constrained the
 fit (e.g. "1x2+ou+ah+tt").
+
+`matches` ACCUMULATES. Bookmakers price roughly a round at a time, so any one
+pull sees a single gameweek; keeping what is already banked is what turns 38
+snapshots into a season of market lambdas. Re-pricing a fixture overwrites it,
+so running this hourly costs nothing but the credits.
+
+`strength` is what that accumulation buys: a ridge-regularised joint fit of all
+forty attack/defence parameters to every banked fixture, pulled toward last
+season's values. The site uses it for the fixtures the market has NOT priced —
+which is most of them, most of the time. With one round banked it barely moves
+off last season, which is correct: one fixture per club carries almost no
+information. See fit_strength() for why, and --refit to re-derive offline.
 """
 import csv
 import datetime
@@ -34,6 +48,7 @@ import json
 import math
 import os
 import re
+import sys
 import urllib.request
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site_data")
@@ -243,6 +258,124 @@ def from_odds_api(key, enrich):
     return out, "the-odds-api"
 
 
+# ── the banked market record ────────────────────────────────────────────────
+def read_existing(path):
+    """Whatever is already in odds.json. A missing or unreadable file is not an
+       error — it just means nothing is banked yet."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def merge_matches(old, new):
+    """Union of banked and freshly priced fixtures, newest winning.
+
+       Keyed on the pairing rather than the gameweek: a fixture is played once
+       per season at a given venue, so (h, a) identifies it even if it gets
+       postponed into a different gameweek — which is exactly when keying on
+       the gameweek would silently bank the same game twice."""
+    by_pair = {}
+    for m in list(old) + list(new):
+        try:
+            by_pair[(int(m["h"]), int(m["a"]))] = m
+        except (KeyError, TypeError, ValueError):
+            continue
+    return list(by_pair.values())
+
+
+# ── market-implied team strength ────────────────────────────────────────────
+# Every priced fixture is two equations in four unknowns:
+#     λ_home = att_home x (def_away / lg_def) x home_advantage
+#     λ_away = att_away x (def_home / lg_def) / home_advantage
+# so no single fixture identifies anything. Fit all forty parameters at once
+# against every fixture banked so far, pulled toward last season's values by a
+# ridge term, and the market's opinion emerges as the fixtures accumulate.
+#
+# The ridge weight is what makes this safe to run from day one. With one round
+# priced each club has n=1, PRIOR_W=4 leaves the answer 80% last season, and
+# the fit barely moves — correct, because one fixture against an opponent whose
+# own strength is equally stale carries almost no information. By the time a
+# club has appeared in six priced games the market is running the estimate.
+# Promoted clubs get a far weaker pull because the thing they are being pulled
+# toward is a blanket placeholder, not a record.
+PRIOR_W = 4.0        # fixtures' worth of belief in a club's carried strength
+PRIOR_W_NEW = 0.25   # ...and in the flat placeholder a promoted club carries
+FIT_ITERS = 60
+
+
+def fit_strength(matches, season, short_by_id):
+    """Ridge-regularised joint fit of every club's attack and defence to the
+       banked market lambdas. Returns {short_name: {att, def, n}}, empty when
+       there is no model to anchor on."""
+    model_path = os.path.join(ROOT, season, "xp_model.json")
+    if not os.path.exists(model_path):
+        return {}
+    with open(model_path, encoding="utf-8") as f:
+        model = json.load(f)
+    teams = model.get("teams", {})
+    lg = model.get("league", {})
+    lg_def, h_adv = lg.get("def"), lg.get("hAtt", 1.0)
+    if not teams or not lg_def:
+        return {}
+
+    la = {t: math.log(v["att"]) for t, v in teams.items() if v.get("att")}
+    ld = {t: math.log(v["def"]) for t, v in teams.items() if v.get("def")}
+    la0, ld0 = dict(la), dict(ld)
+    weight = {t: (PRIOR_W_NEW if v.get("prior") else PRIOR_W) for t, v in teams.items()}
+
+    # (attacker, defender, log λ, log venue multiplier applied to the attacker)
+    obs = []
+    for m in matches:
+        hs, as_ = short_by_id.get(m.get("h")), short_by_id.get(m.get("a"))
+        if hs not in la or as_ not in la:
+            continue
+        for att, dfc, lam, venue in ((hs, as_, m.get("lh"), h_adv),
+                                     (as_, hs, m.get("la"), 1 / h_adv)):
+            if lam and lam > 0:
+                obs.append((att, dfc, math.log(lam), math.log(venue)))
+    if not obs:
+        return {}
+
+    # Coordinate descent: each parameter's update is a closed form, so this is
+    # a handful of passes over a few hundred numbers and stays dependency-free.
+    log_lg_def = math.log(lg_def)
+    for _ in range(FIT_ITERS):
+        num = {t: weight[t] * la0[t] for t in la}
+        den = {t: weight[t] for t in la}
+        for att, dfc, ll, lv in obs:
+            num[att] += ll - ld[dfc] + log_lg_def - lv
+            den[att] += 1.0
+        la = {t: num[t] / den[t] for t in la}
+        num = {t: weight[t] * ld0[t] for t in ld}
+        den = {t: weight[t] for t in ld}
+        for att, dfc, ll, lv in obs:
+            num[dfc] += ll - la[att] + log_lg_def - lv
+            den[dfc] += 1.0
+        ld = {t: num[t] / den[t] for t in ld}
+
+    played = {}
+    for m in matches:
+        for t in (short_by_id.get(m.get("h")), short_by_id.get(m.get("a"))):
+            if t in la:
+                played[t] = played.get(t, 0) + 1
+
+    strength = {t: {"att": round(math.exp(la[t]), 3),
+                    "def": round(math.exp(ld[t]), 3),
+                    "n": played.get(t, 0)}
+                for t in sorted(la) if played.get(t)}
+    if strength:
+        moved = sorted(strength.items(),
+                       key=lambda kv: -abs(kv[1]["att"] - teams[kv[0]]["att"]))[:5]
+        print(f"market-implied strength fitted for {len(strength)} clubs from "
+              f"{len(matches)} banked fixtures | biggest attack revisions: "
+              + ", ".join(f"{t} {teams[t]['att']:.2f}->{v['att']:.2f} (n={v['n']})"
+                          for t, v in moved))
+    return strength
+
+
 # ── football-data fallback (keyless) ────────────────────────────────────────
 def from_football_data():
     text, _ = get("https://www.football-data.co.uk/fixtures.csv", as_json=False)
@@ -271,6 +404,25 @@ def from_football_data():
 if __name__ == "__main__":
     with open(os.path.join(ROOT, "seasons.json"), encoding="utf-8") as f:
         season = json.load(f)["seasons"][0]["id"]
+
+    # --refit: re-run the strength fit over the fixtures already banked and
+    # write nothing else. No bookmaker call and no FPL call, so no credits and
+    # no network — which is the point: PRIOR_W is a judgement call, and
+    # re-deriving after changing it should not cost anything or wait for
+    # tomorrow's schedule. Team ids come from teams.json, which is ordered
+    # alphabetically exactly as the FPL ids are (see src/lib/xp.ts).
+    if "--refit" in sys.argv:
+        path = os.path.join(ROOT, season, "odds.json")
+        payload = read_existing(path)
+        if not payload.get("matches"):
+            sys.exit(f"{path}: nothing banked to re-fit")
+        with open(os.path.join(ROOT, season, "teams.json"), encoding="utf-8") as f:
+            shorts = {i + 1: t["short_name"] for i, t in enumerate(json.load(f))}
+        payload["strength"] = fit_strength(payload["matches"], season, shorts)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
+        print(f"{path}: strength re-fitted over {len(payload['matches'])} banked fixtures")
+        sys.exit(0)
 
     boot, _ = get(f"{FPL}/bootstrap-static/")
     by_norm = {norm(t["name"]): t["id"] for t in boot["teams"]}
@@ -310,54 +462,20 @@ if __name__ == "__main__":
         lh, la = solve(cons)
         matches.append({"gw": gw, "h": h, "a": a, "lh": lh, "la": la, "src": used})
 
-    # ── market-implied strength for clubs with no Premier League record ──────
-    # A promoted club's own history tells us nothing, but every priced fixture
-    # against a club we DO know is an equation with one unknown:
-    #     λ_home = att_home x (def_away / league_def) x home_advantage
-    # Solve it the other way round and the market hands us their attack and
-    # defence directly — and sharpens both every time another fixture is
-    # priced. Written alongside the lambdas so the site can use these strengths
-    # for the club's UNPRICED fixtures too, instead of a blanket prior.
-    strength = {}
-    model_path = os.path.join(ROOT, season, "xp_model.json")
-    if os.path.exists(model_path):
-        with open(model_path, encoding="utf-8") as f:
-            model = json.load(f)
-        known = {k: v for k, v in model.get("teams", {}).items() if not v.get("prior")}
-        lg = model.get("league", {})
-        lg_att, lg_def, h_adv = lg.get("att"), lg.get("def"), lg.get("hAtt", 1.0)
-        short_by_id = {t["id"]: t["short_name"] for t in boot["teams"]}
-        acc = {}
-        if lg_att and lg_def:
-            for m in matches:
-                hs, as_ = short_by_id.get(m["h"]), short_by_id.get(m["a"])
-                for side, opp, lam_for, lam_against, at_home in (
-                    (hs, as_, m["lh"], m["la"], True),
-                    (as_, hs, m["la"], m["lh"], False),
-                ):
-                    if side is None or opp is None or side in known or opp not in known:
-                        continue
-                    # Venue multiplier applies to whoever is attacking:
-                    #   λ_us   = att_us x (def_them / lg_def) x venue_us
-                    #   λ_them = att_them x (def_us / lg_def) x venue_them
-                    # with venue_them = 1 / venue_us.
-                    venue_us = h_adv if at_home else 1 / h_adv
-                    a = acc.setdefault(side, {"att": [], "def": []})
-                    a["att"].append(lam_for * lg_def / (known[opp]["def"] * venue_us))
-                    a["def"].append(lam_against * lg_def * venue_us / known[opp]["att"])
-        for team, a in acc.items():
-            if a["att"] and a["def"]:
-                strength[team] = {
-                    "att": round(sum(a["att"]) / len(a["att"]), 3),
-                    "def": round(sum(a["def"]) / len(a["def"]), 3),
-                    "n": len(a["att"]),
-                }
-        if strength:
-            print("market-implied strength for clubs with no PL record: "
-                  + ", ".join(f"{t} att {v['att']:.2f} def {v['def']:.2f} (from {v['n']} priced)"
-                              for t, v in sorted(strength.items())))
-
     out_path = os.path.join(ROOT, season, "odds.json")
+
+    # ── accumulate, rather than replace ──────────────────────────────────────
+    # Bookmakers price about a round at a time, so any single pull sees one
+    # gameweek. Keeping the ones already banked turns 38 one-round snapshots
+    # into a season of market lambdas, which is what makes the strength fit
+    # below able to generalise at all — see the note there. Keyed by the
+    # fixture, so a re-priced game overwrites rather than double-counts, and
+    # so a postponement that moves a game between gameweeks is picked up.
+    matches = merge_matches(read_existing(out_path).get("matches", []), matches)
+
+    strength = fit_strength(matches, season,
+                            {t["id"]: t["short_name"] for t in boot["teams"]})
+
     payload = {
         "generated_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source": source,

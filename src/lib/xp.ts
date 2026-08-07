@@ -137,15 +137,27 @@ const FACT = [1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880, 3628800, 39916800]
 /** A club's attack/defence per game. Promoted sides carry a flagged prior in
  *  the model; wherever the market has priced them we can solve their real
  *  strength out of the odds, so that always wins. */
+/** A club's attack and defence for fixtures the market hasn't priced.
+ *
+ *  Prefers the market-fitted figure whenever odds.json carries one. That is
+ *  already a blend, not a raw read: refresh_odds.py fits all forty parameters
+ *  against every fixture banked so far, pulled toward last season's values by
+ *  a ridge weighted in fixtures. So a club priced once is still mostly last
+ *  season, and one priced twenty times is mostly the market — which is why
+ *  there is nothing to blend a second time here.
+ *
+ *  Older files carry the block for promoted clubs only. Falling through to
+ *  `base` covers that, and covers a club the fit never saw. */
 export function strengthOf(
   team: string,
   model: XpModel | null,
   market: MarketOdds | null,
 ): { att: number; def: number } | undefined {
-  const base = model?.teams[team]
   const implied = market?.strength?.[team]
-  if (implied && (!base || base.prior)) return { att: implied.att, def: implied.def }
-  return base
+  if (implied && implied.att > 0 && implied.def > 0) {
+    return { att: implied.att, def: implied.def }
+  }
+  return model?.teams[team]
 }
 
 /** E[floor(K/div)] for K ~ Poisson(lam): expected goals-conceded hits (div 2)
@@ -188,17 +200,25 @@ function componentXp(
   const lg = model.league
   const t = strengthOf(fix.team, model, market)
   const o = strengthOf(fix.opponent, model, market)
+  // The club's strength AS THE PLAYER'S RATES WERE MEASURED AGAINST it, which
+  // is not the same thing as its best current estimate. xg90 is a per-90 from
+  // last season, so dividing by anything other than last season's attack turns
+  // a fixture multiplier into a silent re-rating of the player: mark Liverpool
+  // up for signing a striker and every existing Liverpool player's share of
+  // the attack quietly shrinks. The market's opinion belongs in the numerator
+  // — what this fixture is worth — never in the denominator.
+  const base = model.teams[fix.team] ?? t
   const home = fix.venue === 'H'
   const hA = lg.hAtt || 1
 
   // How much the team should create / concede in THIS fixture, relative to
   // its own norm. Market numbers when the fixture is priced; strengths
   // otherwise.
-  const attScale = mkt && t ? mkt.for / Math.max(t.att, 0.2)
+  const attScale = mkt && base ? mkt.for / Math.max(base.att, 0.2)
     : (o ? o.def / lg.def : 1) * (home ? hA : 1 / hA)
   const lamCs = mkt ? mkt.against
     : (t ? t.def : lg.def) * (o ? o.att / lg.att : 1) * (home ? 1 / hA : hA)
-  const svScale = mkt && t ? mkt.against / Math.max(t.def, 0.2)
+  const svScale = mkt && base ? mkt.against / Math.max(base.def, 0.2)
     : (o ? o.att / lg.att : 1) * (home ? 1 / hA : hA)
 
   const emf = p.p60 + 0.5 * Math.max(p.ppl - p.p60, 0)
