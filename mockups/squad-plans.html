@@ -1,0 +1,453 @@
+<title>More than one squad</title>
+<style>
+:root{--bg:#0a0908;--s1:#131110;--s2:#1b1917;--s3:#242120;--line:#2a2724;--ink:#f4efe3;--ink2:#a9a294;
+--ink3:#777064;--acc:#c9a227;--acc2:#e8c85a;--good:#3ddc7a;--warn:#e8b04a;--bad:#f0736f;--info:#6aa6f0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:30px 18px 80px}
+h1{font-size:26px;line-height:1.2;margin:0 0 8px;letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:19px;margin:0 0 3px;letter-spacing:-.01em;text-wrap:balance}
+.lede{color:var(--ink2);font-size:15px;margin:0 0 6px;max-width:68ch}
+.meta{color:var(--ink3);font-size:12.5px;margin:0 0 34px;border-top:1px solid var(--line);padding-top:12px}
+code{font-size:12px;background:var(--s2);padding:1px 5px;border-radius:4px;color:var(--ink2)}
+section{margin:0 0 52px}
+.tag{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin:0 0 5px}
+.sub{color:var(--ink2);font-size:14px;margin:0 0 14px;max-width:78ch}
+.note{background:var(--s1);border:1px solid var(--line);border-radius:11px;padding:13px 16px;
+margin-top:16px;font-size:13.5px;color:var(--ink2);max-width:84ch}
+.note b{color:var(--ink);font-weight:600}
+.note+.note{margin-top:9px}
+
+/* ── the library ── */
+.lib{display:grid;gap:11px;grid-template-columns:repeat(auto-fill,minmax(266px,1fr))}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:13px;padding:13px 14px;position:relative}
+.card.on{border-color:var(--acc);box-shadow:0 0 0 1px rgba(201,162,39,.35)}
+.card.sel{border-color:var(--info)}
+.chd{display:flex;align-items:baseline;gap:7px;margin-bottom:2px}
+.cnm{font-size:15px;font-weight:650;letter-spacing:-.01em}
+.badge{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+padding:2px 6px;border-radius:5px;background:rgba(201,162,39,.16);color:var(--acc2)}
+.badge.b2{background:rgba(106,166,240,.16);color:var(--info)}
+.cwhen{font-size:11px;color:var(--ink3);margin-bottom:9px}
+.cstat{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+.cstat div{background:var(--s2);border-radius:7px;padding:5px 7px}
+.cstat b{display:block;font-size:15px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.cstat em{font-style:normal;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3)}
+.cmini{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:10px}
+.cmini i{font-style:normal;font-size:9.5px;padding:2px 5px;border-radius:4px;background:var(--s2);color:var(--ink2)}
+.cmini i.hi{background:rgba(201,162,39,.16);color:var(--acc2)}
+.cact{display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:9px}
+.btn{font:inherit;font-size:11.5px;font-weight:600;padding:5px 9px;border-radius:7px;
+border:1px solid var(--line);background:transparent;color:var(--ink2);cursor:default}
+.btn.p{background:var(--acc);border-color:var(--acc);color:#17130a}
+.tick{position:absolute;top:11px;right:12px;width:17px;height:17px;border-radius:5px;
+border:1.5px solid var(--line);background:var(--s2)}
+.tick.on{background:var(--info);border-color:var(--info)}
+.tick.on:after{content:"";position:absolute;left:5px;top:2px;width:4px;height:8px;
+border:solid #0a0908;border-width:0 2px 2px 0;transform:rotate(42deg)}
+.new{border-style:dashed;display:flex;flex-direction:column;justify-content:center;gap:7px;min-height:150px}
+.new .cnm{color:var(--ink2)}
+.newopt{font-size:12px;color:var(--ink2);display:flex;gap:7px;align-items:baseline}
+.newopt b{color:var(--ink);font-weight:600;font-size:12.5px}
+
+/* ── comparison ── */
+.cmp{overflow-x:auto;background:var(--s1);border:1px solid var(--line);border-radius:11px;padding:13px}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:13px}
+th,td{text-align:right;padding:7px 9px;border-bottom:1px solid var(--line);
+font-variant-numeric:tabular-nums;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);font-weight:600}
+tbody tr:last-child td{border-bottom:0}
+td.best{color:var(--acc2);font-weight:700}
+.pn{font-weight:650}
+.pn i{font-style:normal;display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:7px;vertical-align:0}
+
+.wk{display:grid;grid-template-columns:96px 1fr;gap:9px;align-items:center;margin-bottom:5px}
+.wkl{font-size:12px;font-weight:600}
+.wkl em{font-style:normal;display:block;font-size:10px;color:var(--ink3)}
+.wkb{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.wkb span{display:block;border-radius:4px;padding:5px 2px;text-align:center;font-size:11px;
+font-variant-numeric:tabular-nums;color:#17130a;font-weight:600}
+.wkh{display:grid;grid-template-columns:96px 1fr;gap:9px;margin-bottom:4px}
+.wkh div{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;font-size:10px;
+letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);text-align:center}
+
+/* ── head to head ── */
+.h2h{display:grid;gap:11px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.h2hc{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:13px 15px}
+.h2ht{font-size:13px;font-weight:650;margin-bottom:3px}
+.h2hn{font-size:11.5px;color:var(--ink3);margin-bottom:10px}
+.bar{height:22px;border-radius:6px;overflow:hidden;display:flex;font-size:11px;font-weight:700}
+.bar i{font-style:normal;display:flex;align-items:center;justify-content:center;color:#17130a}
+.dist{position:relative;height:44px;margin-top:12px}
+.dist .zero{position:absolute;left:50%;top:0;bottom:12px;width:1px;background:var(--ink3)}
+.dist .rng{position:absolute;top:11px;height:11px;border-radius:5px;
+background:linear-gradient(90deg,rgba(240,115,111,.55),rgba(201,162,39,.2),rgba(61,220,122,.55))}
+.dist .mean{position:absolute;top:6px;width:2px;height:21px;background:var(--acc2);border-radius:1px}
+.dist span{position:absolute;bottom:0;font-size:10px;color:var(--ink3);font-variant-numeric:tabular-nums}
+
+/* ── shared vs different ── */
+.venn{display:grid;gap:11px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.vc{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.vc.core{border-color:rgba(201,162,39,.4)}
+.vt{font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--acc);margin-bottom:8px}
+.vt.d{color:var(--ink3)}
+.pl{display:flex;flex-wrap:wrap;gap:4px}
+.pl i{font-style:normal;font-size:11.5px;padding:3px 7px;border-radius:6px;background:var(--s2);color:var(--ink2)}
+.vc.core .pl i{background:rgba(201,162,39,.12);color:var(--acc2)}
+
+.caps{display:grid;grid-template-columns:96px repeat(6,1fr);gap:4px;min-width:560px;align-items:center}
+.caps .hd{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);text-align:center}
+.caps .nm{font-size:12px;font-weight:600}
+.caps .c{font-size:10.5px;text-align:center;padding:5px 2px;border-radius:5px;background:var(--s2);
+color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.caps .c.same{background:rgba(201,162,39,.14);color:var(--acc2)}
+
+.steps{display:grid;gap:9px;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));margin-top:4px}
+.step{background:var(--s1);border:1px solid var(--line);border-radius:11px;padding:11px 13px}
+.stepn{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);margin-bottom:5px}
+.step p{margin:0;font-size:12.5px;color:var(--ink2)}
+.step b{color:var(--ink)}
+
+@media (max-width:660px){.wrap{padding:22px 13px 60px}h1{font-size:22px}h2{font-size:17px}
+.lib{grid-template-columns:1fr}.wk,.wkh{grid-template-columns:76px 1fr}}
+</style>
+<div class="wrap">
+
+<h1>More than one squad, and a way to tell them apart</h1>
+<p class="lede">A plan library: build a fifteen, name it, keep it, and start another. Then tick
+two or three and get an answer about which one you should actually field — not a
+side-by-side table you have to read yourself.</p>
+<p class="meta">Every number below is real. Three squads built by the site's own optimiser
+under £100m and the three-per-club rule, projected over GW1–6 by <code>xpForGw</code>,
+and compared over <b>20,000 paired simulated runs</b> · nothing here is illustrative</p>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<section>
+<span class="tag">The thing itself</span>
+<h2>A library, not a slot</h2>
+<p class="sub">Today the Squad Builder holds exactly one fifteen in <code>fpl_squad_build</code>
+and one plan in <code>fpl_planner</code>, and changing the fifteen wipes the plan. This turns
+both into a list. Your current squad becomes "Plan 1" on first load and nothing is lost.</p>
+
+<div class="lib">
+
+  <div class="card on">
+    <div class="chd"><span class="cnm">Balanced</span><span class="badge">Active</span></div>
+    <div class="cwhen">Edited 20 minutes ago · GW1 start</div>
+    <div class="cstat">
+      <div><b>339.7</b><em>xP · 6 gw</em></div>
+      <div><b>£100.0</b><em>spent</em></div>
+      <div><b>18.4%</b><em>avg owned</em></div>
+    </div>
+    <div class="cmini">
+      <i class="hi">B.Fernandes</i><i class="hi">Gabriel</i><i>Thiago</i><i>Virgil</i><i>Raya</i><i>+10</i>
+    </div>
+    <div class="cact"><button class="btn p">Open</button><button class="btn">Duplicate</button>
+      <button class="btn">Rename</button><button class="btn">Delete</button></div>
+    <div class="tick on"></div>
+  </div>
+
+  <div class="card sel">
+    <div class="chd"><span class="cnm">Haaland build</span></div>
+    <div class="cwhen">Edited yesterday · GW1 start</div>
+    <div class="cstat">
+      <div><b>328.0</b><em>xP · 6 gw</em></div>
+      <div><b>£99.5</b><em>spent</em></div>
+      <div><b>18.4%</b><em>avg owned</em></div>
+    </div>
+    <div class="cmini">
+      <i class="hi">Haaland</i><i class="hi">Gabriel</i><i>Rice</i><i>Ndiaye</i><i>Raya</i><i>+10</i>
+    </div>
+    <div class="cact"><button class="btn">Open</button><button class="btn">Duplicate</button>
+      <button class="btn">Rename</button><button class="btn">Delete</button></div>
+    <div class="tick on"></div>
+  </div>
+
+  <div class="card sel">
+    <div class="chd"><span class="cnm">No premiums</span></div>
+    <div class="cwhen">Edited 3 days ago · GW1 start</div>
+    <div class="cstat">
+      <div><b>331.6</b><em>xP · 6 gw</em></div>
+      <div><b>£100.0</b><em>spent</em></div>
+      <div><b>14.6%</b><em>avg owned</em></div>
+    </div>
+    <div class="cmini">
+      <i class="hi">Mbeumo</i><i class="hi">Watkins</i><i>Rice</i><i>Thiago</i><i>Pickford</i><i>+10</i>
+    </div>
+    <div class="cact"><button class="btn">Open</button><button class="btn">Duplicate</button>
+      <button class="btn">Rename</button><button class="btn">Delete</button></div>
+    <div class="tick on"></div>
+  </div>
+
+  <div class="card new">
+    <div class="cnm">New plan</div>
+    <div class="newopt"><b>Empty fifteen</b> — start from nothing</div>
+    <div class="newopt"><b>Copy of Balanced</b> — then change three things</div>
+    <div class="newopt"><b>Auto pick</b> — the optimiser's best, as a baseline</div>
+    <div class="newopt"><b>Import from FPL</b> — your real team as a starting point</div>
+  </div>
+
+</div>
+
+<div class="note"><b>Duplicate is the one that matters.</b> Nobody builds a second squad from
+an empty pitch — they build the first one, wonder about one decision, and want to change it
+without losing the original. Copy-then-edit is the actual workflow, so it is one tap from the
+card rather than buried in a menu.</div>
+
+<div class="note"><b>Where it lives, and whether you need an account.</b> You do not. Each plan
+is a row in <code>fpl_plans</code> in your browser — the same place the single squad lives now
+— so it costs nothing, needs no login, and works offline. The price is that it is per-device:
+plans made on a laptop do not appear on a phone. A <b>share code</b> covers that without an
+account, the same way the squad import already works: it packs the fifteen and the week
+decisions into a short string you paste on the other device. If plans ever need to follow you
+around automatically, that is when an account earns its keep, and not before.</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<section>
+<span class="tag">Compare · the headline</span>
+<h2>Three plans, one table</h2>
+<p class="sub">Tick two or more in the library and this is the top of the comparison. The
+projection column is the sum of six weekly best elevens with a captain; the range is the 10th
+to 90th percentile of 20,000 simulated runs of that same squad.</p>
+
+<div class="cmp">
+<table>
+<thead><tr><th>Plan</th><th>Spent</th><th>Projection</th><th>Owned</th><th>Floor</th><th>Median</th><th>Ceiling</th></tr></thead>
+<tbody>
+<tr><td class="pn"><i style="background:var(--acc2)"></i>Balanced</td><td>£100.0</td>
+  <td class="best">339.7</td><td>18.4%</td><td>301</td><td class="best">339</td><td>381</td></tr>
+<tr><td class="pn"><i style="background:var(--info)"></i>Haaland build</td><td>£99.5</td>
+  <td>328.0</td><td>18.4%</td><td>289</td><td>327</td><td>368</td></tr>
+<tr><td class="pn"><i style="background:var(--good)"></i>No premiums</td><td>£100.0</td>
+  <td>331.6</td><td class="best">14.6%</td><td>293</td><td>330</td><td>372</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note"><b>Read the two columns together or the table lies.</b> Balanced projects 11.7
+points more than the Haaland build over six weeks. Balanced also has an eighty-point spread
+between its own bad run and its own good one. The gap you are choosing is a seventh of the
+noise you are choosing it inside — which does not make the choice pointless, it makes it the
+part you control. The rest of this page is about separating those two things.</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<section>
+<span class="tag">Compare · week by week</span>
+<h2>Where the gap opens</h2>
+<p class="sub">Projected points per week, per plan. A total hides whether one plan is
+better everywhere or better in two weeks and level in four — and those are different decisions,
+because the second one is a transfer, not a rebuild.</p>
+
+<div class="cmp">
+  <div class="wkh"><div></div><div><span>GW1</span><span>GW2</span><span>GW3</span><span>GW4</span><span>GW5</span><span>GW6</span></div></div>
+
+  <div class="wk"><div class="wkl">Balanced<em>339.7 total</em></div>
+    <div class="wkb">
+      <span style="background:#c9a227">57.1</span><span style="background:#e8c85a">58.7</span>
+      <span style="background:#a8871f">55.5</span><span style="background:#c1991f">56.8</span>
+      <span style="background:#bd951f">56.4</span><span style="background:#a4831d">55.2</span>
+    </div></div>
+
+  <div class="wk"><div class="wkl">Haaland build<em>328.0 total</em></div>
+    <div class="wkb">
+      <span style="background:#5b7fae">55.5</span><span style="background:#3d5b82">52.4</span>
+      <span style="background:#6d95c8">56.3</span><span style="background:#456489">53.1</span>
+      <span style="background:#7fa9dd">57.6</span><span style="background:#456489">53.1</span>
+    </div></div>
+
+  <div class="wk"><div class="wkl">No premiums<em>331.6 total</em></div>
+    <div class="wkb">
+      <span style="background:#3f9c60">55.7</span><span style="background:#398f58">55.2</span>
+      <span style="background:#358653">54.8</span><span style="background:#409e61">55.8</span>
+      <span style="background:#3c975d">55.4</span><span style="background:#348452">54.7</span>
+    </div></div>
+</div>
+
+<div class="note"><b>The Haaland build is the volatile one before a ball is kicked.</b> Its
+weeks run 52.4 to 57.6 while No premiums sits between 54.7 and 55.8 — a four-point band against
+a one-point band, on projections alone. That is what fifteen and a half million pounds in one
+player does to a squad: the fixture that player has stops being one of eleven inputs and starts
+being most of the week.</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<section>
+<span class="tag">Compare · the answer</span>
+<h2>How often does the better plan actually win?</h2>
+<p class="sub">Each pair simulated 20,000 times with <b>common random numbers</b> — every player
+draws the same score in both plans, so the eight players the squads share cancel out exactly and
+what is left is the decision you are actually making. The bar is how often the first plan
+finishes ahead; the strip below is the range of the gap.</p>
+
+<div class="h2h">
+
+  <div class="h2hc">
+    <div class="h2ht">Balanced <span style="color:var(--ink3);font-weight:400">vs</span> Haaland build</div>
+    <div class="h2hn">mean gap +12.1 points over six weeks</div>
+    <div class="bar">
+      <i style="width:63.3%;background:var(--acc2)">63.3%</i>
+      <i style="width:36.7%;background:#3c5f8a;color:#e6eefa">36.7%</i>
+    </div>
+    <div class="dist">
+      <div class="zero"></div>
+      <div class="rng" style="left:16%;right:6%"></div>
+      <div class="mean" style="left:63%"></div>
+      <span style="left:12%">−32</span><span style="left:47%">0</span><span style="right:2%">+56</span>
+    </div>
+  </div>
+
+  <div class="h2hc">
+    <div class="h2ht">Balanced <span style="color:var(--ink3);font-weight:400">vs</span> No premiums</div>
+    <div class="h2hn">mean gap +8.4 points over six weeks</div>
+    <div class="bar">
+      <i style="width:62.3%;background:var(--acc2)">62.3%</i>
+      <i style="width:37.7%;background:#2f6b46;color:#e2f6ea">37.7%</i>
+    </div>
+    <div class="dist">
+      <div class="zero"></div>
+      <div class="rng" style="left:22%;right:14%"></div>
+      <div class="mean" style="left:61%"></div>
+      <span style="left:18%">−24</span><span style="left:47%">0</span><span style="right:10%">+41</span>
+    </div>
+  </div>
+
+  <div class="h2hc">
+    <div class="h2ht">Haaland build <span style="color:var(--ink3);font-weight:400">vs</span> No premiums</div>
+    <div class="h2hn">mean gap −3.7 points over six weeks</div>
+    <div class="bar">
+      <i style="width:45.1%;background:#5b7fae;color:#e6eefa">45.1%</i>
+      <i style="width:54.9%;background:var(--good);color:#0a2415">54.9%</i>
+    </div>
+    <div class="dist">
+      <div class="zero"></div>
+      <div class="rng" style="left:6%;right:18%"></div>
+      <div class="mean" style="left:44%"></div>
+      <span style="left:2%">−43</span><span style="left:47%">0</span><span style="right:14%">+36</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="note"><b>This is the panel the feature exists for, and it is the one nobody else
+draws.</b> "Plan A projects 11.7 more" sounds decisive. "Plan A wins 63% of the time" is the
+same fact and does not, and the second one is true. Better than a coin toss, a long way from
+a certainty, and the Haaland build still comes out ahead in more than a third of runs — usually
+the ones where he does what he is bought to do.</div>
+
+<div class="note"><b>Why common random numbers and not two independent runs.</b> These squads
+share eight players. Simulated separately, those eight draw different scores in each plan and
+add about eighty points of noise that has nothing to do with the decision — the 12-point edge
+would vanish inside it and every comparison would come out 50/50. Drawing them once and reusing
+the number in both plans removes exactly the part the two squads have in common. It is the
+difference between a panel that answers the question and a panel that looks like it does.</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<section>
+<span class="tag">Compare · what is actually different</span>
+<h2>Plans agree more than they look like they do</h2>
+<p class="sub">Twenty-three distinct players across three squads. Eight of them are in all
+three — so the argument is about seven or eight places, not forty-five.</p>
+
+<div class="venn">
+  <div class="vc core">
+    <div class="vt">In all three · 8 players</div>
+    <div class="pl"><i>Raya</i><i>Gabriel</i><i>Tarkowski</i><i>Senesi</i><i>Thiaw</i>
+      <i>Anderson</i><i>Garner</i><i>Calvert-Lewin</i></div>
+  </div>
+  <div class="vc">
+    <div class="vt d">Only in Balanced</div>
+    <div class="pl"><i>B.Fernandes</i><i>Szoboszlai</i></div>
+  </div>
+  <div class="vc">
+    <div class="vt d">Only in Haaland build</div>
+    <div class="pl"><i>Haaland</i><i>Van Hecke</i><i>E.Le Fée</i><i>Ndiaye</i></div>
+  </div>
+  <div class="vc">
+    <div class="vt d">Only in No premiums</div>
+    <div class="pl"><i>Pickford</i><i>Mbeumo</i><i>Watkins</i></div>
+  </div>
+</div>
+
+<div class="note"><b>The shared eight are the finding, not the leftovers.</b> Three squads built
+to three different briefs all bought the same back line and the same two cheap midfielders —
+which means those eight are not a preference, they are what the projection thinks is true, and
+no plan you write is going to be about them. It also tells you where a wildcard actually costs
+you: eight of the fifteen were never in question.</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<section>
+<span class="tag">Compare · the armband</span>
+<h2>Who each plan captains, week by week</h2>
+<p class="sub">Two plans can project the same and be completely different bets once the armband
+is on. Gold marks a week where two of the three land on the same player. <b>No week has all
+three agreeing</b>, which is itself worth knowing: the armband is never the free part of a
+plan.</p>
+
+<div class="cmp">
+<div class="caps">
+  <div></div><div class="hd">GW1</div><div class="hd">GW2</div><div class="hd">GW3</div>
+  <div class="hd">GW4</div><div class="hd">GW5</div><div class="hd">GW6</div>
+
+  <div class="nm">Balanced</div>
+  <div class="c">B.Fernandes</div><div class="c">B.Fernandes</div><div class="c same">Thiago</div>
+  <div class="c same">Enzo</div><div class="c">B.Fernandes</div><div class="c">B.Fernandes</div>
+
+  <div class="nm">Haaland build</div>
+  <div class="c">Haaland</div><div class="c">Haaland</div><div class="c">Haaland</div>
+  <div class="c">Senesi</div><div class="c">Haaland</div><div class="c same">Tarkowski</div>
+
+  <div class="nm">No premiums</div>
+  <div class="c">Rice</div><div class="c">Mbeumo</div><div class="c same">Thiago</div>
+  <div class="c same">Enzo</div><div class="c">Thiaw</div><div class="c same">Tarkowski</div>
+</div>
+</div>
+
+<div class="note"><b>Buying Haaland is buying four captaincies, not one striker.</b> He takes the
+armband in four of six weeks, which is the real reason the plan feels different despite
+projecting eleven points worse — and it is also why its distribution is the widest of the three.
+A captain is a doubled bet, so the plan with the most concentrated armband has the most to gain
+and the most to lose, and the table on its own never says that.</div>
+
+<div class="note">Note what the third plan's GW5 captain is: <b>Thiaw, a £5.0m defender</b>.
+That is not the model being clever, it is the model telling you the plan has no captain — the
+best available doubled score is a defender, and a week with no armband worth having is a real
+finding about a squad, not a rendering glitch.</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<section>
+<span class="tag">How it would work</span>
+<h2>Four things to build, in order</h2>
+
+<div class="steps">
+  <div class="step"><div class="stepn">1 · storage</div>
+    <p><b>fpl_plans</b> becomes a list of <code>{id, name, base, weeks, startGw, updated}</code>.
+    The existing single squad migrates in as "Plan 1" on first load. Nothing else changes —
+    the planner already stores exactly this shape, just once.</p></div>
+  <div class="step"><div class="stepn">2 · the library</div>
+    <p>A strip above the pitch: active plan, switcher, duplicate, rename, delete. Duplicate is
+    the primary action. Everything below it keeps working on whichever plan is active.</p></div>
+  <div class="step"><div class="stepn">3 · compare</div>
+    <p>Tick two to four, and the Insights tab gains a <b>Compare</b> group. Every panel already
+    there takes a squad; most of them take two with a colour each and no new maths.</p></div>
+  <div class="step"><div class="stepn">4 · head to head</div>
+    <p>The one genuinely new piece: the paired simulation. It reuses the draw function the floor
+    and ceiling panel already has, run over two lineups with a shared random stream.</p></div>
+</div>
+
+<div class="note"><b>What this is not, and will not pretend to be.</b> These are six-week
+projections of a fixed fifteen. They do not know about the transfers you will make in week
+three, injuries that have not happened, or price changes. Beyond GW1 no fixture is priced by
+the market, so weeks 2–6 lean on last season's team strengths adjusted for the odds banked so
+far. A plan comparison is a statement about the squads as they stand today, and it should be
+re-read after every deadline rather than treated as a season-long verdict — which is exactly why
+the plans are stored and editable rather than scored once and filed.</div>
+</section>
+
+</div>
