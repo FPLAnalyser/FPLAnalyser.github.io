@@ -1,0 +1,185 @@
+<title>Planning mode — multiple plans, compared</title>
+<style>
+:root{--bg:#0a0908;--s1:#131110;--s2:#1b1917;--line:#2a2724;--ink:#f4efe3;--ink2:#a9a294;
+--ink3:#777064;--acc:#c9a227;--acc2:#e8c85a;--good:#3ddc7a;--bad:#f0736f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:30px 18px 80px}
+h1{font-size:26px;line-height:1.2;margin:0 0 8px;letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:19px;margin:0 0 3px;letter-spacing:-.01em;text-wrap:balance}
+.lede{color:var(--ink2);font-size:15px;margin:0 0 6px;max-width:70ch}
+.meta{color:var(--ink3);font-size:12.5px;margin:0 0 34px;border-top:1px solid var(--line);padding-top:12px}
+section{margin:0 0 52px}
+.tag{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin:0 0 5px}
+.sub{color:var(--ink2);font-size:14px;margin:0 0 14px;max-width:76ch}
+.note{background:var(--s1);border:1px solid var(--line);border-radius:11px;padding:13px 16px;
+margin-top:16px;font-size:13.5px;color:var(--ink2);max-width:84ch}
+.note b{color:var(--ink);font-weight:600}
+.note code{font-size:12px;background:var(--s2);padding:1px 5px;border-radius:4px}
+.scroll{overflow-x:auto;background:var(--s1);border:1px solid var(--line);border-radius:11px;padding:12px}
+.chart{display:block;width:100%;min-width:640px;height:auto}
+.grid{stroke:var(--line);stroke-width:1}
+.axl{fill:var(--ink3);font-size:10.5px;text-anchor:middle;font-variant-numeric:tabular-nums}
+.axl.r{text-anchor:end}
+.key{display:flex;gap:15px;margin-top:9px;font-size:12px;color:var(--ink2);flex-wrap:wrap}
+.key i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.shelf{display:grid;gap:11px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.plan{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:13px 15px}
+.plan.lead{border-color:#5a4a1c;box-shadow:inset 0 0 0 1px rgba(201,162,39,.18)}
+.ptop{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.pid{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;
+font-size:12px;font-weight:700;color:#17130A}
+.pname{font-size:14.5px;font-weight:600}
+.pbadge{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--acc);
+border:1px solid #5a4a1c;border-radius:5px;padding:2px 6px}
+.pdesc{font-size:12.5px;color:var(--ink2);margin:0 0 11px;line-height:1.45}
+.pnum{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:11px}
+.pnum span{background:var(--s2);border-radius:8px;padding:6px 9px}
+.pnum b{display:block;font-size:16px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.pnum b.g{color:var(--good)}.pnum b.r{color:var(--bad)}
+.pnum em{display:block;font-style:normal;font-size:10px;color:var(--ink3);letter-spacing:.04em}
+.pmoves{margin:0;padding:0;list-style:none;border-top:1px solid var(--line);padding-top:8px}
+.pmoves li{font-size:11.5px;color:var(--ink2);padding:1.5px 0;font-variant-numeric:tabular-nums}
+.pmoves li.none{color:var(--ink3);font-style:italic}
+.plan.new{display:grid;place-content:center;text-align:center;border-style:dashed;color:var(--ink3)}
+.plan.new span{font-size:26px;line-height:1;color:var(--acc);display:block;margin-bottom:4px}
+.plan.new b{display:block;font-size:13.5px;color:var(--ink2)}
+.plan.new em{font-style:normal;font-size:11.5px;display:block;margin-top:3px}
+.dhd,.drow{display:grid;grid-template-columns:78px repeat(3,1fr);gap:8px;align-items:stretch;min-width:640px}
+.dhd{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);
+padding-bottom:6px;font-weight:600}
+.drow{padding:5px 0;border-top:1px solid var(--line)}
+.drow.same{opacity:.5}
+.dg{font-size:12px;color:var(--ink2);align-self:center;font-weight:600}
+.dg em{display:block;font-style:normal;font-size:10px;color:var(--ink3);font-weight:400}
+.dc{background:var(--s2);border:1px solid transparent;border-radius:8px;padding:6px 9px;display:block}
+.dc.win{border-color:#5a4a1c;background:rgba(201,162,39,.09)}
+.dc b{font-size:14px;font-variant-numeric:tabular-nums}
+.dc .hit{font-style:normal;font-size:11px;color:var(--bad);margin-left:5px}
+.dc u{display:block;text-decoration:none;font-size:10.5px;color:var(--ink3);margin-top:1px}
+.dc em{display:block;font-style:normal;font-size:10.5px;color:var(--acc2);margin-top:2px}
+.opt{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-top:4px}
+.optc{background:var(--s1);border:1px solid var(--line);border-radius:11px;padding:13px 15px}
+.optc.pick{border-color:#5a4a1c}
+.optc h3{margin:0 0 3px;font-size:14.5px}
+.optc .lvl{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--acc);display:block;margin-bottom:5px}
+.optc p{margin:0 0 8px;font-size:12.5px;color:var(--ink2);line-height:1.5}
+.optc ul{margin:0;padding-left:16px}
+.optc li{font-size:12px;color:var(--ink2);padding:1px 0}
+.optc li.no{color:var(--ink3)}
+@media (max-width:660px){.wrap{padding:22px 13px 60px}h1{font-size:22px}h2{font-size:17px}
+.pnum{grid-template-columns:1fr 1fr}}
+</style>
+<div class="wrap">
+<h1>Planning mode</h1>
+<p class="lede">Several plans for the same squad, kept side by side, scored against each
+other. Three real plans below, projected with the site's own engine over GW1–6 and
+simulated 40,000 times each.</p>
+<p class="meta">The planner engine already exists — <code>usePlanner.ts</code> holds a
+week-by-week plan with transfers, chips, hits and auto-lineup. Today it stores exactly one.</p>
+
+<section>
+<span class="tag">Concept 1 — the shelf</span>
+<h2>Plans as objects you can keep</h2>
+<p class="sub">Each plan is the whole six weeks: who you transfer, when, what it costs in
+hits, and what it projects. Duplicating one and changing a single decision is the whole
+interaction.</p>
+<div class="shelf"><div class="plan"><div class="ptop"><span class="pid" style="background:#a8871f">A</span><span class="pname">Hold</span></div><p class="pdesc">No transfers for six weeks. Bank every free transfer.</p><div class="pnum"><span><b>338.9</b><em>xP, net of hits</em></span><span><b>306–374</b><em>likely range</em></span><span><b>0</b><em>points hit</em></span><span><b class="r">-5.6</b><em>vs best</em></span></div><ul class="pmoves"><li class="none">No transfers</li></ul></div><div class="plan lead"><div class="ptop"><span class="pid" style="background:#3a8ec6">B</span><span class="pname">One a week</span><span class=pbadge>best projection</span></div><p class="pdesc">Optimal single free transfer, banking where nothing pays.</p><div class="pnum"><span><b>344.5</b><em>xP, net of hits</em></span><span><b>310–379</b><em>likely range</em></span><span><b>0</b><em>points hit</em></span><span><b class="g">+0.0</b><em>vs best</em></span></div><ul class="pmoves"><li>GW3: Mbeumo → Garner</li><li>GW4: Beto → Enzo</li><li>GW4: Szoboszlai → João Pedro</li><li>GW6: Virgil → Gabriel</li><li>GW6: Guéhi → Shaw</li></ul></div><div class="plan"><div class="ptop"><span class="pid" style="background:#c85d84">C</span><span class="pname">Chase Chelsea</span></div><p class="pdesc">Take a -4 in GW4 to double up on Chelsea before Hull at home.</p><div class="pnum"><span><b>339.2</b><em>xP, net of hits</em></span><span><b>305–374</b><em>likely range</em></span><span><b>−4</b><em>points hit</em></span><span><b class="r">-5.3</b><em>vs best</em></span></div><ul class="pmoves"><li>GW4: Beto → Enzo</li><li>GW4: Welbeck → João Pedro</li></ul></div><div class="plan new"><span>+</span><b>New plan</b><em>Duplicate any plan and change one thing</em></div></div>
+<div class="note"><b>The unit of planning is a plan, not a gameweek.</b> The Squad Builder
+already lets you make a transfer in GW3 and see GW4 change. What it cannot do is hold
+<i>two</i> answers at once — and holding two answers is what planning is. Everything here
+is the existing state object with a name attached.</div>
+</section>
+
+<section>
+<span class="tag">Concept 2 — head to head</span>
+<h2>Running totals, with the honest band around them</h2>
+<p class="sub">Cumulative expected points, net of hits. The shaded band is the
+10th-to-90th outcome range for the leading plan.</p>
+<div class="scroll"><svg viewBox="0 0 740 270" class="chart" role="img" aria-label="Cumulative expected points for three plans"><line x1="44" x2="716" y1="182.2" y2="182.2" class="grid"/><text x="38" y="185.7" class="axl r">100</text><line x1="44" x2="716" y1="126.4" y2="126.4" class="grid"/><text x="38" y="129.9" class="axl r">200</text><line x1="44" x2="716" y1="70.6" y2="70.6" class="grid"/><text x="38" y="74.1" class="axl r">300</text><polygon points="62.0,202.2 193.2,165.9 324.4,131.2 455.6,95.7 586.8,61.0 718.0,26.2 718.0,64.7 586.8,93.2 455.6,121.6 324.4,150.6 193.2,179.1 62.0,208.7" fill="#3a8ec6" opacity=".12"/><polyline points="62.0,205.5 193.2,172.6 324.4,141.0 455.6,110.4 586.8,79.2 718.0,48.8" fill="none" stroke="#a8871f" stroke-width="2.5" stroke-linejoin="round"/><circle cx="62.0" cy="205.5" r="3.6" fill="#a8871f" stroke="#131110" stroke-width="1.6"><title>Plan A · GW1: 58.2 xP — running 58.2</title></circle><circle cx="193.2" cy="172.6" r="3.6" fill="#a8871f" stroke="#131110" stroke-width="1.6"><title>Plan A · GW2: 59.0 xP — running 117.2</title></circle><circle cx="324.4" cy="141.0" r="3.6" fill="#a8871f" stroke="#131110" stroke-width="1.6"><title>Plan A · GW3: 56.5 xP — running 173.8</title></circle><circle cx="455.6" cy="110.4" r="3.6" fill="#a8871f" stroke="#131110" stroke-width="1.6"><title>Plan A · GW4: 54.8 xP — running 228.6</title></circle><circle cx="586.8" cy="79.2" r="3.6" fill="#a8871f" stroke="#131110" stroke-width="1.6"><title>Plan A · GW5: 56.0 xP — running 284.6</title></circle><circle cx="718.0" cy="48.8" r="3.6" fill="#a8871f" stroke="#131110" stroke-width="1.6"><title>Plan A · GW6: 54.4 xP — running 338.9</title></circle><text x="726.0" y="52.8" fill="#a8871f" font-size="12" font-weight="700">A</text><polyline points="62.0,205.5 193.2,172.6 324.4,141.0 455.6,108.8 586.8,77.3 718.0,45.7" fill="none" stroke="#3a8ec6" stroke-width="2.5" stroke-linejoin="round"/><circle cx="62.0" cy="205.5" r="3.6" fill="#3a8ec6" stroke="#131110" stroke-width="1.6"><title>Plan B · GW1: 58.2 xP — running 58.2</title></circle><circle cx="193.2" cy="172.6" r="3.6" fill="#3a8ec6" stroke="#131110" stroke-width="1.6"><title>Plan B · GW2: 59.0 xP — running 117.2</title></circle><circle cx="324.4" cy="141.0" r="3.6" fill="#3a8ec6" stroke="#131110" stroke-width="1.6"><title>Plan B · GW3: 56.5 xP — running 173.7</title></circle><circle cx="455.6" cy="108.8" r="3.6" fill="#3a8ec6" stroke="#131110" stroke-width="1.6"><title>Plan B · GW4: 57.6 xP — running 231.4</title></circle><circle cx="586.8" cy="77.3" r="3.6" fill="#3a8ec6" stroke="#131110" stroke-width="1.6"><title>Plan B · GW5: 56.5 xP — running 287.9</title></circle><circle cx="718.0" cy="45.7" r="3.6" fill="#3a8ec6" stroke="#131110" stroke-width="1.6"><title>Plan B · GW6: 56.6 xP — running 344.5</title></circle><text x="726.0" y="49.7" fill="#3a8ec6" font-size="12" font-weight="700">B</text><polyline points="62.0,205.5 193.2,172.6 324.4,141.0 455.6,111.2 586.8,79.9 718.0,48.7" fill="none" stroke="#c85d84" stroke-width="2.5" stroke-linejoin="round"/><circle cx="62.0" cy="205.5" r="3.6" fill="#c85d84" stroke="#131110" stroke-width="1.6"><title>Plan C · GW1: 58.2 xP — running 58.2</title></circle><circle cx="193.2" cy="172.6" r="3.6" fill="#c85d84" stroke="#131110" stroke-width="1.6"><title>Plan C · GW2: 59.0 xP — running 117.2</title></circle><circle cx="324.4" cy="141.0" r="3.6" fill="#c85d84" stroke="#131110" stroke-width="1.6"><title>Plan C · GW3: 56.5 xP — running 173.8</title></circle><circle cx="455.6" cy="111.2" r="3.6" fill="#c85d84" stroke="#131110" stroke-width="1.6"><title>Plan C · GW4: 57.5 xP less a 4-point hit — running 227.2</title></circle><circle cx="586.8" cy="79.9" r="3.6" fill="#c85d84" stroke="#131110" stroke-width="1.6"><title>Plan C · GW5: 56.0 xP — running 283.3</title></circle><circle cx="718.0" cy="48.7" r="3.6" fill="#c85d84" stroke="#131110" stroke-width="1.6"><title>Plan C · GW6: 55.9 xP — running 339.2</title></circle><text x="726.0" y="52.7" fill="#c85d84" font-size="12" font-weight="700">C</text><text x="62.0" y="253.0" class="axl">GW1</text><text x="193.2" y="253.0" class="axl">GW2</text><text x="324.4" y="253.0" class="axl">GW3</text><text x="455.6" y="253.0" class="axl">GW4</text><text x="586.8" y="253.0" class="axl">GW5</text><text x="718.0" y="253.0" class="axl">GW6</text></svg></div><div class="key"><span><i style="background:#a8871f"></i>A · Hold</i></span><span><i style="background:#3a8ec6"></i>B · One a week</i></span><span><i style="background:#c85d84"></i>C · Chase Chelsea</i></span><span><i style="background:#3a8ec6;opacity:.35"></i>10th–90th for plan B</span></div>
+<div class="note"><b>The band is the point, and it is uncomfortable.</b> The best plan
+beats the worst by <b>5.6 points</b> over six
+weeks. The 10th-to-90th range <i>within</i> the best plan is
+<b>69 points</b>. Plan choice is worth about a
+8% sliver of
+what variance does — so a comparison tool that shows only the projected totals is
+inviting you to agonise over a rounding error. Showing both is what makes it honest, and
+it is the reason to build it: not to find the best plan, but to see how little the
+question matters and stop churning.</div>
+</section>
+
+<section>
+<span class="tag">Concept 3 — divergence</span>
+<h2>Only the weeks that actually differ</h2>
+<p class="sub">Most of any two plans is identical. The insight lives in the handful of
+weeks where they part company — the transfer, the captain, the hit.</p>
+<div class="scroll" style="padding:10px 12px"><div class="dhd"><span></span><span style="color:#a8871f">A · Hold</span><span style="color:#3a8ec6">B · One a week</span><span style="color:#c85d84">C · Chase Chelsea</span></div><div class="drow same"><span class="dg">GW1<em>identical</em></span><span class="dc"><b>58.2</b><u>C: B.Fernandes</u></span><span class="dc"><b>58.2</b><u>C: B.Fernandes</u></span><span class="dc"><b>58.2</b><u>C: B.Fernandes</u></span></div><div class="drow same"><span class="dg">GW2<em>identical</em></span><span class="dc"><b>59.0</b><u>C: B.Fernandes</u></span><span class="dc"><b>59.0</b><u>C: B.Fernandes</u></span><span class="dc"><b>59.0</b><u>C: B.Fernandes</u></span></div><div class="drow"><span class="dg">GW3</span><span class="dc win"><b>56.5</b><u>C: B.Fernandes</u></span><span class="dc win"><b>56.5</b><u>C: B.Fernandes</u><em>Mbeumo → Garner</em></span><span class="dc win"><b>56.5</b><u>C: B.Fernandes</u></span></div><div class="drow"><span class="dg">GW4</span><span class="dc"><b>54.8</b><u>C: B.Fernandes</u></span><span class="dc win"><b>57.6</b><u>C: Enzo</u><em>Beto → Enzo</em><em>Szoboszlai → João Pedro</em></span><span class="dc"><b>53.5</b><i class="hit">−4</i><u>C: Enzo</u><em>Beto → Enzo</em><em>Welbeck → João Pedro</em></span></div><div class="drow"><span class="dg">GW5</span><span class="dc"><b>56.0</b><u>C: Thiaw</u></span><span class="dc win"><b>56.5</b><u>C: Thiaw</u></span><span class="dc"><b>56.0</b><u>C: Thiaw</u></span></div><div class="drow"><span class="dg">GW6</span><span class="dc"><b>54.4</b><u>C: B.Fernandes</u></span><span class="dc win"><b>56.6</b><u>C: B.Fernandes</u><em>Virgil → Gabriel</em><em>Guéhi → Shaw</em></span><span class="dc"><b>55.9</b><u>C: B.Fernandes</u></span></div></div>
+<div class="note"><b>Diffing beats displaying.</b> Three plans over six weeks is
+eighteen gameweeks of detail nobody reads. Greying out the identical weeks leaves the
+three or four decisions that are actually in play, with the captain and the hit right
+there — which is the shape of the question a manager is really asking.</div>
+</section>
+
+<section>
+<span class="tag">Concept 4 — the read</span>
+<h2>What the comparison concludes</h2>
+<div class="scroll" style="padding:15px 18px">
+<p style="margin:0 0 10px;font-size:14.5px;color:var(--ink);line-height:1.55">
+<b>Take plan B, and expect it not to matter much.</b></p>
+<p style="margin:0 0 9px;font-size:13.5px;color:var(--ink2);line-height:1.6">
+B projects <b style="color:var(--ink)">344.5</b> against A's
+<b style="color:var(--ink)">338.9</b> — worth
+5.6 points over six weeks, or under a point a week, and it
+takes no hit to get there. Every one of its five moves is a free transfer used in a week
+where banking bought nothing.</p>
+<p style="margin:0 0 9px;font-size:13.5px;color:var(--ink2);line-height:1.6">
+<b style="color:var(--ink)">Plan C does not pay.</b> Doubling on Chelsea before Hull at
+home is the right read on the fixture — it gains
+4.3 before the hit — but the −4 eats it, and
+it lands at 339.2, -5.3 behind B. A hit needs
+to buy about a point a week for six weeks to break even, and this one buys a third of that.</p>
+<p style="margin:0;font-size:13.5px;color:var(--ink2);line-height:1.6">
+<b style="color:var(--ink)">All three sit inside each other's range.</b> B's 10th
+percentile (310) is below A's median (338). On any given
+six-week run the worst plan here beats the best about four times in ten. That is not an
+argument against planning — it is an argument for planning once and leaving it alone.</p>
+</div>
+<div class="note"><b>This is the bit that is actually hard to copy.</b> A solver gives
+you the optimum and no sense of whether it is worth having. The reason to write the
+verdict is that "these plans are indistinguishable" is a genuine, actionable answer, and
+it is the one a tool built to sell transfers can never give.</div>
+</section>
+
+<section>
+<span class="tag">Concept 5 — where plans live</span>
+<h2>Does this need an account? No.</h2>
+<div class="opt">
+<div class="optc pick"><span class="lvl">Recommended</span><h3>Browser storage + a shareable link</h3>
+<p>Plans sit in <code>localStorage</code> alongside the one the planner already keeps,
+and any plan encodes into a link you can send yourself.</p>
+<ul>
+<li>No sign-up, no email, nothing to breach</li>
+<li>A whole plan is about <b>60 characters</b> — fifteen player ids at ten bits, eight
+transfers, five chip slots, base64url</li>
+<li>The link moves a plan between phone and laptop, and into a WhatsApp group</li>
+<li class="no">Lost if the browser is cleared and no link was saved</li>
+</ul></div>
+<div class="optc"><span class="lvl">Only if it earns it</span><h3>Accounts</h3>
+<p>A login buys silent cross-device sync and server-side compute. It costs a database,
+auth, a privacy policy, and a category of risk this site has spent real effort avoiding.</p>
+<ul>
+<li>Sync without having to keep a link</li>
+<li>Plans survive a cleared browser</li>
+<li class="no">Personal data where there is currently none</li>
+<li class="no">A second thing to run, and to keep up at 3am</li>
+</ul></div>
+</div>
+<div class="note"><b>The site holds no account today and is better for it</b> —
+<code>docs/DOMAIN_CATEGORISATION.md</code> leans on "nothing is for sale and no money
+changes hands" to argue its way out of a Gambling classification, and "we collect
+nothing" is the same argument in a stronger form. The link approach gets you every
+practical benefit of an account except silent sync, and silent sync is not worth a user
+database. If people start asking for it, that is the moment to reconsider — not before.</div>
+</section>
+</div>
