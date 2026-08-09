@@ -10,6 +10,7 @@ import { FixtureChips, FixtureNames } from '../components/FixtureChips'
 import { ShareFooter } from '../components/ShareFooter'
 import { SeasonPlanner } from '../components/SeasonPlanner'
 import { SquadLab } from '../components/SquadLab'
+import { SquadLadder } from '../components/SquadLadder'
 import { Icon } from '../components/Icon'
 import { Pitch, PitchCard, BenchSpine, CARD_W } from '../components/Pitch'
 import { PlayerCardSheet } from '../components/PlayerCardSheet'
@@ -24,7 +25,7 @@ import { SHARE_FORMATS, frameHeight, drawFitted, type FormatId } from '../lib/fr
 import { deliverImage } from '../lib/share'
 import { num } from '../lib/rows'
 import { useAvailability, availBadge, availFor, SEV_COLOUR, type Availability } from '../lib/availability'
-import { xpForGw, useXpModel, useMarketOdds } from '../lib/xp'
+import { xpForGw, useXpModel, useMarketOdds, useShotProfiles } from '../lib/xp'
 import { usePlanner } from '../lib/usePlanner'
 import { CHIP_LABEL, type Chip } from '../lib/planner'
 import { teamLabel, playerHref } from '../lib/util'
@@ -243,6 +244,7 @@ export default function SquadBuilder() {
   const avail = useAvailability()
   const listXpModel = useXpModel()
   const listMarket = useMarketOdds()
+  const listProfiles = useShotProfiles()
   const fixtureEase = (data?.fixtureEase ?? []) as FixtureEaseRow[]
   // You build for one gameweek — the next one to be played — and then plan
   // forward from it. Everything on this page is anchored to that number.
@@ -525,6 +527,19 @@ export default function SquadBuilder() {
                 unlimitedTransfers={planner.ft === Infinity}
                 chipSpentAt={planner.chipSpent}
                 onApplyMove={(outEl, inEl) => { planner.doTransfer(outEl, inEl); setPendingIn(null) }}
+              />
+            )}
+            {complete && (
+              <SquadLadder
+                squad={liveChosen}
+                gws={planner.gws.filter((g) => g >= liveGw).slice(0, 6)}
+                engine={{
+                  fixtureEase,
+                  avail,
+                  model: listXpModel,
+                  market: listMarket,
+                  profiles: listProfiles,
+                }}
               />
             )}
           </div>
