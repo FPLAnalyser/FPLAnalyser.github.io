@@ -1,0 +1,168 @@
+<title>Season planner — comparing whole-season plans</title>
+<style>
+:root{--bg:#0a0908;--s1:#131110;--s2:#1b1917;--line:#2a2724;--ink:#f4efe3;--ink2:#a9a294;
+--ink3:#777064;--acc:#c9a227;--acc2:#e8c85a;--good:#3ddc7a;--bad:#f0736f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:30px 18px 80px}
+h1{font-size:26px;line-height:1.2;margin:0 0 8px;letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:19px;margin:0 0 3px;letter-spacing:-.01em;text-wrap:balance}
+.lede{color:var(--ink2);font-size:15px;margin:0 0 6px;max-width:70ch}
+.meta{color:var(--ink3);font-size:12.5px;margin:0 0 34px;border-top:1px solid var(--line);padding-top:12px}
+section{margin:0 0 52px}
+.tag{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin:0 0 5px}
+.sub{color:var(--ink2);font-size:14px;margin:0 0 14px;max-width:78ch}
+.note{background:var(--s1);border:1px solid var(--line);border-radius:11px;padding:13px 16px;
+margin-top:16px;font-size:13.5px;color:var(--ink2);max-width:84ch}
+.note b{color:var(--ink);font-weight:600}
+.note code{font-size:12px;background:var(--s2);padding:1px 5px;border-radius:4px}
+.scroll{overflow-x:auto;background:var(--s1);border:1px solid var(--line);border-radius:11px;padding:12px}
+.chart{display:block;width:100%;min-width:660px;height:auto}
+.grid{stroke:var(--line);stroke-width:1}
+.axl{fill:var(--ink3);font-size:10.5px;text-anchor:middle;font-variant-numeric:tabular-nums}
+.axl.r{text-anchor:end}
+.key{display:flex;gap:15px;margin-top:9px;font-size:12px;color:var(--ink2);flex-wrap:wrap;align-items:center}
+.key i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.key .kchip{background:var(--acc)}.key .ktr{background:#55442a}.key .knone{background:var(--s2)}
+.striphd,.striprow{display:grid;grid-template-columns:132px 1fr 46px;gap:10px;align-items:center;min-width:660px}
+.striphd{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);padding-bottom:5px}
+.striphd span:nth-child(2){text-align:left}.striphd span:nth-child(3){text-align:right}
+.striprow{padding:5px 0;border-top:1px solid var(--line)}
+.sn b{display:block;font-size:13px}
+.sn em{display:block;font-style:normal;font-size:10.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.strip{display:grid;grid-template-columns:repeat(38,1fr);gap:1.5px}
+.sc{display:block;height:20px;background:var(--s2);border-radius:2px;font-size:8px;
+line-height:20px;text-align:center;color:var(--ink3)}
+.sc.tr{background:#55442a;color:#c0b18a}
+.sc.chip{background:linear-gradient(180deg,#F7E3A6,#C9A227);color:#17130A;font-weight:700;font-size:7.5px}
+.stot{font-size:13.5px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.drow2{display:grid;grid-template-columns:52px 1fr 52px minmax(0,1.5fr);gap:11px;align-items:center;
+padding:7px 0;border-bottom:1px solid var(--line)}
+.drow2:last-child{border-bottom:0}
+.dw{font-size:12.5px;font-weight:600;color:var(--ink2)}
+.dbar{height:11px;background:var(--s2);border-radius:5px;overflow:hidden}
+.dbar i{display:block;height:100%;border-radius:5px}
+.dbar .pos{background:linear-gradient(90deg,#2a6b45,var(--good))}
+.dbar .neg{background:linear-gradient(90deg,#7a3a37,var(--bad))}
+.dv{font-size:12.5px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.dt{font-size:11.5px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ovwrap{display:flex;align-items:flex-end;gap:3px;height:90px}
+.ov{flex:1;background:linear-gradient(180deg,var(--acc),#55442a);border-radius:2px 2px 0 0;min-height:3px}
+.ovax{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink3);margin-top:5px}
+.cards{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:11px;padding:13px 15px}
+.card h3{margin:0 0 5px;font-size:14.5px}
+.card p{margin:0;font-size:12.5px;color:var(--ink2);line-height:1.5}
+.card .big{font-size:24px;font-weight:700;letter-spacing:-.02em;display:block;margin-bottom:2px;
+font-variant-numeric:tabular-nums}
+.card .cap{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);display:block;margin-bottom:8px}
+@media (max-width:660px){.wrap{padding:22px 13px 60px}h1{font-size:22px}h2{font-size:17px}
+.drow2{grid-template-columns:46px 1fr 48px}.dt{display:none}}
+</style>
+<div class="wrap">
+<h1>Comparing plans across a whole season</h1>
+<p class="lede">Three plans run over all 38 gameweeks — pick a fifteen, then move forward
+week by week making transfers and playing chips. Real projections from the site's engine,
+a rolling planner that actually makes the transfers, and 20,000 simulated seasons each.</p>
+<p class="meta">Every transfer below was chosen by a five-gameweek-horizon greedy planner
+under real budget and three-per-club rules, not written by hand · chips priced at what
+they return in the week they are played</p>
+
+<section>
+<span class="tag">The whole season at once</span>
+<h2>A plan is a strip, not a spreadsheet</h2>
+<p class="sub">Thirty-eight weeks per plan. Gold is a chip, dark amber a transfer, blank a
+week you left alone. The entire shape of a season fits in one row.</p>
+<div class="scroll" style="padding:12px 14px"><div class="striphd"><span></span><span>GW1</span><span>GW38</span><span></span></div><div class="striprow"><span class="sn"><b style="color:#a8871f">Anchor</b><em>19 transfers · 0 hit pts</em></span><span class="strip"><span class="sc" title="GW1: 57.7 pts"></span><span class="sc tr" title="GW2: 58.9 pts — Szoboszlai → Enzo">·</span><span class="sc tr" title="GW3: 56.0 pts — Mbeumo → Gibbs-White">·</span><span class="sc" title="GW4: 56.1 pts"></span><span class="sc" title="GW5: 57.2 pts"></span><span class="sc" title="GW6: 54.6 pts"></span><span class="sc" title="GW7: 55.1 pts"></span><span class="sc tr" title="GW8: 55.8 pts — Welbeck → Calvert-Lewin">·</span><span class="sc chip" title="GW9: 51.7 pts — WC played — Thiaw → Van Hecke; Thiago → Watkins">WC</span><span class="sc tr" title="GW10: 55.8 pts — Guéhi → Truffert">·</span><span class="sc" title="GW11: 54.7 pts"></span><span class="sc" title="GW12: 55.8 pts"></span><span class="sc tr" title="GW13: 54.2 pts — Watkins → Thiago">·</span><span class="sc tr" title="GW14: 59.2 pts — Gibbs-White → Mbeumo">·</span><span class="sc chip" title="GW15: 67.5 pts — BB played — Truffert → Guéhi">BB</span><span class="sc tr" title="GW16: 55.5 pts — Mbeumo → Gibbs-White">·</span><span class="sc" title="GW17: 57.0 pts"></span><span class="sc tr" title="GW18: 56.6 pts — Van Hecke → Thiaw">·</span><span class="sc" title="GW19: 56.8 pts"></span><span class="sc" title="GW20: 55.4 pts"></span><span class="sc" title="GW21: 56.7 pts"></span><span class="sc tr" title="GW22: 53.3 pts — Thiaw → Van Hecke">·</span><span class="sc" title="GW23: 54.3 pts"></span><span class="sc" title="GW24: 54.7 pts"></span><span class="sc tr" title="GW25: 55.2 pts — Gibbs-White → Szoboszlai">·</span><span class="sc chip" title="GW26: 60.0 pts — WC played — Van Hecke → Lacroix">WC</span><span class="sc" title="GW27: 52.5 pts"></span><span class="sc" title="GW28: 59.3 pts"></span><span class="sc tr" title="GW29: 55.8 pts — Guéhi → Thiaw">·</span><span class="sc chip" title="GW30: 60.4 pts — TC played — Szoboszlai → Mbeumo">TC</span><span class="sc" title="GW31: 58.9 pts"></span><span class="sc tr" title="GW32: 57.8 pts — Lacroix → Truffert">·</span><span class="sc tr" title="GW33: 56.7 pts — Mbeumo → Gibbs-White">·</span><span class="sc" title="GW34: 55.3 pts"></span><span class="sc tr" title="GW35: 55.0 pts — Truffert → Guéhi">·</span><span class="sc" title="GW36: 55.6 pts"></span><span class="sc" title="GW37: 56.3 pts"></span><span class="sc" title="GW38: 57.1 pts"></span></span><span class="stot">2147</span></div><div class="striprow"><span class="sn"><b style="color:#3a8ec6">Early pivot</b><em>24 transfers · 0 hit pts</em></span><span class="strip"><span class="sc" title="GW1: 57.7 pts"></span><span class="sc tr" title="GW2: 58.9 pts — Szoboszlai → Enzo">·</span><span class="sc tr" title="GW3: 56.0 pts — Mbeumo → Gibbs-White">·</span><span class="sc" title="GW4: 56.1 pts"></span><span class="sc chip" title="GW5: 57.2 pts — WC played">WC</span><span class="sc" title="GW6: 54.6 pts"></span><span class="sc" title="GW7: 55.1 pts"></span><span class="sc tr" title="GW8: 55.8 pts — Welbeck → Calvert-Lewin">·</span><span class="sc" title="GW9: 52.8 pts"></span><span class="sc tr" title="GW10: 55.6 pts — Thiago → Watkins">·</span><span class="sc tr" title="GW11: 54.2 pts — Guéhi → Van Hecke">·</span><span class="sc chip" title="GW12: 61.9 pts — TC played — Van Hecke → Guéhi">TC</span><span class="sc tr" title="GW13: 54.4 pts — Watkins → Thiago">·</span><span class="sc tr" title="GW14: 58.6 pts — Gibbs-White → Mbeumo">·</span><span class="sc tr" title="GW15: 54.3 pts — Mbeumo → Szoboszlai">·</span><span class="sc tr" title="GW16: 56.0 pts — Thiaw → Truffert">·</span><span class="sc" title="GW17: 57.8 pts"></span><span class="sc" title="GW18: 56.1 pts"></span><span class="sc" title="GW19: 57.3 pts"></span><span class="sc tr" title="GW20: 54.8 pts — Rice → Gibbs-White">·</span><span class="sc chip" title="GW21: 57.8 pts — WC played — Gibbs-White → Rice; Szoboszlai → E.Le Fée; Virgil → Gabriel">WC</span><span class="sc" title="GW22: 54.2 pts"></span><span class="sc tr" title="GW23: 53.9 pts — Gabriel → Virgil">·</span><span class="sc tr" title="GW24: 53.4 pts — Calvert-Lewin → João Pedro">·</span><span class="sc tr" title="GW25: 54.7 pts — Rice → Szoboszlai">·</span><span class="sc tr" title="GW26: 60.4 pts — Beto → Calvert-Lewin">·</span><span class="sc" title="GW27: 52.6 pts"></span><span class="sc" title="GW28: 59.8 pts"></span><span class="sc tr" title="GW29: 56.6 pts — Truffert → Thiaw">·</span><span class="sc tr" title="GW30: 55.6 pts — Szoboszlai → Rice">·</span><span class="sc tr" title="GW31: 57.9 pts — Enzo → Garner">·</span><span class="sc tr" title="GW32: 57.3 pts — João Pedro → Watkins">·</span><span class="sc chip" title="GW33: 72.1 pts — BB played">BB</span><span class="sc" title="GW34: 54.8 pts"></span><span class="sc" title="GW35: 55.4 pts"></span><span class="sc tr" title="GW36: 56.2 pts — Watkins → João Pedro">·</span><span class="sc tr" title="GW37: 56.0 pts — Rice → Gibbs-White">·</span><span class="sc" title="GW38: 56.8 pts"></span></span><span class="stot">2150</span></div><div class="striprow"><span class="sn"><b style="color:#c85d84">Churn</b><em>34 transfers · 0 hit pts</em></span><span class="strip"><span class="sc tr" title="GW1: 57.5 pts — Szoboszlai → Enzo">·</span><span class="sc" title="GW2: 58.9 pts"></span><span class="sc tr" title="GW3: 56.0 pts — Mbeumo → Gibbs-White">·</span><span class="sc" title="GW4: 56.1 pts"></span><span class="sc" title="GW5: 57.2 pts"></span><span class="sc" title="GW6: 54.6 pts"></span><span class="sc tr" title="GW7: 56.0 pts — Thiaw → Van Hecke; Tarkowski → Truffert">·</span><span class="sc tr" title="GW8: 55.8 pts — Beto → Calvert-Lewin">·</span><span class="sc chip" title="GW9: 51.7 pts — WC played — Guéhi → Tarkowski; Thiago → Watkins">WC</span><span class="sc tr" title="GW10: 56.3 pts — Gibbs-White → Mbeumo">·</span><span class="sc" title="GW11: 54.6 pts"></span><span class="sc tr" title="GW12: 55.8 pts — Mbeumo → Gibbs-White">·</span><span class="sc tr" title="GW13: 54.4 pts — Watkins → Thiago">·</span><span class="sc tr" title="GW14: 59.7 pts — Van Hecke → Thiaw; Gibbs-White → Mbeumo">·</span><span class="sc chip" title="GW15: 67.2 pts — BB played — Mbeumo → Szoboszlai">BB</span><span class="sc tr" title="GW16: 56.0 pts — Thiaw → Guéhi">·</span><span class="sc" title="GW17: 57.8 pts"></span><span class="sc tr" title="GW18: 56.3 pts — Szoboszlai → E.Le Fée">·</span><span class="sc tr" title="GW19: 57.1 pts — Enzo → Gibbs-White">·</span><span class="sc tr" title="GW20: 55.7 pts — E.Le Fée → Garner">·</span><span class="sc" title="GW21: 56.5 pts"></span><span class="sc tr" title="GW22: 52.5 pts — Gibbs-White → Enzo; Garner → Szoboszlai">·</span><span class="sc tr" title="GW23: 54.8 pts — Truffert → Van Hecke">·</span><span class="sc tr" title="GW24: 54.1 pts — Van Hecke → F.Kadıoğlu">·</span><span class="sc tr" title="GW25: 55.2 pts — F.Kadıoğlu → Truffert">·</span><span class="sc chip" title="GW26: 60.1 pts — WC played">WC</span><span class="sc" title="GW27: 52.6 pts"></span><span class="sc tr" title="GW28: 58.8 pts — Truffert → Thiaw; Rice → Mbeumo">·</span><span class="sc tr" title="GW29: 56.7 pts — Guéhi → Van Hecke">·</span><span class="sc chip" title="GW30: 59.9 pts — TC played — Szoboszlai → Rice">TC</span><span class="sc tr" title="GW31: 57.8 pts — Enzo → Garner">·</span><span class="sc tr" title="GW32: 58.5 pts — Virgil → Gabriel">·</span><span class="sc tr" title="GW33: 57.9 pts — Mbeumo → Gibbs-White">·</span><span class="sc tr" title="GW34: 55.5 pts — Van Hecke → Andersen">·</span><span class="sc" title="GW35: 56.4 pts"></span><span class="sc tr" title="GW36: 56.1 pts — Tarkowski → Guéhi">·</span><span class="sc tr" title="GW37: 57.3 pts — Andersen → N.Williams">·</span><span class="sc tr" title="GW38: 56.9 pts — Guéhi → Tarkowski; Thiago → João Pedro">·</span></span><span class="stot">2152</span></div></div><div class="key"><span><i class="kchip"></i>chip played</span><span><i class="ktr"></i>transfer made</span><span><i class="knone"></i>no move</span></div>
+<div class="note"><b>Scale changes what the view has to do.</b> Six weeks can be a table.
+Thirty-eight cannot — three plans is 114 gameweeks of detail, and nobody reads that. The
+strip is deliberately almost content-free: it shows <i>when</i> you act, not what you did,
+because at season scale the rhythm is the plan. Everything else is a drill-down.</div>
+</section>
+
+<section>
+<span class="tag">The finding</span>
+<h2>Thirty-eight weeks of different planning is worth 5.7 points</h2>
+<div class="cards">
+<div class="card"><span class="cap">Best minus worst plan</span><span class="big">5.7</span>
+<p>Across a whole season, with 34 transfers in one plan and
+19 in another.</p></div>
+<div class="card"><span class="cap">Range within one plan</span><span class="big">170</span>
+<p>10th to 90th percentile of the same plan played 20,000 times. Nothing changed but luck.</p></div>
+<div class="card"><span class="cap">Plan choice as a share of variance</span>
+<span class="big">3.4%</span>
+<p>What your planning controls, against what it does not.</p></div>
+</div>
+<div class="note"><b>This is the number the category refuses to print.</b> Every season
+planner on the market is built to make you feel that the difference between plans is the
+difference between seasons. On these projections it is <b>5.7 points in
+2147</b> — a fifth of a single good captaincy week, spread over
+nine months. A comparison feature that cannot say that is marketing.</div>
+</section>
+
+<section>
+<span class="tag">Divergence</span>
+<h2>How far apart the plans ever get</h2>
+<p class="sub">Running difference from the Anchor plan. The grey cone is the spread two
+identical plans would show anyway, from luck alone, widening with the square root of
+gameweeks played.</p>
+<div class="scroll"><svg viewBox="0 0 760 250" class="chart" role="img" aria-label="Cumulative difference from the Anchor plan, against the noise band"><line x1="46" x2="740" y1="186.4" y2="186.4" class="grid"/><text x="40" y="189.9" class="axl r">-60</text><line x1="46" x2="740" y1="153.2" y2="153.2" class="grid"/><text x="40" y="156.7" class="axl r">-30</text><line x1="46" x2="740" y1="86.8" y2="86.8" class="grid"/><text x="40" y="90.3" class="axl r">+30</text><line x1="46" x2="740" y1="53.6" y2="53.6" class="grid"/><text x="40" y="57.1" class="axl r">+60</text><polygon points="56.0,104.6 74.5,98.2 93.0,93.2 111.5,89.1 129.9,85.5 148.4,82.2 166.9,79.1 185.4,76.3 203.9,73.7 222.4,71.1 240.9,68.8 259.4,66.5 277.8,64.3 296.3,62.2 314.8,60.2 333.3,58.2 351.8,56.3 370.3,54.5 388.8,52.7 407.2,50.9 425.7,49.2 444.2,47.5 462.7,45.9 481.2,44.3 499.7,42.8 518.2,41.2 536.6,39.7 555.1,38.2 573.6,36.8 592.1,35.4 610.6,34.0 629.1,32.6 647.6,31.2 666.1,29.9 684.5,28.6 703.0,27.3 721.5,26.0 740.0,24.8 740.0,215.2 721.5,214.0 703.0,212.7 684.5,211.4 666.1,210.1 647.6,208.8 629.1,207.4 610.6,206.0 592.1,204.6 573.6,203.2 555.1,201.8 536.6,200.3 518.2,198.8 499.7,197.2 481.2,195.7 462.7,194.1 444.2,192.5 425.7,190.8 407.2,189.1 388.8,187.3 370.3,185.5 351.8,183.7 333.3,181.8 314.8,179.8 296.3,177.8 277.8,175.7 259.4,173.5 240.9,171.2 222.4,168.9 203.9,166.3 185.4,163.7 166.9,160.9 148.4,157.8 129.9,154.5 111.5,150.9 93.0,146.8 74.5,141.8 56.0,135.4" fill="#a9a294" opacity=".10"/><line x1="46" x2="740" y1="120.0" y2="120.0" stroke="#777064" stroke-width="1.2"/><polyline points="56.0,120.0 74.5,120.0 93.0,120.0 111.5,120.0 129.9,120.0 148.4,120.0 166.9,120.0 185.4,120.0 203.9,118.8 222.4,119.0 240.9,119.7 259.4,112.8 277.8,112.5 296.3,113.1 314.8,128.0 333.3,127.4 351.8,126.5 370.3,127.1 388.8,126.5 407.2,127.3 425.7,126.0 444.2,125.0 462.7,125.4 481.2,126.9 499.7,127.6 518.2,127.1 536.6,127.0 555.1,126.5 573.6,125.4 592.1,130.9 610.6,132.1 629.1,132.6 647.6,115.6 666.1,116.1 684.5,115.6 703.0,115.0 721.5,115.3 740.0,115.7" fill="none" stroke="#3a8ec6" stroke-width="2.2"/><polyline points="56.0,120.2 74.5,120.2 93.0,120.3 111.5,120.2 129.9,120.3 148.4,120.3 166.9,119.3 185.4,119.3 203.9,119.2 222.4,118.8 240.9,119.0 259.4,119.0 277.8,118.6 296.3,118.1 314.8,118.6 333.3,118.0 351.8,117.0 370.3,117.3 388.8,117.0 407.2,116.9 425.7,116.9 444.2,117.8 462.7,117.2 481.2,117.9 499.7,118.0 518.2,117.8 536.6,117.7 555.1,118.2 573.6,117.0 592.1,117.7 610.6,118.9 629.1,118.1 647.6,116.8 666.1,116.6 684.5,115.1 703.0,114.6 721.5,113.5 740.0,113.7" fill="none" stroke="#c85d84" stroke-width="2.2"/><text x="56.0" y="235.0" class="axl">GW1</text><text x="222.4" y="235.0" class="axl">GW10</text><text x="407.2" y="235.0" class="axl">GW20</text><text x="592.1" y="235.0" class="axl">GW30</text><text x="740.0" y="235.0" class="axl">GW38</text></svg></div><div class="key"><span><i style="background:#3a8ec6"></i>Early pivot vs Anchor</span><span><i style="background:#c85d84"></i>Churn vs Anchor</span><span><i style="background:#3a3630"></i>range a coin-flip season would produce</span></div>
+<div class="note"><b>The lines never leave the cone.</b> Every plan spends the season
+inside the range that pure variance would produce between two copies of the <i>same</i>
+plan — so at no point in 38 weeks is the difference between them distinguishable from
+noise. Drawing the cone is what turns a comparison chart from a scoreboard into an
+honest instrument, and it is one line of maths nobody else puts on the screen.</div>
+</section>
+
+<section>
+<span class="tag">Decision points</span>
+<h2>The six weeks that actually moved the gap</h2>
+<p class="sub">Week-on-week change in the difference between Anchor and Early pivot,
+largest first.</p>
+<div class="scroll" style="padding:10px 14px"><div class="drow2"><span class="dw">GW33</span><span class="dbar"><i class="pos" style="width:96%"></i></span><span class="dv">+15.4</span><span class="dt">Early pivot plays BB</span></div><div class="drow2"><span class="dw">GW15</span><span class="dbar"><i class="neg" style="width:84%"></i></span><span class="dv">-13.4</span><span class="dt">Anchor plays BB, Churn plays BB</span></div><div class="drow2"><span class="dw">GW12</span><span class="dbar"><i class="pos" style="width:39%"></i></span><span class="dv">+6.2</span><span class="dt">Early pivot plays TC</span></div><div class="drow2"><span class="dw">GW30</span><span class="dbar"><i class="neg" style="width:31%"></i></span><span class="dv">-4.9</span><span class="dt">Anchor plays TC, Churn plays TC</span></div><div class="drow2"><span class="dw">GW24</span><span class="dbar"><i class="neg" style="width:8%"></i></span><span class="dv">-1.3</span><span class="dt">transfers only</span></div><div class="drow2"><span class="dw">GW21</span><span class="dbar"><i class="pos" style="width:8%"></i></span><span class="dv">+1.2</span><span class="dt">Early pivot plays WC</span></div></div>
+<div class="note"><b>Every one of the top four is a chip week.</b> GW33 and GW15 are the
+two plans' Bench Boosts, GW12 and GW30 their Triple Captains — worth
+15.4 and 13.4 points against a whole
+season of transfer decisions worth 5.7. That is the actionable conclusion of the
+entire exercise: <b>at season scale the only decisions with real leverage are the chips</b>,
+so a season comparison should lead with chip placement and treat transfer policy as
+texture. Every planner I have seen does the opposite.</div>
+</section>
+
+<section>
+<span class="tag">Convergence</span>
+<h2>Plans agree more than they look like they do</h2>
+<p class="sub">Players shared between Anchor and Early pivot, every second gameweek.
+Fifteen of fifteen at the start.</p>
+<div class="scroll" style="padding:14px"><div class="ovwrap"><span class="ov" title="GW2: 15 of 15 players shared" style="height:100%"></span><span class="ov" title="GW4: 15 of 15 players shared" style="height:100%"></span><span class="ov" title="GW6: 15 of 15 players shared" style="height:100%"></span><span class="ov" title="GW8: 15 of 15 players shared" style="height:100%"></span><span class="ov" title="GW10: 13 of 15 players shared" style="height:87%"></span><span class="ov" title="GW12: 13 of 15 players shared" style="height:87%"></span><span class="ov" title="GW14: 13 of 15 players shared" style="height:87%"></span><span class="ov" title="GW16: 13 of 15 players shared" style="height:87%"></span><span class="ov" title="GW18: 13 of 15 players shared" style="height:87%"></span><span class="ov" title="GW20: 13 of 15 players shared" style="height:87%"></span><span class="ov" title="GW22: 12 of 15 players shared" style="height:80%"></span><span class="ov" title="GW24: 12 of 15 players shared" style="height:80%"></span><span class="ov" title="GW26: 12 of 15 players shared" style="height:80%"></span><span class="ov" title="GW28: 12 of 15 players shared" style="height:80%"></span><span class="ov" title="GW30: 12 of 15 players shared" style="height:80%"></span><span class="ov" title="GW32: 11 of 15 players shared" style="height:73%"></span><span class="ov" title="GW34: 11 of 15 players shared" style="height:73%"></span><span class="ov" title="GW36: 12 of 15 players shared" style="height:80%"></span><span class="ov" title="GW38: 12 of 15 players shared" style="height:80%"></span></div><div class="ovax"><span>GW2</span><span>GW38</span></div></div>
+<div class="note"><b>They never really part.</b> Two plans built on different wildcard
+timing still hold <b>12 of 15 players</b> by the end of the season, because both are
+chasing the same projections and converge on the same answers. Worth drawing precisely
+because it is counter-intuitive: the feeling of a plan is that it is <i>yours</i>, and
+the measurement is that it is mostly everyone's.</div>
+</section>
+
+<section>
+<span class="tag">Honesty</span>
+<h2>What a 38-week projection is and is not</h2>
+<div class="cards">
+<div class="card"><h3>Priced by the market: 1 week</h3>
+<p>Bookmakers have GW1. Everything from GW2 is our own team strength, which is why the
+accumulating odds fit matters more than any planning feature.</p></div>
+<div class="card"><h3>Blanks and doubles: unknown</h3>
+<p>All 38 gameweeks currently have exactly 10 fixtures. The cup rounds that create the
+blanks and doubles a chip plan is built around have not been drawn. Any chip placed
+beyond about GW20 today is a placeholder.</p></div>
+<div class="card"><h3>Squad turnover: ignored</h3>
+<p>The planner assumes today's prices and no injuries. Neither survives contact with a
+season, and both matter more than the transfer policy being compared.</p></div>
+</div>
+<div class="note"><b>So what is a season plan for?</b> Not prediction. It is for finding
+the weeks that will need a decision, and for placing chips where the fixture structure —
+not the projection — says they belong. The comparison is worth building because it makes
+that distinction visible: the strip shows where you act, the cone shows that most of it
+does not matter, and the decision points show the four weeks that do. That is a genuinely
+different product from a solver that hands you an optimum and lets you believe it.</div>
+</section>
+</div>
