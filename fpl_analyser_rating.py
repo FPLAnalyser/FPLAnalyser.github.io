@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 import os
 
+from dc_rules import DC_THR
+
 # ── Paths ─────────────────────────────────────────────────────────────────────
 DATA_DIR = os.environ.get("FPL_DATA_DIR") or "./data"
 # CHANGED: enriched dataset replaces player_gw_history.csv (superset of its columns)
@@ -100,10 +102,16 @@ def pts_per_game(group):
     return round(games["total_points"].mean(), 3) if len(games) > 0 else 0
 
 def dc_hit_rate(group, position):
-    threshold = 10 if position == "DEF" else 12
+    """Share of these appearances that reached the def-con threshold.
+
+    The threshold lives in dc_rules.py, not here — it used to be written out
+    in this function AND in build_xp_model.py, which is one FPL rule change
+    away from the rating and the projection disagreeing about the same player
+    with nothing to show it."""
     if "defensive_contribution" not in group.columns:
         return 0
-    return float((group["defensive_contribution"] >= threshold).mean())
+    thr = DC_THR.get(position, 99)
+    return float((group["defensive_contribution"].fillna(0) >= thr).mean())
 
 def minutes_scores(group):
     total_games = len(group)

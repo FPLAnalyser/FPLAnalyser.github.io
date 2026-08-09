@@ -222,7 +222,19 @@ function componentXp(
     : (o ? o.att / lg.att : 1) * (home ? 1 / hA : hA)
 
   const emf = p.p60 + 0.5 * Math.max(p.ppl - p.p60, 0)
-  const dcMult = model.dcCurve[pos]?.[String(fix.fdr)] ?? 1
+
+  /* Def-con responds to how much defending there is to do, so it scales on the
+     attacking pressure the team faces relative to the league — the same
+     quantity build_xp_model.py fits the slope against, computed the same way.
+     Market goals-against where the fixture is priced; opponent attack and
+     venue otherwise. Not FDR: that is an editorial 1–5 that exists for no
+     historical fixture, so the curve keyed on it could never be refitted. */
+  const press = mkt ? mkt.against / lg.def
+    : (o ? o.att / lg.att : 1) * (home ? 1 / hA : hA)
+  const cur = model.dcCurve[pos] as Record<string, number> | undefined
+  const dcMult = typeof cur?.beta === 'number'
+    ? Math.pow(Math.max(press, 0.2), cur.beta)
+    : cur?.[String(fix.fdr)] ?? 1   // pre-2026 files still carry the FDR table
 
   const lamGoal = p.xg90 * attScale * matchup * emf
   const lamAssist = p.xa90 * attScale * emf
