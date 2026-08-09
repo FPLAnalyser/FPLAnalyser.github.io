@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Icon } from './Icon'
+import { PreviewBadge } from './PreviewBadge'
 import { OnboardingModal } from './OnboardingModal'
 import { ThemeSwitcher } from './ThemeSwitcher'
 import { SeasonSwitcher } from './SeasonSwitcher'
@@ -135,6 +136,8 @@ export function Layout() {
       {/* No animated route transition: content must never depend on the
           animation engine to become visible (it silently fails on some WebKit
           versions, leaving pages mounted but at opacity 0). */}
+      <PreviewBadge />
+
       <PullToRefresh>
         <main className="pb-[calc(env(safe-area-inset-bottom)+76px)] md:pb-[env(safe-area-inset-bottom)]">
           <Outlet />

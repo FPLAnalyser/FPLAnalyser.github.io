@@ -2,11 +2,28 @@
 
 Short file on purpose. Only things that change what you do.
 
-## Ship to `main`
+## Ship to `main` — but not everything
 
-**Push straight to `main`.** The site deploys from `main` via *Deploy to GitHub
-Pages*; anything on a feature branch is invisible to the owner, who checks the
-live site. Work sitting unmerged on a branch is work that looks undone.
+**Small, finished, verified work goes straight to `main`.** The site deploys
+from `main` via *Deploy to GitHub Pages*; a fix sitting unmerged on a branch is
+a fix that looks undone.
+
+**Anything half-built goes on a branch and gets a preview.** This rule used to
+have no exception, and it was written before anyone could reach the site. Now
+they can, so a new page landing on `main` in pieces is a broken live site, not
+an untidy repo.
+
+Push the branch and *Publish preview* builds it to a separate Pages site —
+new code against `main`'s live data, no analytics, `Disallow: /`, and a corner
+badge naming the branch so it cannot be mistaken for production. Nothing in
+that workflow can deploy to `fplanalyser.co.uk`. See `docs/PREVIEW.md`; it is
+inert until `PREVIEW_REPO` is set.
+
+Rebase the branch on `main` often — the scheduled refreshes commit to `main`
+several times a day, and a branch that carries its own `site_data` conflicts on
+every one. The preview build sidesteps this by taking `site_data` from `main`
+regardless of what the branch holds, so a stale branch still previews against
+today's odds.
 
 `main` also receives scheduled data-refresh commits (odds, availability, images)
 several times a day, so **fetch and rebase before pushing** rather than merging

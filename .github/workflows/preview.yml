@@ -1,0 +1,113 @@
+name: Publish preview
+
+# A full copy of the site, built from any branch that is not main, published to
+# a separate GitHub Pages site. The point is to look at unfinished work on a
+# real phone on a real network without it being the live site.
+#
+# It is a SEPARATE workflow from deploy.yml on purpose. Adding a second branch
+# to that file's trigger would put a dev build one `if:` typo away from being
+# published to fplanalyser.co.uk. Nothing in this file can deploy to
+# production; nothing in deploy.yml depends on this one.
+#
+# Two decisions worth knowing about:
+#
+#   * site_data comes from MAIN, not from the branch. The scheduled refreshes
+#     commit odds, availability and squads to main several times a day, so a
+#     branch that carries its own copy conflicts on every rebase and drifts
+#     stale in between. Taking the data from main means a preview always shows
+#     NEW CODE against LIVE DATA, which is the thing you actually want to check,
+#     and there is never a data conflict to resolve.
+#
+#   * analytics are not passed through. VITE_GOATCOUNTER is deliberately absent
+#     below, so a preview counts nothing and the privacy notice on it is true
+#     for the same reason a local build's is — it reads the same flag.
+
+on:
+  push:
+    branches-ignore: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    # Unset the variable and previews quietly stop being a thing, exactly as
+    # the mirror does.
+    if: ${{ vars.PREVIEW_REPO != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # New code, live data — see the note at the top.
+      - name: Take site_data from main
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          git checkout origin/main -- site_data
+          echo "site_data now at $(git rev-parse --short origin/main) (main)"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          VITE_FPL_PROXY: ${{ vars.VITE_FPL_PROXY }}
+          VITE_SUPPORT_URL: ${{ vars.VITE_SUPPORT_URL }}
+          # Marks the build so the app can say, on screen, that it is not live.
+          VITE_PREVIEW: ${{ github.ref_name }}
+          # VITE_GOATCOUNTER intentionally omitted — previews count nothing.
+
+      - name: Make it unpublishable to search engines
+        run: |
+          set -euo pipefail
+          # A preview on a public host is still a public host. Half-built pages
+          # indexed under a second domain would split the site's search
+          # identity and hand a crawler more "odds"-flavoured copy to
+          # categorise — see docs/DOMAIN_CATEGORISATION.md.
+          printf 'User-agent: *\nDisallow: /\n' > dist/robots.txt
+          rm -f dist/sitemap.xml
+          # Two Pages sites cannot both claim the custom domain.
+          rm -f dist/CNAME
+
+      - name: Publish to the preview site
+        env:
+          PREVIEW_REPO: ${{ vars.PREVIEW_REPO }}
+          PREVIEW_TOKEN: ${{ secrets.PREVIEW_TOKEN }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PREVIEW_TOKEN}" ]; then
+            echo "::error::PREVIEW_REPO is set but PREVIEW_TOKEN is not — nothing to push with."
+            exit 1
+          fi
+          # Same two-call check the mirror job uses: git reports "Repository not
+          # found" for a repo that does not exist and for one the token cannot
+          # see, which leaves you guessing between them.
+          code() { curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$@"; }
+          API="https://api.github.com/repos/${PREVIEW_REPO}"
+          anon=$(code "$API")
+          auth=$(code -H "Authorization: Bearer ${PREVIEW_TOKEN}" "$API")
+          echo "repo visibility: anonymous=${anon} as-token=${auth}"
+          if [ "$auth" != "200" ]; then
+            echo "::error::${PREVIEW_REPO} is not readable with PREVIEW_TOKEN (anon ${anon}, token ${auth}). Check the repo exists under that exact name and is public, and that the token's Resource owner is the org that owns it — that cannot be changed after creation, so it has to be reissued."
+            exit 1
+          fi
+          cd dist
+          git init -q
+          git config user.name "FPL Analyser"
+          git config user.email "224126997+FPLAnalyser@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Preview of ${BRANCH} at ${GITHUB_SHA::7}"
+          git push -q --force \
+            "https://x-access-token:${PREVIEW_TOKEN}@github.com/${PREVIEW_REPO}.git" \
+            HEAD:main
+          echo "published ${BRANCH} → https://${PREVIEW_REPO%%/*}.github.io"

@@ -27,7 +27,23 @@ const ALLOW = [
   /^\/api\/leagues-classic\/\d+\/standings\/$/,
 ]
 
-/** Origins allowed to read a response. Add a custom domain here when you have one. */
+/** The preview site, if one exists — set this to the Pages origin you created
+ *  for it (see docs/PREVIEW.md) and redeploy, or leave it empty.
+ *
+ *  It is a named constant rather than another line in the list below because
+ *  the empty case has to be safe: '' is filtered out, so an unconfigured
+ *  preview matches nothing rather than matching every origin whose header is
+ *  missing. */
+const PREVIEW_ORIGIN = ''
+
+/** Origins allowed to read a response. Add a custom domain here when you have one.
+ *
+ *  Exact match, deliberately — no wildcards, no suffix tests. This relay runs on
+ *  our Cloudflare account, so an origin check that admits `*.pages.dev` or
+ *  `*.github.io` would let anyone who can deploy to those hosts route their
+ *  traffic through it. That is also why the preview site is a fixed address
+ *  rather than per-branch URLs: per-branch previews are only reachable behind a
+ *  wildcard, and the wildcard is the thing worth avoiding. */
 const ORIGINS = [
   'https://fplanalyser.co.uk',
   'https://www.fplanalyser.co.uk',
@@ -36,10 +52,11 @@ const ORIGINS = [
   // build, different origin — so it needs listing here or every live call from
   // it fails CORS. See docs/DOMAIN_CATEGORISATION.md.
   'https://mirror03.github.io',
+  PREVIEW_ORIGIN,
   'http://localhost:4173',
   'http://localhost:4177',
   'http://localhost:5173',
-]
+].filter(Boolean)
 
 /** How long the edge may reuse a response. Manager picks change at most once a
  *  gameweek; a minute of cache turns a viral spike into a handful of origin
