@@ -10,7 +10,7 @@ import { FixtureChips, FixtureNames } from '../components/FixtureChips'
 import { ShareFooter } from '../components/ShareFooter'
 import { SeasonPlanner } from '../components/SeasonPlanner'
 import { SquadLab } from '../components/SquadLab'
-import { SquadLadder } from '../components/SquadLadder'
+import { SquadAnalysis } from '../components/SquadAnalysis'
 import { Icon } from '../components/Icon'
 import { Pitch, PitchCard, BenchSpine, CARD_W } from '../components/Pitch'
 import { PlayerCardSheet } from '../components/PlayerCardSheet'
@@ -24,6 +24,7 @@ import { rasterise } from '../lib/capture'
 import { SHARE_FORMATS, frameHeight, drawFitted, type FormatId } from '../lib/frames'
 import { deliverImage } from '../lib/share'
 import { num } from '../lib/rows'
+import { useDiffScale } from '../lib/fixtureRuns'
 import { useAvailability, availBadge, availFor, SEV_COLOUR, type Availability } from '../lib/availability'
 import { xpForGw, useXpModel, useMarketOdds, useShotProfiles } from '../lib/xp'
 import { usePlanner } from '../lib/usePlanner'
@@ -240,8 +241,16 @@ export default function SquadBuilder() {
   // the empty place waits to be filled, or pick the player coming in first
   // and choose who makes way for him.
   const [pendingIn, setPendingIn] = useState<RatingRow | null>(null)
+  /* Build the squad, or read it. The analysis used to sit in the right-hand
+     column under the transfer market, which made a laptop scroll past the
+     pitch to reach it and a phone scroll past everything. It is a different
+     job from picking, so it gets its own tab rather than more page. */
+  const [view, setView] = useState<'build' | 'insights'>('build')
 
   const avail = useAvailability()
+  // The site's own fixture difficulty — the turn map colours by it, so its
+  // greens mean the same thing as the Fixtures page's greens.
+  const diffScale = useDiffScale(data)
   const listXpModel = useXpModel()
   const listMarket = useMarketOdds()
   const listProfiles = useShotProfiles()
@@ -430,7 +439,37 @@ export default function SquadBuilder() {
     <PageShell>
       <SectionBanner imgKey="squad" title="Squad Builder" subtitle={`Pick your Gameweek ${buildGw} fifteen within £100m, then step forward week by week — transfers, captain and chips`} />
 
-      <>
+      {/* Insights only exists once there are fifteen players to read. Offering
+          the tab on an empty squad and landing on empty panels is worse than
+          not offering it, so it appears when the squad does. */}
+      {complete && (
+        <div className="mb-4">
+          <Tabs
+            tabs={[{ id: 'build', label: 'Squad' }, { id: 'insights', label: 'Insights' }]}
+            active={view}
+            onChange={(id) => setView(id as 'build' | 'insights')}
+            layoutId="squad-view"
+          />
+        </div>
+      )}
+
+      {complete && view === 'insights' && (
+        <SquadAnalysis
+          squad={liveChosen}
+          xi={liveXI.length ? liveXI : liveChosen}
+          pool={pool}
+          gws={planner.gws.filter((g) => g >= liveGw).slice(0, 6)}
+          engine={{ fixtureEase, avail, model: listXpModel, market: listMarket, profiles: listProfiles }}
+          fixtureEase={fixtureEase}
+          diffScale={diffScale}
+          bank={Math.max(0, BUDGET - planner.spend)}
+          captain={planner.week?.captain ?? null}
+          seasonToDate={(data?.seasonToDate ?? null) as never}
+          playedGws={Math.max(0, buildGw - 1)}
+        />
+      )}
+
+      <div hidden={complete && view === 'insights'}>
       {/* The right-hand column is the Squad Lab's column, and it is sized for
           the lab rather than for whatever the pitch left over. It steps up with
           the screen: 400 on a small laptop, where 680 of board plus 680 of
@@ -527,19 +566,6 @@ export default function SquadBuilder() {
                 unlimitedTransfers={planner.ft === Infinity}
                 chipSpentAt={planner.chipSpent}
                 onApplyMove={(outEl, inEl) => { planner.doTransfer(outEl, inEl); setPendingIn(null) }}
-              />
-            )}
-            {complete && (
-              <SquadLadder
-                squad={liveChosen}
-                gws={planner.gws.filter((g) => g >= liveGw).slice(0, 6)}
-                engine={{
-                  fixtureEase,
-                  avail,
-                  model: listXpModel,
-                  market: listMarket,
-                  profiles: listProfiles,
-                }}
               />
             )}
           </div>
@@ -709,7 +735,7 @@ export default function SquadBuilder() {
         </div>
       </div>
 
-      </>
+      </div>
 
       {sheetFor && (
         <PlayerCardSheet
