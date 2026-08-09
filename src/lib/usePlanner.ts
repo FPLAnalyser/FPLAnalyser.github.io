@@ -18,6 +18,8 @@ import type { FixtureEaseRow, RatingRow } from './types'
 
 const BUDGET = 100
 const MAX_PER_CLUB = 3
+/** Only used when no plan id is supplied — a caller that predates the plan
+ *  library, or a test. Real use passes `storeKey` from lib/plans. */
 const STORE = 'fpl_planner'
 
 export interface Planner {
@@ -66,11 +68,15 @@ export interface Planner {
   fill: (inEl: number) => void
 }
 
-export function usePlanner({ base, byEl, startGw, fixtureEase, seed }: {
+export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey }: {
   base: number[]
   byEl: Map<number, RatingRow>
   startGw: number
   fixtureEase: FixtureEaseRow[]
+  /** Where these weeks live. One key per plan, so switching plans switches
+   *  the whole week history rather than carrying one plan's captain into
+   *  another's squad. See lib/plans.ts. */
+  storeKey?: string
   /** A lineup to open the first week with instead of auto-picking one —
    *  a squad imported from a screenshot arrives already set out, and
    *  improving on it would silently contradict the picture it came from. */
@@ -89,23 +95,30 @@ export function usePlanner({ base, byEl, startGw, fixtureEase, seed }: {
   const sig = base.join(',')
   const ready = base.length === 15
 
-  const [state, setState] = useState<PlannerState>(() => {
+  const key = storeKey ?? STORE
+  const load = (k: string): PlannerState => {
     try {
-      const raw = localStorage.getItem(STORE)
+      const raw = localStorage.getItem(k)
       if (raw) { const s = JSON.parse(raw); if (s.base?.join(',') === sig) return s }
     } catch { /* ignore */ }
     return { base: [...base], startGw, weeks: {} }
-  })
+  }
+  const [state, setState] = useState<PlannerState>(() => load(key))
   const persist = (s: PlannerState) => {
     setState(s)
-    try { localStorage.setItem(STORE, JSON.stringify(s)) } catch { /* private mode */ }
+    try { localStorage.setItem(key, JSON.stringify(s)) } catch { /* private mode */ }
   }
 
-  // Rebuild from scratch when the base fifteen changes underneath us.
+  /* Rebuild when the fifteen changes underneath us — and that now includes
+     SWITCHING PLAN, where both the key and the base change at once. Reloading
+     from the new key first matters: a plan you have opened before comes back
+     with its weeks, and only a genuinely new fifteen starts empty. */
   useEffect(() => {
-    if (state.base.join(',') !== sig) persist({ base: [...base], startGw, weeks: {} })
+    if (state.base.join(',') === sig) return
+    const stored = load(key)
+    persist(stored.base.join(',') === sig ? stored : { base: [...base], startGw, weeks: {} })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sig])
+  }, [sig, key])
 
   // Materialise the week being viewed: carry the previous lineup forward when
   // those players are all still here, else auto-pick the best legal eleven.

@@ -4,6 +4,7 @@ import { SquadLadder } from './SquadLadder'
 import { Contribution, GoalSources, DefenceConcentration, ClubRisk, MinutesRisk } from './SquadShape'
 import { CaptaincyLadder, CaptaincyVsField, ChipWindows, OwnershipSwing, TransferUpside, FixtureTurnMap, PriceWatch } from './SquadDecisions'
 import { FloorCeiling, ProjectedVsActual, type SeasonRow } from './SquadOutcomes'
+import { SquadCompare, type ComparePlan } from './SquadCompare'
 import { buildSeries, type Engine } from '../lib/squadInsights'
 import { num } from '../lib/rows'
 import type { DiffScale } from '../lib/fixtureRuns'
@@ -27,7 +28,7 @@ import type { RatingRow, FixtureEaseRow } from '../lib/types'
    to the engine on its own.
    ════════════════════════════════════════════════════════════════════════ */
 
-const GROUPS: TabDef[] = [
+const BASE_GROUPS: TabDef[] = [
   { id: 'ladder', label: 'Ladder' },
   { id: 'shape', label: 'Shape' },
   { id: 'outcomes', label: 'Outcomes' },
@@ -36,6 +37,7 @@ const GROUPS: TabDef[] = [
 
 export function SquadAnalysis({
   squad, xi, pool, gws, engine, fixtureEase, diffScale, bank, captain, seasonToDate, playedGws,
+  comparing,
 }: {
   squad: RatingRow[]
   /** The starting eleven — chips and captaincy are eleven-player questions. */
@@ -50,8 +52,17 @@ export function SquadAnalysis({
   captain: number | null
   seasonToDate: SeasonRow[] | null
   playedGws: number
+  /** Plans ticked in the library. Two or more turns on the Compare group. */
+  comparing: ComparePlan[]
 }) {
-  const [group, setGroup] = useState('ladder')
+  const canCompare = comparing.length >= 2
+  const groups = canCompare
+    ? [{ id: 'compare', label: `Compare ${comparing.length}` }, ...BASE_GROUPS]
+    : BASE_GROUPS
+  /* Land on Compare when there is one — you got here by pressing Compare, and
+     showing the ladder for one squad instead is not what was asked for. */
+  const [group, setGroup] = useState(canCompare ? 'compare' : 'ladder')
+  const active = groups.some((g) => g.id === group) ? group : groups[0].id
 
   const gwKey = gws.join(',')
   const { fixtureEase: fe, avail, model, market, profiles } = engine
@@ -65,17 +76,25 @@ export function SquadAnalysis({
   const owned = useMemo(() => new Set(squad.map((r) => num(r, 'element') ?? -1)), [squad])
   const squadTeams = useMemo(() => new Set(squad.map((r) => String(r.team))), [squad])
 
-  if (!gws.length || !series.length) return null
+  if (!gws.length) return null
 
   return (
     <div className="grid gap-4">
-      <Tabs tabs={GROUPS} active={group} onChange={setGroup} layoutId="squad-insights" />
+      <Tabs tabs={groups} active={active} onChange={setGroup} layoutId="squad-insights" />
 
-      {group === 'ladder' && (
+      {active === 'compare' && (
+        <SquadCompare plans={comparing} gws={gws} engine={engine} />
+      )}
+
+      {active !== 'compare' && !series.length && (
+        <p className="text-[13px] text-ink-2">Pick a full fifteen and this fills in.</p>
+      )}
+
+      {active === 'ladder' && !!series.length && (
         <SquadLadder squad={squad} gws={gws} pool={pool} engine={engine} />
       )}
 
-      {group === 'shape' && (
+      {active === 'shape' && !!series.length && (
         <>
           <Contribution squad={series} gws={gws} />
           <GoalSources squad={series} />
@@ -84,7 +103,7 @@ export function SquadAnalysis({
         </>
       )}
 
-      {group === 'outcomes' && (
+      {active === 'outcomes' && !!series.length && (
         <>
           <FloorCeiling squad={series} xiElements={xiElements} gws={gws} captain={captain} />
           <MinutesRisk squad={series} />
@@ -92,7 +111,7 @@ export function SquadAnalysis({
         </>
       )}
 
-      {group === 'decisions' && (
+      {active === 'decisions' && !!series.length && (
         <>
           <CaptaincyLadder squad={series} xiElements={xiElements} gws={gws} />
           <CaptaincyVsField squad={series} xiElements={xiElements} pool={pool} gws={gws} engine={engine} gwIndex={0} gw={gws[0]} />

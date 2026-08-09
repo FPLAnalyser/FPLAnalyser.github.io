@@ -11,6 +11,7 @@ import { ShareFooter } from '../components/ShareFooter'
 import { SeasonPlanner } from '../components/SeasonPlanner'
 import { SquadLab } from '../components/SquadLab'
 import { SquadAnalysis } from '../components/SquadAnalysis'
+import { PlanBar } from '../components/PlanBar'
 import { Icon } from '../components/Icon'
 import { Pitch, PitchCard, BenchSpine, CARD_W } from '../components/Pitch'
 import { PlayerCardSheet } from '../components/PlayerCardSheet'
@@ -25,6 +26,7 @@ import { SHARE_FORMATS, frameHeight, drawFitted, type FormatId } from '../lib/fr
 import { deliverImage } from '../lib/share'
 import { num } from '../lib/rows'
 import { useDiffScale } from '../lib/fixtureRuns'
+import { usePlans, weeksKey } from '../lib/plans'
 import { useAvailability, availBadge, availFor, SEV_COLOUR, type Availability } from '../lib/availability'
 import { xpForGw, useXpModel, useMarketOdds, useShotProfiles } from '../lib/xp'
 import { usePlanner } from '../lib/usePlanner'
@@ -43,7 +45,6 @@ const NEED: Record<Pos, number> = { GKP: 2, DEF: 5, MID: 5, FWD: 3 }
 const POS_LABEL: Record<Pos, string> = { GKP: 'Goalkeepers', DEF: 'Defenders', MID: 'Midfielders', FWD: 'Forwards' }
 const BUDGET = 100.0
 const MAX_PER_CLUB = 3
-const STORE_KEY = 'fpl_squad_build'
 
 const ovOf = (r: RatingRow): number | null => {
   const s = num(r, 'season_overall_score')
@@ -134,9 +135,11 @@ const PRICE_MAX = 15.5 // a hair above the most expensive player so nobody is fi
 export default function SquadBuilder() {
   const { data, error } = useCore()
   const navigate = useNavigate()
-  const [picked, setPicked] = useState<number[]>(() => {
-    try { const s = localStorage.getItem(STORE_KEY); return s ? JSON.parse(s) : [] } catch { return [] }
-  })
+  /* The fifteen now belongs to a PLAN, and there can be several. The library
+     owns the storage — including migrating whatever the old single-squad key
+     held into "Plan 1" — so the page holds no squad of its own. */
+  const plans = usePlans()
+  const picked = useMemo(() => plans.active?.base ?? [], [plans.active])
   const [pickPos, setPickPos] = useState<Pos>('GKP')
   const [metric, setMetric] = useState<Metric>('rating')
   const [sheetFor, setSheetFor] = useState<RatingRow | null>(null)
@@ -281,10 +284,7 @@ export default function SquadBuilder() {
   }, [data])
   const nameOfEl = (el: number) => String(byEl.get(el)?.web_name ?? '')
 
-  const persist = (next: number[]) => {
-    setPicked(next)
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(next)) } catch { /* ignore */ }
-  }
+  const persist = (next: number[]) => plans.setBase(next)
 
   const chosen = useMemo(() => picked.map((el) => byEl.get(el)).filter(Boolean) as RatingRow[], [picked, byEl])
   const spent = useMemo(() => chosen.reduce((s, r) => s + priceOf(r), 0), [chosen])
@@ -328,7 +328,11 @@ export default function SquadBuilder() {
   const complete = total === 15 && SLOTS.every((s) => countByPos[s.pos] === s.count)
   const valid = complete && spent <= BUDGET + 1e-9
 
-  const planner = usePlanner({ base: picked, byEl, startGw: buildGw, fixtureEase, seed: importedXI })
+  const planner = usePlanner({
+    base: picked, byEl, startGw: buildGw, fixtureEase, seed: importedXI,
+    // Each plan keeps its own week decisions; switching plan switches them.
+    storeKey: plans.activeId ? weeksKey(plans.activeId) : undefined,
+  })
   // The board's week drives what the list is for: before the fifteen exists
   // it's an add list, after it's the transfer market for the week on screen.
   const plannerSquad = complete && planner.week ? planner.squad : picked
@@ -358,6 +362,20 @@ export default function SquadBuilder() {
     () => (planner.week?.xi ?? []).map((el) => byEl.get(el)).filter(Boolean) as RatingRow[],
     [planner.week, byEl],
   )
+  /** The ticked plans, resolved to squads. A plan whose fifteen is incomplete
+   *  still comes through — the comparison says so rather than hiding it, which
+   *  is the difference between "not ready" and "not there". */
+  const comparing = useMemo(
+    () => plans.compare
+      .map((id) => plans.plans.find((p) => p.id === id))
+      .filter(Boolean)
+      .map((p) => ({
+        plan: p!,
+        squad: p!.base.map((el) => byEl.get(el)).filter(Boolean) as RatingRow[],
+      })),
+    [plans.compare, plans.plans, byEl],
+  )
+
   /** Places sold and not yet refilled, and which positions they are. */
   const openPlaces = planner.pendingOut.length
   const openBy = useMemo(() => {
@@ -439,10 +457,18 @@ export default function SquadBuilder() {
     <PageShell>
       <SectionBanner imgKey="squad" title="Squad Builder" subtitle={`Pick your Gameweek ${buildGw} fifteen within £100m, then step forward week by week — transfers, captain and chips`} />
 
+      {/* The library first: which squad you are looking at is the question
+          that precedes every other one on this page. */}
+      <PlanBar
+        plans={plans}
+        canCompare={plans.compare.length >= 2}
+        onCompare={() => setView('insights')}
+      />
+
       {/* Insights only exists once there are fifteen players to read. Offering
           the tab on an empty squad and landing on empty panels is worse than
           not offering it, so it appears when the squad does. */}
-      {complete && (
+      {(complete || plans.compare.length >= 2) && (
         <div className="mb-4">
           <Tabs
             tabs={[{ id: 'build', label: 'Squad' }, { id: 'insights', label: 'Insights' }]}
@@ -453,7 +479,7 @@ export default function SquadBuilder() {
         </div>
       )}
 
-      {complete && view === 'insights' && (
+      {view === 'insights' && (
         <SquadAnalysis
           squad={liveChosen}
           xi={liveXI.length ? liveXI : liveChosen}
@@ -466,10 +492,11 @@ export default function SquadBuilder() {
           captain={planner.week?.captain ?? null}
           seasonToDate={(data?.seasonToDate ?? null) as never}
           playedGws={Math.max(0, buildGw - 1)}
+          comparing={comparing}
         />
       )}
 
-      <div hidden={complete && view === 'insights'}>
+      <div hidden={view === 'insights'}>
       {/* The right-hand column is the Squad Lab's column, and it is sized for
           the lab rather than for whatever the pitch left over. It steps up with
           the screen: 400 on a small laptop, where 680 of board plus 680 of

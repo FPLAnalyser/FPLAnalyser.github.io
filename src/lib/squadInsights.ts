@@ -303,3 +303,146 @@ export function transferUpside(
   }
   return out.sort((a, b) => b.gain - a.gain).slice(0, limit)
 }
+
+// ── comparing plans ─────────────────────────────────────────────────────────
+
+/** One plan's eleven for one gameweek, chosen the way the pitch would choose
+ *  it: the best legal formation on projection, captain to the best starter. */
+const FORMATIONS: [number, number, number][] = []
+for (let d = 3; d <= 5; d++) for (let m = 2; m <= 5; m++) { const f = 10 - d - m; if (f >= 1 && f <= 3) FORMATIONS.push([d, m, f]) }
+
+export interface PlanWeek { xi: PlayerSeries[]; captain: number | null; xp: number; form: string }
+
+export function bestWeek(squad: PlayerSeries[], i: number): PlanWeek | null {
+  const by: Record<string, { p: PlayerSeries; xp: number }[]> = { GKP: [], DEF: [], MID: [], FWD: [] }
+  for (const p of squad) {
+    if (!by[p.pos]) continue
+    by[p.pos].push({ p, xp: p.weeks[i]?.xp ?? 0 })
+  }
+  for (const k of Object.keys(by)) by[k].sort((a, b) => b.xp - a.xp)
+  if (!by.GKP.length) return null
+  let best: PlanWeek | null = null
+  for (const [d, m, f] of FORMATIONS) {
+    if (by.DEF.length < d || by.MID.length < m || by.FWD.length < f) continue
+    const xi = [by.GKP[0], ...by.DEF.slice(0, d), ...by.MID.slice(0, m), ...by.FWD.slice(0, f)]
+    const xp = xi.reduce((s, x) => s + x.xp, 0)
+    if (!best || xp > best.xp) {
+      const cap = xi.slice().sort((a, b) => b.xp - a.xp)[0]
+      best = { xi: xi.map((x) => x.p), captain: cap?.p.element ?? null, xp: xp + (cap?.xp ?? 0), form: `${d}-${m}-${f}` }
+    }
+  }
+  return best
+}
+
+export interface HeadToHead {
+  a: number; b: number
+  /** Shares of paired runs, 0–1. They sum to 1.
+   *
+   *  TIES ARE THEIR OWN CATEGORY and have to be, because with common random
+   *  numbers they are not a rounding artefact — two plans that share every
+   *  player tie in every single run, exactly. Folding those into the loser's
+   *  column printed "0% / 100%" for two identical squads, which is the most
+   *  wrong a comparison panel can be. */
+  winRate: number
+  tieRate: number
+  meanGap: number
+  p10: number
+  p90: number
+}
+
+export interface PlanCompare {
+  totals: number[][]
+  weeks: PlanWeek[][]
+  h2h: HeadToHead[]
+  draws: number
+}
+
+/** Compare plans over the horizon with COMMON RANDOM NUMBERS.
+ *
+ *  This is the only part of the comparison that could not be done by putting
+ *  two projections side by side, and it is the whole reason the feature is
+ *  worth building — so it is worth being exact about why it is written this
+ *  way.
+ *
+ *  Two squads that differ by three players still share twelve. Simulated
+ *  independently, those twelve draw DIFFERENT scores in each plan and inject
+ *  something like eighty points of variance that has nothing whatever to do
+ *  with the decision being made. A genuine twelve-point edge disappears inside
+ *  it and every comparison prints a coin toss.
+ *
+ *  So each (player, gameweek) gets its own random stream, seeded on the draw
+ *  index and the player's id. A player in both plans draws the identical score
+ *  in both, the shared core cancels exactly, and what survives is the
+ *  difference between the squads. That is the estimator with the variance
+ *  removed, not a different question.
+ */
+export function comparePlans(
+  plans: PlayerSeries[][], gws: number[], draws = 4000,
+): PlanCompare {
+  const weeks = plans.map((sq) => gws.map((_, i) => bestWeek(sq, i)).filter(Boolean) as PlanWeek[])
+  const totals: number[][] = plans.map(() => [])
+
+  // FNV-1a over (draw, element, gw) — cheap, and spreads adjacent ids apart,
+  // which a plain sum does not.
+  const seedOf = (d: number, el: number, gw: number) => {
+    let h = 2166136261 >>> 0
+    for (const v of [d, el, gw]) { h ^= v; h = Math.imul(h, 16777619) >>> 0 }
+    return h >>> 0
+  }
+
+  const cache = new Map<number, number>()
+  for (let d = 1; d <= draws; d++) {
+    cache.clear()
+    for (let pi = 0; pi < plans.length; pi++) {
+      let t = 0
+      for (let i = 0; i < weeks[pi].length; i++) {
+        const w = weeks[pi][i]
+        for (const p of w.xi) {
+          const parts = p.weeks[i]?.parts
+          if (!parts) continue
+          const k = p.element * 64 + i
+          let v = cache.get(k)
+          if (v === undefined) {
+            v = drawWeek(parts, p.pos, rng(seedOf(d, p.element, gws[i])))
+            cache.set(k, v)
+          }
+          t += p.element === w.captain ? v * 2 : v
+        }
+      }
+      totals[pi].push(t)
+    }
+  }
+
+  const h2h: HeadToHead[] = []
+  for (let a = 0; a < plans.length; a++) {
+    for (let b = a + 1; b < plans.length; b++) {
+      const gaps: number[] = []
+      let wins = 0, ties = 0
+      for (let d = 0; d < draws; d++) {
+        const g = totals[a][d] - totals[b][d]
+        gaps.push(g)
+        // Points are integers plus the near-deterministic bonus/cards terms, so
+        // an exact tie needs a tolerance rather than === 0.
+        if (Math.abs(g) < 1e-6) ties++
+        else if (g > 0) wins++
+      }
+      gaps.sort((x, y) => x - y)
+      h2h.push({
+        a, b,
+        winRate: wins / draws,
+        tieRate: ties / draws,
+        meanGap: gaps.reduce((s, v) => s + v, 0) / draws,
+        p10: gaps[Math.floor(draws * 0.1)],
+        p90: gaps[Math.floor(draws * 0.9)],
+      })
+    }
+  }
+  return { totals, weeks, h2h, draws }
+}
+
+/** Percentiles of one plan's own total, from the same paired run. */
+export function spreadOf(totals: number[]): { p10: number; median: number; p90: number; mean: number } {
+  const t = totals.slice().sort((a, b) => a - b)
+  const q = (f: number) => t[Math.min(t.length - 1, Math.floor(f * t.length))]
+  return { p10: q(0.1), median: q(0.5), p90: q(0.9), mean: t.reduce((a, b) => a + b, 0) / t.length }
+}
