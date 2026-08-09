@@ -110,4 +110,12 @@ jobs:
           git push -q --force \
             "https://x-access-token:${PREVIEW_TOKEN}@github.com/${PREVIEW_REPO}.git" \
             HEAD:main
-          echo "published ${BRANCH} → https://${PREVIEW_REPO%%/*}.github.io"
+          # A project site lives at <org>.github.io/<repo>/; an org site at
+          # <org>.github.io. Both are valid PREVIEW_REPO values, so work out
+          # which this is rather than printing a URL that 404s.
+          org="${PREVIEW_REPO%%/*}"; repo="${PREVIEW_REPO#*/}"
+          if [ "$repo" = "${org}.github.io" ]; then
+            echo "published ${BRANCH} → https://${org}.github.io/"
+          else
+            echo "published ${BRANCH} → https://${org}.github.io/${repo}/"
+          fi

@@ -1,3 +1,7 @@
+// First, deliberately: on a preview build this namespaces localStorage before
+// anything reads it. The preview shares an origin with the mirror, which is
+// production for blocked networks. See lib/previewStorage.ts.
+import './lib/previewStorage'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
