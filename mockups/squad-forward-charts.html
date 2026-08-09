@@ -1,0 +1,146 @@
+<title>Forward charts — Squad Builder &amp; My Team</title>
+<style>
+:root{--bg:#0a0908;--s1:#131110;--s2:#1b1917;--line:#2a2724;--ink:#f4efe3;--ink2:#a9a294;
+--ink3:#777064;--acc:#c9a227;--acc2:#e8c85a;--def:#a8871f;--mid:#c85d84;--fwd:#3a8ec6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:30px 18px 80px}
+h1{font-size:26px;line-height:1.2;margin:0 0 8px;letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:19px;margin:0 0 3px;letter-spacing:-.01em;text-wrap:balance}
+.lede{color:var(--ink2);font-size:15px;margin:0 0 6px;max-width:66ch}
+.meta{color:var(--ink3);font-size:12.5px;margin:0 0 34px;
+border-top:1px solid var(--line);padding-top:12px}
+section{margin:0 0 52px}
+.tag{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+color:var(--acc);margin:0 0 5px}
+.sub{color:var(--ink2);font-size:14px;margin:0 0 14px;max-width:72ch}
+.note{background:var(--s1);border:1px solid var(--line);border-radius:11px;
+padding:13px 16px;margin-top:16px;font-size:13.5px;color:var(--ink2);max-width:80ch}
+.note b{color:var(--ink);font-weight:600}
+.scroll{overflow-x:auto;background:var(--s1);border:1px solid var(--line);border-radius:11px;padding:12px}
+.chart{display:block;width:100%;min-width:640px;height:auto}
+.grid{stroke:var(--line);stroke-width:1}
+.axis{stroke:var(--ink3);stroke-width:1}
+.axl{fill:var(--ink3);font-size:10.5px;text-anchor:middle;font-variant-numeric:tabular-nums}
+.axl.r{text-anchor:end}
+.vlab{fill:var(--ink);font-size:11.5px;text-anchor:middle;font-variant-numeric:tabular-nums;font-weight:600}
+.b1{fill:var(--acc);opacity:.13}
+.b2{fill:var(--acc);opacity:.22}
+.mline{fill:none;stroke:var(--acc2);stroke-width:2;stroke-linejoin:round}
+.dot{fill:var(--acc2);stroke:var(--s1);stroke-width:2}
+.key{display:flex;gap:16px;margin-top:9px;font-size:12px;color:var(--ink2)}
+.key i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;
+vertical-align:-1px}
+table.lad{border-collapse:separate;border-spacing:2px;width:100%;min-width:640px}
+table.lad thead td{font-size:10.5px;letter-spacing:.08em;color:var(--ink3);text-align:center;
+padding-bottom:2px;text-transform:uppercase}
+table.lad th{text-align:left;padding-right:10px;white-space:nowrap;font-weight:500}
+table.lad th b{display:block;font-size:13.5px;font-weight:600;color:var(--ink)}
+table.lad th span{display:block;font-size:11px;color:var(--ink3);
+font-variant-numeric:tabular-nums}
+.cell{text-align:center;border-radius:5px;padding:7px 4px;min-width:72px}
+.cell b{display:block;font-size:14px;font-weight:600;color:var(--ink);
+font-variant-numeric:tabular-nums}
+.cell i{display:block;font-style:normal;font-size:10px;color:var(--ink2);letter-spacing:.03em}
+.cell i em{font-style:normal;color:var(--ink3)}
+.avg{text-align:center;font-size:13px;color:var(--ink2);font-variant-numeric:tabular-nums;
+padding-left:8px}
+thead .avg{color:var(--ink3)}
+.crow{display:grid;grid-template-columns:46px 1fr 52px minmax(0,1.5fr);gap:11px;
+align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+.crow:last-child{border-bottom:0}
+.cteam{font-size:12.5px;font-weight:600;letter-spacing:.04em}
+.ctrack{height:9px;background:var(--s2);border-radius:5px;overflow:hidden}
+.ctrack i{display:block;height:100%;background:linear-gradient(90deg,#75601f,var(--acc));
+border-radius:5px}
+.cval{font-size:12.5px;color:var(--ink);font-variant-numeric:tabular-nums;text-align:right}
+.cwho{font-size:11.5px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.legend{display:flex;align-items:center;gap:8px;margin-top:9px;font-size:11.5px;color:var(--ink3)}
+.legend .sc{display:flex;gap:2px}
+.legend .sc i{width:26px;height:9px;border-radius:2px;display:block}
+@media (max-width:640px){
+.wrap{padding:22px 13px 60px}h1{font-size:22px}h2{font-size:17px}
+.crow{grid-template-columns:42px 1fr 46px;}.cwho{display:none}}
+@media (prefers-reduced-motion:no-preference){.cell,.dot{transition:opacity .15s}}
+.cell:hover{outline:1px solid var(--acc2)}
+</style>
+<div class="wrap">
+<h1>Forward charts for the Squad Builder and My Team</h1>
+<p class="lede">Four ways to draw what the squad is projected to do next, rather than
+what it did last season. Every number below is real — produced by the site's own
+<code>xpForGw</code> engine over GW1–6 for the fifteen the optimiser picked.</p>
+<p class="meta">Odds priced for GW1 · team strength fitted from banked market lambdas ·
+ratings carried from 2025/26 · simulation 60,000 runs per gameweek</p>
+
+<section>
+<span class="tag">Concept 1 — clean sheets</span>
+<h2>The clean-sheet ladder</h2>
+<p class="sub">Every defensive asset you own against the six weeks ahead. Cell shade is
+the probability of a clean sheet; the number is the same figure, so it never reads by
+colour alone.</p>
+<div class="scroll"><table class="lad"><thead><tr><th></th><td>GW1</td><td>GW2</td><td>GW3</td><td>GW4</td><td>GW5</td><td>GW6</td><td class="avg">AVG</td></tr></thead><tbody><tr><th><b>Raya</b><span>ARS · £6</span></th><td class="cell" style="background:#987c25" title="Raya vs COV (H) — 55% clean sheet, 0.55 goals expected against"><b>55%</b><i>COV <em>H</em></i></td><td class="cell" style="background:#75601f" title="Raya vs AVL (A) — 45% clean sheet, 0.75 goals expected against"><b>45%</b><i>AVL <em>A</em></i></td><td class="cell" style="background:#75601f" title="Raya vs CHE (H) — 40% clean sheet, 0.86 goals expected against"><b>40%</b><i>CHE <em>H</em></i></td><td class="cell" style="background:#987c25" title="Raya vs SUN (A) — 52% clean sheet, 0.59 goals expected against"><b>52%</b><i>SUN <em>A</em></i></td><td class="cell" style="background:#75601f" title="Raya vs BHA (A) — 38% clean sheet, 0.91 goals expected against"><b>38%</b><i>BHA <em>A</em></i></td><td class="cell" style="background:#987c25" title="Raya vs LEE (H) — 47% clean sheet, 0.7 goals expected against"><b>47%</b><i>LEE <em>H</em></i></td><td class="avg">46%</td></tr><tr><th><b>Dubravka</b><span>TOT · £4</span></th><td class="cell" style="background:#3a3018" title="Dubravka vs BRE (A) — 20% clean sheet, 1.52 goals expected against"><b>20%</b><i>BRE <em>A</em></i></td><td class="cell" style="background:#3a3018" title="Dubravka vs NEW (H) — 24% clean sheet, 1.31 goals expected against"><b>24%</b><i>NEW <em>H</em></i></td><td class="cell" style="background:#3a3018" title="Dubravka vs NFO (A) — 25% clean sheet, 1.28 goals expected against"><b>25%</b><i>NFO <em>A</em></i></td><td class="cell" style="background:#55441a" title="Dubravka vs EVE (H) — 31% clean sheet, 1.06 goals expected against"><b>31%</b><i>EVE <em>H</em></i></td><td class="cell" style="background:#55441a" title="Dubravka vs AVL (H) — 30% clean sheet, 1.11 goals expected against"><b>30%</b><i>AVL <em>H</em></i></td><td class="cell" style="background:#241f16" title="Dubravka vs MUN (A) — 15% clean sheet, 1.81 goals expected against"><b>15%</b><i>MUN <em>A</em></i></td><td class="avg">24%</td></tr><tr><th><b>Tarkowski</b><span>EVE · £6</span></th><td class="cell" style="background:#55441a" title="Tarkowski vs CRY (H) — 30% clean sheet, 1.17 goals expected against"><b>30%</b><i>CRY <em>H</em></i></td><td class="cell" style="background:#3a3018" title="Tarkowski vs BOU (A) — 18% clean sheet, 1.71 goals expected against"><b>18%</b><i>BOU <em>A</em></i></td><td class="cell" style="background:#3a3018" title="Tarkowski vs MUN (H) — 20% clean sheet, 1.6 goals expected against"><b>20%</b><i>MUN <em>H</em></i></td><td class="cell" style="background:#55441a" title="Tarkowski vs TOT (A) — 29% clean sheet, 1.22 goals expected against"><b>29%</b><i>TOT <em>A</em></i></td><td class="cell" style="background:#75601f" title="Tarkowski vs IPS (H) — 36% clean sheet, 0.99 goals expected against"><b>36%</b><i>IPS <em>H</em></i></td><td class="cell" style="background:#75601f" title="Tarkowski vs HUL (A) — 38% clean sheet, 0.95 goals expected against"><b>38%</b><i>HUL <em>A</em></i></td><td class="avg">28%</td></tr><tr><th><b>Senesi</b><span>TOT · £6</span></th><td class="cell" style="background:#3a3018" title="Senesi vs BRE (A) — 21% clean sheet, 1.52 goals expected against"><b>21%</b><i>BRE <em>A</em></i></td><td class="cell" style="background:#55441a" title="Senesi vs NEW (H) — 26% clean sheet, 1.31 goals expected against"><b>26%</b><i>NEW <em>H</em></i></td><td class="cell" style="background:#55441a" title="Senesi vs NFO (A) — 26% clean sheet, 1.28 goals expected against"><b>26%</b><i>NFO <em>A</em></i></td><td class="cell" style="background:#55441a" title="Senesi vs EVE (H) — 33% clean sheet, 1.06 goals expected against"><b>33%</b><i>EVE <em>H</em></i></td><td class="cell" style="background:#55441a" title="Senesi vs AVL (H) — 31% clean sheet, 1.11 goals expected against"><b>31%</b><i>AVL <em>H</em></i></td><td class="cell" style="background:#3a3018" title="Senesi vs MUN (A) — 16% clean sheet, 1.81 goals expected against"><b>16%</b><i>MUN <em>A</em></i></td><td class="avg">25%</td></tr><tr><th><b>Guéhi</b><span>MCI · £6</span></th><td class="cell" style="background:#55441a" title="Guéhi vs BOU (H) — 28% clean sheet, 1.12 goals expected against"><b>28%</b><i>BOU <em>H</em></i></td><td class="cell" style="background:#3a3018" title="Guéhi vs CRY (A) — 20% clean sheet, 1.5 goals expected against"><b>20%</b><i>CRY <em>A</em></i></td><td class="cell" style="background:#75601f" title="Guéhi vs COV (H) — 39% clean sheet, 0.79 goals expected against"><b>39%</b><i>COV <em>H</em></i></td><td class="cell" style="background:#3a3018" title="Guéhi vs MUN (A) — 18% clean sheet, 1.55 goals expected against"><b>18%</b><i>MUN <em>A</em></i></td><td class="cell" style="background:#75601f" title="Guéhi vs SUN (H) — 41% clean sheet, 0.74 goals expected against"><b>41%</b><i>SUN <em>H</em></i></td><td class="cell" style="background:#3a3018" title="Guéhi vs LIV (A) — 20% clean sheet, 1.44 goals expected against"><b>20%</b><i>LIV <em>A</em></i></td><td class="avg">28%</td></tr><tr><th><b>Virgil</b><span>LIV · £6.5</span></th><td class="cell" style="background:#3a3018" title="Virgil vs NEW (A) — 25% clean sheet, 1.4 goals expected against"><b>25%</b><i>NEW <em>A</em></i></td><td class="cell" style="background:#75601f" title="Virgil vs NFO (H) — 38% clean sheet, 0.97 goals expected against"><b>38%</b><i>NFO <em>H</em></i></td><td class="cell" style="background:#75601f" title="Virgil vs IPS (A) — 35% clean sheet, 1.04 goals expected against"><b>35%</b><i>IPS <em>A</em></i></td><td class="cell" style="background:#75601f" title="Virgil vs FUL (H) — 36% clean sheet, 1.03 goals expected against"><b>36%</b><i>FUL <em>H</em></i></td><td class="cell" style="background:#3a3018" title="Virgil vs BOU (A) — 23% clean sheet, 1.47 goals expected against"><b>23%</b><i>BOU <em>A</em></i></td><td class="cell" style="background:#3a3018" title="Virgil vs MCI (H) — 17% clean sheet, 1.78 goals expected against"><b>17%</b><i>MCI <em>H</em></i></td><td class="avg">29%</td></tr><tr><th><b>Thiaw</b><span>NEW · £5</span></th><td class="cell" style="background:#241f16" title="Thiaw vs LIV (H) — 14% clean sheet, 1.82 goals expected against"><b>14%</b><i>LIV <em>H</em></i></td><td class="cell" style="background:#55441a" title="Thiaw vs TOT (A) — 28% clean sheet, 1.09 goals expected against"><b>28%</b><i>TOT <em>A</em></i></td><td class="cell" style="background:#3a3018" title="Thiaw vs BOU (H) — 24% clean sheet, 1.24 goals expected against"><b>24%</b><i>BOU <em>H</em></i></td><td class="cell" style="background:#3a3018" title="Thiaw vs LEE (A) — 19% clean sheet, 1.5 goals expected against"><b>19%</b><i>LEE <em>A</em></i></td><td class="cell" style="background:#75601f" title="Thiaw vs HUL (H) — 42% clean sheet, 0.68 goals expected against"><b>42%</b><i>HUL <em>H</em></i></td><td class="cell" style="background:#55441a" title="Thiaw vs COV (A) — 28% clean sheet, 1.1 goals expected against"><b>28%</b><i>COV <em>A</em></i></td><td class="avg">26%</td></tr></tbody></table></div>
+<div class="legend">Clean-sheet chance
+<span class="sc"><i style="background:#241f16"></i><i style="background:#3a3018"></i><i style="background:#55441a"></i><i style="background:#75601f"></i><i style="background:#987c25"></i><i style="background:#c9a227"></i></span>
+low → high</div>
+<div class="note"><b>What it tells you that a fixture grid doesn't.</b> Two of these
+rows are the same fixture — Dubravka and Senesi are both Tottenham, so their weeks move
+together and owning both buys one outcome twice. <b>GW6</b> is the trough: four of the
+seven sit at 20% or below in the same week, which is the week to plan a defensive
+transfer around. And Raya is not in the same conversation as the rest — a 46% average
+against 24–29% for every other defensive asset in the squad.</div>
+</section>
+
+<section>
+<span class="tag">Concept 2 — goal threat</span>
+<h2>Where the goals are projected to come from</h2>
+<p class="sub">Projected xG for the whole squad, split by the line it comes from. The
+total is what the squad should score; the split is how exposed you are if one line
+goes quiet.</p>
+<div class="scroll"><svg viewBox="0 0 760 240" class="chart" role="img" aria-label="Projected squad xG per gameweek, split by position"><line x1="36" x2="748" y1="152.4" y2="152.4" class="grid"/><text x="30" y="155.9" class="axl r">1</text><line x1="36" x2="748" y1="94.8" y2="94.8" class="grid"/><text x="30" y="98.3" class="axl r">2</text><line x1="36" x2="748" y1="37.2" y2="37.2" class="grid"/><text x="30" y="40.7" class="axl r">3</text><line x1="36" x2="748" y1="210" y2="210" class="axis"/><rect x="54.0" y="184.4" width="62" height="23.6" rx="3" fill="#a8871f"><title>GW1 DEF: 0.44 projected xG</title></rect><rect x="54.0" y="123.1" width="62" height="59.3" rx="3" fill="#c85d84"><title>GW1 MID: 1.06 projected xG</title></rect><rect x="54.0" y="50.7" width="62" height="70.5" rx="3" fill="#3a8ec6"><title>GW1 FWD: 1.26 projected xG</title></rect><text x="85.0" y="44.7" class="vlab">2.77</text><text x="85.0" y="225.0" class="axl">GW1</text><rect x="169.7" y="185.1" width="62" height="22.9" rx="3" fill="#a8871f"><title>GW2 DEF: 0.43 projected xG</title></rect><rect x="169.7" y="115.8" width="62" height="67.3" rx="3" fill="#c85d84"><title>GW2 MID: 1.20 projected xG</title></rect><rect x="169.7" y="47.3" width="62" height="66.5" rx="3" fill="#3a8ec6"><title>GW2 FWD: 1.19 projected xG</title></rect><text x="200.7" y="41.3" class="vlab">2.83</text><text x="200.7" y="225.0" class="axl">GW2</text><rect x="285.3" y="179.1" width="62" height="28.9" rx="3" fill="#a8871f"><title>GW3 DEF: 0.54 projected xG</title></rect><rect x="285.3" y="126.1" width="62" height="51.0" rx="3" fill="#c85d84"><title>GW3 MID: 0.92 projected xG</title></rect><rect x="285.3" y="60.1" width="62" height="63.9" rx="3" fill="#3a8ec6"><title>GW3 FWD: 1.15 projected xG</title></rect><text x="316.3" y="54.1" class="vlab">2.60</text><text x="316.3" y="225.0" class="axl">GW3</text><rect x="401.0" y="185.5" width="62" height="22.5" rx="3" fill="#a8871f"><title>GW4 DEF: 0.42 projected xG</title></rect><rect x="401.0" y="137.2" width="62" height="46.3" rx="3" fill="#c85d84"><title>GW4 MID: 0.84 projected xG</title></rect><rect x="401.0" y="60.5" width="62" height="74.7" rx="3" fill="#3a8ec6"><title>GW4 FWD: 1.33 projected xG</title></rect><text x="432.0" y="54.5" class="vlab">2.59</text><text x="432.0" y="225.0" class="axl">GW4</text><rect x="516.7" y="179.6" width="62" height="28.4" rx="3" fill="#a8871f"><title>GW5 DEF: 0.53 projected xG</title></rect><rect x="516.7" y="133.3" width="62" height="44.3" rx="3" fill="#c85d84"><title>GW5 MID: 0.80 projected xG</title></rect><rect x="516.7" y="47.4" width="62" height="83.9" rx="3" fill="#3a8ec6"><title>GW5 FWD: 1.49 projected xG</title></rect><text x="547.7" y="41.4" class="vlab">2.82</text><text x="547.7" y="225.0" class="axl">GW5</text><rect x="632.3" y="187.2" width="62" height="20.8" rx="3" fill="#a8871f"><title>GW6 DEF: 0.40 projected xG</title></rect><rect x="632.3" y="135.2" width="62" height="50.1" rx="3" fill="#c85d84"><title>GW6 MID: 0.90 projected xG</title></rect><rect x="632.3" y="58.9" width="62" height="74.3" rx="3" fill="#3a8ec6"><title>GW6 FWD: 1.32 projected xG</title></rect><text x="663.3" y="52.9" class="vlab">2.62</text><text x="663.3" y="225.0" class="axl">GW6</text></svg></div><div class="key"><span><i style="background:#a8871f"></i>DEF</span><span><i style="background:#c85d84"></i>MID</span><span><i style="background:#3a8ec6"></i>FWD</span></div>
+<div class="note"><b>Reads as a balance check.</b> The squad total barely moves —
+2.59 to 2.83 xG a week — but the mix swings: midfield leads in GW2 (1.20 against the
+forwards' 1.19) and is well behind by GW5 (0.80 against 1.49). A squad whose threat
+keeps migrating between lines is one where captaincy should migrate too.</div>
+</section>
+
+<section>
+<span class="tag">Concept 3 — variance</span>
+<h2>Floor and ceiling, not just the projection</h2>
+<p class="sub">The same six weeks simulated 60,000 times each. The line is the median
+week; the bands are the middle half and the 10th-to-90th range.</p>
+<div class="scroll"><svg viewBox="0 0 760 250" class="chart" role="img" aria-label="Projected gameweek total with 10th to 90th percentile band"><line x1="40" x2="746" y1="166.0" y2="166.0" class="grid"/><text x="34" y="169.5" class="axl r">50</text><line x1="40" x2="746" y1="119.8" y2="119.8" class="grid"/><text x="34" y="123.3" class="axl r">60</text><line x1="40" x2="746" y1="73.6" y2="73.6" class="grid"/><text x="34" y="77.1" class="axl r">70</text><polygon points="54.0,56.0 191.2,47.7 328.4,66.7 465.6,75.0 602.8,67.1 740.0,76.8 740.0,192.3 602.8,187.2 465.6,190.4 328.4,182.6 191.2,177.0 54.0,180.7" class="b1"/><polygon points="54.0,88.4 191.2,84.7 328.4,99.4 465.6,107.3 602.8,99.4 740.0,109.1 740.0,173.8 602.8,164.1 465.6,167.3 328.4,159.5 191.2,153.9 54.0,153.0" class="b2"/><polyline points="54.0,119.8 191.2,116.1 328.4,127.6 465.6,135.9 602.8,130.4 740.0,137.8" class="mline"/><circle cx="54.0" cy="119.8" r="4.5" class="dot"><title>GW1: median 60.0, likely 52.8–66.8, 10th–90th 46.8–73.8</title></circle><text x="54.0" y="108.8" class="vlab">60</text><text x="54.0" y="235.0" class="axl">GW1</text><circle cx="191.2" cy="116.1" r="4.5" class="dot"><title>GW2: median 60.8, likely 52.6–67.6, 10th–90th 47.6–75.6</title></circle><text x="191.2" y="105.1" class="vlab">61</text><text x="191.2" y="235.0" class="axl">GW2</text><circle cx="328.4" cy="127.6" r="4.5" class="dot"><title>GW3: median 58.3, likely 51.4–64.4, 10th–90th 46.4–71.5</title></circle><text x="328.4" y="116.6" class="vlab">58</text><text x="328.4" y="235.0" class="axl">GW3</text><circle cx="465.6" cy="135.9" r="4.5" class="dot"><title>GW4: median 56.5, likely 49.7–62.7, 10th–90th 44.7–69.7</title></circle><text x="465.6" y="124.9" class="vlab">56</text><text x="465.6" y="235.0" class="axl">GW4</text><circle cx="602.8" cy="130.4" r="4.5" class="dot"><title>GW5: median 57.7, likely 50.4–64.4, 10th–90th 45.4–71.4</title></circle><text x="602.8" y="119.4" class="vlab">58</text><text x="602.8" y="235.0" class="axl">GW5</text><circle cx="740.0" cy="137.8" r="4.5" class="dot"><title>GW6: median 56.1, likely 48.3–62.3, 10th–90th 44.3–69.3</title></circle><text x="740.0" y="126.8" class="vlab">56</text><text x="740.0" y="235.0" class="axl">GW6</text></svg></div>
+<div class="note"><b>The honest one, and the one no competitor shows.</b> The median
+GW1 is 60 points — but the 10th-to-90th range is <b>46.8 to 73.8</b>, a 27-point
+spread on an unchanged squad. Six weeks of medians only fall from 60.0 to 56.1, a
+smaller move than a single week's noise. It reframes a bad gameweek as the range
+working normally rather than the plan being wrong, which is exactly the moment
+managers take a −4 they don't need.</div>
+</section>
+
+<section>
+<span class="tag">Concept 4 — correlation</span>
+<h2>How concentrated the defence is</h2>
+<p class="sub">Expected clean sheets over the window, grouped by club. FPL defensive
+returns are correlated inside a club — a shutout pays every asset at once, and a 4–0
+loss pays none of them.</p>
+<div class="scroll" style="padding:6px 14px"><div class="crow"><span class="cteam">TOT</span><div class="ctrack"><i style="width:100.0%"></i></div><span class="cval">2.96</span><span class="cwho">Dubravka, Senesi</span></div><div class="crow"><span class="cteam">ARS</span><div class="ctrack"><i style="width:93.8%"></i></div><span class="cval">2.77</span><span class="cwho">Raya</span></div><div class="crow"><span class="cteam">LIV</span><div class="ctrack"><i style="width:58.7%"></i></div><span class="cval">1.74</span><span class="cwho">Virgil</span></div><div class="crow"><span class="cteam">EVE</span><div class="ctrack"><i style="width:57.5%"></i></div><span class="cval">1.70</span><span class="cwho">Tarkowski</span></div><div class="crow"><span class="cteam">MCI</span><div class="ctrack"><i style="width:56.6%"></i></div><span class="cval">1.67</span><span class="cwho">Guéhi</span></div><div class="crow"><span class="cteam">NEW</span><div class="ctrack"><i style="width:52.8%"></i></div><span class="cval">1.56</span><span class="cwho">Thiaw</span></div></div>
+<div class="note"><b>Turns a hidden risk into a number.</b> Tottenham top the list at 2.96, but that
+is <b>two players sharing six fixtures</b> — against Arsenal's 2.77 from Raya alone.
+Read per asset the ranking inverts completely, which is the whole point: the bar is
+volume, and the club grouping is the warning. Spread across six clubs this squad is
+reasonably diversified; the chart earns its place the week it isn't, and nothing else
+on the site would tell you.</div>
+</section>
+
+<section>
+<span class="tag">Where these live</span>
+<h2>Placement</h2>
+<p class="sub">Concepts 1 and 4 belong under the Squad Builder pitch, where you are
+choosing defenders and the correlation is a live decision. Concepts 2 and 3 belong on
+My Team, where the squad is fixed and the question changes from "who" to "what should
+I expect". Concept 3 is also the natural top of the GW Review page — the same band,
+with the actual score dropped onto it.</p>
+</section>
+</div>
