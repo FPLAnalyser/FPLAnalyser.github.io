@@ -300,7 +300,7 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
                 disabled={!week || usedElsewhere}
                 onClick={() => planner.setChip(c)}
                 title={usedElsewhere ? `Played in GW${spentAt} — your ${planner.half === 1 ? 'first' : 'second'}-half ${CHIP_LABEL[c]}` : undefined}
-                className={`min-h-8 rounded-full border px-2.5 text-xs font-medium transition-colors ${week?.chip === c ? 'border-accent bg-accent-soft text-accent' : usedElsewhere || !week ? 'border-line text-ink-3 opacity-40' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}
+                className={`min-h-8 rounded-full border px-2.5 text-xs font-medium transition-colors ${week?.chip === c ? 'border-accent bg-accent-selected text-accent' : usedElsewhere || !week ? 'border-line text-ink-3 opacity-40' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}
               >{CHIP_LABEL[c]}</button>
             )
           })}
@@ -536,8 +536,8 @@ function SquadActions({ isStarter, isCaptain, isVice, canSwap, onCaptain, onVice
   const btn = 'inline-flex min-h-9 min-w-0 flex-1 items-center justify-center gap-1 rounded-lg border px-1.5 text-[11px] font-semibold transition-colors disabled:opacity-40 sm:px-2.5 sm:text-xs'
   return (
     <div className="flex gap-1 sm:gap-1.5">
-      <button onClick={onCaptain} title={isCaptain ? 'Already captain' : 'Make him captain'} className={`${btn} ${isCaptain ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}><Icon name="crown" size={13} className="hidden shrink-0 min-[360px]:block" /> Captain</button>
-      <button onClick={onVice} title={isVice ? 'Already vice' : 'Make him vice-captain'} className={`${btn} ${isVice ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}><Icon name="shield" size={13} className="hidden shrink-0 min-[360px]:block" /> Vice</button>
+      <button onClick={onCaptain} title={isCaptain ? 'Already captain' : 'Make him captain'} className={`${btn} ${isCaptain ? 'border-accent bg-accent-selected text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}><Icon name="crown" size={13} className="hidden shrink-0 min-[360px]:block" /> Captain</button>
+      <button onClick={onVice} title={isVice ? 'Already vice' : 'Make him vice-captain'} className={`${btn} ${isVice ? 'border-accent bg-accent-selected text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'}`}><Icon name="shield" size={13} className="hidden shrink-0 min-[360px]:block" /> Vice</button>
       <button onClick={onSwap} disabled={!canSwap} className={`${btn} border-line-mid text-ink-2 hover:border-line-strong hover:text-ink`}><Icon name="pitch" size={13} className="hidden shrink-0 min-[360px]:block" /> {isStarter ? 'Bench' : 'Start'}</button>
       <button onClick={onTransfer} className={`${btn} border-bad/45 text-bad hover:bg-bad/10`}><Icon name="users" size={13} className="hidden shrink-0 min-[360px]:block" /> Transfer</button>
     </div>

@@ -57,7 +57,7 @@ export function PlanBar({ plans, canCompare, onCompare }: {
             <div
               key={p.id}
               className={`flex shrink-0 items-center gap-2 rounded-lg border px-2.5 py-1.5 transition-colors ${
-                active ? 'border-accent bg-accent-soft' : 'border-line-mid bg-surface-2'}`}
+                active ? 'border-accent bg-accent-selected' : 'border-line-mid bg-surface-2'}`}
             >
               {/* Ticking a plan for comparison must not also open it — those
                   are different intentions and merging them means you cannot

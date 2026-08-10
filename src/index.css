@@ -65,22 +65,42 @@
 /* ─── MODE: DARK (surfaces / ink / lines) ─── */
 :root, :root[data-mode="dark"] {
   color-scheme: dark;
-  --bg-0: #000000; --bg-1: #070605;
-  --surface-1: #16130e; --surface-2: #201b13; --surface-3: #2a2318;
-  --series-1: #b08c26; --series-2: #4f8ce8;   /* validated against #16130e */
+  /* NEUTRAL, not warm. Every surface here used to sit at hue 37-38 with red
+     8 to 18 points above blue, which put a beige film over the whole page —
+     mild on any one panel and unmistakable across a screen of them. These are
+     the same colours de-warmed: each is matched on RELATIVE LUMINANCE, so
+     nothing got brighter or darker, only less brown. Two points of blue are
+     left in on purpose; a dead grey reads flat next to gold. */
+  --bg-0: #000000; --bg-1: #050609;
+  --surface-1: #121316; --surface-2: #1b1c1f; --surface-3: #232427;
+  --series-1: #b08c26; --series-2: #4f8ce8;   /* validated against surface-1 */
   --podium-1: #b08c26; --podium-2: #9aa0a6; --podium-3: #9a4e1c;
-  --podium-4: #3e7bd6; --podium-5: #a24a9a;   /* stepped for #16130e */
-  --surface-glass: rgba(16, 13, 9, 0.74);
+  --podium-4: #3e7bd6; --podium-5: #a24a9a;   /* stepped for surface-1 */
+  --surface-glass: rgba(12, 13, 16, 0.74);
   /* ink-3 carries most of the site's small print — the uppercase micro-labels
      above every tile, the supporting sentence under every figure. At #6c655a
      that was 3.2:1 on surface-1 and 3.0:1 on surface-2, i.e. below the 4.5:1
      body-text bar at the exact sizes (9-11px, letterspaced, uppercase) that
      need it most. Same hue, lifted until it clears 4.5:1 on the darkest card
      it ever sits on. */
-  --ink-1: #f4efe3; --ink-2: #b3ab99; --ink-3: #8b8274;
+  /* Also de-warmed, and this is the one that mattered most: ink-1 was a 42-deg
+     cream at 44% saturation, and text is the largest area of colour on any
+     screen. Luminance-matched again, so the contrast work above is preserved —
+     ink-3 stays above 4.5:1 on the darkest card it sits on (5.1:1 on
+     surface-2, up from 4.5:1). */
+  --ink-1: #edeff3; --ink-2: #aaacb0; --ink-3: #828386;
   --line-subtle: rgba(255, 255, 255, 0.07);
   --line-mid: rgba(255, 255, 255, 0.12);
   --line-strong: rgba(255, 255, 255, 0.2);
+  /* A SELECTED SURFACE IS NOT A GOLD SURFACE.
+     accent-soft is gold at low alpha, and gold at low alpha over a dark ground
+     is not a paler gold — it is brown. Over surface-1 the old 14% wash
+     composited to #2f2712: hue 43, saturation 45. Acceptable behind a small
+     pill; it was the largest patch of brown on the page when it filled a whole
+     selected chip. So a large "this one is selected" fill uses a neutral lift,
+     and the gold does its work at full strength on the border, the tick and
+     the label — which is where a metal reads as a metal. */
+  --accent-selected: rgba(255, 255, 255, 0.055);
   --shadow-1: 0 1px 2px rgba(0,0,0,.5);
   --shadow-2: 0 10px 30px rgba(0,0,0,.45);
   --shadow-3: 0 26px 64px rgba(0,0,0,.6);
@@ -96,6 +116,8 @@
   --line-subtle: rgba(27, 23, 18, 0.09);
   --line-mid: rgba(27, 23, 18, 0.15);
   --line-strong: rgba(27, 23, 18, 0.26);
+  /* The same idea inverted: on a light ground a selection darkens. */
+  --accent-selected: rgba(20, 22, 28, 0.055);
   --shadow-1: 0 1px 2px rgba(27,23,18,.08);
   --shadow-2: 0 12px 30px rgba(27,23,18,.1);
   --shadow-3: 0 26px 60px rgba(27,23,18,.16);
@@ -105,7 +127,7 @@
 :root, :root[data-accent="aurum"] {
   --accent: #c9a227; --accent-2: #ead188; --accent-strong: #9a761c;
   --accent-contrast: #14100a;          /* text on a filled accent */
-  --accent-soft: rgba(201, 162, 39, 0.14);
+  --accent-soft: rgba(201, 162, 39, 0.10);
   --grad-accent: linear-gradient(135deg, #ead188 0%, #9a761c 100%);
   --glow: rgba(201, 162, 39, 0.16);    /* gold glow — turned up to pop on pure black */
 }
@@ -170,6 +192,7 @@
   --color-accent-strong: var(--accent-strong);
   --color-accent-contrast: var(--accent-contrast);
   --color-accent-soft: var(--accent-soft);
+  --color-accent-selected: var(--accent-selected);
   --color-ink: var(--ink-1);
   --color-ink-2: var(--ink-2);
   --color-ink-3: var(--ink-3);

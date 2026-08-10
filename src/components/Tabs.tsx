@@ -74,7 +74,7 @@ export function PillGroup({
             onClick={() => onChange(opt.id)}
             className={`min-h-9 rounded-full border px-3 text-sm font-medium transition-colors ${
               isActive
-                ? 'border-accent bg-accent-soft text-accent'
+                ? 'border-accent bg-accent-selected text-accent'
                 : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
             }`}
           >

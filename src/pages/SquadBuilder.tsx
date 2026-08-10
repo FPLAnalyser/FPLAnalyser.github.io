@@ -75,7 +75,7 @@ function MetricChips({ metric, onChange }: { metric: Metric; onChange: (m: Metri
           key={m.id}
           onClick={() => onChange(m.id)}
           className={`min-h-8 rounded-full border px-3 text-[12px] font-semibold transition-colors ${
-            metric === m.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+            metric === m.id ? 'border-accent bg-accent-selected text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
           }`}
         >
           {m.label}
@@ -639,7 +639,7 @@ export default function SquadBuilder() {
             <button
               onClick={() => setShowFilters((f) => !f)}
               className={`ml-auto inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-colors ${
-                activeFilters > 0 ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+                activeFilters > 0 ? 'border-accent bg-accent-selected text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
               }`}
             >
               <Icon name="target" size={13} /> Filters{activeFilters > 0 ? ` (${activeFilters})` : ''} <span className="text-[10px]">{showFilters ? '▴' : '▾'}</span>
