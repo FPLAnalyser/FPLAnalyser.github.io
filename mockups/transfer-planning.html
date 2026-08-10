@@ -1,0 +1,151 @@
+<meta charset="utf-8"><title>Transfer planning, explained</title>
+<style>
+:root{--bg:#000;--s1:#121316;--s2:#1b1c1f;--s3:#232427;--ink:#edeff3;--ink2:#aaacb0;--ink3:#828386;
+--acc:#c9a227;--acc2:#ead188;--line:rgba(255,255,255,.1);--line2:rgba(255,255,255,.2);
+--good:#3ddc7a;--warn:#e8b04a;--bad:#f0736f;--info:#7fb0ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:900px;margin:0 auto;padding:44px 20px 90px}
+h1{font-size:32px;font-weight:800;letter-spacing:-.02em;margin:0 0 10px}
+h2{font-size:22px;font-weight:800;margin:0 0 6px;letter-spacing:-.01em}
+.lead{color:var(--ink2);font-size:17px;max-width:66ch}
+.rule{height:1px;background:var(--line);margin:40px 0 28px}
+.step{font:700 11px/1 ui-sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--acc);margin-bottom:8px}
+p{max-width:68ch;color:var(--ink2)}
+b.w{color:var(--ink)}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:22px;margin-top:18px}
+.big{font-size:19px;line-height:1.5;color:var(--ink);max-width:64ch}
+
+/* two-option compare */
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+.opt{border:1px solid var(--line);border-radius:14px;padding:18px;background:var(--s2)}
+.opt.win{border-color:var(--acc);background:rgba(255,255,255,.05)}
+.opt .t{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.opt .n{font-size:38px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin:6px 0 2px}
+.opt .d{font-size:13px;color:var(--ink2)}
+.opt ul{margin:12px 0 0;padding-left:18px;font-size:13.5px;color:var(--ink2)}
+.opt li{margin:3px 0}
+.tick{color:var(--acc);font-weight:800}
+
+/* path */
+.mv{display:flex;align-items:center;gap:14px;padding:11px 14px;border:1px solid var(--line);
+ border-radius:12px;margin-bottom:8px;background:var(--s2)}
+.mv.prov{opacity:.5;border-style:dashed;background:transparent}
+.gw{font-size:12px;font-weight:800;color:var(--ink3);width:44px;flex:0 0 auto}
+.sw{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sw i{font-style:normal;color:var(--ink3)}
+.out{color:var(--bad)} .in{color:var(--good)}
+.hit{margin-left:auto;font-size:11px;font-weight:700;color:var(--bad)}
+.lbl{font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink3);margin:16px 0 8px}
+
+/* noise bar */
+.noise{position:relative;height:44px;margin:22px 0 6px}
+.nbar{position:absolute;inset:14px 0 auto 0;height:16px;border-radius:8px;
+ background:linear-gradient(90deg,rgba(240,115,111,.35),rgba(255,255,255,.12),rgba(61,220,122,.35))}
+.nz{position:absolute;top:6px;bottom:6px;width:2px;background:var(--ink2)}
+.nm{position:absolute;top:0;bottom:0;width:3px;background:var(--acc);border-radius:2px}
+.nl{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink3)}
+.callout{border-left:3px solid var(--acc);padding:2px 0 2px 14px;margin:18px 0;color:var(--ink2);max-width:66ch}
+.no{border-left-color:var(--bad)}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}
+td,th{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line)}
+th{font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink3)}
+</style>
+<div class="wrap">
+
+<h1>Transfer planning, in plain English</h1>
+<p class="lead">You asked what I meant by &ldquo;transfer planning is different&rdquo;. Here it is with real
+numbers from your Plan A squad &mdash; no jargon.</p>
+
+<div class="rule"></div>
+<div class="step">The difference in one sentence</div>
+<h2>We compare destinations. We don&rsquo;t plan routes.</h2>
+<div class="card">
+  <p class="big">Everything we have built compares <b class="w">finished squads</b> &mdash; here are two teams,
+  which one scores more. What it never does is work out <b class="w">the moves that get you there, and in
+  which week to make them</b>.</p>
+  <p>It&rsquo;s the difference between a map and a satnav. The map shows you where places are. The satnav
+  works out the route &mdash; and crucially, you only ever drive the next junction before it recalculates.</p>
+</div>
+
+<div class="rule"></div>
+<div class="step">The bit you can use every week</div>
+<h2>&ldquo;Should I use my free transfer, or save it?&rdquo;</h2>
+<p>This is the real question you have every Friday. Here is your Plan A squad, right now, with one free
+transfer. Both options scored over the next six gameweeks.</p>
+<div class="opts">
+  <div class="opt">
+    <div class="t">Use it this week</div>
+    <div class="n">328.7</div>
+    <div class="d">+0.0 against doing nothing</div>
+    <ul><li>Best available move: <b class="w">Kayode &rarr; Mitchell</b></li>
+        <li>Your squad is already well built, so no single swap improves it</li></ul>
+  </div>
+  <div class="opt win">
+    <div class="t">Save it, use two next week <span class="tick">&#10003;</span></div>
+    <div class="n">330.4</div>
+    <div class="d">+1.7 against doing nothing</div>
+    <ul><li><b class="w">Pickford &rarr; Verbruggen</b></li>
+        <li><b class="w">E.Le Fée &rarr; Szoboszlai</b></li></ul>
+  </div>
+</div>
+<div class="callout"><b class="w">Why saving wins here, in one line:</b> one transfer can only swap one
+player. Two transfers can do things one cannot &mdash; here it downgrades the goalkeeper to help pay for a
+much better midfielder. <b class="w">Saving a transfer isn&rsquo;t doing nothing. It&rsquo;s buying the
+option to do something bigger.</b></div>
+<p style="font-size:14px;color:var(--ink3)">Nothing on the site answers this today. It is also the
+cheapest thing here to build, because it only has to look one week ahead.</p>
+
+<div class="rule"></div>
+<div class="step">The ambitious version</div>
+<h2>A six-week plan, and why I don&rsquo;t trust the end of it</h2>
+<p>This is what a proper search comes back with &mdash; the best sequence of moves it can find across six
+weeks, obeying free transfers, hits, budget and the three-per-club rule.</p>
+<div class="card">
+  <div class="lbl">Commit to this</div>
+  <div class="mv"><span class="gw">GW1</span><span class="sw"><b class="out">Pickford</b><i>→</i><b class="in">Verbruggen</b></span></div>
+  <div class="lbl">The rest is a suggestion, not a plan</div>
+  <div class="mv prov"><span class="gw">GW2</span><span class="sw"><b class="out">E.Le Fée</b><i>→</i><b class="in">Szoboszlai</b></span></div><div class="mv prov"><span class="gw">GW4</span><span class="sw"><b class="out">Kayode</b><i>→</i><b class="in">Mitchell</b></span></div><div class="mv prov"><span class="gw">GW4</span><span class="sw"><b class="out">Calvert-Lewin</b><i>→</i><b class="in">Welbeck</b></span></div><div class="mv prov"><span class="gw">GW5</span><span class="sw"><b class="out">Virgil</b><i>→</i><b class="in">Guéhi</b></span></div><div class="mv prov"><span class="gw">GW6</span><span class="sw"><b class="out">Szoboszlai</b><i>→</i><b class="in">Rice</b></span></div>
+  <p style="margin-top:14px">Total: <b class="w">332.7</b> against <b class="w">328.7</b> for
+  never making a transfer &mdash; a gain of <b class="w">+4.0 points over six weeks</b>.</p>
+</div>
+
+<div class="callout no"><b class="w">Look closely at the plan and you can see the problem.</b> It buys
+Szoboszlai in GW2 and sells him again in GW6. That is not a strategy, it is the model chasing whatever
+looks best in each individual week. Present that as &ldquo;your plan&rdquo; and people will follow it.</div>
+
+<div class="rule"></div>
+<div class="step">The honest bit</div>
+<h2>+4.0 points sounds good until you see the scale</h2>
+<p>Your Compare tab already measured how much a six-week total bounces around. Plan A against Plan B came
+out to a mean gap of 3 points inside a range of <b class="w">&minus;38 to +44</b>. Here is where a
++4.0-point plan sits on that same scale:</p>
+<div class="card">
+  <div class="noise">
+    <div class="nbar"></div>
+    <div class="nz" style="left:46.3%"></div>
+    <div class="nm" style="left:51.2%"></div>
+  </div>
+  <div class="nl"><span>&minus;38 &middot; a bad run</span><span>0 &middot; no change</span><span>+44 &middot; a good run</span></div>
+  <p style="margin-top:14px">The gold line is the plan&rsquo;s entire six-week edge. <b class="w">Luck moves you ten
+  times further than the plan does.</b></p>
+</div>
+<p>That does not make planning pointless &mdash; the edge is real and it is the part you control. It does
+mean a screen that prints &ldquo;+4.0 points&rdquo; in big letters is lying about how sure it is.</p>
+
+<div class="rule"></div>
+<div class="step">What I would build</div>
+<h2>The satnav, not the itinerary</h2>
+<table>
+  <tr><th>Build</th><th>Why</th></tr>
+  <tr><td><b class="w">Use it or save it</b></td><td>Answers a question you have every week. Only looks one week ahead, so it is small and trustworthy.</td></tr>
+  <tr><td><b class="w">This week&rsquo;s move, in full</b></td><td>The only thing you actually commit to. Search six weeks deep to choose it well &mdash; like a chess engine thinking ahead to pick one move.</td></tr>
+  <tr><td><b class="w">Later weeks, greyed out</b></td><td>Shown so you can see where it is heading, drawn as provisional so nobody treats it as a promise.</td></tr>
+  <tr><td><b class="w">&ldquo;Beats holding <span style="color:var(--ink3)">&hellip;</span>% of the time&rdquo;</b></td><td>A win rate rather than &ldquo;+4.0 points&rdquo; &mdash; the same paired simulation the Compare tab already runs. Not computed here: it needs the simulation, which is the build, not the mock-up.</td></tr>
+</table>
+<div class="callout no"><b class="w">What I would not build:</b> a six-week plan presented as a plan, or a
+button that applies it for you. That version would look the most impressive and mislead the most people
+&mdash; and there is one more catch: this all assumes prices never change. In real life your budget drifts
+every week, so a plan that is £0.1m tight in GW5 may simply be impossible by the time you get there.</div>
+
+</div>
