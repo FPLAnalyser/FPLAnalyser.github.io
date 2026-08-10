@@ -1,0 +1,291 @@
+<meta charset="utf-8"><title>Squad compare and builder — seven concepts</title>
+<style>
+:root{--bg:#000;--s1:#121316;--s2:#1b1c1f;--s3:#232427;--ink:#edeff3;--ink2:#aaacb0;--ink3:#828386;
+--acc:#c9a227;--acc2:#ead188;--line:rgba(255,255,255,.1);--line2:rgba(255,255,255,.2);
+--good:#3ddc7a;--warn:#e8b04a;--bad:#f0736f;--tone:rgba(255,255,255,.05);
+--fa:#ead188;--fb:#7fb0ff;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+ -webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:40px 20px 80px}
+h1{font-size:30px;font-weight:800;letter-spacing:-.02em;margin:0 0 6px}
+.sub{color:var(--ink2);max-width:70ch;margin:0 0 10px}
+.rule{height:1px;background:var(--line);margin:34px 0 26px}
+.tag{font:700 10.5px/1 ui-sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--acc)}
+h2{font-size:19px;font-weight:800;margin:6px 0 4px;letter-spacing:-.01em}
+.kick{color:var(--ink2);font-size:13.5px;margin:0 0 16px;max-width:78ch}
+.note{color:var(--ink3);font-size:12.5px;line-height:1.6;margin-top:12px;border-left:2px solid var(--line2);padding-left:12px;max-width:82ch}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:20px}
+.pa{color:var(--fa)} .pb{color:var(--fb)}
+
+/* 1 verdict */
+.verdict{display:grid;grid-template-columns:1fr auto 1fr;gap:18px;align-items:center}
+.vb{text-align:center} .vb .n{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.vb .l{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink3);margin-top:5px}
+.vs{font-size:11px;letter-spacing:.16em;color:var(--ink3)}
+.headline{font-size:17px;font-weight:700;margin:18px 0 0;text-align:center;letter-spacing:-.01em}
+
+/* 2 dims */
+.dim{display:grid;grid-template-columns:38px 1fr 220px 1fr 38px;gap:10px;align-items:center;margin:9px 0}
+.dnum{font-variant-numeric:tabular-nums;font-weight:700;font-size:14px;color:var(--ink3);text-align:center}
+.dnum.win{color:var(--ink)}
+.dbar{height:9px;background:var(--s3);border-radius:5px;display:flex;justify-content:flex-end;overflow:hidden}
+.dbar.r{justify-content:flex-start}
+.dbar i{display:block;height:100%;background:rgba(234,209,136,.35);border-radius:5px}
+.dbar.r i{background:rgba(127,176,255,.35)}
+.dbar i.win{background:var(--fa)} .dbar.r i.win{background:var(--fb)}
+.dlab{text-align:center} .dlab b{display:block;font-size:12.5px;font-weight:700}
+.dlab span{display:block;font-size:10.5px;color:var(--ink3);line-height:1.35;margin-top:1px}
+
+/* 3 timeline */
+svg{display:block;width:100%;height:auto}
+.gl{stroke:rgba(255,255,255,.07);stroke-width:1}
+.ax{fill:var(--ink3);font-size:10px;text-anchor:middle}
+.la{fill:none;stroke:var(--fa);stroke-width:2.5} .lb{fill:none;stroke:var(--fb);stroke-width:2.5}
+.da{fill:var(--fa)} .db{fill:var(--fb)}
+.bandp{fill:rgba(234,209,136,.10)}
+.legend{display:flex;gap:18px;font-size:12px;color:var(--ink2);margin-top:10px;flex-wrap:wrap}
+.legend i{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+
+/* 4 horizon */
+.hrow{display:grid;grid-template-columns:70px repeat(8,1fr);gap:6px;align-items:center;margin:8px 0}
+.htag{font-size:11.5px;font-weight:700;color:var(--ink2)}
+.hc{background:var(--s2);border:1px solid var(--line);border-radius:9px;padding:8px 0;text-align:center}
+.hc b{display:block;font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
+.hc span{display:block;font-size:9.5px;color:var(--ink3);margin-top:2px}
+.hc.good{border-color:rgba(61,220,122,.4)} .hc.good b{color:var(--good)}
+.hc.warn{border-color:rgba(232,176,74,.45)} .hc.warn b{color:var(--warn)}
+.hc.bad{border-color:rgba(240,115,111,.5)} .hc.bad b{color:var(--bad)}
+
+/* 5 ledger */
+table{width:100%;border-collapse:collapse;margin-top:4px}
+td{padding:9px 8px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+.pn{font-weight:600} .pn i{display:block;font-style:normal;font-size:10.5px;color:var(--ink3);margin-top:1px}
+.pn.r{text-align:right}
+.num{font-variant-numeric:tabular-nums;color:var(--ink2);text-align:center;width:56px}
+.mid{text-align:center;font-weight:800;font-variant-numeric:tabular-nums;width:64px}
+.up{color:var(--fa)} .dn{color:var(--fb)}
+thead td{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);font-weight:700}
+
+/* 6 structure */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.spend{display:flex;height:30px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.spend i{display:grid;place-items:center;font-style:normal}
+.spend em{font-style:normal;font-size:10px;font-weight:700;color:#0b0b0d;white-space:nowrap}
+.sGKP{background:#5b6472} .sDEF{background:#7fb0ff} .sMID{background:#ead188} .sFWD{background:#f0a36f}
+.chip{display:inline-block;background:var(--s3);border:1px solid var(--line);border-radius:999px;
+ padding:3px 9px;font-size:11.5px;color:var(--ink2);margin:3px 3px 0 0}
+.chip.hot{border-color:rgba(232,176,74,.5);color:var(--warn)}
+.mini{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin:14px 0 6px}
+
+/* builder */
+.build{display:grid;grid-template-columns:1fr 300px;gap:16px}
+.pitch{background:linear-gradient(180deg,#0b2417,#07130c);border:1px solid var(--line);border-radius:14px;padding:16px;min-height:300px}
+.prow{display:flex;justify-content:center;gap:10px;margin:14px 0}
+.pl{width:74px;background:var(--s2);border:1px solid var(--line);border-radius:10px;padding:7px 4px;text-align:center}
+.pl b{display:block;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl span{display:block;font-size:9.5px;color:var(--ink3)}
+.pl .xp{color:var(--acc2);font-weight:800;font-size:12px;font-variant-numeric:tabular-nums}
+.rail .r1{background:var(--s2);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.r1 .t{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+.r1 .v{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:3px}
+.delta{font-size:12px;font-weight:700} .pos{color:var(--good)} .neg{color:var(--bad)}
+</style>
+<div class="wrap">
+<h1>Squad compare &amp; builder — seven concepts</h1>
+<p class="sub">Every number below is computed from today's <code>site_data</code>: two legal &pound;100.0m fifteens,
+their per-gameweek expected points, and the four squad dimensions the site already scores. Nothing is placeholder.</p>
+<p class="sub" style="color:var(--ink3);font-size:13px">One caveat worth stating: GW1 in the live app is priced off
+bookmaker odds, and these figures use the strength model for every week. GW1 here reads a touch differently from the
+app (Raya 4.62 against the app's 4.4); GW2 onward match.</p>
+
+<div class="rule"></div>
+<div class="tag">Concept 1</div><h2>The verdict, and the contradiction in it</h2>
+<p class="kick">Lead with the number people came for, then immediately qualify it — because on this pair the two
+headline numbers disagree, and that disagreement is the most useful thing on the page.</p>
+<div class="card">
+  <div class="verdict">
+    <div class="vb"><div class="n pa">329</div><div class="l">Plan A · 6-week points</div>
+      <div class="n" style="font-size:22px;margin-top:12px;color:var(--ink2)">75</div><div class="l">Squad rating</div></div>
+    <div class="vs">VS</div>
+    <div class="vb"><div class="n pb">327</div><div class="l">Plan B · 6-week points</div>
+      <div class="n" style="font-size:22px;margin-top:12px;color:var(--ink2)">76</div><div class="l">Squad rating</div></div>
+  </div>
+  <p class="headline">Plan B has the better players. Plan A scores more points.</p>
+  <p class="note"><b>This is the panel doing its job, not a bug.</b> Squad rating averages what fifteen footballers
+  are, over a season. The projection is what this fifteen is likely to return over these six weeks — quality
+  multiplied by fixtures, minutes and who gets the armband. B rates 76 to A's 75 and still
+  projects 1.7 fewer points, because A owns Haaland and captains him in seven of eight
+  weeks. A comparison that showed only one of these numbers would be telling you half the story and sounding
+  certain about it.</p>
+</div>
+
+<div class="rule"></div>
+<div class="tag">Concept 2</div><h2>The four dimensions, faced off</h2>
+<p class="kick">The squad ratings you already compute — Attack, Defence, Def Con, Fixtures — put on one axis each,
+growing outward from the label so the shape of the difference is readable without comparing bar lengths across a gap.</p>
+<div class="card"><div class="dim">
+  <div class="dnum ">75</div>
+  <div class="dbar"><i style="width:75%" class=""></i></div>
+  <div class="dlab"><b>Squad rating</b><span>mean player rating across the fifteen</span></div>
+  <div class="dbar r"><i style="width:76%" class="win"></i></div>
+  <div class="dnum win">76</div>
+</div><div class="dim">
+  <div class="dnum win">65</div>
+  <div class="dbar"><i style="width:65%" class="win"></i></div>
+  <div class="dlab"><b>Attack</b><span>goals and assists from MID/FWD</span></div>
+  <div class="dbar r"><i style="width:63%" class=""></i></div>
+  <div class="dnum ">63</div>
+</div><div class="dim">
+  <div class="dnum ">69</div>
+  <div class="dbar"><i style="width:69%" class=""></i></div>
+  <div class="dlab"><b>Defence</b><span>clean-sheet record of GKP/DEF</span></div>
+  <div class="dbar r"><i style="width:73%" class="win"></i></div>
+  <div class="dnum win">73</div>
+</div><div class="dim">
+  <div class="dnum win">69</div>
+  <div class="dbar"><i style="width:69%" class="win"></i></div>
+  <div class="dlab"><b>Def Con</b><span>how often outfielders hit the +2 threshold</span></div>
+  <div class="dbar r"><i style="width:63%" class=""></i></div>
+  <div class="dnum ">63</div>
+</div><div class="dim">
+  <div class="dnum ">58</div>
+  <div class="dbar"><i style="width:58%" class=""></i></div>
+  <div class="dlab"><b>Fixtures</b><span>your clubs next six, ranked against the league</span></div>
+  <div class="dbar r"><i style="width:61%" class="win"></i></div>
+  <div class="dnum win">61</div>
+</div>
+  <p class="note">Read the shape, not the totals: <b>A is the attacking squad with the harder run</b>
+  (Def Con 69, Fixtures 58), <b>B is the defensive one with the kinder run</b>
+  (Defence 73, Fixtures 61). Two of these are near-ties and drawn as such —
+  a design that declared a winner on every row would manufacture five decisions out of two.
+  <br><br>One honesty note that has to ship with this panel: these dimensions come from last season's percentiles, and
+  pre-season they exist for 7 of the fifteen at the back and 8 up front — the
+  rest are new signings and promoted players with no record. The mean is taken over the players who have one.</p>
+</div>
+
+<div class="rule"></div>
+<div class="tag">Concept 3</div><h2>Where the gap opens, week by week</h2>
+<p class="kick">The timeline you asked for: expected points against gameweeks, both plans on one axis, the gap between
+them shaded. A total tells you which plan is ahead; this tells you <em>when</em>, which is the difference between a
+transfer and a rebuild.</p>
+<div class="card">
+  <svg viewBox="0 0 760 240" role="img" aria-label="Expected points per gameweek, Plan A against Plan B">
+    <line x1="26.0" y1="6" x2="26.0" y2="222" class="gl"/><text x="26.0" y="236" class="ax">GW1</text><line x1="127.1" y1="6" x2="127.1" y2="222" class="gl"/><text x="127.1" y="236" class="ax">GW2</text><line x1="228.3" y1="6" x2="228.3" y2="222" class="gl"/><text x="228.3" y="236" class="ax">GW3</text><line x1="329.4" y1="6" x2="329.4" y2="222" class="gl"/><text x="329.4" y="236" class="ax">GW4</text><line x1="430.6" y1="6" x2="430.6" y2="222" class="gl"/><text x="430.6" y="236" class="ax">GW5</text><line x1="531.7" y1="6" x2="531.7" y2="222" class="gl"/><text x="531.7" y="236" class="ax">GW6</text><line x1="632.9" y1="6" x2="632.9" y2="222" class="gl"/><text x="632.9" y="236" class="ax">GW7</text><line x1="734.0" y1="6" x2="734.0" y2="222" class="gl"/><text x="734.0" y="236" class="ax">GW8</text>
+    <polygon points="26.0,111.8 127.1,152.7 228.3,75.0 329.4,132.3 430.6,66.9 531.7,173.1 632.9,66.9 734.0,173.1 734.0,122.0 632.9,134.3 531.7,144.5 430.6,120.0 329.4,85.3 228.3,113.9 127.1,162.9 26.0,120.0" class="bandp"/>
+    <polyline points="26.0,111.8 127.1,152.7 228.3,75.0 329.4,132.3 430.6,66.9 531.7,173.1 632.9,66.9 734.0,173.1" class="la"/><polyline points="26.0,120.0 127.1,162.9 228.3,113.9 329.4,85.3 430.6,120.0 531.7,144.5 632.9,134.3 734.0,122.0" class="lb"/>
+    <circle cx="26.0" cy="110.1" r="3.5" class="da"/><circle cx="26.0" cy="120.0" r="3.5" class="db"/><circle cx="127.1" cy="159.7" r="3.5" class="da"/><circle cx="127.1" cy="172.0" r="3.5" class="db"/><circle cx="228.3" cy="65.5" r="3.5" class="da"/><circle cx="228.3" cy="112.6" r="3.5" class="db"/><circle cx="329.4" cy="134.9" r="3.5" class="da"/><circle cx="329.4" cy="77.9" r="3.5" class="db"/><circle cx="430.6" cy="55.6" r="3.5" class="da"/><circle cx="430.6" cy="120.0" r="3.5" class="db"/><circle cx="531.7" cy="184.4" r="3.5" class="da"/><circle cx="531.7" cy="149.7" r="3.5" class="db"/><circle cx="632.9" cy="55.6" r="3.5" class="da"/><circle cx="632.9" cy="137.3" r="3.5" class="db"/><circle cx="734.0" cy="184.4" r="3.5" class="da"/><circle cx="734.0" cy="122.5" r="3.5" class="db"/>
+  </svg>
+  <div class="legend"><span><i style="background:var(--fa)"></i>Plan A</span>
+    <span><i style="background:var(--fb)"></i>Plan B</span>
+    <span><i style="background:rgba(234,209,136,.10);height:9px"></i>Gap</span></div>
+  <p class="note">Six weeks, and the lead changes hands three times. A wins GW3 and GW5 by around two points a week;
+  B takes GW4 and GW6. <b>Nothing here is a rebuild</b> — the plans are within 1.7 points
+  over six weeks, which is inside the noise of a single captain haul. The chart earns its place by saying that plainly
+  instead of letting a 1.7-point total read as a verdict.</p>
+</div>
+
+<div class="rule"></div>
+<div class="tag">Concept 4</div><h2>Horizon scan, both plans at once</h2>
+<p class="kick">Already on Squad Lab for one squad — worth far more across two. How many of your fifteen walk into a
+fixture rated 4 or 5, week by week.</p>
+<div class="card"><div class="hrow"><div class="htag">Plan A</div><div class="hc good"><b>1</b><span>GW1</span></div><div class="hc good"><b>2</b><span>GW2</span></div><div class="hc warn"><b>5</b><span>GW3</span></div><div class="hc "><b>3</b><span>GW4</span></div><div class="hc "><b>3</b><span>GW5</span></div><div class="hc bad"><b>7</b><span>GW6</span></div><div class="hc bad"><b>6</b><span>GW7</span></div><div class="hc bad"><b>6</b><span>GW8</span></div></div><div class="hrow"><div class="htag">Plan B</div><div class="hc good"><b>1</b><span>GW1</span></div><div class="hc bad"><b>6</b><span>GW2</span></div><div class="hc bad"><b>6</b><span>GW3</span></div><div class="hc "><b>3</b><span>GW4</span></div><div class="hc good"><b>1</b><span>GW5</span></div><div class="hc warn"><b>5</b><span>GW6</span></div><div class="hc warn"><b>4</b><span>GW7</span></div><div class="hc warn"><b>4</b><span>GW8</span></div></div>
+  <p class="note"><b>This is the panel that would actually change my mind.</b> The projection has A ahead, but A walks
+  seven of fifteen into a hard game in GW6 and six in GW7-8, while B never goes past six and sits at one in GW5. A
+  squad that projects 1.7 points better over six weeks and then hits a wall in the seventh is not obviously the better
+  plan — and you cannot see that anywhere in a total.</p>
+</div>
+
+<div class="rule"></div>
+<div class="tag">Concept 5</div><h2>The ledger: seven swaps, priced</h2>
+<p class="kick">The plans share 8 players. Those cancel. What is left is seven decisions, each with the
+six-week points it is worth — so "which plan" becomes "which of these seven do I actually believe".</p>
+<div class="card"><table>
+<thead><tr><td>Plan A only</td><td class="num">6GW</td><td class="mid">Δ</td><td class="num">6GW</td><td class="pn r">Plan B only</td></tr></thead>
+<tbody><tr><td class="pn">Tarkowski<i>DEF · EVE · £6.0</i></td>
+        <td class="num">25.8</td>
+        <td class="mid dn">-2.7</td>
+        <td class="num">28.5</td>
+        <td class="pn r">Gabriel<i>DEF · ARS · £8.0</i></td></tr><tr><td class="pn">Kayode<i>DEF · BRE · £4.5</i></td>
+        <td class="num">19.4</td>
+        <td class="mid dn">-1.7</td>
+        <td class="num">21.1</td>
+        <td class="pn r">N.Williams<i>DEF · NFO · £5.0</i></td></tr><tr><td class="pn">E.Le Fée<i>MID · SUN · £6.0</i></td>
+        <td class="num">22.6</td>
+        <td class="mid dn">-3.7</td>
+        <td class="num">26.3</td>
+        <td class="pn r">Gibbs-White<i>MID · NFO · £8.0</i></td></tr><tr><td class="pn">Garner<i>MID · EVE · £6.0</i></td>
+        <td class="num">24.9</td>
+        <td class="mid dn">-2.2</td>
+        <td class="num">27.1</td>
+        <td class="pn r">Rice<i>MID · ARS · £7.5</i></td></tr><tr><td class="pn">Wharton<i>MID · CRY · £5.5</i></td>
+        <td class="num">19.5</td>
+        <td class="mid up">+1.3</td>
+        <td class="num">18.2</td>
+        <td class="pn r">Mac Allister<i>MID · LIV · £5.5</i></td></tr><tr><td class="pn">Haaland<i>FWD · MCI · £15.5</i></td>
+        <td class="num">33.8</td>
+        <td class="mid up">+9.1</td>
+        <td class="num">24.7</td>
+        <td class="pn r">Watkins<i>FWD · AVL · £8.0</i></td></tr><tr><td class="pn">Calvert-Lewin<i>FWD · LEE · £6.0</i></td>
+        <td class="num">22.1</td>
+        <td class="mid dn">-2.8</td>
+        <td class="num">24.9</td>
+        <td class="pn r">João Pedro<i>FWD · CHE · £7.5</i></td></tr></tbody></table>
+  <p class="note">Paired within position, most expensive first — the two plans differ by exactly two defenders,
+    three midfielders and two forwards, so every row is a like-for-like choice rather than an arbitrary line-up of
+    names. <b>B wins five of the seven</b>, and A is still ahead overall: the whole margin is Haaland, worth
+    +9.1 over Watkins across six weeks and captained in seven of eight.
+
+<div class="rule"></div>
+<div class="tag">Concept 6</div><h2>Structure and risk</h2>
+<p class="kick">Two squads can project alike and be built completely differently. Where the money went, and how
+concentrated the club exposure is.</p>
+<div class="two">
+  <div class="card"><div class="tag pa" style="color:var(--fa)">Plan A</div>
+    <div class="mini">Spend by position</div><div class="spend"><i class="sGKP" style="width:11.5%" title="GKP £11.5m"><em>GKP £12m</em></i><i class="sDEF" style="width:28.0%" title="DEF £28.0m"><em>DEF £28m</em></i><i class="sMID" style="width:31.0%" title="MID £31.0m"><em>MID £31m</em></i><i class="sFWD" style="width:29.5%" title="FWD £29.5m"><em>FWD £30m</em></i></div>
+    <div class="mini">Clubs with two or more</div><span class="chip hot">EVE ×3</span> <span class="chip">BRE ×2</span> <span class="chip">MCI ×2</span>
+    <p class="note">£30m of the £100m in three forwards, and three Everton players — the
+    maximum. One Everton postponement takes a fifth of the outfield.</p></div>
+  <div class="card"><div class="tag" style="color:var(--fb)">Plan B</div>
+    <div class="mini">Spend by position</div><div class="spend"><i class="sGKP" style="width:11.5%" title="GKP £11.5m"><em>GKP £12m</em></i><i class="sDEF" style="width:30.5%" title="DEF £30.5m"><em>DEF £30m</em></i><i class="sMID" style="width:34.5%" title="MID £34.5m"><em>MID £34m</em></i><i class="sFWD" style="width:23.5%" title="FWD £23.5m"><em>FWD £24m</em></i></div>
+    <div class="mini">Clubs with two or more</div><span class="chip hot">ARS ×3</span> <span class="chip">LIV ×2</span> <span class="chip">NFO ×2</span> <span class="chip">CHE ×2</span>
+    <p class="note">Flatter: £34m through the middle and no forward over £8.0m. Three Arsenal,
+    but spread across the pitch rather than stacked in one line.</p></div>
+</div>
+
+<div class="rule"></div>
+<div class="tag">Concept 7</div><h2>Builder: the impact rail</h2>
+<p class="kick">For the builder itself. Rather than a pitch with a separate stats panel, every figure the site already
+computes sits in a rail that moves the moment you add or drop a player — so picking is a conversation, not a form.</p>
+<div class="card"><div class="build">
+  <div class="pitch">
+    <div class="prow"><div class="pl"><b>Raya</b><span>ARS</span><span class="xp">4.6</span></div></div>
+    <div class="prow"><div class="pl"><b>Kayode</b><span>BRE</span><span class="xp">3.2</span></div><div class="pl"><b>Thiaw</b><span>NEW</span><span class="xp">4.2</span></div><div class="pl"><b>Virgil</b><span>LIV</span><span class="xp">4.4</span></div><div class="pl"><b>Tarkowski</b><span>EVE</span><span class="xp">4.3</span></div></div>
+    <div class="prow"><div class="pl"><b>E.Le Fée</b><span>SUN</span><span class="xp">3.8</span></div><div class="pl"><b>Wharton</b><span>CRY</span><span class="xp">3.2</span></div><div class="pl"><b>Anderson</b><span>MCI</span><span class="xp">4.6</span></div><div class="pl"><b>Garner</b><span>EVE</span><span class="xp">4.1</span></div></div>
+    <div class="prow"><div class="pl"><b>Calvert-L</b><span>LEE</span><span class="xp">3.7</span></div><div class="pl"><b>Thiago</b><span>BRE</span><span class="xp">4.8</span></div></div>
+  </div>
+  <div class="rail">
+    <div class="r1"><div class="t">Projected · 6 weeks</div><div class="v pa">329</div>
+      <div class="delta pos">+4.1 since your last change</div></div>
+    <div class="r1"><div class="t">Squad rating</div><div class="v">75</div>
+      <div class="delta neg">−2 · you traded quality for fixtures</div></div>
+    <div class="r1"><div class="t">Worst week ahead</div><div class="v" style="color:var(--bad)">GW6</div>
+      <div class="delta">7 of 15 in a hard game</div></div>
+    <div class="r1"><div class="t">In the bank</div><div class="v">£0.0m</div>
+      <div class="delta" style="color:var(--ink3)">15 of 15 picked</div></div>
+  </div>
+</div>
+  <p class="note">The rail is the point: <b>the four numbers that should decide a pick are visible while you are making
+  it</b>, with the delta from your last change attached. The "−2, you traded quality for fixtures" line is the same
+  contradiction Concept 1 opens with, caught at the moment it happens rather than explained afterwards.</p>
+</div>
+
+<div class="rule"></div>
+<p class="note" style="border-color:var(--acc);max-width:none">
+<b>On the screenshots you shared.</b> What is worth taking from them is the <em>premise</em> — two plans side by side,
+one timeline, a clear winner per row. What is not worth taking is the execution: their comparison is a table of totals
+with a colour on the bigger number, which is exactly the design that would have told you "A wins by 1.7" and hidden
+GW6. So these concepts keep the side-by-side and the timeline, and differ deliberately in three ways: every panel
+carries the reason underneath it, near-ties are drawn as near-ties instead of being awarded, and the squad dimensions
+you already compute do the work a generic "rating" column does on theirs.</p>
+</div>
