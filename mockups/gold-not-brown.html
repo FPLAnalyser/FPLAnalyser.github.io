@@ -1,0 +1,342 @@
+<title>Black and gold, without the brown</title>
+<style>
+/* ── the five grounds ────────────────────────────────────────────────────── */
+.v{--acc:#c9a227;--acc2:#ead188;--accc:#14100a;--good:#3ddc7a;--bad:#f0736f;--b:#6ea8ff}
+
+/* A · today — warm greys, cream ink, a 14% gold wash */
+.v-now{--bg:#0a0908;--s1:#131110;--s2:#1b1917;--s3:#242120;--line:#2a2724;--lmid:#3a3630;
+--ink:#f4efe3;--ink2:#a9a294;--ink3:#777064;--soft:rgba(201,162,39,.14);--chipbg:var(--soft)}
+
+/* B · neutral greys and ink, wash untouched — isolates one change */
+.v-neutral{--bg:#0a0a0b;--s1:#121214;--s2:#1a1a1d;--s3:#232327;--line:#292a2e;--lmid:#383a3f;
+--ink:#f2f3f6;--ink2:#a6a8ae;--ink3:#767a82;--soft:rgba(201,162,39,.14);--chipbg:var(--soft)}
+
+/* C · neutral + the wash removed: gold on the border and the text only */
+.v-nowash{--bg:#0a0a0b;--s1:#121214;--s2:#1a1a1d;--s3:#232327;--line:#292a2e;--lmid:#383a3f;
+--ink:#f2f3f6;--ink2:#a6a8ae;--ink3:#767a82;--soft:rgba(201,162,39,.08);--chipbg:rgba(255,255,255,.05)}
+
+/* D · C, with a cleaner gold */
+.v-brighter{--bg:#0a0a0b;--s1:#121214;--s2:#1a1a1d;--s3:#232327;--line:#292a2e;--lmid:#383a3f;
+--ink:#f2f3f6;--ink2:#a6a8ae;--ink3:#767a82;--acc:#dcb43c;--acc2:#f0d182;--accc:#100c02;
+--soft:rgba(220,180,60,.08);--chipbg:rgba(255,255,255,.05)}
+
+/* E · true black ground, panels lifted */
+.v-black{--bg:#000000;--s1:#0e0e10;--s2:#17171a;--s3:#202024;--line:#26272b;--lmid:#35373c;
+--ink:#f2f3f6;--ink2:#a6a8ae;--ink3:#767a82;--acc:#dcb43c;--acc2:#f0d182;--accc:#100c02;
+--soft:rgba(220,180,60,.08);--chipbg:rgba(255,255,255,.055)}
+
+*{box-sizing:border-box}
+body{margin:0;background:#08080a;color:#eceef1;
+font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:30px 18px 80px}
+h1{font-size:26px;line-height:1.2;margin:0 0 8px;letter-spacing:-.02em}
+h2{font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
+.lede{color:#a6a8ae;font-size:15px;margin:0 0 6px;max-width:70ch}
+.meta{color:#767a82;font-size:12.5px;margin:0 0 34px;border-top:1px solid #222327;padding-top:12px}
+section{margin:0 0 50px}
+.tag{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#c9a227;margin:0 0 5px}
+.sub{color:#a6a8ae;font-size:14px;margin:0 0 16px;max-width:82ch}
+.note{background:#121214;border:1px solid #26272b;border-radius:11px;padding:13px 16px;
+margin-top:16px;font-size:13.5px;color:#a6a8ae;max-width:86ch}
+.note b{color:#f2f3f6;font-weight:600}
+code{font-size:12px;background:#1a1a1d;padding:1px 5px;border-radius:4px;color:#a6a8ae}
+table.tok{border-collapse:collapse;width:100%;font-size:12.5px;margin-top:6px}
+table.tok td,table.tok th{padding:5px 8px;border-bottom:1px solid #222327;text-align:left;
+font-variant-numeric:tabular-nums}
+table.tok th{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:#767a82;font-weight:600}
+table.tok i{display:inline-block;width:13px;height:13px;border-radius:3px;margin-right:7px;vertical-align:-2px;
+outline:1px solid #33343a}
+.warm{color:#e8b04a}.cool{color:#7fb0ff}
+
+/* ── the sample component (the plan bar you screenshotted) ───────────────── */
+.v{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:13px 14px;color:var(--ink)}
+.vh{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+.vn{font-size:13.5px;font-weight:700}
+.vd{font-size:11px;color:var(--ink3)}
+.vhex{margin-left:auto;font-size:10.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.bar{background:color-mix(in oklab,var(--s1) 60%,var(--bg));border:1px solid var(--line);
+border-radius:12px;padding:10px}
+.blab{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.blab em{font-style:normal;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);font-weight:700}
+.blab u{text-decoration:none;font-size:11px;color:var(--ink3)}
+.cta{margin-left:auto;background:var(--acc);color:var(--accc);border:0;border-radius:8px;
+padding:5px 10px;font:inherit;font-size:11.5px;font-weight:700;cursor:default}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:flex;align-items:center;gap:8px;border:1px solid var(--lmid);background:var(--s2);
+border-radius:9px;padding:5px 9px}
+.chip.on{border-color:var(--acc);background:var(--chipbg)}
+.chip b{font-size:12.5px;font-weight:650;color:var(--ink);display:block}
+.chip.on b{color:var(--acc)}
+.chip em{font-style:normal;font-size:10px;color:var(--ink3);display:block}
+.box{width:15px;height:15px;border-radius:4px;border:1.5px solid var(--ink3);position:relative;flex:none}
+.box.on{background:var(--acc);border-color:var(--acc)}
+.box.on:after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;
+border:solid var(--accc);border-width:0 2px 2px 0;transform:rotate(42deg)}
+.acts{display:flex;gap:8px;border-left:1px solid var(--line);padding-left:9px;margin-left:2px}
+.acts s{text-decoration:none;font-size:11px;font-weight:650;color:var(--ink3)}
+.hint{margin-top:8px;font-size:11px;color:var(--ink3)}
+.grid5{display:grid;gap:13px;grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}
+
+/* ── the fuller sample ───────────────────────────────────────────────────── */
+.page{background:var(--bg);border:1px solid var(--line);border-radius:14px;overflow:hidden;color:var(--ink)}
+.nav{display:flex;align-items:center;gap:16px;padding:11px 15px;border-bottom:1px solid var(--line);
+background:color-mix(in oklab,var(--s1) 70%,var(--bg))}
+.logo{font-size:15px;font-weight:800;letter-spacing:-.02em}
+.logo span{color:var(--acc)}
+.nav a{font-size:12.5px;color:var(--ink2);text-decoration:none}
+.nav a.on{color:var(--ink);font-weight:650;position:relative}
+.nav a.on:after{content:"";position:absolute;left:0;right:0;bottom:-13px;height:2px;background:var(--acc);border-radius:2px}
+.body{padding:14px 15px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:12px}
+.st{background:var(--s1);border:1px solid var(--line);border-radius:11px;padding:9px 11px}
+.st b{display:block;font-size:19px;font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:var(--acc2)}
+.st em{font-style:normal;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.tbl{background:var(--s1);border:1px solid var(--line);border-radius:11px;overflow:hidden}
+.tr{display:grid;grid-template-columns:1.6fr repeat(4,1fr);gap:9px;padding:8px 11px;
+border-bottom:1px solid var(--line);font-size:12.5px;font-variant-numeric:tabular-nums;align-items:center}
+.tr:last-child{border-bottom:0}
+.tr.h{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);font-weight:600}
+.tr n{font-style:normal;font-weight:650}
+.tr .gold{color:var(--acc2);font-weight:700}
+.pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;
+background:var(--soft);color:var(--acc2);border:1px solid color-mix(in oklab,var(--acc) 45%,transparent)}
+.two{display:grid;gap:13px;grid-template-columns:1fr 1fr}
+@media (max-width:820px){.two{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:660px){.wrap{padding:22px 13px 60px}h1{font-size:22px}}
+</style>
+<div class="wrap">
+
+<h1>Black and gold, without the brown</h1>
+<p class="lede">You are right, and it is measurable. Three separate things are making that cast,
+and only one of them is the gold itself.</p>
+<p class="meta">Every hex below is computed, not eyeballed — composited alpha, and contrast ratios
+checked against the ground they sit on</p>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section>
+<span class="tag">Diagnosis</span>
+<h2>Where the brown actually comes from</h2>
+<p class="sub">R−B is how much redder than bluer a colour is. A true grey is 0. Every surface
+token on the site is positive, and the text is strongly so.</p>
+
+<table class="tok">
+  <tr><th>Token</th><th>Today</th><th>R−B</th><th>Hue</th><th>Neutral at the same lightness</th><th>R−B</th></tr>
+  <tr><td>bg-0</td><td><i style="background:#0a0908"></i>#0a0908</td><td class="warm">+2</td><td>30°</td>
+      <td><i style="background:#0a0a0b"></i>#0a0a0b</td><td class="cool">−1</td></tr>
+  <tr><td>surface-1</td><td><i style="background:#131110"></i>#131110</td><td class="warm">+3</td><td>20°</td>
+      <td><i style="background:#121214"></i>#121214</td><td class="cool">−2</td></tr>
+  <tr><td>surface-2</td><td><i style="background:#1b1917"></i>#1b1917</td><td class="warm">+4</td><td>30°</td>
+      <td><i style="background:#1a1a1d"></i>#1a1a1d</td><td class="cool">−3</td></tr>
+  <tr><td>line-mid</td><td><i style="background:#3a3630"></i>#3a3630</td><td class="warm">+10</td><td>36°</td>
+      <td><i style="background:#383a3f"></i>#383a3f</td><td class="cool">−7</td></tr>
+  <tr><td>ink-1 · body text</td><td><i style="background:#f4efe3"></i>#f4efe3</td><td class="warm">+17</td><td>42°</td>
+      <td><i style="background:#f2f3f6"></i>#f2f3f6</td><td class="cool">−4</td></tr>
+  <tr><td>ink-2 · secondary</td><td><i style="background:#a9a294"></i>#a9a294</td><td class="warm">+21</td><td>40°</td>
+      <td><i style="background:#a6a8ae"></i>#a6a8ae</td><td class="cool">−8</td></tr>
+  <tr><td>ink-3 · captions</td><td><i style="background:#777064"></i>#777064</td><td class="warm">+19</td><td>38°</td>
+      <td><i style="background:#767a82"></i>#767a82</td><td class="cool">−12</td></tr>
+</table>
+
+<div class="note"><b>1 · The greys are warm.</b> Mild on its own, but it is on every panel, every
+border and every caption at once, so the whole page sits under a beige film.</div>
+
+<div class="note"><b>2 · The body text is cream, not white.</b> <code>#f4efe3</code> is a 42° hue at
+44% saturation — that is a deliberate warm cream, and it is the single largest area of colour on
+any screen. Text is most of what you look at, so this is doing more work than the panels are.</div>
+
+<div class="note"><b>3 · And the actual brown is the gold wash.</b> The selected plan chip is
+filled with <code>rgba(201,162,39,.14)</code>. Over the warm panel that composites to
+<i style="background:#2c2513;display:inline-block;width:13px;height:13px;border-radius:3px;vertical-align:-2px;outline:1px solid #33343a"></i>
+<code>#2c2513</code> — hue 43°, saturation 40%. That is not gold and it is not black. It is brown,
+by arithmetic. <b>Gold at 14% over near-black is mud by definition</b>: you cannot dilute a
+mid-tone into a dark ground and get a metal, you get its earth pigment.</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section>
+<span class="tag">Options</span>
+<h2>The same plan bar, five ways</h2>
+<p class="sub">Identical markup; only the variables change. Compare A with B to see the greys and
+ink alone, and B with C to see what removing the wash does.</p>
+
+<div class="grid5">
+
+  <div class="v v-now">
+    <div class="vh"><span class="vn">A · Today</span><span class="vd">warm greys · cream ink · .14 wash</span>
+      <span class="vhex">chip #2c2513</span></div>
+    <div class="bar">
+      <div class="blab"><em>Plans</em><u>2 of 8</u><button class="cta">Compare 2</button></div>
+      <div class="chips">
+        <span class="chip"><span class="box"></span><span><b>Plan 1</b><em>15/15 · 21 min ago</em></span></span>
+        <span class="chip on"><span class="box on"></span><span><b>Plan 2</b><em>15/15 · 16 min ago</em></span>
+          <span class="acts"><s>Rename</s><s>Duplicate</s><s>✕</s></span></span>
+      </div>
+      <div class="hint">Tick two or more, then Compare.</div>
+    </div>
+  </div>
+
+  <div class="v v-neutral">
+    <div class="vh"><span class="vn">B · Neutral ground</span><span class="vd">greys + ink only</span>
+      <span class="vhex">chip #2c2617</span></div>
+    <div class="bar">
+      <div class="blab"><em>Plans</em><u>2 of 8</u><button class="cta">Compare 2</button></div>
+      <div class="chips">
+        <span class="chip"><span class="box"></span><span><b>Plan 1</b><em>15/15 · 21 min ago</em></span></span>
+        <span class="chip on"><span class="box on"></span><span><b>Plan 2</b><em>15/15 · 16 min ago</em></span>
+          <span class="acts"><s>Rename</s><s>Duplicate</s><s>✕</s></span></span>
+      </div>
+      <div class="hint">Tick two or more, then Compare.</div>
+    </div>
+  </div>
+
+  <div class="v v-nowash">
+    <div class="vh"><span class="vn">C · Neutral, no wash</span><span class="vd">gold on border + text</span>
+      <span class="vhex">chip #1e1e20</span></div>
+    <div class="bar">
+      <div class="blab"><em>Plans</em><u>2 of 8</u><button class="cta">Compare 2</button></div>
+      <div class="chips">
+        <span class="chip"><span class="box"></span><span><b>Plan 1</b><em>15/15 · 21 min ago</em></span></span>
+        <span class="chip on"><span class="box on"></span><span><b>Plan 2</b><em>15/15 · 16 min ago</em></span>
+          <span class="acts"><s>Rename</s><s>Duplicate</s><s>✕</s></span></span>
+      </div>
+      <div class="hint">Tick two or more, then Compare.</div>
+    </div>
+  </div>
+
+  <div class="v v-brighter">
+    <div class="vh"><span class="vn">D · C + cleaner gold</span><span class="vd">#dcb43c, 10.0:1</span>
+      <span class="vhex">chip #1e1e20</span></div>
+    <div class="bar">
+      <div class="blab"><em>Plans</em><u>2 of 8</u><button class="cta">Compare 2</button></div>
+      <div class="chips">
+        <span class="chip"><span class="box"></span><span><b>Plan 1</b><em>15/15 · 21 min ago</em></span></span>
+        <span class="chip on"><span class="box on"></span><span><b>Plan 2</b><em>15/15 · 16 min ago</em></span>
+          <span class="acts"><s>Rename</s><s>Duplicate</s><s>✕</s></span></span>
+      </div>
+      <div class="hint">Tick two or more, then Compare.</div>
+    </div>
+  </div>
+
+  <div class="v v-black">
+    <div class="vh"><span class="vn">E · True black</span><span class="vd">#000 ground, panels lifted</span>
+      <span class="vhex">chip #1c1c1f</span></div>
+    <div class="bar">
+      <div class="blab"><em>Plans</em><u>2 of 8</u><button class="cta">Compare 2</button></div>
+      <div class="chips">
+        <span class="chip"><span class="box"></span><span><b>Plan 1</b><em>15/15 · 21 min ago</em></span></span>
+        <span class="chip on"><span class="box on"></span><span><b>Plan 2</b><em>15/15 · 16 min ago</em></span>
+          <span class="acts"><s>Rename</s><s>Duplicate</s><s>✕</s></span></span>
+      </div>
+      <div class="hint">Tick two or more, then Compare.</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="note"><b>Counted, not judged by eye.</b> I rendered the three cards and classified
+every pixel: <b>brown</b> is hue 30–55° at 18–60% saturation and 6–28% lightness — a dark muddy
+yellow — and <b>gold</b> is the accent at strength, above 55% saturation and 35% lightness.
+<table class="tok" style="margin-top:9px">
+  <tr><th>Card</th><th>Brown pixels</th><th>Share of the card</th><th>Gold pixels</th><th>Commonest brown</th></tr>
+  <tr><td>A · Today</td><td>15,880</td><td class="warm">15.4%</td><td>3,033</td>
+      <td><i style="background:#282311"></i>#282311</td></tr>
+  <tr><td>B · Neutral ground</td><td>15,833</td><td class="warm">15.3%</td><td>3,076</td>
+      <td><i style="background:#282313"></i>#282313</td></tr>
+  <tr><td>C · No wash</td><td>160</td><td class="cool">0.2%</td><td>3,078</td>
+      <td><i style="background:#2c281d"></i>#2c281d</td></tr>
+</table>
+<span style="display:block;margin-top:9px">Neutralising the greys moved it by <b>one tenth of one
+percent</b>. Removing the wash took it to nothing — and the gold count is unchanged in all three,
+so the accent lost nothing.</span></div>
+
+<div class="note"><b>So B barely helps, and that is the finding.</b> Neutralising the greys moves the
+chip from <code>#2c2513</code> to <code>#2c2617</code> — three points of blue. The panel around it
+is cleaner, but the brown patch you were pointing at is still brown, because the wash is what
+makes it. <b>C is where it goes away</b>: the fill becomes a neutral lift and the gold does its
+job at full strength on the border, the tick and the name, which is where a metal reads as a
+metal.</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section>
+<span class="tag">In context</span>
+<h2>Today against the recommendation</h2>
+<p class="sub">More of a real screen, so it can be judged as a page rather than a swatch.</p>
+
+<div class="two">
+  <div class="page v v-now">
+    <div class="nav"><span class="logo">FPL <span>Analyser</span></span>
+      <a href="#">Home</a><a href="#" class="on">Squad</a><a href="#">Fixtures</a><a href="#">Players</a></div>
+    <div class="body">
+      <div class="stats">
+        <div class="st"><b>339.7</b><em>xP · 6 gw</em></div><div class="st"><b>£0.0m</b><em>bank</em></div>
+        <div class="st"><b>63%</b><em>h2h</em></div><div class="st"><b>82</b><em>rating</em></div>
+      </div>
+      <div class="tbl">
+        <div class="tr h"><span>Player</span><span>Price</span><span>xP</span><span>Own</span><span>Form</span></div>
+        <div class="tr"><n>B.Fernandes <span class="pill">C</span></n><span>£12.0</span><span class="gold">6.3</span><span>48.6%</span><span>—</span></div>
+        <div class="tr"><n>Gabriel</n><span>£8.0</span><span class="gold">5.1</span><span>26.5%</span><span>—</span></div>
+        <div class="tr"><n>Thiago</n><span>£8.0</span><span class="gold">4.5</span><span>16.1%</span><span>—</span></div>
+      </div>
+      <div style="margin-top:11px" class="chips">
+        <span class="chip on"><span class="box on"></span><span><b>Balanced</b><em>active</em></span></span>
+        <span class="chip"><span class="box"></span><span><b>Haaland build</b><em>15/15</em></span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="page v v-brighter">
+    <div class="nav"><span class="logo">FPL <span>Analyser</span></span>
+      <a href="#">Home</a><a href="#" class="on">Squad</a><a href="#">Fixtures</a><a href="#">Players</a></div>
+    <div class="body">
+      <div class="stats">
+        <div class="st"><b>339.7</b><em>xP · 6 gw</em></div><div class="st"><b>£0.0m</b><em>bank</em></div>
+        <div class="st"><b>63%</b><em>h2h</em></div><div class="st"><b>82</b><em>rating</em></div>
+      </div>
+      <div class="tbl">
+        <div class="tr h"><span>Player</span><span>Price</span><span>xP</span><span>Own</span><span>Form</span></div>
+        <div class="tr"><n>B.Fernandes <span class="pill">C</span></n><span>£12.0</span><span class="gold">6.3</span><span>48.6%</span><span>—</span></div>
+        <div class="tr"><n>Gabriel</n><span>£8.0</span><span class="gold">5.1</span><span>26.5%</span><span>—</span></div>
+        <div class="tr"><n>Thiago</n><span>£8.0</span><span class="gold">4.5</span><span>16.1%</span><span>—</span></div>
+      </div>
+      <div style="margin-top:11px" class="chips">
+        <span class="chip on"><span class="box on"></span><span><b>Balanced</b><em>active</em></span></span>
+        <span class="chip"><span class="box"></span><span><b>Haaland build</b><em>15/15</em></span></span>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="sub" style="margin-top:9px">Left: today. Right: option D — neutral greys and ink, the
+wash removed, gold at <code>#dcb43c</code>.</p>
+
+<div class="note"><b>What is still gold, and it is most of it.</b> The wordmark, the stat
+numbers, the xP column, the captain pill's border and text, the active tab underline, the tick,
+the button. Nothing has been taken away from the brand — it has stopped being <em>diluted</em>
+into the background, which is what was making it read as brown rather than as gold on black.</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<section>
+<span class="tag">If you want it</span>
+<h2>What changing this actually costs</h2>
+<p class="sub">Small, and contained, because everything reskins from the token block at the top of
+<code>index.css</code>.</p>
+
+<table class="tok">
+  <tr><th>Change</th><th>Where</th><th>Risk</th></tr>
+  <tr><td>Neutral greys — 9 surface and line tokens</td><td><code>index.css</code> :root dark block</td><td>Low. Contrast improves slightly on every pair I checked.</td></tr>
+  <tr><td>Neutral ink — 3 tokens</td><td>same block</td><td>Low. Body text goes 17.25:1 → 17.84:1 on the ground.</td></tr>
+  <tr><td>Drop the gold wash — <code>--accent-soft</code></td><td>same block, one value</td><td>Low, but it is used in ~30 places, so worth one pass with fresh eyes.</td></tr>
+  <tr><td>Brighter gold — 3 accent tokens</td><td>aurum block</td><td>Medium. Share images, the splash and the favicon are drawn in the old gold and would need re-exporting to match.</td></tr>
+  <tr><td>Light mode</td><td>light block</td><td>Separate pass — its greys are warm for the same reason and want the same treatment.</td></tr>
+</table>
+
+<div class="note"><b>My recommendation is C.</b> Neutral greys, neutral ink, and kill the wash —
+that is three edits in one file, no re-exporting, and it removes the brown at its source. Keep
+<code>#c9a227</code>: it is the brand gold, it is on every share card, and once it is no longer
+sitting on a beige page and no longer being smeared at 14% opacity, it reads as gold. Take D only
+if, having lived with C, you still want the accent itself brighter — and budget an afternoon for
+the artwork if so.</div>
+</section>
+
+</div>
