@@ -215,7 +215,7 @@ export function SquadImport({ pool, fixtureEase, gw, onApply, onClose }: {
                 </div>
               ))}
               {problems.length > 0 && (
-                <div className="mt-3 rounded-xl border border-warn/40 bg-warn/10 p-3">
+                <div className="mt-3 rounded-xl border border-warn/40 bg-tone-surface p-3">
                   <div className="mb-1 text-[11px] font-bold tracking-[0.1em] text-ink-2 uppercase">Not a legal squad yet</div>
                   <ul className="flex flex-col gap-0.5 text-[12.5px] text-ink-2">
                     {problems.map((p) => <li key={p}>· {p}</li>)}
@@ -275,7 +275,7 @@ function SlotRow({ slot, player, pool, open, onToggle, onPick }: {
       : sure
         ? null
         : { text: 'check', why: `The name read as "${slot.read}", and more than one ${slot.club ? teamLabel(slot.club) : ''} player is close to it.`.replace('  ', ' ') }
-  const tone = !player ? 'border-bad/50 bg-bad/8' : sure ? 'border-line' : 'border-warn/45 bg-warn/8'
+  const tone = !player ? 'border-bad/50 bg-tone-surface' : sure ? 'border-line' : 'border-warn/45 bg-tone-surface'
 
   const options = useMemo(() => {
     const q = query.trim()

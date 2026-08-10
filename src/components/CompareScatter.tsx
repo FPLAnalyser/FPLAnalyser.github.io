@@ -613,7 +613,7 @@ export function ViewChips<T extends string>({ options, active, onChange }: { opt
           key={o.id}
           onClick={() => onChange(o.id)}
           className={`min-h-9 rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${
-            active === o.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+            active === o.id ? 'border-accent bg-accent-selected text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
           }`}
         >
           {o.label}

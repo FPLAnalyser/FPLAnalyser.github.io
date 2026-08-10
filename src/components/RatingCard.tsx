@@ -30,10 +30,10 @@ function tierOf(ov: number | null, ownership: number | null): Tier {
 }
 interface TierStyle { bg: string; border: string; edge: string; a: string; a2: string; as: string; glow?: string }
 const TIER: Record<Tier, TierStyle> = {
-  bronze: { bg: 'linear-gradient(165deg,#241a12,#160f0a)', border: 'rgba(176,124,74,.45)', edge: 'linear-gradient(135deg,#c8965a,#7a5230)', a: '#d69b63', a2: '#e0b385', as: '#8a5f34' },
+  bronze: { bg: 'linear-gradient(165deg,#1b1c1f,#0f1013)', border: 'rgba(176,124,74,.45)', edge: 'linear-gradient(135deg,#c8965a,#7a5230)', a: '#d69b63', a2: '#e0b385', as: '#8a5f34' },
   silver: { bg: 'linear-gradient(165deg,#20232a,#121317)', border: 'rgba(185,194,207,.45)', edge: 'linear-gradient(135deg,#dce3ec,#8b96a6)', a: '#ccd5e1', a2: '#e6ecf3', as: '#8b96a6' },
-  gold: { bg: 'linear-gradient(165deg,#211d16,#0d0b08)', border: 'rgba(201,162,39,.5)', edge: 'linear-gradient(135deg,#ead188,#9a761c)', a: '#c9a227', a2: '#ead188', as: '#9a761c' },
-  elite: { bg: 'linear-gradient(165deg,#2a2212,#171208)', border: 'rgba(231,200,119,.85)', edge: 'linear-gradient(135deg,#fff6d8,#e7c877,#b98f3f)', a: '#ffe9a8', a2: '#ffe08a', as: '#c79a45', glow: '0 0 0 1px rgba(231,200,119,.22), 0 16px 46px rgba(231,200,119,.16)' },
+  gold: { bg: 'linear-gradient(165deg,#1c1d20,#0a0b0e)', border: 'rgba(201,162,39,.5)', edge: 'linear-gradient(135deg,#ead188,#9a761c)', a: '#c9a227', a2: '#ead188', as: '#9a761c' },
+  elite: { bg: 'linear-gradient(165deg,#222326,#121316)', border: 'rgba(231,200,119,.85)', edge: 'linear-gradient(135deg,#fff6d8,#e7c877,#b98f3f)', a: '#ffe9a8', a2: '#ffe08a', as: '#c79a45', glow: '0 0 0 1px rgba(231,200,119,.22), 0 16px 46px rgba(231,200,119,.16)' },
   diff: { bg: 'linear-gradient(165deg,#122223,#0a1415)', border: 'rgba(90,200,190,.5)', edge: 'linear-gradient(135deg,#6fe3d2,#2c8f86)', a: '#7fe7d6', a2: '#a6f0e6', as: '#2c8f86' },
 }
 

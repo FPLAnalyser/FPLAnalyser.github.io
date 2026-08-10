@@ -369,7 +369,7 @@ function SharedAndDifferent({ rows }: { rows: Row[] }) {
       }
     >
       <div className="grid gap-2.5 sm:grid-cols-2">
-        <div className="rounded-xl border border-accent/40 bg-accent-soft/40 p-3">
+        <div className="rounded-xl border border-accent/40 bg-accent-selected p-3">
           <div className="mb-2 text-[10px] font-bold tracking-[0.11em] text-accent uppercase">
             In every plan · {core.length}
           </div>

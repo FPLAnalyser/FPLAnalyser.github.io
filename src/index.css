@@ -101,6 +101,19 @@
      and the gold does its work at full strength on the border, the tick and
      the label — which is where a metal reads as a metal. */
   --accent-selected: rgba(255, 255, 255, 0.055);
+  /* The same argument, one step further out: a TONE surface is not a tinted
+     surface either. `--warn` is #e8b04a, and a "needs attention" card filled
+     with it at 6% over near-black composites to #181410 — the single largest
+     brown block left on the Squad page once the body wash was neutral. At that
+     alpha the amber is doing no semantic work anyway; nobody reads 6% of a hue.
+     The border at 40–50% and the amber label do read, so they carry the tone
+     and the fill goes neutral. Where good/bad are variants of the SAME slot as
+     a warn card — the Squad Lab lead, the close/clear call, the import row —
+     they take the neutral fill too, because one tinted variant beside one
+     colourless one reads as a bug rather than a rule. Standalone green and red
+     cards keep their tint: neither of them was ever brown, and there is no
+     reason to drain a working signal. */
+  --tone-surface: rgba(255, 255, 255, 0.05);
   --shadow-1: 0 1px 2px rgba(0,0,0,.5);
   --shadow-2: 0 10px 30px rgba(0,0,0,.45);
   --shadow-3: 0 26px 64px rgba(0,0,0,.6);
@@ -118,6 +131,7 @@
   --line-strong: rgba(27, 23, 18, 0.26);
   /* The same idea inverted: on a light ground a selection darkens. */
   --accent-selected: rgba(20, 22, 28, 0.055);
+  --tone-surface: rgba(20, 22, 28, 0.05);
   --shadow-1: 0 1px 2px rgba(27,23,18,.08);
   --shadow-2: 0 12px 30px rgba(27,23,18,.1);
   --shadow-3: 0 26px 60px rgba(27,23,18,.16);
@@ -129,13 +143,25 @@
   --accent-contrast: #14100a;          /* text on a filled accent */
   --accent-soft: rgba(201, 162, 39, 0.10);
   --grad-accent: linear-gradient(135deg, #ead188 0%, #9a761c 100%);
-  --glow: rgba(201, 162, 39, 0.16);    /* gold glow — turned up to pop on pure black */
+  /* THE PAGE GLOW IS NOT GOLD. It cannot be.
+     `body` paints two 1100px radial washes of this colour, fixed, over every
+     route — 7.2 million pixels on the Squad page alone. Gold at 16% over black
+     composites to rgb(32,26,6): hue 40, and at 7% lightness that is not gold,
+     it is brown. There is no alpha that fixes it, because dark gold IS brown —
+     gold only reads as gold above roughly 45% lightness, which a background
+     wash can never be. Chasing the tint component-by-component was hopeless
+     while this sat on top of all of them.
+     So the ambient light goes neutral-cool and the gold lives where it can
+     actually be gold: borders, figures, fills, the wordmark. Same luminance
+     lift, no cast. */
+  --glow: rgba(214, 222, 240, 0.05);
 }
 :root[data-mode="light"][data-accent="aurum"] {
   --accent: #8f732b; --accent-2: #b8933a; --accent-strong: #7d6120;  /* 4.5:1 on white */
   --accent-contrast: #fffdf7; --accent-soft: rgba(154, 123, 46, 0.12);
   --grad-accent: linear-gradient(135deg, #b8933a 0%, #7d6120 100%);
-  --glow: rgba(154, 123, 46, 0.10);
+  /* Same problem inverted: gold at 10% over paper is beige. */
+  --glow: rgba(120, 132, 160, 0.07);
 }
 
 /* ─── ACCENT: FROST ─── */
@@ -193,6 +219,7 @@
   --color-accent-contrast: var(--accent-contrast);
   --color-accent-soft: var(--accent-soft);
   --color-accent-selected: var(--accent-selected);
+  --color-tone-surface: var(--tone-surface);
   --color-ink: var(--ink-1);
   --color-ink-2: var(--ink-2);
   --color-ink-3: var(--ink-3);
@@ -540,7 +567,7 @@ body {
   radial-gradient(circle at 74% 34%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 26%),
   radial-gradient(circle at 74% 34%, transparent 30%, color-mix(in srgb, var(--accent) 16%, transparent) 31%, transparent 33%),
   radial-gradient(circle at 74% 34%, transparent 44%, color-mix(in srgb, var(--accent) 10%, transparent) 45%, transparent 47%),
-  linear-gradient(160deg, #171310, #0a0806); }
+  linear-gradient(160deg, #131417, #08090c); }
 .hw-squad { background:
   radial-gradient(circle at 30% 34%, rgba(255,255,255,.16) 0 5px, transparent 6px),
   radial-gradient(circle at 50% 34%, rgba(255,255,255,.16) 0 5px, transparent 6px),
@@ -548,19 +575,31 @@ body {
   radial-gradient(circle at 40% 58%, rgba(255,255,255,.13) 0 5px, transparent 6px),
   radial-gradient(circle at 60% 58%, rgba(255,255,255,.13) 0 5px, transparent 6px),
   linear-gradient(180deg, #0b2417, #07130c); }
+/* The three tiles whose identity was "black with a gold sheen" and which read
+   as brown blocks instead: their bases were warm near-blacks (#1c160c, #141009,
+   #171310) carrying an accent wash on top, so the whole tile sat in the brown
+   band. Bases swapped for neutrals of the same relative luminance — the gold
+   wash still lights them, it just no longer has warm ground to muddy into. */
 .hw-myteam { background:
   radial-gradient(75% 65% at 50% 22%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 60%),
-  linear-gradient(160deg, #1c160c, #0a0806); }
-.hw-compare { background: linear-gradient(120deg, #141009, #0a0806); }
+  linear-gradient(160deg, #151619, #08090c); }
+.hw-compare { background: linear-gradient(120deg, #0f1013, #08090c); }
 
 /* The home page's import invitation. Not a tile — it is a wide banner with
    live text over it, so the wash is far gentler than `.hw-*` above and the
    photo (if `public/home/import.jpg` exists) is laid over it at 30% with a
    left-to-right scrim. Both themes: the scrim uses --bg-0, so on light it
    fades to paper rather than to black. */
+/* This one was the widest single band of brown left on the home page: a 7%
+   gold base with a 14% gold radial over it composited to #35301a at its peak —
+   a 1390px-wide olive stripe directly under the headline. The gold it was
+   reaching for is already there at full strength in the START HERE label, the
+   rule under it and the Import button's border, which is where gold reads as
+   gold. The field itself is now surface with a plain light falloff from the
+   right, so the banner keeps its shape and loses the cast. */
 .hw-invite { background:
-  radial-gradient(120% 140% at 88% 50%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 62%),
-  color-mix(in srgb, var(--accent) 7%, var(--surface-1)); }
+  radial-gradient(120% 140% at 88% 50%, rgba(255, 255, 255, 0.055), transparent 62%),
+  var(--surface-1); }
 
 /* ════════════════════════════════════════════════════════════════════════
    Section hero banners — each section opens with its home-tile photo as a

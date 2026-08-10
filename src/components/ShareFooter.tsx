@@ -33,7 +33,7 @@ function InstagramMark({ size = 15 }: { size?: number }) {
  *  "who made this and where do I find more" on its own. */
 export function ShareFooter() {
   return (
-    <div className="mt-2 flex flex-col items-center gap-1 rounded-b-2xl bg-[#0c0b09] px-3 py-3">
+    <div className="mt-2 flex flex-col items-center gap-1 rounded-b-2xl bg-[#0a0b0e] px-3 py-3">
       {/* The name and the address on one line, because they are one thought:
           who made this, and where it lives. The address gets the same weight
           as the wordmark — it is the only thing here that turns a picture

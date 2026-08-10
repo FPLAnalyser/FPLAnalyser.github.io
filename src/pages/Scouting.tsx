@@ -778,7 +778,7 @@ function ScoutReport({
   return (
     <div>
       {warnings.length > 0 && (
-        <div className="mb-4 rounded-lg border border-warn/30 bg-warn/10 px-4 py-2.5 text-sm text-warn">{warnings.join(' ')}</div>
+        <div className="mb-4 rounded-lg border border-warn/30 bg-tone-surface px-4 py-2.5 text-sm text-warn">{warnings.join(' ')}</div>
       )}
 
       {multi && (

@@ -30,8 +30,8 @@ function brand(source: HTMLCanvasElement, fmt: ShareFormat, title: string, dark:
   const chrome = pad0 + 34 + Math.round(fmt.w * 0.028) + Math.round(fmt.w * 0.095) + pad0
   out.height = frameHeight(fmt, source, chrome, pad0)
   const ctx = out.getContext('2d')!
-  const bg = dark ? '#0c0b09' : '#faf8f3'
-  const ink = dark ? '#f4efe3' : '#1b1712'
+  const bg = dark ? '#0a0b0e' : '#faf8f3'
+  const ink = dark ? '#f4efe3' : '#17181b'
 
   ctx.fillStyle = bg
   ctx.fillRect(0, 0, out.width, out.height)
@@ -231,7 +231,7 @@ export function Exportable({ title, filename, children, className, toolbar, iden
             key={f.id}
             onClick={() => setFmt(f.id)}
             className={`min-h-8 rounded-full border px-3 text-[12px] font-semibold transition-colors ${
-              fmt === f.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong'
+              fmt === f.id ? 'border-accent bg-accent-selected text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong'
             }`}
           >
             {f.label} <span className="font-normal">{f.hint}</span>
@@ -266,7 +266,7 @@ export function Exportable({ title, filename, children, className, toolbar, iden
           // 32px square: the smallest thing a thumb can reliably find, and the
           // most a fixture card's corner can give up.
           className={`absolute top-2 right-2 z-[4] inline-flex h-8 w-8 items-center justify-center rounded-lg border transition-colors ${
-            open ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid bg-surface-1/80 text-ink-3 hover:border-line-strong hover:text-ink'
+            open ? 'border-accent bg-accent-selected text-accent' : 'border-line-mid bg-surface-1/80 text-ink-3 hover:border-line-strong hover:text-ink'
           }`}
           aria-expanded={open}
           aria-label={`Share ${title}`}

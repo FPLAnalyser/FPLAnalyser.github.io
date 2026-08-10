@@ -82,7 +82,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.dataset.accent = accent
     root.dataset.mode = mode
     // Keep the browser UI chrome (address bar) in step with the surface.
-    const theme = mode === 'dark' ? '#0c0b09' : '#f6f4ef'
+    const theme = mode === 'dark' ? '#0a0b0e' : '#f6f4ef'
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme)
   }, [accent, mode])
 

@@ -12,7 +12,7 @@ export function PremiumGate({ feature, children }: { feature: PremiumFeature; ch
   if (canUse(feature)) return <>{children}</>
   return (
     <>
-      <button onClick={() => setShowPaywall(true)} className="flex w-full items-center justify-center gap-2 rounded-xl border border-accent/40 bg-accent-soft/40 px-4 py-6 text-sm font-semibold text-accent">
+      <button onClick={() => setShowPaywall(true)} className="flex w-full items-center justify-center gap-2 rounded-xl border border-accent/40 bg-accent-selected px-4 py-6 text-sm font-semibold text-accent">
         <Icon name="crown" size={16} /> {PREMIUM_PITCH[feature]} — Unlock Premium
       </button>
       <Paywall open={showPaywall} onClose={() => setShowPaywall(false)} highlight={feature} />

@@ -239,7 +239,7 @@ export function SquadVerdict({ chosen, fixtureEase, gw, avail, score, bestXI, on
 
       <button
         onClick={onOpen}
-        className="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-accent/60 bg-accent-soft/50 text-[12.5px] font-bold text-accent transition-colors hover:brightness-110"
+        className="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-accent/60 bg-accent-selected text-[12.5px] font-bold text-accent transition-colors hover:brightness-110"
       >
         Full breakdown <Icon name="arrow-right" size={13} />
       </button>

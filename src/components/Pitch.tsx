@@ -132,20 +132,20 @@ export const tierOf = (rating: number | null): Tier =>
 const TIER_SKIN: Record<Tier, { edge: string; stock: string; glow?: string; pad?: number }> = {
   elite: {
     edge: 'conic-gradient(from 210deg,#8A6E36,#F6EDD6,#FFFBF0,#D8BE86,#6E5A2E,#F6EDD6,#8A6E36)',
-    stock: 'linear-gradient(168deg,#241f16,#141009 56%,#0c0906)',
+    stock: 'linear-gradient(168deg,#1f2023,#0f1013 56%,#08090c)',
     glow: '0 0 0 1px rgba(255,251,240,.18), 0 0 18px -2px rgba(201,162,39,.5)',
     pad: 2.5,
   },
   gold: {
     edge: 'linear-gradient(160deg,#5f4d26,#c9a227,#ead188,#50411f)',
-    stock: 'linear-gradient(168deg,#241f16,#141009 56%,#0c0906)',
+    stock: 'linear-gradient(168deg,#1f2023,#0f1013 56%,#08090c)',
   },
   steel: {
     edge: 'linear-gradient(160deg,#5C636B,#C9CFD6,#e8ecf1,#4a5057)',
     stock: 'linear-gradient(168deg,#1a1d21,#12151a 56%,#0a0c0e)',
   },
   graphite: {
-    edge: 'linear-gradient(160deg,#33302a,#55524a,#33302a)',
+    edge: 'linear-gradient(160deg,#2f3033,#55524a,#2f3033)',
     stock: 'linear-gradient(168deg,#1c1b19,#131211 56%,#0b0b0a)',
   },
   ice: {

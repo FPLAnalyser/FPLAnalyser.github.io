@@ -26,7 +26,7 @@ function Hero() {
       </div>
 
       {preseason && (
-        <div className="rounded-xl border border-accent/25 bg-accent-soft/40 p-3.5 lg:mt-8">
+        <div className="rounded-xl border border-accent/25 bg-accent-selected p-3.5 lg:mt-8">
           <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.14em] text-accent uppercase">
             <Icon name="star" size={13} /> Welcome to the {seasonLabel} season
           </div>

@@ -40,7 +40,7 @@ export function ColumnGuide<T>({ columns, label = 'Columns' }: { columns: Column
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         className={`inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-[12px] font-semibold transition-colors ${
-          open ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+          open ? 'border-accent bg-accent-selected text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
         }`}
       >
         <Icon name="info" size={13} /> <span className="hidden min-[360px]:inline">{label}</span>

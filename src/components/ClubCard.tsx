@@ -10,7 +10,7 @@ import type { FixtureEaseRow, TeamRatingRow } from '../lib/types'
 //
 // The surface is a hardcoded dark gradient in BOTH themes, so nothing inside
 // it may use the ink tokens: those flip with the theme, and in light mode
-// --ink is #1b1712 against a #211d16 card — the club's own name was rendering
+// --ink is #17181b against a #1c1d20 card — the club's own name was rendering
 // at about 1.05:1, which is to say invisible. Everything here is therefore an
 // explicit light-on-dark value. The accent is safe because it is gold in
 // either theme.
@@ -72,7 +72,7 @@ export function ClubCard({
     <Tag
       onClick={onClick}
       className={`group relative w-full overflow-hidden rounded-2xl p-4 text-left ${onClick ? 'transition-transform hover:-translate-y-0.5' : ''}`}
-      style={{ background: 'linear-gradient(165deg,#211d16,#0d0b08)', border: '1px solid rgba(217,180,92,0.3)' }}
+      style={{ background: 'linear-gradient(165deg,#1c1d20,#0a0b0e)', border: '1px solid rgba(217,180,92,0.3)' }}
     >
       <div className="absolute inset-x-0 top-0 h-[3px]" style={{ background: 'linear-gradient(135deg,#e7c877,#b98f3f)' }} />
       <div className="flex items-center gap-3">

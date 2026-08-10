@@ -135,7 +135,7 @@ export function SortableTable<T>({ rows, columns: allColumns, initialSort, initi
               <tr
                 key={rowKey(row, ri)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={`border-b border-line last:border-0 ${isLeader ? 'bg-accent-soft' : ''} ${
+                className={`border-b border-line last:border-0 ${isLeader ? 'bg-accent-selected' : ''} ${
                   onRowClick ? 'cursor-pointer transition-colors hover:bg-surface-2/70' : ''
                 }`}
               >

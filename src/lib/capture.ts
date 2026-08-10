@@ -237,7 +237,7 @@ async function legacyShot(node: HTMLElement, dark: boolean, minWidth: number): P
     await twoFrames()
     const { default: html2canvas } = await import('html2canvas-pro')
     return await html2canvas(node, {
-      backgroundColor: dark ? '#0c0b09' : '#ffffff',
+      backgroundColor: dark ? '#0a0b0e' : '#ffffff',
       scale: captureScale(node, minWidth),
       useCORS: true,
       logging: false,
@@ -292,7 +292,7 @@ export async function rasterise(node: HTMLElement, dark: boolean, minWidth = 0):
     restoreImages = hideUnrasterisable(node)
     await twoFrames()
     const { domToCanvas } = await import('modern-screenshot')
-    const bg = dark ? '#0c0b09' : '#ffffff'
+    const bg = dark ? '#0a0b0e' : '#ffffff'
     const canvas = await domToCanvas(node, {
       scale: captureScale(node, minWidth),
       backgroundColor: bg,

@@ -87,7 +87,7 @@ function DeadlineStrip({ gw, at }: { gw: number; at?: Date }) {
   const cd = d > 0 ? `${d}d ${h}h ${mi}m` : h > 0 ? `${h}h ${mi}m` : `${mi}m ${s}s`
   const urgent = left > 0 && left < 6 * 3600000
   return (
-    <div className={`mb-5 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl border px-4 py-3 ${urgent ? 'border-warn/50 bg-warn/10' : 'border-accent/35 bg-accent-soft/30'}`}>
+    <div className={`mb-5 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl border px-4 py-3 ${urgent ? 'border-warn/50 bg-tone-surface' : 'border-accent/35 bg-accent-selected'}`}>
       <span className="flex items-center gap-2 text-[11px] font-extrabold tracking-[0.14em] text-ink-3 uppercase">
         <Icon name="clock" size={15} className="text-accent" />
         GW{gw} deadline
@@ -939,7 +939,7 @@ const PODIUM = [
   {
     label: 'The pick', foil: true,
     edge: 'linear-gradient(160deg,#5f4d26,#c9a227,#ead188,#50411f)',
-    stock: 'linear-gradient(168deg,#241f16,#141009 56%,#0c0906)',
+    stock: 'linear-gradient(168deg,#1f2023,#0f1013 56%,#08090c)',
     num: 'linear-gradient(180deg,#fffbf0,#f0e0b0 52%,#c9a227)',
     // A share image cannot draw the gradient — index.css explains why — so it
     // falls back to this one colour, taken from the gradient's midpoint.

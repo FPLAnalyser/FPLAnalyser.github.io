@@ -140,7 +140,7 @@ export function ManagerCard({ picksData, historyData, entryData, ratings, teamNa
       <Exportable title={`${name} — Gameweek ${e.event}`}>
         {/* The card sets its own ink: it is one fixed dark object in both
             themes, and the exported PNG has to match what's on screen. */}
-        <div className="relative overflow-hidden rounded-2xl p-4" style={{ color: '#f4efe3', background: 'linear-gradient(168deg,#241f16 0%,#141009 56%,#0c0906 100%)', border: '1px solid rgba(234,209,136,.22)' }}>
+        <div className="relative overflow-hidden rounded-2xl p-4" style={{ color: '#f4efe3', background: 'linear-gradient(168deg,#1f2023 0%,#0f1013 56%,#08090c 100%)', border: '1px solid rgba(234,209,136,.22)' }}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="text-[10px] font-extrabold tracking-[0.2em] uppercase" style={{ color: '#8a8172' }}>Gameweek {e.event} · Manager card</div>
@@ -159,7 +159,7 @@ export function ManagerCard({ picksData, historyData, entryData, ratings, teamNa
               ['GW rank', fmtRank(e.rank)],
               ['Overall', fmtRank(e.overall_rank)],
             ].map(([k, v]) => (
-              <div key={k} className="px-3 py-2.5" style={{ background: '#191410' }}>
+              <div key={k} className="px-3 py-2.5" style={{ background: '#141518' }}>
                 <div className="text-[10px] font-extrabold tracking-[0.16em] uppercase" style={{ color: '#8a8172' }}>{k}</div>
                 <div className="font-num mt-0.5 text-[21px] font-extrabold tabular-nums">{v}</div>
               </div>

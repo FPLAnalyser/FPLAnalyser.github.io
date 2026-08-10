@@ -419,7 +419,7 @@ function Stat({ label, value, tone, sub, onClick }: { label: string; value: stri
   )
   const cls = 'w-full rounded-xl border border-line bg-surface-1/60 p-2.5 text-center'
   return onClick
-    ? <button onClick={onClick} className={`${cls} transition-colors hover:border-accent/50 hover:bg-accent-soft/40`}>{inner}</button>
+    ? <button onClick={onClick} className={`${cls} transition-colors hover:border-accent/50 hover:bg-accent-selected`}>{inner}</button>
     : <div className={cls}>{inner}</div>
 }
 

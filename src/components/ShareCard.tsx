@@ -82,7 +82,7 @@ export function ShareCard({ r, fixtureEase }: { r: RatingRow; fixtureEase?: Fixt
       {open && (
         <div className="fixed inset-0 z-[200] grid place-items-center bg-black/70 p-4 backdrop-blur-sm" onClick={() => setOpen(false)} role="dialog" aria-modal="true">
           <div className="w-full max-w-[360px]" onClick={(e) => e.stopPropagation()}>
-            <div ref={cardRef} className="bg-[#0c0b09]">
+            <div ref={cardRef} className="bg-[#0a0b0e]">
               <RatingCard r={r} fixtureEase={fixtureEase} />
               <ShareFooter />
             </div>

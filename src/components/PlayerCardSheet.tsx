@@ -92,7 +92,7 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap, ac
           key={id}
           onClick={() => setTab(id)}
           className={`min-h-8 shrink-0 rounded-full border px-3 text-[13px] font-semibold transition-colors ${
-            tab === id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+            tab === id ? 'border-accent bg-accent-selected text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
           }`}
         >
           {label}

@@ -1073,7 +1073,7 @@ function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, lineu
         out.width = spec.w
         out.height = frameHeight(spec, shotCanvas, pad * 2, pad)
         const ctx = out.getContext('2d')!
-        ctx.fillStyle = '#0c0b09'
+        ctx.fillStyle = '#0a0b0e'
         ctx.fillRect(0, 0, out.width, out.height)
         drawFitted(ctx, shotCanvas, { x: pad, y: pad, w: out.width - pad * 2, h: out.height - pad * 2 })
         const blob: Blob | null = await new Promise((res) => out.toBlob(res, 'image/png'))
@@ -1118,7 +1118,7 @@ function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, lineu
         {/* The share card is always drawn on the same near-black, whatever
             theme the app is in — so it sets its own ink rather than reading
             theme tokens, which the rasteriser resolves unreliably. */}
-        <div ref={ref} className="rounded-3xl bg-[#0c0b09] p-4" style={{ color: '#f4efe3' }}>
+        <div ref={ref} className="rounded-3xl bg-[#0a0b0e] p-4" style={{ color: '#f4efe3' }}>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="font-brand text-lg leading-none font-normal tracking-[0.08em] whitespace-nowrap">FPL <span style={{ color: '#c9a227' }}>Analyser</span></div>
@@ -1151,7 +1151,7 @@ function SquadShare({ chosen, fixtureEase, squadScore, unrated, total, gw, lineu
               key={f.id}
               onClick={() => setFmt(f.id)}
               className={`min-h-8 rounded-full border px-3 text-[12px] font-semibold transition-colors ${
-                fmt === f.id ? 'border-accent bg-accent-soft text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong'
+                fmt === f.id ? 'border-accent bg-accent-selected text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong'
               }`}
             >
               {f.label} <span className="font-normal">{f.hint}</span>

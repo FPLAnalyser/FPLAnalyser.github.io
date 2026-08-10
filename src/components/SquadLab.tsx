@@ -202,7 +202,7 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
 
       {/* The week you are planning around, open, with its working underneath. */}
       <div className={`overflow-hidden rounded-xl border ${
-        lead.tone === 'warn' ? 'border-warn/50 bg-warn/[0.06]' : lead.tone === 'accent' ? 'border-accent/55 bg-accent-soft/45' : 'border-good/40 bg-good/[0.05]'
+        lead.tone === 'warn' ? 'border-warn/50 bg-tone-surface' : lead.tone === 'accent' ? 'border-accent/55 bg-accent-selected' : 'border-good/40 bg-tone-surface'
       }`}>
         <button
           onClick={() => { tapHaptic('select'); setLeadOpen((o) => !o) }}
@@ -234,7 +234,7 @@ export function SquadLab({ squad, xi, pool, fixtureEase, avail, gw, gws, bank, f
               onClick={() => toggle(r.key)}
               aria-expanded={open === r.key}
               className={`grid w-full grid-cols-[8px_minmax(0,1fr)_auto] items-center gap-2.5 px-3 py-2.5 text-left transition-colors ${
-                open === r.key ? 'bg-accent-soft/35' : 'hover:bg-surface-2/50'
+                open === r.key ? 'bg-accent-selected' : 'hover:bg-surface-2/50'
               }`}
             >
               <span className={`size-2 rounded-full ${DOT[r.tone]}`} />
@@ -542,7 +542,7 @@ function AdvicePanel({ read, onApply, bare }: { read: Recommendation | null; onA
     <div>
       {!bare && <Head title="The Analyser's recommendation" note={`Judged over the next ${read.weeks} gameweeks, not just this one`} />}
 
-      <div className={`rounded-xl border p-3 ${hold ? 'border-good/40 bg-good/5' : 'border-accent/40 bg-accent-soft/40'}`}>
+      <div className={`rounded-xl border p-3 ${hold ? 'border-good/40 bg-good/5' : 'border-accent/40 bg-accent-selected'}`}>
         <div className="flex items-center gap-2">
           <Icon name={hold ? 'check' : 'bolt'} size={14} className={hold ? 'text-good' : 'text-accent'} />
           <span className={`text-sm font-bold ${hold ? 'text-good' : 'text-accent'}`}>{read.headline}</span>
@@ -622,7 +622,7 @@ function CaptainPanel({ read, gw, bare }: { read: CaptainLadder | null; gw: numb
 
       <div className="flex flex-col gap-0.5">
         {shown.map((r, i) => (
-          <div key={num(r.row, 'element')} className={`flex items-center gap-2 rounded-lg px-1 py-1.5 text-[13px] ${i === 0 ? 'bg-accent-soft/50 ring-1 ring-accent/40' : ''}`}>
+          <div key={num(r.row, 'element')} className={`flex items-center gap-2 rounded-lg px-1 py-1.5 text-[13px] ${i === 0 ? 'bg-accent-selected ring-1 ring-accent/40' : ''}`}>
             <span className={`grid size-[18px] shrink-0 place-items-center rounded-md text-[10px] font-bold ${
               i === 0 ? 'bg-accent text-accent-contrast' : i === 1 ? 'bg-surface-3 text-ink-2' : 'text-ink-3'
             }`}>{i === 0 ? 'C' : i === 1 ? 'V' : ''}</span>
@@ -638,7 +638,7 @@ function CaptainPanel({ read, gw, bare }: { read: CaptainLadder | null; gw: numb
       </div>
 
       <div className={`mt-2.5 flex items-start gap-2 rounded-xl border p-2.5 text-[13px] ${
-        read.close ? 'border-warn/40 bg-warn/5' : 'border-good/35 bg-good/5'
+        read.close ? 'border-warn/40 bg-tone-surface' : 'border-good/35 bg-tone-surface'
       }`}>
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-[0.1em] uppercase ${
           read.close ? 'bg-warn/20 text-warn' : 'bg-good/20 text-good'
@@ -697,7 +697,7 @@ function ChipsPanel({ read, bare }: { read: ChipPlan | null; bare?: boolean }) {
       </div>
 
       {read.weeksLeft != null && read.weeksLeft <= 6 && read.advice.some((a) => a.spentAt == null) && (
-        <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-warn/40 bg-warn/5 p-2.5 text-[13px]">
+        <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-warn/40 bg-tone-surface p-2.5 text-[13px]">
           <Icon name="clock" size={13} className="shrink-0 text-warn" />
           <span className="text-ink-2">
             Your first-half chips have to be played by <span className="font-semibold text-ink">GW{FIRST_HALF_LAST}</span> — a
@@ -719,7 +719,7 @@ function ChipRow({ a, best }: { a: ChipAdvice; best: boolean }) {
   return (
     <div className={`rounded-xl border p-2.5 ${
       spent ? 'border-line bg-surface-2/30 opacity-60'
-        : best ? 'border-accent bg-accent-soft/40'
+        : best ? 'border-accent bg-accent-selected'
           : a.worthIt ? 'border-line-strong' : 'border-line'
     }`}>
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
