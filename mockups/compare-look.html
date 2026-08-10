@@ -1,0 +1,506 @@
+<title>A different look, and a better comparison</title>
+<style>
+/* ── palettes ───────────────────────────────────────────────────────────── */
+.t{--bg:#0a0908;--s1:#131110;--s2:#1b1917;--s3:#242120;--line:#2a2724;
+--ink:#f4efe3;--ink2:#a9a294;--ink3:#777064;--acc:#c9a227;--acc2:#ead188;--accc:#14100a;
+--soft:rgba(201,162,39,.14);--b:#6ea8ff;--good:#3ddc7a;--warn:#e8b04a;--bad:#f0736f}
+/* 1 · Aurum — what the site is today */
+.t-aurum{}
+/* 2 · Frost — already in index.css, just not offered */
+.t-frost{--acc:#7fb0ff;--acc2:#a9c9ff;--accc:#0a1220;--soft:rgba(127,176,255,.12);--b:#e8c85a}
+/* 3 · Verdant — likewise */
+.t-verdant{--acc:#3ea87a;--acc2:#57c993;--accc:#05130d;--soft:rgba(62,168,122,.13);--b:#6ea8ff}
+/* 4 · Pitch — accent AND surface change: cool slate ground, bright green */
+.t-pitch{--bg:#0b1220;--s1:#111a2b;--s2:#16233a;--s3:#1d2e49;--line:#22334d;
+--ink:#e9eff7;--ink2:#9db0c9;--ink3:#69809c;--acc:#2fbf71;--acc2:#5fe0a0;--accc:#04150c;
+--soft:rgba(47,191,113,.13);--b:#6ea8ff}
+/* 5 · Graphite — neutral ground, single strong hue */
+.t-graphite{--bg:#0d0e10;--s1:#15171a;--s2:#1d2024;--s3:#262a2f;--line:#2c3035;
+--ink:#f0f2f5;--ink2:#a3aab4;--ink3:#727a85;--acc:#e0623c;--acc2:#ff8b62;--accc:#170703;
+--soft:rgba(224,98,60,.13);--b:#6ea8ff}
+
+*{box-sizing:border-box}
+body{margin:0;background:#08080a;color:#f4efe3;
+font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:30px 18px 80px}
+h1{font-size:26px;line-height:1.2;margin:0 0 8px;letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
+h3{font-size:14px;margin:26px 0 9px;letter-spacing:-.01em;color:#d6d0c4}
+.lede{color:#a9a294;font-size:15px;margin:0 0 6px;max-width:70ch}
+.meta{color:#777064;font-size:12.5px;margin:0 0 34px;border-top:1px solid #23211f;padding-top:12px}
+section{margin:0 0 54px}
+.tag{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#c9a227;margin:0 0 5px}
+.sub{color:#a9a294;font-size:14px;margin:0 0 16px;max-width:80ch}
+.note{background:#131110;border:1px solid #26241f;border-radius:11px;padding:13px 16px;
+margin-top:16px;font-size:13.5px;color:#a9a294;max-width:86ch}
+.note b{color:#f4efe3;font-weight:600}
+code{font-size:12px;background:#1b1917;padding:1px 5px;border-radius:4px;color:#a9a294}
+
+/* ── the themed demo card ───────────────────────────────────────────────── */
+.demos{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}
+.t{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:13px 14px;color:var(--ink)}
+.thead{display:flex;align-items:baseline;gap:8px;margin-bottom:11px}
+.tname{font-size:14px;font-weight:700;letter-spacing:-.01em}
+.tnote{font-size:11px;color:var(--ink3)}
+.sw{display:flex;gap:4px;margin-left:auto}
+.sw i{display:block;width:14px;height:14px;border-radius:4px}
+
+.chiprow{display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap}
+.chip{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--s2);
+border-radius:9px;padding:5px 9px}
+.chip.on{border-color:var(--acc);background:var(--soft)}
+.chip b{font-size:12.5px;font-weight:650;color:var(--ink)}
+.chip.on b{color:var(--acc)}
+.chip em{font-style:normal;font-size:10px;color:var(--ink3);display:block}
+.box{width:15px;height:15px;border-radius:4px;border:1.5px solid var(--ink3);position:relative}
+.box.on{background:var(--acc);border-color:var(--acc)}
+.box.on:after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;
+border:solid var(--accc);border-width:0 2px 2px 0;transform:rotate(42deg)}
+.cta{background:var(--acc);color:var(--accc);border:0;border-radius:8px;padding:6px 11px;
+font:inherit;font-size:12px;font-weight:700;cursor:default}
+
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px}
+.tile{background:var(--s1);border:1px solid var(--line);border-radius:9px;padding:7px 9px}
+.tile b{display:block;font-size:17px;font-variant-numeric:tabular-nums;letter-spacing:-.01em;color:var(--acc2)}
+.tile em{font-style:normal;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3)}
+.spark{display:block;width:100%;height:52px}
+
+/* ── comparison mock ─────────────────────────────────────────────────────── */
+.mock{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:14px;color:var(--ink)}
+.pick{display:grid;grid-template-columns:1fr 40px 1fr auto;gap:10px;align-items:end;margin-bottom:12px}
+.field label{display:block;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
+.field label i{font-style:normal;display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:6px}
+.sel{background:var(--s2);border:1px solid var(--line);border-radius:9px;padding:9px 11px;
+font-size:13.5px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.sel span{color:var(--ink3);font-size:11px}
+.swap{width:40px;height:38px;border-radius:9px;border:1px solid var(--line);background:var(--s2);
+display:grid;place-items:center;color:var(--ink2);font-size:15px}
+.win{display:flex;gap:3px;background:var(--s2);border:1px solid var(--line);border-radius:9px;padding:3px}
+.win b{font-size:11.5px;font-weight:650;padding:5px 9px;border-radius:6px;color:var(--ink3)}
+.win b.on{background:var(--acc);color:var(--accc)}
+
+.edge{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:12px}
+.edget{font-size:12.5px;font-weight:700;margin-bottom:2px}
+.edges{font-size:11.5px;color:var(--ink3);margin-bottom:11px}
+.egrid{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.ec{background:var(--s2);border:1px solid var(--line);border-radius:10px;padding:9px 10px;position:relative}
+.ec .who{position:absolute;top:8px;right:9px;font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;
+font-weight:800;padding:2px 5px;border-radius:4px}
+.ec .who.a{background:var(--soft);color:var(--acc2)}
+.ec .who.b{background:rgba(110,168,255,.16);color:var(--b)}
+.ec .who.lv{background:var(--s3);color:var(--ink3)}
+.ec em{font-style:normal;display:block;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:3px}
+.ec b{display:block;font-size:19px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.ec u{text-decoration:none;display:block;font-size:10.5px;color:var(--ink3);margin-top:2px}
+
+.two{display:grid;gap:11px;grid-template-columns:1fr 1fr}
+.pc{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:12px 13px}
+.pc.a{border-top:2px solid var(--acc)}
+.pc.b{border-top:2px solid var(--b)}
+.pcn{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:1px}
+.pct{font-size:14px;font-weight:700;margin-bottom:9px}
+.pq{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-bottom:9px}
+.pq div{background:var(--s2);border-radius:8px;padding:6px 8px}
+.pq b{display:block;font-size:15.5px;font-variant-numeric:tabular-nums}
+.pq em{font-style:normal;font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3)}
+.cap{display:flex;align-items:center;gap:8px;background:var(--s2);border-radius:8px;padding:7px 9px}
+.cap .av{width:26px;height:26px;border-radius:50%;background:var(--s3)}
+.cap b{font-size:12.5px}
+.cap u{text-decoration:none;font-size:10.5px;color:var(--ink3);display:block}
+.cap .c{margin-left:auto;width:19px;height:19px;border-radius:50%;background:var(--acc);color:var(--accc);
+font-size:10px;font-weight:800;display:grid;place-items:center}
+
+/* diff */
+.counts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:11px}
+.cnt{background:var(--s2);border:1px solid var(--line);border-radius:10px;padding:9px;text-align:center}
+.cnt b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+.cnt em{font-style:normal;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.cnt.a{border-color:color-mix(in oklab,var(--acc) 45%,var(--line))}
+.cnt.b{border-color:rgba(110,168,255,.4)}
+.prow{display:flex;align-items:center;gap:9px;background:var(--s2);border:1px solid var(--line);
+border-radius:9px;padding:7px 9px;margin-bottom:5px}
+.prow .av{width:26px;height:30px;border-radius:5px;background:var(--s3);flex:none}
+.prow b{font-size:12.5px;display:block}
+.prow u{text-decoration:none;font-size:10.5px;color:var(--ink3)}
+.prow .side{margin-left:auto;font-size:9px;font-weight:800;width:17px;height:17px;border-radius:5px;
+display:grid;place-items:center}
+.prow .side.a{background:var(--soft);color:var(--acc2)}
+.prow .side.b{background:rgba(110,168,255,.16);color:var(--b)}
+.shared{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.shared i{font-style:normal;font-size:11px;padding:4px 8px;border-radius:7px;background:var(--s2);color:var(--ink2)}
+
+/* pitch */
+.pitch{background:linear-gradient(180deg,#16351f,#0f2416);border-radius:11px;padding:11px 8px}
+.prowp{display:flex;justify-content:center;gap:6px;margin-bottom:7px}
+.pl{width:60px;border-radius:7px;background:rgba(0,0,0,.34);padding:4px;text-align:center;position:relative}
+.pl .sh{display:block;height:26px;border-radius:5px;background:#3b4a5c;margin-bottom:3px}
+.pl n{font-style:normal;display:block;font-size:9.5px;font-weight:650;color:#eef3ee;
+overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl x{font-style:normal;display:block;font-size:8.5px;color:#9fb3a4;font-variant-numeric:tabular-nums}
+.pl.a{outline:1.5px solid var(--acc)}
+.pl.b{outline:1.5px solid var(--b)}
+.pl.sw2{outline:1.5px solid var(--warn)}
+.pl{position:relative}
+.pl .badge{position:absolute;top:-5px;left:-5px;width:14px;height:14px;border-radius:50%;
+font-size:8px;font-weight:800;display:grid;place-items:center;color:#0b0b0b}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--ink2);margin-bottom:9px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+.chart{display:block;width:100%;height:auto;background:var(--s1);border:1px solid var(--line);border-radius:12px}
+.key{display:flex;gap:16px;margin-top:9px;font-size:12px;color:var(--ink2);flex-wrap:wrap}
+.key i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:6px;vertical-align:3px}
+
+@media (max-width:760px){.two,.pick{grid-template-columns:1fr}.pick{gap:8px}.swap{width:100%;height:32px}}
+@media (max-width:660px){.wrap{padding:22px 13px 60px}h1{font-size:22px}}
+</style>
+<div class="wrap">
+
+<h1>A different look, and a comparison that reads like an answer</h1>
+<p class="lede">Two things: five palettes for the same components, and a rebuild of the compare
+screen taking the parts of that other site that are genuinely better than what we have.</p>
+<p class="meta">Every number in the charts and cards below is real — two squads built by the
+site's own optimiser, projected GW1–6 by the same engine the app uses</p>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section>
+<span class="tag">Colour · one</span>
+<h2>The same card, five ways</h2>
+<p class="sub">Identical markup in each; only the CSS variables change. Two of these already
+exist in <code>index.css</code> and are switched off in one line of <code>theme.tsx</code> —
+Frost and Verdant were built, then hidden on the argument that gold is the brand. Widening one
+array brings the picker back.</p>
+
+<div class="demos">
+
+  <div class="t t-aurum">
+    <div class="thead"><span class="tname">Aurum</span><span class="tnote">today · shipped</span>
+      <span class="sw"><i style="background:#c9a227"></i><i style="background:#ead188"></i><i style="background:#0a0908;outline:1px solid #2a2724"></i></span></div>
+    <div class="chiprow">
+      <span class="chip on"><span class="box on"></span><span><b>Balanced</b><em>15/15 · 2 min ago</em></span></span>
+      <span class="chip"><span class="box"></span><span><b>Haaland build</b><em>15/15 · 1 hr ago</em></span></span>
+    </div>
+    <div class="tiles"><div class="tile"><b>339.7</b><em>xP · 6 gw</em></div>
+      <div class="tile"><b>63%</b><em>wins h2h</em></div><div class="tile"><b>£100</b><em>spent</em></div></div>
+    <svg class="spark" viewBox="0 0 300 52" preserveAspectRatio="none">
+      <polyline fill="none" stroke="var(--acc)" stroke-width="2.5" points="6,20 64,8 122,32 180,20 238,25 294,34"/>
+      <polyline fill="none" stroke="var(--b)" stroke-width="2" stroke-dasharray="4 3" points="6,32 64,46 122,28 180,42 238,14 294,42"/>
+    </svg>
+    <div style="margin-top:9px"><button class="cta">Compare 2</button></div>
+  </div>
+
+  <div class="t t-frost">
+    <div class="thead"><span class="tname">Frost</span><span class="tnote">built · hidden</span>
+      <span class="sw"><i style="background:#7fb0ff"></i><i style="background:#a9c9ff"></i><i style="background:#0a0908;outline:1px solid #2a2724"></i></span></div>
+    <div class="chiprow">
+      <span class="chip on"><span class="box on"></span><span><b>Balanced</b><em>15/15 · 2 min ago</em></span></span>
+      <span class="chip"><span class="box"></span><span><b>Haaland build</b><em>15/15 · 1 hr ago</em></span></span>
+    </div>
+    <div class="tiles"><div class="tile"><b>339.7</b><em>xP · 6 gw</em></div>
+      <div class="tile"><b>63%</b><em>wins h2h</em></div><div class="tile"><b>£100</b><em>spent</em></div></div>
+    <svg class="spark" viewBox="0 0 300 52" preserveAspectRatio="none">
+      <polyline fill="none" stroke="var(--acc)" stroke-width="2.5" points="6,20 64,8 122,32 180,20 238,25 294,34"/>
+      <polyline fill="none" stroke="var(--b)" stroke-width="2" stroke-dasharray="4 3" points="6,32 64,46 122,28 180,42 238,14 294,42"/>
+    </svg>
+    <div style="margin-top:9px"><button class="cta">Compare 2</button></div>
+  </div>
+
+  <div class="t t-verdant">
+    <div class="thead"><span class="tname">Verdant</span><span class="tnote">built · hidden</span>
+      <span class="sw"><i style="background:#3ea87a"></i><i style="background:#57c993"></i><i style="background:#0a0908;outline:1px solid #2a2724"></i></span></div>
+    <div class="chiprow">
+      <span class="chip on"><span class="box on"></span><span><b>Balanced</b><em>15/15 · 2 min ago</em></span></span>
+      <span class="chip"><span class="box"></span><span><b>Haaland build</b><em>15/15 · 1 hr ago</em></span></span>
+    </div>
+    <div class="tiles"><div class="tile"><b>339.7</b><em>xP · 6 gw</em></div>
+      <div class="tile"><b>63%</b><em>wins h2h</em></div><div class="tile"><b>£100</b><em>spent</em></div></div>
+    <svg class="spark" viewBox="0 0 300 52" preserveAspectRatio="none">
+      <polyline fill="none" stroke="var(--acc)" stroke-width="2.5" points="6,20 64,8 122,32 180,20 238,25 294,34"/>
+      <polyline fill="none" stroke="var(--b)" stroke-width="2" stroke-dasharray="4 3" points="6,32 64,46 122,28 180,42 238,14 294,42"/>
+    </svg>
+    <div style="margin-top:9px"><button class="cta">Compare 2</button></div>
+  </div>
+
+  <div class="t t-pitch">
+    <div class="thead"><span class="tname">Pitch</span><span class="tnote">new · surface changes too</span>
+      <span class="sw"><i style="background:#2fbf71"></i><i style="background:#5fe0a0"></i><i style="background:#0b1220;outline:1px solid #22334d"></i></span></div>
+    <div class="chiprow">
+      <span class="chip on"><span class="box on"></span><span><b>Balanced</b><em>15/15 · 2 min ago</em></span></span>
+      <span class="chip"><span class="box"></span><span><b>Haaland build</b><em>15/15 · 1 hr ago</em></span></span>
+    </div>
+    <div class="tiles"><div class="tile"><b>339.7</b><em>xP · 6 gw</em></div>
+      <div class="tile"><b>63%</b><em>wins h2h</em></div><div class="tile"><b>£100</b><em>spent</em></div></div>
+    <svg class="spark" viewBox="0 0 300 52" preserveAspectRatio="none">
+      <polyline fill="none" stroke="var(--acc)" stroke-width="2.5" points="6,20 64,8 122,32 180,20 238,25 294,34"/>
+      <polyline fill="none" stroke="var(--b)" stroke-width="2" stroke-dasharray="4 3" points="6,32 64,46 122,28 180,42 238,14 294,42"/>
+    </svg>
+    <div style="margin-top:9px"><button class="cta">Compare 2</button></div>
+  </div>
+
+  <div class="t t-graphite">
+    <div class="thead"><span class="tname">Graphite</span><span class="tnote">new · warm hue, cold ground</span>
+      <span class="sw"><i style="background:#e0623c"></i><i style="background:#ff8b62"></i><i style="background:#0d0e10;outline:1px solid #2c3035"></i></span></div>
+    <div class="chiprow">
+      <span class="chip on"><span class="box on"></span><span><b>Balanced</b><em>15/15 · 2 min ago</em></span></span>
+      <span class="chip"><span class="box"></span><span><b>Haaland build</b><em>15/15 · 1 hr ago</em></span></span>
+    </div>
+    <div class="tiles"><div class="tile"><b>339.7</b><em>xP · 6 gw</em></div>
+      <div class="tile"><b>63%</b><em>wins h2h</em></div><div class="tile"><b>£100</b><em>spent</em></div></div>
+    <svg class="spark" viewBox="0 0 300 52" preserveAspectRatio="none">
+      <polyline fill="none" stroke="var(--acc)" stroke-width="2.5" points="6,20 64,8 122,32 180,20 238,25 294,34"/>
+      <polyline fill="none" stroke="var(--b)" stroke-width="2" stroke-dasharray="4 3" points="6,32 64,46 122,28 180,42 238,14 294,42"/>
+    </svg>
+    <div style="margin-top:9px"><button class="cta">Compare 2</button></div>
+  </div>
+
+</div>
+
+<div class="note"><b>The thing the reference site is doing is not mainly the green.</b> Its
+ground is a cool blue-grey, not near-black, and every panel sits a step lighter than the page.
+That is why it reads as bright and modern — and it is why <b>Pitch</b> above looks like a
+different product while Verdant, which changes only the accent, still looks like ours in a
+different colour. Changing the accent is one line. Changing the ground is a proper piece of
+work: nine surface tokens, both light and dark, and every share image re-checked because the
+export canvas paints its own background.</div>
+
+<div class="note"><b>Against changing it at all:</b> the gold is what the wordmark, every share
+card and the domain identity are built on, and a site that looks unlike its own screenshots is a
+worse trade than a slightly warmer background. <b>For it:</b> nothing about the accent is load
+bearing on a dark ground, Frost and Verdant are already token-complete, and offering the picker
+costs one array. My recommendation is to <b>turn the picker back on first</b> — that is free and
+you can live with each for a day — and treat the Pitch surface as a separate decision after.</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section>
+<span class="tag">Compare · two</span>
+<h2>Pick two plans like you mean it</h2>
+<p class="sub">Tick boxes in a strip are right for a library of eight. They are wrong for the
+moment you are actually comparing, where there is an A and a B and you want to swap them round.
+Two named slots, a swap button, and a horizon control.</p>
+
+<div class="mock t t-aurum">
+  <div class="pick">
+    <div class="field"><label><i style="background:var(--acc)"></i>Plan A</label>
+      <div class="sel">Balanced <span>15/15 ▾</span></div></div>
+    <div class="swap">⇄</div>
+    <div class="field"><label><i style="background:var(--b)"></i>Plan B</label>
+      <div class="sel">Haaland build <span>15/15 ▾</span></div></div>
+    <div class="field"><label>Window</label>
+      <div class="win"><b>1</b><b>3</b><b class="on">6 GW</b></div></div>
+  </div>
+
+  <div class="edge">
+    <div class="edget">The decision</div>
+    <div class="edges">Straight from Gameweek 1 across the next 6.</div>
+    <div class="egrid">
+      <div class="ec"><span class="who a">Plan A</span><em>6 GW projection</em><b>+11.7</b><u>339.7 vs 328.0</u></div>
+      <div class="ec"><span class="who a">Plan A</span><em>Head to head</em><b>63%</b><u>of 4,000 paired runs</u></div>
+      <div class="ec"><span class="who b">Plan B</span><em>Ceiling</em><b>+4</b><u>90th pct 372 vs 368</u></div>
+      <div class="ec"><span class="who lv">Level</span><em>Bank</em><b>£0.0</b><u>£100.0m vs £99.5m</u></div>
+      <div class="ec"><span class="who b">Plan B</span><em>Differential</em><b>−3.8pp</b><u>14.6% vs 18.4% owned</u></div>
+    </div>
+  </div>
+
+  <div class="two">
+    <div class="pc a">
+      <div class="pcn">Plan A</div><div class="pct">Balanced</div>
+      <div class="pq"><div><b>339.7</b><em>xP · 6 gw</em></div><div><b>£0.0m</b><em>bank</em></div>
+        <div><b>301–381</b><em>floor–ceiling</em></div><div><b>2.85</b><em>fixture load</em></div></div>
+      <div class="cap"><span class="av"></span><span><b>B.Fernandes</b><u>HUL A · 6.4 xP</u></span><span class="c">C</span></div>
+    </div>
+    <div class="pc b">
+      <div class="pcn">Plan B</div><div class="pct">Haaland build</div>
+      <div class="pq"><div><b>328.0</b><em>xP · 6 gw</em></div><div><b>£0.5m</b><em>bank</em></div>
+        <div><b>289–368</b><em>floor–ceiling</em></div><div><b>2.83</b><em>fixture load</em></div></div>
+      <div class="cap"><span class="av"></span><span><b>Haaland</b><u>BOU H · 6.9 xP</u></span><span class="c">C</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="note"><b>What I would take from their version, and what I would not.</b> Take: the two
+named slots with a swap, the horizon control, and above all the <b>strip of tiles that each name
+a winner</b> — that is the same instinct as our head-to-head panel and it belongs at the top
+rather than four scrolls down. Leave: their tiles are all point estimates, so five of them agree
+with each other and none says how sure it is. Ours has the one number theirs cannot print —
+<b>63% of paired runs</b> — and that is the tile the whole screen should be built around.</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section>
+<span class="tag">Compare · three</span>
+<h2>The timeline, as a line</h2>
+<p class="sub">What you asked for. Projected points per week for each plan, and underneath, the
+running gap — which is the line that actually answers "when does this decision pay off".</p>
+
+<div class="mock t t-aurum">
+  <svg class="chart" viewBox="0 0 660 210" preserveAspectRatio="xMidYMid meet">
+    <text x="30" y="18" fill="var(--ink3)" font-size="10.5" text-anchor="end">60</text>
+    <text x="30" y="99" fill="var(--ink3)" font-size="10.5" text-anchor="end">55</text>
+    <text x="30" y="180" fill="var(--ink3)" font-size="10.5" text-anchor="end">50</text>
+    <line x1="34" y1="14" x2="648" y2="14" stroke="var(--line)"/>
+    <line x1="34" y1="95" x2="648" y2="95" stroke="var(--line)"/>
+    <line x1="34" y1="176" x2="648" y2="176" stroke="var(--line)"/>
+    <!-- A: 57.1 58.7 55.5 56.8 56.4 55.2 -->
+    <polyline fill="none" stroke="var(--acc)" stroke-width="2.6" stroke-linejoin="round"
+      points="34,60 156,17 278,89 400,66 522,74 644,101"/>
+    <!-- B: 55.5 52.4 56.3 53.1 57.6 53.1 -->
+    <polyline fill="none" stroke="var(--b)" stroke-width="2.6" stroke-linejoin="round"
+      points="34,89 156,140 278,76 400,128 522,46 644,128"/>
+    <g fill="var(--acc)"><circle cx="34" cy="60" r="3.4"/><circle cx="156" cy="17" r="3.4"/><circle cx="278" cy="89" r="3.4"/><circle cx="400" cy="66" r="3.4"/><circle cx="522" cy="74" r="3.4"/><circle cx="644" cy="101" r="3.4"/></g>
+    <g fill="var(--b)"><circle cx="34" cy="89" r="3.4"/><circle cx="156" cy="140" r="3.4"/><circle cx="278" cy="76" r="3.4"/><circle cx="400" cy="128" r="3.4"/><circle cx="522" cy="46" r="3.4"/><circle cx="644" cy="128" r="3.4"/></g>
+    <g fill="var(--ink3)" font-size="10.5" text-anchor="middle">
+      <text x="34" y="197">GW1</text><text x="156" y="197">GW2</text><text x="278" y="197">GW3</text>
+      <text x="400" y="197">GW4</text><text x="522" y="197">GW5</text><text x="644" y="197">GW6</text></g>
+  </svg>
+  <div class="key"><span><i style="background:var(--acc)"></i>Balanced</span>
+    <span><i style="background:var(--b)"></i>Haaland build</span>
+    <span style="color:var(--ink3)">projected points per gameweek</span></div>
+
+  <h3 style="margin:20px 0 8px">Running gap — Balanced minus Haaland build</h3>
+  <svg class="chart" viewBox="0 0 660 180" preserveAspectRatio="xMidYMid meet">
+    <line x1="34" y1="136" x2="648" y2="136" stroke="var(--ink3)" stroke-dasharray="3 3"/>
+    <text x="30" y="140" fill="var(--ink3)" font-size="10.5" text-anchor="end">0</text>
+    <text x="30" y="30" fill="var(--ink3)" font-size="10.5" text-anchor="end">+12</text>
+    <path d="M34,121 L156,61 L278,69 L400,33 L522,44 L644,24 L644,136 L34,136 Z"
+      fill="var(--soft)"/>
+    <polyline fill="none" stroke="var(--acc)" stroke-width="2.6" stroke-linejoin="round"
+      points="34,121 156,61 278,69 400,33 522,44 644,24"/>
+    <g fill="var(--acc2)" font-size="10.5" text-anchor="middle" font-weight="700">
+      <text x="34" y="113">1.6</text><text x="156" y="53">7.9</text><text x="278" y="61">7.0</text>
+      <text x="400" y="25">10.8</text><text x="522" y="36">9.6</text><text x="644" y="16">11.7</text></g>
+    <g fill="var(--ink3)" font-size="10.5" text-anchor="middle">
+      <text x="34" y="167">GW1</text><text x="156" y="167">GW2</text><text x="278" y="167">GW3</text>
+      <text x="400" y="167">GW4</text><text x="522" y="167">GW5</text><text x="644" y="167">GW6</text></g>
+  </svg>
+</div>
+
+<div class="note"><b>The second chart is the one worth having.</b> Six weeks of two wobbling lines
+is a picture of variance; the running gap is a picture of the decision. It says the difference is
+made almost entirely in <b>GW2 and GW4</b> — Balanced is ahead by 1.6 after one week and by 7.9
+after two — and that <b>the Haaland build wins GW3 and GW5 outright</b>, which is the whole
+argument for holding him through a bad opening. A total of "+11.7" says none of that.</div>
+
+<div class="note">One honest limit to keep on the chart: this compares two fixed fifteens with a
+best legal eleven each week. It does not know about the transfers you will make in week three.
+Over six weeks that is a reasonable read; over a season it is not, which is why the season
+version of this belongs with the 38-week planner rather than here.</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section>
+<span class="tag">Compare · four</span>
+<h2>Differences, counted and then shown</h2>
+<p class="sub">Their version is good: three counts, then the players that differ in two columns,
+then the shared ones folded into chips at the bottom. Ours already computes all of this and
+draws it flatter than it deserves.</p>
+
+<div class="mock t t-aurum">
+  <div class="counts">
+    <div class="cnt"><b>10</b><em>shared</em></div>
+    <div class="cnt a"><b>5</b><em>A only</em></div>
+    <div class="cnt b"><b>5</b><em>B only</em></div>
+  </div>
+  <div class="two">
+    <div>
+      <div class="pcn" style="margin-bottom:7px">Balanced only</div>
+      <div class="prow"><span class="av"></span><span><b>B.Fernandes</b><u>MUN · £12.0m · 34.7 xP</u></span><span class="side a">A</span></div>
+      <div class="prow"><span class="av"></span><span><b>Thiago</b><u>BRE · £8.0m · 28.0 xP</u></span><span class="side a">A</span></div>
+      <div class="prow"><span class="av"></span><span><b>Virgil</b><u>LIV · £6.5m · 26.9 xP</u></span><span class="side a">A</span></div>
+      <div class="prow"><span class="av"></span><span><b>Enzo</b><u>CHE · £7.0m · 26.1 xP</u></span><span class="side a">A</span></div>
+      <div class="prow"><span class="av"></span><span><b>Szoboszlai</b><u>LIV · £7.0m · 25.9 xP</u></span><span class="side a">A</span></div>
+    </div>
+    <div>
+      <div class="pcn" style="margin-bottom:7px">Haaland build only</div>
+      <div class="prow"><span class="av"></span><span><b>Haaland</b><u>MCI · £15.5m · 33.4 xP</u></span><span class="side b">B</span></div>
+      <div class="prow"><span class="av"></span><span><b>Rice</b><u>ARS · £7.5m · 27.1 xP</u></span><span class="side b">B</span></div>
+      <div class="prow"><span class="av"></span><span><b>E.Le Fée</b><u>SUN · £6.0m · 23.2 xP</u></span><span class="side b">B</span></div>
+      <div class="prow"><span class="av"></span><span><b>Ndiaye</b><u>EVE · £6.0m · 22.5 xP</u></span><span class="side b">B</span></div>
+      <div class="prow"><span class="av"></span><span><b>Van Hecke</b><u>BHA · £5.0m · 22.1 xP</u></span><span class="side b">B</span></div>
+    </div>
+  </div>
+  <div class="pcn" style="margin:12px 0 6px">In both plans · 10</div>
+  <div class="shared"><i>Raya</i><i>Dubravka</i><i>Gabriel</i><i>Tarkowski</i><i>Senesi</i>
+    <i>Thiaw</i><i>Anderson</i><i>Garner</i><i>Calvert-Lewin</i><i>Welbeck</i></div>
+</div>
+
+<div class="note"><b>Ten of the fifteen are the same players.</b> Two squads built to different
+briefs, and the argument is about five places — which is the finding, not the leftovers. It also
+prices the decision properly: this is not "premium versus no premium", it is
+<b>£15.5m of Haaland against B.Fernandes, Thiago and a better bench</b>.</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section>
+<span class="tag">Compare · five</span>
+<h2>Two pitches, side by side</h2>
+<p class="sub">The best idea on their screen and the one we do not have at all. Colour-code every
+shirt by whether it is shared, A-only, B-only, or the same player in the eleven on one side and
+the bench on the other — that last one is a real difference a squad list cannot show.</p>
+
+<div class="mock t t-aurum">
+  <div class="legend">
+    <span><i style="background:#3b4a5c"></i>Shared pick</span>
+    <span><i style="background:var(--acc)"></i>Plan A only</span>
+    <span><i style="background:var(--b)"></i>Plan B only</span>
+    <span><i style="background:var(--warn)"></i>XI on one side, bench on the other</span>
+  </div>
+  <div class="two">
+    <div>
+      <div class="pct" style="font-size:12.5px">Balanced · 3-4-3 · 57.1 xP</div>
+      <div class="pitch">
+        <div class="prowp"><span class="pl"><span class="sh"></span><n>Raya</n><x>4.4</x></span></div>
+        <div class="prowp">
+          <span class="pl"><span class="sh"></span><n>Gabriel</n><x>5.1</x></span>
+          <span class="pl"><span class="sh"></span><n>Tarkowski</n><x>4.6</x></span>
+          <span class="pl a"><span class="badge" style="background:var(--acc)">A</span><span class="sh"></span><n>Virgil</n><x>4.2</x></span>
+        </div>
+        <div class="prowp">
+          <span class="pl a"><span class="badge" style="background:var(--acc)">A</span><span class="sh"></span><n>B.Fernandes</n><x>6.3</x></span>
+          <span class="pl"><span class="sh"></span><n>Anderson</n><x>4.6</x></span>
+          <span class="pl a"><span class="badge" style="background:var(--acc)">A</span><span class="sh"></span><n>Enzo</n><x>4.1</x></span>
+          <span class="pl"><span class="sh"></span><n>Garner</n><x>4.3</x></span>
+        </div>
+        <div class="prowp">
+          <span class="pl a"><span class="badge" style="background:var(--acc)">A</span><span class="sh"></span><n>Thiago</n><x>4.5</x></span>
+          <span class="pl"><span class="sh"></span><n>Calvert-Lewin</n><x>3.4</x></span>
+          <span class="pl sw2"><span class="badge" style="background:var(--warn)">!</span><span class="sh"></span><n>Welbeck</n><x>3.3</x></span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="pct" style="font-size:12.5px">Haaland build · 4-4-2 · 55.5 xP</div>
+      <div class="pitch">
+        <div class="prowp"><span class="pl"><span class="sh"></span><n>Raya</n><x>4.4</x></span></div>
+        <div class="prowp">
+          <span class="pl"><span class="sh"></span><n>Gabriel</n><x>5.1</x></span>
+          <span class="pl"><span class="sh"></span><n>Tarkowski</n><x>4.6</x></span>
+          <span class="pl"><span class="sh"></span><n>Senesi</n><x>4.4</x></span>
+          <span class="pl b"><span class="badge" style="background:var(--b)">B</span><span class="sh"></span><n>Van Hecke</n><x>3.9</x></span>
+        </div>
+        <div class="prowp">
+          <span class="pl b"><span class="badge" style="background:var(--b)">B</span><span class="sh"></span><n>Rice</n><x>4.7</x></span>
+          <span class="pl"><span class="sh"></span><n>Anderson</n><x>4.6</x></span>
+          <span class="pl b"><span class="badge" style="background:var(--b)">B</span><span class="sh"></span><n>Ndiaye</n><x>3.9</x></span>
+          <span class="pl"><span class="sh"></span><n>Garner</n><x>4.3</x></span>
+        </div>
+        <div class="prowp">
+          <span class="pl b"><span class="badge" style="background:var(--b)">B</span><span class="sh"></span><n>Haaland</n><x>6.9</x></span>
+          <span class="pl"><span class="sh"></span><n>Calvert-Lewin</n><x>3.4</x></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note"><b>Formations differ, so the pitches are not row-aligned</b> — Balanced fields
+3-4-3 in GW1 and the Haaland build 4-4-2, because £15.5m in one striker has to come out of the
+back line. Two lists could never show you that; two pitches show it before you read a number.</div>
+
+<div class="note"><b>Order I would build these in:</b> the A/B pickers and the decision strip
+first — they change the whole screen for about a day's work and reuse numbers we already
+compute. The two charts next, because you asked for them and the running gap is the best thing
+on this page. The two pitches last: they need the per-week lineups threaded into the comparison,
+which is real plumbing rather than layout.</div>
+</section>
+
+</div>
