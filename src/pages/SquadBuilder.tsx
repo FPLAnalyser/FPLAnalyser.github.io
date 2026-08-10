@@ -332,6 +332,9 @@ export default function SquadBuilder() {
     base: picked, byEl, startGw: buildGw, fixtureEase, seed: importedXI,
     // Each plan keeps its own week decisions; switching plan switches them.
     storeKey: plans.activeId ? weeksKey(plans.activeId) : undefined,
+    // Opening-week edits change the fifteen rather than recording a transfer,
+    // and the fifteen belongs to the plan.
+    onBaseChange: (next) => plans.setBase(next),
   })
   // The board's week drives what the list is for: before the fifteen exists
   // it's an add list, after it's the transfer market for the week on screen.
@@ -599,7 +602,7 @@ export default function SquadBuilder() {
           <div className="lg:sticky lg:top-20 lg:flex lg:max-h-[calc(100vh-6rem)] lg:flex-col">
           <div className="lg:shrink-0">
           <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">
-            {complete ? `Transfer market — GW${planner.gw}` : 'Add players'}
+            {!complete ? 'Add players' : planner.opening ? `Your fifteen — GW${planner.gw}` : `Transfer market — GW${planner.gw}`}
           </div>
 
           {complete && openPlaces > 0 && (

@@ -155,7 +155,10 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
       name={nameOf(el)}
       code={num(rowOf(el) ?? {}, 'code')}
       element={el}
-      transferred={!!week?.transfers.some((t) => t.in === el)}
+      /* Nothing arrives by transfer at the opening week — you are picking a
+         squad, so a green "signed this week" tick on eleven of the fifteen
+         was marking the act of building it. */
+      transferred={!planner.opening && !!week?.transfers.some((t) => t.in === el)}
       sold={planner.pendingOut.includes(el)}
       onSell={week
         ? () => {
@@ -167,7 +170,7 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
         : onRemovePick
           ? () => { tapHaptic('light'); onRemovePick(el) }
           : undefined}
-      sellVerb={week ? 'Sell' : 'Remove'}
+      sellVerb={week && !planner.opening ? 'Sell' : 'Remove'}
       bench={onBench && !benchBoost}
       highlight={subFor != null && partners.includes(el)}
       dimmed={subFor != null && !partners.includes(el) && el !== subFor}
@@ -195,19 +198,24 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
           <Stat label="In the bank" value={`£${(BUDGET - spend).toFixed(1)}m`} tone={spend > BUDGET ? 'bad' : 'ink'} sub={`£${spend.toFixed(1)}m squad`} />
         </div>
 
-        {/* Transfers — above the pitch, where you can act on them */}
+        {/* Transfers — above the pitch, where you can act on them. At the
+            opening week there are none to have: the box counts the fifteen
+            you are assembling instead of counting moves against a limit that
+            does not apply. */}
         <div className="mb-2.5 rounded-2xl border border-line bg-surface-1/60 px-3 py-2.5">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">{week ? 'Transfers' : 'Squad'}</span>
+            <span className="text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">{week && !planner.opening ? 'Transfers' : 'Squad'}</span>
             <span className={`font-num rounded-md px-2 py-0.5 text-sm font-bold tabular-nums ${hit > 0 ? 'bg-bad/15 text-bad' : 'bg-surface-3 text-ink'}`}>
-              {!week ? `${picked}/15` : ft === Infinity ? `${week.transfers.filter((t) => t.in != null).length} · unlimited` : `${week.transfers.filter((t) => t.in != null).length}/${banked}`}
+              {!week || planner.opening ? `${picked}/15` : ft === Infinity ? `${week.transfers.filter((t) => t.in != null).length} · unlimited` : `${week.transfers.filter((t) => t.in != null).length}/${banked}`}
             </span>
             {!week
               ? <span className="text-xs text-ink-3">Pick {15 - picked} more from the list{picked === 0 ? ' — or hit Auto pick' : ''}</span>
-              : ft === Infinity
-                ? <span className="text-xs font-semibold text-accent">{week.chip ? CHIP_LABEL[week.chip] : 'Opening squad'} — no limit</span>
-                : <span className="text-xs text-ink-3">{ftLeft} free left{hit > 0 ? <span className="font-semibold text-bad"> · −{hit} pts</span> : ''}</span>}
-            {week && week.transfers.length === 0 && <span className="ml-auto text-xs text-ink-3">Tap ✕ on a player to sell him</span>}
+              : planner.opening
+                ? <span className="text-xs text-ink-3">{week.chip ? `${CHIP_LABEL[week.chip]} — ` : ''}Building your opening squad — changes are free until the season starts</span>
+                : ft === Infinity
+                  ? <span className="text-xs font-semibold text-accent">{week.chip ? CHIP_LABEL[week.chip] : 'Free hit'} — no limit</span>
+                  : <span className="text-xs text-ink-3">{ftLeft} free left{hit > 0 ? <span className="font-semibold text-bad"> · −{hit} pts</span> : ''}</span>}
+            {week && !planner.opening && week.transfers.length === 0 && <span className="ml-auto text-xs text-ink-3">Tap ✕ on a player to sell him</span>}
             {week && planner.pendingOut.length > 0 && (
               <span className="ml-auto text-xs font-semibold text-accent">
                 £{(BUDGET - spend).toFixed(1)}m to spend on {planner.pendingOut.length} {planner.pendingOut.length === 1 ? 'place' : 'places'}
@@ -253,7 +261,7 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
               : <EmptySlot key={`be${j}`} pos={slot.pos} onClick={() => onPickSlot?.(slot.pos)} />))}
       </BenchSpine>
 
-      {week && week.transfers.length > 0 && (
+      {week && !planner.opening && week.transfers.length > 0 && (
         <div className="mx-auto mt-2.5" style={{ maxWidth: BOARD_W }}>
           <div className="rounded-2xl border border-line bg-surface-1/60 px-3 py-2.5">
             <div className="mb-1.5 text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">This week's transfers</div>

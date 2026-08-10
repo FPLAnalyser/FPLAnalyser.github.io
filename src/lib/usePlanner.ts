@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { num } from './rows'
 import {
   type PlannerState, type WeekPlan, type Pos, type Chip,
@@ -42,6 +42,10 @@ export interface Planner {
   chipSpent: (c: Chip) => number | null
   /** 1 before GW20, 2 after — the two chip sets. */
   half: 1 | 2
+  /** The week on screen is the one you build IN, not transfer in. Changes
+   *  here edit the fifteen and cost nothing; the UI drops every transfer
+   *  affordance rather than showing zero of them. */
+  opening: boolean
   spend: number
   posOf: (el: number) => Pos
   setWeek: (patch: Partial<WeekPlan>) => void
@@ -68,7 +72,7 @@ export interface Planner {
   fill: (inEl: number) => void
 }
 
-export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey }: {
+export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey, onBaseChange }: {
   base: number[]
   byEl: Map<number, RatingRow>
   startGw: number
@@ -77,6 +81,9 @@ export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey }:
    *  the whole week history rather than carrying one plan's captain into
    *  another's squad. See lib/plans.ts. */
   storeKey?: string
+  /** Change the stored fifteen. Used for OPENING-WEEK edits, which are not
+   *  transfers — see the note on `opening` below. */
+  onBaseChange?: (next: number[]) => void
   /** A lineup to open the first week with instead of auto-picking one —
    *  a squad imported from a screenshot arrives already set out, and
    *  improving on it would silently contradict the picture it came from. */
@@ -109,16 +116,48 @@ export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey }:
     try { localStorage.setItem(key, JSON.stringify(s)) } catch { /* private mode */ }
   }
 
-  /* Rebuild when the fifteen changes underneath us — and that now includes
-     SWITCHING PLAN, where both the key and the base change at once. Reloading
-     from the new key first matters: a plan you have opened before comes back
-     with its weeks, and only a genuinely new fifteen starts empty. */
+  /* WHICH STORE WE ARE CURRENTLY SHOWING. Keyed on both the plan and the
+     fifteen, and this pair is the whole reason duplicated plans were linked:
+     the old guard returned early whenever the BASE matched, and a duplicate
+     has the same base by definition. So switching between an original and its
+     copy left the previous plan's weeks in memory, and the next edit wrote
+     them into whichever plan you had just opened. Both plans then showed one
+     set of transfers, in either direction, which is exactly what a copy is
+     not supposed to do. */
+  const loadedFor = useRef(`${key}|${sig}`)
+  /* A base change WE made — an opening-week edit, or the one-off fold-in
+     below — is not somebody picking a different fifteen, so it must not reset
+     the forward plan. */
+  const expectedSig = useRef<string | null>(null)
+
   useEffect(() => {
-    if (state.base.join(',') === sig) return
-    const stored = load(key)
-    persist(stored.base.join(',') === sig ? stored : { base: [...base], startGw, weeks: {} })
+    const tag = `${key}|${sig}`
+    if (loadedFor.current === tag) return
+    loadedFor.current = tag
+    if (expectedSig.current === sig) { expectedSig.current = null; return }
+    persist(load(key))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sig, key])
+
+  /* ONE-OFF REPAIR for plans saved before the opening week stopped being a
+     transfer window. Those plans hold their changes as transfers in the first
+     week, which means their stored fifteen is the squad they started from —
+     stale everywhere the fifteen is read, the comparison tab most of all. Fold
+     them in, clear them, and leave the forward weeks alone. */
+  useEffect(() => {
+    const first = state.weeks[startGw]
+    if (!first?.transfers.length) return
+    const next = squadAt(state, startGw)
+    if (next.length !== state.base.length) return
+    expectedSig.current = next.join(',')
+    persist({
+      ...state,
+      base: [...next],
+      weeks: { ...state.weeks, [startGw]: { ...first, transfers: [] } },
+    })
+    onBaseChange?.(next)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, startGw])
 
   // Materialise the week being viewed: carry the previous lineup forward when
   // those players are all still here, else auto-pick the best legal eleven.
@@ -182,6 +221,58 @@ export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey }:
     return null
   }
 
+  /* ── THE OPENING WEEK IS NOT A TRANSFER WINDOW ─────────────────────────
+     Picking your first fifteen is building a squad, not making transfers.
+     FPL agrees — the game charges nothing before the season starts — and
+     `freeTransfers` has always returned Infinity here, but the moves were
+     still RECORDED as transfers, which put a count in the header, a green
+     tick on every incoming player, and a "this week's transfers" list under
+     a squad nobody had transferred anything into.
+     Worse, it was wrong rather than merely noisy: a swap at the opening week
+     left the plan's stored fifteen untouched and lived only in the week's
+     transfer list, so the plan library — and therefore the whole comparison
+     tab, which reads a plan's fifteen — was looking at the squad you started
+     from rather than the one on your screen.
+     So an opening-week change edits the FIFTEEN, and the forward weeks have
+     the same substitution applied so a captain choice in GW4 survives. */
+  const opening = gw <= startGw
+
+  const editBase = (next: number[], swap?: { out: number; in: number }) => {
+    const keep = new Set(next)
+    const weeks: Record<number, WeekPlan> = {}
+    for (const k of Object.keys(state.weeks)) {
+      const g = Number(k)
+      const w = state.weeks[g]
+      // A like-for-like change substitutes him everywhere he appears, so the
+      // eleven and the armband you set for GW4 survive it. A removal just
+      // drops him, and the lineup is re-derived once the fifteen is whole.
+      const base = swap
+        ? replaceIn(w, (e) => (e === swap.out ? swap.in : e))
+        : {
+            ...w,
+            xi: w.xi.filter((e) => keep.has(e)),
+            bench: w.bench.filter((e) => keep.has(e)),
+            captain: w.captain != null && keep.has(w.captain) ? w.captain : null,
+            vice: w.vice != null && keep.has(w.vice) ? w.vice : null,
+          }
+      weeks[g] = {
+        ...base,
+        // Nothing that happened at the opening week is a transfer, and a
+        // later week's transfer naming a player who is no longer in the
+        // squad is not one either.
+        transfers: g <= startGw
+          ? []
+          : base.transfers.filter((t) => (swap ? true : keep.has(t.out) && (t.in == null || keep.has(t.in)))),
+      }
+    }
+    // The base is about to change under us; tell the reload guard this one
+    // came from here so it does not treat it as a different squad and wipe
+    // the forward plan.
+    expectedSig.current = next.join(',')
+    persist({ ...state, base: [...next], weeks })
+    onBaseChange?.(next)
+  }
+
   const canReplace = (outEl: number, inEl: number): string | null => {
     if (squad.includes(inEl)) return 'Already in your squad'
     if (pendingOut.includes(inEl)) return 'You just sold him — keep him instead'
@@ -223,7 +314,9 @@ export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey }:
     canReplace,
     pendingOut,
     canFill,
+    opening,
     sell: (el: number) => {
+      if (opening) { editBase(state.base.filter((e) => e !== el)); return }
       if (!week || week.transfers.some((t) => t.out === el)) return
       // The card stays on the pitch, greyed, so the shape of the team is
       // still readable while you decide who takes his place.
@@ -241,6 +334,11 @@ export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey }:
       })
     },
     fill: (inEl: number) => {
+      if (opening) {
+        if (state.base.includes(inEl) || state.base.length >= 15) return
+        editBase([...state.base, inEl])
+        return
+      }
       if (!week || canFill(inEl)) return
       const outEl = pendingOut.find((e) => posOf(e) === posOf(inEl))
       if (outEl == null) return
@@ -250,6 +348,11 @@ export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey }:
       }, outEl, inEl)
     },
     doTransfer: (outEl: number, inEl: number) => {
+      if (opening) {
+        if (canReplace(outEl, inEl)) return
+        editBase(state.base.map((e) => (e === outEl ? inEl : e)), { out: outEl, in: inEl })
+        return
+      }
       if (!week || canReplace(outEl, inEl)) return
       commit(gw, {
         ...week,
