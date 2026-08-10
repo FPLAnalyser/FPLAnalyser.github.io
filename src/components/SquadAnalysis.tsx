@@ -5,6 +5,7 @@ import { Contribution, GoalSources, DefenceConcentration, ClubRisk, MinutesRisk 
 import { CaptaincyLadder, CaptaincyVsField, ChipWindows, OwnershipSwing, TransferUpside, FixtureTurnMap, PriceWatch } from './SquadDecisions'
 import { FloorCeiling, ProjectedVsActual, type SeasonRow } from './SquadOutcomes'
 import { SquadCompare, type ComparePlan } from './SquadCompare'
+import { SquadRiskMonitor, SquadWatch } from './SquadWatch'
 import { buildSeries, type Engine } from '../lib/squadInsights'
 import { num } from '../lib/rows'
 import type { DiffScale } from '../lib/fixtureRuns'
@@ -18,9 +19,17 @@ import type { RatingRow, FixtureEaseRow } from '../lib/types'
    stacked in the order they were built:
 
      Ladder     one grid, six metrics, week by week
+     Watch      what needs attention before the deadline
      Shape      where the points come from, and how concentrated
      Outcomes   the range a week can land in, and whether we were right
      Decisions  captain, chip, transfer, price
+
+   Watch is the odd one out and deliberately so: every other group answers
+   "how good is this squad", and it answers "what do I do about it". It
+   composes signals the other groups already show in full rather than
+   modelling anything new, which is why each row names the signal driving
+   it — a triage list that hid its inputs would be a fourth opinion nobody
+   asked for.
 
    Everything reads ONE pass of the engine, built here and handed down. The
    panels are pure functions of that pass, so two of them cannot disagree
@@ -30,6 +39,7 @@ import type { RatingRow, FixtureEaseRow } from '../lib/types'
 
 const BASE_GROUPS: TabDef[] = [
   { id: 'ladder', label: 'Ladder' },
+  { id: 'watch', label: 'Watch' },
   { id: 'shape', label: 'Shape' },
   { id: 'outcomes', label: 'Outcomes' },
   { id: 'decisions', label: 'Decisions' },
@@ -92,6 +102,13 @@ export function SquadAnalysis({
 
       {active === 'ladder' && !!series.length && (
         <SquadLadder squad={squad} gws={gws} pool={pool} engine={engine} />
+      )}
+
+      {active === 'watch' && !!series.length && (
+        <>
+          <SquadWatch squad={series} gws={gws} fixtureEase={fixtureEase} avail={avail} />
+          <SquadRiskMonitor squad={series} gws={gws} fixtureEase={fixtureEase} avail={avail} />
+        </>
       )}
 
       {active === 'shape' && !!series.length && (
