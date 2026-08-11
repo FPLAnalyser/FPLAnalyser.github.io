@@ -4,7 +4,6 @@ import { SquadLadder } from './SquadLadder'
 import { Contribution, GoalSources, DefenceConcentration, ClubRisk, MinutesRisk } from './SquadShape'
 import { CaptaincyLadder, CaptaincyVsField, ChipWindows, OwnershipSwing, TransferUpside, FixtureTurnMap, PriceWatch } from './SquadDecisions'
 import { FloorCeiling, ProjectedVsActual, type SeasonRow } from './SquadOutcomes'
-import { SquadCompare, type ComparePlan } from './SquadCompare'
 import { SquadRiskMonitor, SquadWatch } from './SquadWatch'
 import { buildSeries, type Engine } from '../lib/squadInsights'
 import { num } from '../lib/rows'
@@ -47,7 +46,6 @@ const BASE_GROUPS: TabDef[] = [
 
 export function SquadAnalysis({
   squad, xi, pool, gws, engine, fixtureEase, diffScale, bank, captain, seasonToDate, playedGws,
-  comparing,
 }: {
   squad: RatingRow[]
   /** The starting eleven — chips and captaincy are eleven-player questions. */
@@ -62,16 +60,12 @@ export function SquadAnalysis({
   captain: number | null
   seasonToDate: SeasonRow[] | null
   playedGws: number
-  /** Plans ticked in the library. Two or more turns on the Compare group. */
-  comparing: ComparePlan[]
 }) {
-  const canCompare = comparing.length >= 2
-  const groups = canCompare
-    ? [{ id: 'compare', label: `Compare ${comparing.length}` }, ...BASE_GROUPS]
-    : BASE_GROUPS
-  /* Land on Compare when there is one — you got here by pressing Compare, and
-     showing the ladder for one squad instead is not what was asked for. */
-  const [group, setGroup] = useState(canCompare ? 'compare' : 'ladder')
+  /* Comparing plans moved out to a tab of its own: it answers a different
+     question from every group here, which all read ONE squad. `comparing` is
+     still taken so the empty-state copy can point at it. */
+  const groups = BASE_GROUPS
+  const [group, setGroup] = useState('ladder')
   const active = groups.some((g) => g.id === group) ? group : groups[0].id
 
   const gwKey = gws.join(',')
@@ -92,11 +86,7 @@ export function SquadAnalysis({
     <div className="grid gap-4">
       <Tabs tabs={groups} active={active} onChange={setGroup} layoutId="squad-insights" />
 
-      {active === 'compare' && (
-        <SquadCompare plans={comparing} gws={gws} engine={engine} />
-      )}
-
-      {active !== 'compare' && !series.length && (
+      {!series.length && (
         <p className="text-[13px] text-ink-2">Pick a full fifteen and this fills in.</p>
       )}
 

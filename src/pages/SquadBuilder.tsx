@@ -11,6 +11,7 @@ import { ShareFooter } from '../components/ShareFooter'
 import { SeasonPlanner } from '../components/SeasonPlanner'
 import { SquadLab } from '../components/SquadLab'
 import { SquadAnalysis } from '../components/SquadAnalysis'
+import { SquadCompare } from '../components/SquadCompare'
 import { PlanBar } from '../components/PlanBar'
 import { Icon } from '../components/Icon'
 import { Pitch, PitchCard, BenchSpine, CARD_W } from '../components/Pitch'
@@ -43,6 +44,24 @@ const SLOTS: { pos: Pos; count: number }[] = [
 ]
 const NEED: Record<Pos, number> = { GKP: 2, DEF: 5, MID: 5, FWD: 3 }
 const POS_LABEL: Record<Pos, string> = { GKP: 'Goalkeepers', DEF: 'Defenders', MID: 'Midfielders', FWD: 'Forwards' }
+type View = 'build' | 'insights' | 'compare'
+
+/** Moves a stored plan spends after its opening week. Reads the plan's own
+ *  week store; a plan that has never been stepped forward has none. */
+function countTransfers(id: string, startGw: number): number {
+  try {
+    const raw = localStorage.getItem(weeksKey(id))
+    if (!raw) return 0
+    const weeks = JSON.parse(raw) as Record<string, { transfers?: { in?: number | null }[] }>
+    let n = 0
+    for (const [gw, w] of Object.entries(weeks)) {
+      if (Number(gw) <= startGw) continue
+      n += (w.transfers ?? []).filter((t) => t.in != null).length
+    }
+    return n
+  } catch { return 0 }
+}
+
 const BUDGET = 100.0
 const MAX_PER_CLUB = 3
 
@@ -248,7 +267,7 @@ export default function SquadBuilder() {
      column under the transfer market, which made a laptop scroll past the
      pitch to reach it and a phone scroll past everything. It is a different
      job from picking, so it gets its own tab rather than more page. */
-  const [view, setView] = useState<'build' | 'insights'>('build')
+  const [view, setView] = useState<View>('build')
 
   const avail = useAvailability()
   // The site's own fixture difficulty — the turn map colours by it, so its
@@ -375,8 +394,14 @@ export default function SquadBuilder() {
       .map((p) => ({
         plan: p!,
         squad: p!.base.map((el) => byEl.get(el)).filter(Boolean) as RatingRow[],
+        /* Moves the plan actually spends, read from its own stored weeks. The
+           opening week is excluded: assembling a first fifteen is building a
+           squad, not making transfers, and counting it would penalise every
+           plan by fifteen. Used only to break a tie on points — two plans that
+           project the same are not equal if one of them paid for it. */
+        transfers: countTransfers(p!.id, buildGw),
       })),
-    [plans.compare, plans.plans, byEl],
+    [plans.compare, plans.plans, byEl, buildGw],
   )
 
   /** Places sold and not yet refilled, and which positions they are. */
@@ -465,7 +490,7 @@ export default function SquadBuilder() {
       <PlanBar
         plans={plans}
         canCompare={plans.compare.length >= 2}
-        onCompare={() => setView('insights')}
+        onCompare={() => setView('compare')}
       />
 
       {/* Insights only exists once there are fifteen players to read. Offering
@@ -474,12 +499,28 @@ export default function SquadBuilder() {
       {(complete || plans.compare.length >= 2) && (
         <div className="mb-4">
           <Tabs
-            tabs={[{ id: 'build', label: 'Squad' }, { id: 'insights', label: 'Insights' }]}
+            tabs={[
+              { id: 'build', label: 'Squad' },
+              ...(complete ? [{ id: 'insights', label: 'Insights' }] : []),
+              /* Comparing plans is its own job, not a reading of one squad, so
+                 it sits beside Insights rather than inside it. No count in the
+                 label — the strip above already says how many are ticked, and
+                 a number in a tab reads as a badge for something unread. */
+              ...(plans.compare.length >= 2 ? [{ id: 'compare', label: 'Compare plans' }] : []),
+            ]}
             active={view}
-            onChange={(id) => setView(id as 'build' | 'insights')}
+            onChange={(id) => setView(id as View)}
             layoutId="squad-view"
           />
         </div>
+      )}
+
+      {view === 'compare' && (
+        <SquadCompare
+          plans={comparing}
+          gws={planner.gws.filter((g) => g >= liveGw).slice(0, 6)}
+          engine={{ fixtureEase, avail, model: listXpModel, market: listMarket, profiles: listProfiles }}
+        />
       )}
 
       {view === 'insights' && (
@@ -495,11 +536,10 @@ export default function SquadBuilder() {
           captain={planner.week?.captain ?? null}
           seasonToDate={(data?.seasonToDate ?? null) as never}
           playedGws={Math.max(0, buildGw - 1)}
-          comparing={comparing}
         />
       )}
 
-      <div hidden={view === 'insights'}>
+      <div hidden={view !== 'build'}>
       {/* The right-hand column is the Squad Lab's column, and it is sized for
           the lab rather than for whatever the pitch left over. It steps up with
           the screen: 400 on a small laptop, where 680 of board plus 680 of

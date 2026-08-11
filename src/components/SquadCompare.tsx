@@ -1,5 +1,6 @@
-import { Fragment, useMemo } from 'react'
+import { useMemo } from 'react'
 import { Panel } from './SquadShape'
+import { TeamBadge } from './badges'
 import { squadDimensions, type Dimension } from './SquadVerdict'
 import { num } from '../lib/rows'
 import {
@@ -11,7 +12,7 @@ import type { FixtureEaseRow, RatingRow } from '../lib/types'
 /* ════════════════════════════════════════════════════════════════════════
    Comparing plans.
 
-   The table at the top could be assembled by anyone with two projections
+   The verdict at the top could be assembled by anyone with two projections
    side by side. The head-to-head could not, and it is the reason the tab
    exists: "Plan A projects 11 more" sounds decisive, "Plan A wins 63% of
    the time" is the same fact and does not — and the second is the true one.
@@ -31,6 +32,8 @@ const pct = (v: number) => `${Math.round(v * 100)}%`
 export interface ComparePlan {
   plan: StoredPlan
   squad: RatingRow[]
+  /** Moves spent after the opening week. Breaks a tie on points. */
+  transfers?: number
 }
 
 export function SquadCompare({ plans, gws, engine, draws = 4000 }: {
@@ -77,6 +80,7 @@ export function SquadCompare({ plans, gws, engine, draws = 4000 }: {
     const rated = p.squad.map((r) => num(r, 'season_overall_score')).filter((v): v is number => v != null)
     return {
       rating: rated.length ? Math.round((rated.reduce((a, b) => a + b, 0) / rated.length) * 20) : null,
+      transfers: p.transfers ?? 0,
       dims: squadDimensions(p.squad, fixtureEase, gws[0]),
       name: p.plan.name,
       colour: COLOURS[i % COLOURS.length],
@@ -89,13 +93,9 @@ export function SquadCompare({ plans, gws, engine, draws = 4000 }: {
     }
   })
 
-  const bestProj = Math.max(...rows.map((r) => r.projection))
-  const lowOwn = Math.min(...rows.map((r) => r.owned))
-
   return (
     <div className="grid gap-4">
       <Verdict rows={rows} />
-      <Headline rows={rows} bestProj={bestProj} lowOwn={lowOwn} />
       <Dimensions rows={rows} />
       <WeekByWeek rows={rows} gws={gws} />
       <Horizon rows={rows} gws={gws} fixtureEase={fixtureEase} />
@@ -116,7 +116,7 @@ type Row = ReturnType<typeof buildRows>[number]
 function buildRows() {
   return [] as {
     name: string; colour: string; spend: number; projection: number; owned: number
-    rating: number | null; dims: Dimension[]
+    rating: number | null; dims: Dimension[]; transfers: number
     spread: { p10: number; median: number; p90: number; mean: number }
     weeks: { xp: number; captain: number | null; xi: PlayerSeries[]; form: string }[]
     series: PlayerSeries[]
@@ -126,136 +126,107 @@ function buildRows() {
 
 // ── the verdict ─────────────────────────────────────────────────────────────
 
-/* The number people came for, said once and large, with the sentence that
-   qualifies it directly underneath.
+/* One panel, one answer, in the order the question is actually asked: who
+   wins, by how much, and on what.
  
-   The table below this panel has every figure in it and is the better artefact
-   for anyone reading closely — but a table makes a reader do the comparing,
-   and most of the time the comparison has one answer. So this states it, and
-   states the contradiction when the two headline numbers disagree, which on
-   real pairs of plans they routinely do: the projection is these weeks with
-   fixtures, minutes and a captain applied, the rating is season-long quality.
-   A tab that showed only one of them would sound certain and be wrong. */
+   This replaces a seven-column table that opened the tab. The table had every
+   figure in it and made the reader do all of the comparing — and most of the
+   time the comparison has one answer, so it is stated. The supporting numbers
+   are still here, under the bars, where they qualify the answer instead of
+   burying it. */
 function Verdict({ rows }: { rows: Row[] }) {
-  const byProj = [...rows].sort((a, b) => b.projection - a.projection)
-  const top = byProj[0]
-  const gap = top.projection - byProj[byProj.length - 1].projection
-  const rated = rows.filter((r) => r.rating != null)
-  const topRate = rated.length
-    ? rated.reduce((a, b) => ((b.rating ?? 0) > (a.rating ?? 0) ? b : a))
+  /* Points, then moves, then quality. Two plans that project the same are not
+     equal if one of them paid four transfers to get there, and if they spent
+     the same then the better-rated fifteen is the one more likely to keep
+     being right after this window closes. Ranking on points alone would have
+     called those ties arbitrarily, by array order. */
+  const ranked = [...rows].sort((a, b) =>
+    b.projection - a.projection
+    || a.transfers - b.transfers
+    || (b.rating ?? -1) - (a.rating ?? -1))
+  const top = ranked[0]
+  const gap = top.projection - ranked[ranked.length - 1].projection
+  const max = Math.max(...rows.map((r) => r.projection))
+  const min = Math.min(...rows.map((r) => r.projection))
+  /* Bars start near the lowest plan, not at zero. Six weeks of projection is
+     300-odd points for everyone, so a zero-based axis draws four bars of
+     identical length and says nothing. */
+  const floor = min - Math.max(gap * 0.6, 2)
+  const width = (v: number) => `${Math.max(6, ((v - floor) / Math.max(max - floor, 0.001)) * 100)}%`
+
+  const tied = ranked.length > 1 && Math.abs(top.projection - ranked[1].projection) < 1
+  const why = tied
+    ? (top.transfers !== ranked[1].transfers
+        ? `level on points, and ${top.name} spends ${top.transfers} ${top.transfers === 1 ? 'transfer' : 'transfers'} against ${ranked[1].transfers}`
+        : `level on points and on transfers, so it falls to the better-rated fifteen`)
     : null
+
+  const rated = rows.filter((r) => r.rating != null)
+  const topRate = rated.length ? rated.reduce((a, b) => ((b.rating ?? 0) > (a.rating ?? 0) ? b : a)) : null
   const split = topRate && topRate.name !== top.name
-  // Inside a point over the window, a "winner" is a rounding artefact.
-  const tooClose = gap < 1
 
   return (
     <Panel
       title="The verdict"
-      kicker="Projected points over the window, and the squad rating behind them. Two different questions, and they do not always agree."
-      note={
-        tooClose
-          ? <>These plans are within a point of each other over {rows[0].weeks.length} weeks, which is
-              nothing — the head-to-head below will land near a coin toss and should. Whatever decides
-              this, it is not the projection.</>
-          : split
-          ? <><b>{topRate!.name} has the better players; {top.name} scores more points.</b> The rating
-              averages what fifteen footballers are over a season. The projection is what this fifteen
-              returns over these {rows[0].weeks.length} weeks once fixtures, minutes and the armband are
-              applied — so a squad can be the stronger set of players and still the weaker plan for the
-              window in front of you.</>
-          : <><b>{top.name} leads on both.</b> It projects {gap.toFixed(1)} more and holds the better-rated
-              fifteen, so there is no tension to resolve here — which is the easy case, and rarer than
-              you would think.</>
-      }
-    >
-      <div className={`grid items-stretch gap-2.5 ${rows.length === 2 ? 'sm:grid-cols-[1fr_auto_1fr]' : 'sm:grid-cols-2'}`}>
-        {rows.map((r, i) => (
-          <Fragment key={r.name}>
-            {i === 1 && rows.length === 2 && (
-              <span className="hidden self-center text-[10px] tracking-[0.18em] text-ink-3 sm:block">VS</span>
-            )}
-            <div className={`rounded-xl border p-4 text-center ${
-              r.name === top.name && !tooClose ? 'border-accent/55 bg-accent-selected' : 'border-line bg-surface-2/40'
-            }`}>
-              <span className="flex items-center justify-center gap-2 text-[11.5px] font-semibold text-ink-2">
-                <span className="size-2.5 rounded-[3px]" style={{ background: r.colour }} />
-                {r.name}
-              </span>
-              <div className="font-display mt-2 text-4xl leading-none tabular-nums" style={{ color: r.colour }}>
-                {r.projection.toFixed(0)}
-              </div>
-              <div className="mt-1 text-[10px] tracking-[0.1em] text-ink-3 uppercase">
-                Projected · {r.weeks.length} weeks
-              </div>
-              <div className="font-num mt-3 text-xl leading-none tabular-nums text-ink">{r.rating ?? '—'}</div>
-              <div className="mt-1 text-[10px] tracking-[0.1em] text-ink-3 uppercase">Squad rating</div>
-            </div>
-          </Fragment>
-        ))}
-      </div>
-    </Panel>
-  )
-}
-
-// ── the table ───────────────────────────────────────────────────────────────
-
-function Headline({ rows, bestProj, lowOwn }: { rows: Row[]; bestProj: number; lowOwn: number }) {
-  const widest = Math.max(...rows.map((r) => r.spread.p90 - r.spread.p10))
-  const gap = bestProj - Math.min(...rows.map((r) => r.projection))
-  return (
-    <Panel
-      title="Three numbers, and the one that qualifies them"
-      kicker="Projection is the sum of a best legal eleven each week with a captain. The range is the 10th to 90th percentile of the simulated runs behind it — the same runs the head-to-head below is drawn from."
+      kicker={`Projected points over ${rows[0].weeks.length} weeks. Ties break on transfers spent, then on squad rating.`}
       note={
         <>
-          The best plan projects <b>{gap.toFixed(1)}</b> more than the worst over these{' '}
-          {rows[0].weeks.length} weeks. The widest single plan spans <b>{widest.toFixed(0)}</b> points
-          between its own bad run and its own good one. Read together, the gap you are choosing is a
-          fraction of the noise you are choosing it inside — which does not make the choice
-          pointless, it makes it the part you control.
+          {split
+            ? <><b>{topRate!.name} has the better players; {top.name} scores more points.</b> The rating
+                averages what fifteen footballers are over a season; the projection is what this fifteen
+                returns over these weeks once fixtures, minutes and the armband are applied. A squad can
+                be the stronger set of players and still the weaker plan for the window in front of you. </>
+            : null}
+          The range is the 10th to 90th percentile of the simulated runs — the same runs the head-to-head
+          below is drawn from. Read it against the gap: the difference you are choosing is a fraction of
+          the noise you are choosing it inside, which does not make the choice pointless, it makes it the
+          part you control.
         </>
       }
     >
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[560px] text-[13px]">
-          <thead>
-            <tr className="border-b border-line text-[10px] tracking-[0.09em] text-ink-3 uppercase">
-              <th className="py-1.5 pr-2 text-left font-semibold">Plan</th>
-              <th className="px-2 py-1.5 text-right font-semibold">Spent</th>
-              <th className="px-2 py-1.5 text-right font-semibold">Projection</th>
-              <th className="px-2 py-1.5 text-right font-semibold">Owned</th>
-              <th className="px-2 py-1.5 text-right font-semibold">Floor</th>
-              <th className="px-2 py-1.5 text-right font-semibold">Median</th>
-              <th className="py-1.5 pl-2 text-right font-semibold">Ceiling</th>
-            </tr>
-          </thead>
-          <tbody className="font-num tabular-nums">
-            {rows.map((r) => (
-              <tr key={r.name} className="border-b border-line last:border-0">
-                <td className="py-2 pr-2 text-left">
-                  <span className="flex items-center gap-2 font-sans text-[13px] font-semibold text-ink">
-                    <span className="size-2.5 shrink-0 rounded-[3px]" style={{ background: r.colour }} />
-                    {r.name}
-                  </span>
-                </td>
-                <td className="px-2 py-2 text-right text-ink-2">£{r.spend.toFixed(1)}</td>
-                <td className={`px-2 py-2 text-right font-bold ${r.projection >= bestProj - 1e-9 ? 'text-accent-2' : 'text-ink'}`}>
+      <div className="grid gap-2.5">
+        {ranked.map((r, i) => (
+          <div key={r.name} className="grid grid-cols-[22px_1fr] items-center gap-2.5 sm:gap-3">
+            <span className={`font-num text-center text-[13px] font-bold tabular-nums ${i === 0 ? 'text-accent' : 'text-ink-3'}`}>
+              {i + 1}
+            </span>
+            <div>
+              <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                <span className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+                  <span className="size-2.5 rounded-[3px]" style={{ background: r.colour }} />
+                  {r.name}
+                  {i === 0 && <span className="rounded-full border border-accent/50 px-1.5 py-px text-[9.5px] font-bold tracking-[0.06em] text-accent uppercase">Leads</span>}
+                </span>
+                <span className="font-num text-[11px] tabular-nums text-ink-3">
+                  £{r.spend.toFixed(1)} · {r.transfers} {r.transfers === 1 ? 'move' : 'moves'} · rating {r.rating ?? '—'} · {r.owned.toFixed(1)}% owned
+                </span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <span className="h-7 flex-1 overflow-hidden rounded-lg bg-surface-3">
+                  <span className="block h-full rounded-lg" style={{ width: width(r.projection), background: r.colour, opacity: i === 0 ? 1 : 0.5 }} />
+                </span>
+                <span className="font-display w-[62px] shrink-0 text-right text-xl leading-none tabular-nums" style={{ color: i === 0 ? r.colour : 'var(--ink-2)' }}>
                   {r.projection.toFixed(1)}
-                </td>
-                <td className={`px-2 py-2 text-right ${r.owned <= lowOwn + 1e-9 ? 'font-bold text-accent-2' : 'text-ink-2'}`}>
-                  {r.owned.toFixed(1)}%
-                </td>
-                <td className="px-2 py-2 text-right text-ink-2">{r.spread.p10.toFixed(0)}</td>
-                <td className="px-2 py-2 text-right text-ink">{r.spread.median.toFixed(0)}</td>
-                <td className="py-2 pl-2 text-right text-ink-2">{r.spread.p90.toFixed(0)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </span>
+              </div>
+              <div className="font-num mt-1 text-[10.5px] tabular-nums text-ink-3">
+                {r.spread.p10.toFixed(0)} to {r.spread.p90.toFixed(0)} across the simulated runs
+                {i > 0 && <span className="ml-2 text-ink-3">−{(top.projection - r.projection).toFixed(1)} behind</span>}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
+      {why && (
+        <p className="mt-3 rounded-xl border border-line bg-surface-2/40 px-3 py-2 text-[12px] text-ink-2">
+          <b className="text-ink">{top.name} leads on the tiebreak</b> — {why}.
+        </p>
+      )}
     </Panel>
   )
 }
+
+// ── week by week ─────────────────────────────────────────────────────────
 
 // ── week by week ────────────────────────────────────────────────────────────
 
@@ -267,6 +238,16 @@ function WeekByWeek({ rows, gws }: { rows: Row[]; gws: number[] }) {
     const xs = r.weeks.map((w) => w.xp)
     return { name: r.name, band: Math.max(...xs) - Math.min(...xs) }
   }).sort((a, b) => b.band - a.band)
+
+  /* Who takes each week. A margin under a tenth of a point is a rounding
+     difference between two identical-looking cells, so it is called a tie and
+     nothing is highlighted — marking a winner there would invent one. */
+  const best = gws.map((_, i) => {
+    const vals = rows.map((r) => r.weeks[i]?.xp ?? -Infinity)
+    const top = Math.max(...vals)
+    const many = vals.filter((v) => top - v < 0.1).length > 1
+    return many ? null : rows[vals.indexOf(top)].name
+  })
 
   return (
     <Panel
@@ -284,32 +265,39 @@ function WeekByWeek({ rows, gws }: { rows: Row[]; gws: number[] }) {
       <TrendChart rows={rows} gws={gws} lo={lo} hi={hi} />
       <div className="overflow-x-auto">
         <div className="min-w-[520px]">
-          <div className="mb-1 grid gap-2" style={{ gridTemplateColumns: `104px repeat(${gws.length}, 1fr)` }}>
+          <div className="mb-1 grid gap-2" style={{ gridTemplateColumns: `124px repeat(${gws.length}, 1fr)` }}>
             <span />
             {gws.map((gw) => (
               <span key={gw} className="text-center text-[10px] font-bold tracking-[0.08em] text-ink-3 uppercase">GW{gw}</span>
             ))}
           </div>
           {rows.map((r) => (
-            <div key={r.name} className="mb-1.5 grid items-center gap-2" style={{ gridTemplateColumns: `104px repeat(${gws.length}, 1fr)` }}>
+            <div key={r.name} className="mb-1.5 grid items-center gap-2" style={{ gridTemplateColumns: `124px repeat(${gws.length}, 1fr)` }}>
               <span className="truncate">
-                <span className="block text-[12px] font-semibold text-ink">{r.name}</span>
-                <span className="font-num block text-[10px] text-ink-3 tabular-nums">{r.projection.toFixed(1)} total</span>
+                <span className="flex items-center gap-1.5 text-[12px] font-semibold text-ink">
+                  <span className="size-2 shrink-0 rounded-[2px]" style={{ background: r.colour }} />
+                  {r.name}
+                </span>
+                <span className="font-display block text-lg leading-tight tabular-nums" style={{ color: r.colour }}>
+                  {r.projection.toFixed(1)}
+                </span>
               </span>
               {r.weeks.map((w, i) => {
-                // Shaded within the plan's own colour by where the week sits in
-                // the range every plan shares, so a cell is comparable across
-                // rows as well as along one.
-                const t = hi > lo ? (w.xp - lo) / (hi - lo) : 0.5
+                /* Every cell used to be a different shade of the plan's colour
+                   with the text flipping between dark and light past a
+                   threshold — six brightnesses and two ink colours in one row,
+                   which read as a fault rather than a scale. One surface, one
+                   ink, and the only thing colour now says is "this plan wins
+                   this week", which is the one thing worth spotting. */
+                const wins = best[i] === r.name
                 return (
                   <span
                     key={i}
                     title={`${r.name} · GW${gws[i]} · ${w.xp.toFixed(1)} xP · ${w.form}`}
-                    className="font-num block rounded px-1 py-1.5 text-center text-[11.5px] font-bold tabular-nums"
-                    style={{
-                      background: `color-mix(in oklab, ${r.colour} ${Math.round(28 + t * 62)}%, var(--surface-2))`,
-                      color: t > 0.55 ? 'var(--accent-contrast)' : 'var(--ink-1)',
-                    }}
+                    className={`font-num block rounded-lg border py-1.5 text-center text-[12.5px] tabular-nums ${
+                      wins ? 'font-bold text-ink' : 'border-line bg-surface-2/40 text-ink-2'
+                    }`}
+                    style={wins ? { borderColor: r.colour, background: `color-mix(in oklab, ${r.colour} 18%, transparent)` } : undefined}
                   >
                     {w.xp.toFixed(1)}
                   </span>
@@ -317,6 +305,9 @@ function WeekByWeek({ rows, gws }: { rows: Row[]; gws: number[] }) {
               })}
             </div>
           ))}
+          <div className="mt-1.5 text-[10.5px] text-ink-3">
+            The highlighted cell is the best plan that week. Ties are left unmarked.
+          </div>
         </div>
       </div>
     </Panel>
@@ -381,21 +372,28 @@ function HeadToHead({ rows, cmp }: { rows: Row[]; cmp: ReturnType<typeof compare
 
   return (
     <Panel
-      title="How often does the better plan actually win?"
-      kicker={`Each pair simulated ${cmp.draws.toLocaleString()} times with common random numbers — every player draws the same score in both plans, so the players the squads share cancel out exactly and what is left is the decision you are making.`}
+      title="If you played this window over and over"
+      kicker={`A projection is an average, and nobody scores the average. So each pair is played out ${cmp.draws.toLocaleString()} times with the luck randomised — goals, hauls, blanks — and the bar below counts how often each plan finishes ahead.`}
       note={
         decided.length === 0
           ? <>Every pairing here is a dead tie in every run, which means the squads are the same
               fifteen. Change something in one of them and this panel starts having an opinion.</>
           : <>
-              <b>This is the panel worth having, and it is the one a table cannot give you.</b>{' '}
-              {rows[closest.a].name} against {rows[closest.b].name} comes out{' '}
-              {pct(closest.winRate)} / {pct(1 - closest.winRate - closest.tieRate)}
-              {closest.tieRate > 0.005 ? ` with ${pct(closest.tieRate)} dead level` : ''} — a mean gap
-              of {closest.meanGap >= 0 ? '+' : ''}{closest.meanGap.toFixed(1)} inside a range of{' '}
-              {closest.p10.toFixed(0)} to {closest.p90.toFixed(0)}. Better than a coin toss is not the
-              same as right, and the losing plan still comes out ahead in the runs where its
-              differentials do what they were bought to do.
+              <b>Why this matters more than the points total.</b> The verdict at the top might say one
+              plan is {Math.abs(closest.meanGap).toFixed(1)} points better. That sounds decisive. What it
+              actually means is that {rows[closest.a].name} finishes ahead of {rows[closest.b].name} in{' '}
+              <b>{pct(closest.winRate)}</b> of those runs, and behind in{' '}
+              <b>{pct(1 - closest.winRate - closest.tieRate)}</b>
+              {closest.tieRate > 0.005 ? `, level in ${pct(closest.tieRate)}` : ''}.
+              {' '}<b>Roughly {closest.winRate >= 0.55 || closest.winRate <= 0.45 ? 'a strong lean' : 'a coin toss'}.</b>
+              {' '}Across those runs the margin swings from {closest.p10.toFixed(0)} to{' '}
+              {closest.p90.toFixed(0)} points, so the plan that loses on paper still wins plenty of the
+              time — whenever its differentials do what they were bought to do.
+              <br /><br />
+              Every player is dealt the same luck in both plans, so the ones both squads own cancel out
+              exactly and only your actual decision is being measured. Without that, the shared twelve
+              would add noise that has nothing to do with the choice and drag every comparison towards
+              50/50.
             </>
       }
     >
@@ -463,16 +461,9 @@ function HeadToHead({ rows, cmp }: { rows: Row[]; cmp: ReturnType<typeof compare
         })}
       </div>
       <p className="mt-3 max-w-[80ch] text-[11.5px] leading-snug text-ink-3">
-        Why common random numbers and not two independent runs: plans that differ by three players
-        still share twelve. Simulated separately those twelve draw different scores in each plan and
-        add tens of points of noise that has nothing to do with the decision — a real edge vanishes
-        inside it and every comparison prints 50/50. Drawing each player once and reusing the number
-        in both plans removes exactly the part the squads have in common.
-      </p>
-      <p className="mt-1.5 max-w-[80ch] text-[11.5px] leading-snug text-ink-3">
-        The mean gap here and the projection gap in the first table are the same quantity measured
-        two ways — one summed, one drawn — so they land within a few tenths of each other rather
-        than exactly on it. If they ever diverged by more than that, one of them would be wrong.
+        The mean gap here and the projection gap in the verdict are the same quantity measured two
+        ways — one summed, one drawn — so they land within a few tenths of each other rather than
+        exactly on it. If they ever diverged by more than that, one of them would be wrong.
       </p>
     </Panel>
   )
@@ -626,12 +617,9 @@ function Dimensions({ rows }: { rows: Row[] }) {
     })),
   ]
 
-  // Does the top-projecting plan also rate highest? When it does not, that is
-  // the most useful sentence on the tab, so it is said rather than implied.
-  const topProj = rows.reduce((a, b) => (b.projection > a.projection ? b : a))
-  const rated = rows.filter((r) => r.rating != null)
-  const topRate = rated.length ? rated.reduce((a, b) => ((b.rating ?? 0) > (a.rating ?? 0) ? b : a)) : null
-  const split = topRate && topRate.name !== topProj.name
+  /* The rating-versus-projection split is stated once, in the verdict at the
+     top. Repeating it here put the same sentence twice on one screen, which
+     reads as a fault rather than as emphasis. */
 
   return (
     <Panel
@@ -639,15 +627,7 @@ function Dimensions({ rows }: { rows: Row[] }) {
       kicker="Squad rating, and the four routes to points scored the same 0–100 way as a player. A near-tie is drawn as a near-tie — nothing here awards a winner it cannot see."
       note={
         <>
-          {split ? (
-            <>
-              <b>{topRate!.name} has the better players; {topProj.name} scores more points.</b> That is
-              the panel working, not a contradiction to resolve — the rating is season-long quality, the
-              projection is these {rows[0].weeks.length} weeks with fixtures, minutes and a captain
-              applied.{' '}
-            </>
-          ) : null}
-          These dimensions come from last season's percentiles, so pre-season they exist only for
+          These dimensions come from last season&rsquo;s percentiles, so pre-season they exist only for
           players with a record — new signings and promoted players carry none, and each figure is the
           mean over the players who have one rather than over all fifteen.
         </>
@@ -668,25 +648,52 @@ function Dimensions({ rows }: { rows: Row[] }) {
               <Track v={l.vals[1]} colour={rows[1].colour} lead={!tie && (l.vals[1] ?? -1) >= best} />
               <Val v={l.vals[1]} lead={!tie && (l.vals[1] ?? -1) >= best} />
             </div>
-          ) : (
-            <div key={l.label} className="border-b border-line py-1.5 last:border-0">
-              <div className="mb-1 flex items-baseline gap-2">
-                <span className="text-[12px] font-semibold text-ink">{l.label}</span>
-                <span className="text-[10px] text-ink-3">{l.note}</span>
-              </div>
-              <div className="grid gap-1">
-                {rows.map((r, i) => (
-                  <div key={r.name} className="grid grid-cols-[64px_1fr_34px] items-center gap-2">
-                    <span className="truncate text-[11px] text-ink-2">{r.name}</span>
-                    <Track v={l.vals[i]} colour={r.colour} lead={!tie && (l.vals[i] ?? -1) >= best} />
-                    <Val v={l.vals[i]} lead={!tie && (l.vals[i] ?? -1) >= best} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )
+          ) : null
         })}
       </div>
+
+      {/* Three or four plans do not face off — there is no middle to grow away
+          from, and five stacks of four bars was a wall rather than a reading.
+          A grid puts one number where the eye expects it and marks the best in
+          each column, so a plan's shape is a row you can read across. */}
+      {!two && (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[440px] text-[13px]">
+            <thead>
+              <tr className="border-b border-line text-[10px] tracking-[0.09em] text-ink-3 uppercase">
+                <th className="py-1.5 pr-2 text-left font-semibold">Plan</th>
+                {lines.map((l) => (
+                  <th key={l.label} className="px-2 py-1.5 text-right font-semibold" title={l.note}>{l.label}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={r.name} className="border-b border-line last:border-0">
+                  <td className="py-2 pr-2">
+                    <span className="flex items-center gap-2 text-[12.5px] font-semibold text-ink">
+                      <span className="size-2.5 shrink-0 rounded-[3px]" style={{ background: r.colour }} />
+                      {r.name}
+                    </span>
+                  </td>
+                  {lines.map((l) => {
+                    const best = Math.max(...l.vals.map((v) => v ?? -1))
+                    const tie = l.vals.filter((v) => v != null && Math.abs(v - best) <= 1).length > 1
+                    const lead = !tie && (l.vals[i] ?? -1) >= best
+                    return (
+                      <td key={l.label} className="px-2 py-2 text-right">
+                        <span className={`font-num text-[13px] tabular-nums ${lead ? 'font-bold text-accent-2' : 'text-ink-2'}`}>
+                          {l.vals[i] ?? '—'}
+                        </span>
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </Panel>
   )
 }
@@ -721,12 +728,22 @@ function Track({ v, colour, lead, flip }: { v: number | null; colour: string; le
    ahead over six weeks and still walk most of its fifteen into a wall in the
    seventh. */
 function Horizon({ rows, gws, fixtureEase }: { rows: Row[]; gws: number[]; fixtureEase: FixtureEaseRow[] }) {
-  const hard = useMemo(() => {
+  const { hard, clubs } = useMemo(() => {
     const byTeamGw = new Map<string, number>()
     for (const f of fixtureEase) byTeamGw.set(`${f.team}|${f.gw}`, f.fdr)
-    return rows.map((r) =>
-      gws.map((gw) => r.series.filter((p) => (byTeamGw.get(`${p.team}|${gw}`) ?? 3) >= 4).length),
-    )
+    const isHard = (team: string, gw: number) => (byTeamGw.get(`${team}|${gw}`) ?? 3) >= 4
+    return {
+      hard: rows.map((r) => gws.map((gw) => r.series.filter((p) => isHard(p.team, gw)).length)),
+      /* Which clubs the hard week actually belongs to. A count says a week is
+         rough; the crests say whether that is four players from one club with
+         one bad fixture, or four separate problems — and those are different
+         things to plan around. */
+      clubs: rows.map((r) => gws.map((gw) => {
+        const c = new Map<string, number>()
+        for (const p of r.series) if (isHard(p.team, gw)) c.set(p.team, (c.get(p.team) ?? 0) + 1)
+        return [...c.entries()].sort((a, b) => b[1] - a[1])
+      })),
+    }
   }, [rows, gws, fixtureEase])
 
   const worst = hard.map((h) => {
@@ -797,15 +814,27 @@ function Horizon({ rows, gws, fixtureEase }: { rows: Row[]; gws: number[]; fixtu
               {hard[i].map((n, j) => (
                 <span
                   key={gws[j]}
-                  title={`GW${gws[j]} — ${n} of 15 in a fixture rated 4 or 5`}
-                  className={`rounded-lg border py-1.5 text-center ${
+                  title={`GW${gws[j]} — ${n} of 15 in a fixture rated 4 or 5${clubs[i][j].length ? `: ${clubs[i][j].map(([t, c]) => `${t}${c > 1 ? ` x${c}` : ''}`).join(', ')}` : ''}`}
+                  className={`rounded-lg border px-1 py-1.5 text-center ${
                     n >= 6 ? 'border-bad/50' : n >= 4 ? 'border-warn/45' : n <= 2 ? 'border-good/40' : 'border-line'
                   }`}
                 >
                   <b className={`font-num block text-[15px] font-extrabold tabular-nums ${
                     n >= 6 ? 'text-bad' : n >= 4 ? 'text-warn' : n <= 2 ? 'text-good' : 'text-ink'
                   }`}>{n}</b>
-                  <span className="block text-[9px] text-ink-3">GW{gws[j]}</span>
+                  {/* Four crests is the most a cell this narrow can hold and
+                      still be a crest rather than a smudge; past that the count
+                      above already says there are more, and the title carries
+                      the full list. */}
+                  <span className="mt-1 flex flex-wrap items-center justify-center gap-0.5">
+                    {clubs[i][j].slice(0, 4).map(([team, c]) => (
+                      <span key={team} className="relative inline-flex" title={`${team}${c > 1 ? ` — ${c} players` : ''}`}>
+                        <TeamBadge team={team} size={13} />
+                        {c > 1 && <span className="font-num absolute -right-1 -bottom-1 text-[7.5px] font-bold tabular-nums text-ink-2">{c}</span>}
+                      </span>
+                    ))}
+                  </span>
+                  <span className="mt-0.5 block text-[9px] text-ink-3">GW{gws[j]}</span>
                 </span>
               ))}
             </div>

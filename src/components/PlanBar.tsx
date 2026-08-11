@@ -44,7 +44,7 @@ export function PlanBar({ plans, canCompare, onCompare }: {
             onClick={onCompare}
             className="ml-auto inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-accent px-3 text-[12px] font-bold text-accent-contrast transition-colors hover:bg-accent-strong"
           >
-            <Icon name="users" size={13} /> Compare {plans.compare.length}
+            <Icon name="users" size={13} /> Compare plans
           </button>
         )}
       </div>
