@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { PlayerPhoto } from './PlayerPhoto'
 import { FoilShell, Pitch, BenchSpine, CARD_W, initialsOf, tierOf, nameSize } from './Pitch'
@@ -32,6 +32,52 @@ const POS_ORDER = ['GKP', 'DEF', 'MID', 'FWD'] as const
  * dugout beneath it, and every action on a player one tap away. State lives in
  * usePlanner so the list beside the board can transfer into it.
  */
+
+/* How much the last pick moved the number.
+ *
+ * The strip has always shown where the squad IS. What it never showed is what
+ * the thing you just did was worth — so building a fifteen was a sequence of
+ * guesses with the score only readable at the end. This closes that loop.
+ *
+ * Two rules keep it honest. It reports on a change to the SQUAD, so stepping
+ * to another gameweek clears it rather than presenting a different fixture
+ * list as if it were your decision. And it holds the last real delta until
+ * the next one, so the answer is still there after you have looked away. */
+function useSquadDelta(value: number | null, squadSig: string, gw: number, ready: boolean) {
+  const [delta, setDelta] = useState<number | null>(null)
+  const base = useRef({ sig: squadSig, gw, value })
+  useEffect(() => {
+    if (base.current.gw !== gw) {
+      // Another gameweek is a different fixture list, not a decision you made.
+      base.current = { sig: squadSig, gw, value }
+      setDelta(null)
+      return
+    }
+    /* A swap is two actions — the man leaves, then his replacement arrives —
+       and in between the squad is fourteen, the week cannot be built and the
+       projection is null. The baseline only moves on a complete fifteen, so a
+       delta always compares one finished squad with another. */
+    if (!ready) return
+    if (base.current.sig === squadSig) {
+      base.current = { ...base.current, value }
+      return
+    }
+    /* And it waits for the number to stop moving. Adding the fifteenth player
+       rebuilds the week, and the projection lands before the auto-lineup and
+       the armband have settled — measured live it read +3.3 on a swap that was
+       actually worth -1.1, because it compared against a transient. Each new
+       value re-arms this timer, so the delta is taken once the figure has held
+       still, which is also the moment it is worth reading. */
+    const before = base.current.value
+    const t = setTimeout(() => {
+      base.current = { sig: squadSig, gw, value }
+      setDelta(before != null && value != null ? value - before : null)
+    }, 400)
+    return () => clearTimeout(t)
+  }, [squadSig, gw, value, ready])
+  return delta
+}
+
 export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onSold, squadScore, onOpenSquadRating, partialSquad, onRemovePick, onPickSlot, footer }: {
   planner: Planner
   byEl: Map<number, RatingRow>
@@ -122,6 +168,30 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
   const partial = !week ? layoutPartial(partialSquad ?? [], planner.posOf, (el) => ratingOf(el)) : null
   const picked = partialSquad?.length ?? 0
 
+  /* Both boards feed the same signature: a full week names its eleven and
+     bench, a part-built squad is just the list so far. */
+  const squadSig = useMemo(() => {
+    const list = week ? [...week.xi, ...week.bench] : (partialSquad ?? [])
+    return [...list].sort((a, b) => a - b).join(',')
+  }, [week, partialSquad])
+  const complete = Boolean(week)
+  const xpDelta = useSquadDelta(teamXp, squadSig, gw, complete)
+  const scoreDelta = useSquadDelta(squadScore ?? null, squadSig, gw, complete)
+
+  /* When the two headline numbers move opposite ways, that IS the trade you
+     just made, and it is worth one sentence — a rating is season-long quality
+     and a projection is this week with the fixture applied, so a swap can
+     easily be up on one and down on the other. Below these thresholds the
+     move is noise and gets no commentary. */
+  const trade = (() => {
+    if (xpDelta == null || scoreDelta == null) return null
+    if (Math.abs(xpDelta) < 0.1 || Math.abs(scoreDelta) < 1) return null
+    if (xpDelta > 0 && scoreDelta < 0) return 'Points up, rating down — you traded season-long quality for this week\u2019s fixture.'
+    if (xpDelta < 0 && scoreDelta > 0) return 'Rating up, points down — a better footballer into a worse week.'
+    if (xpDelta > 0) return 'Up on both — a straight upgrade rather than a trade-off.'
+    return 'Down on both. Worth a second look before you leave it.'
+  })()
+
   const beginSub = (el: number) => {
     setSheet(null)
     if (!planner.partnersFor(el).length) return
@@ -192,11 +262,18 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
 
         {/* One row of numbers for the whole page */}
         <div className="mb-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Stat label="Projected points" value={teamXp == null ? '—' : teamXp.toFixed(1)} tone="accent" sub={week ? 'what this XI should score' : `${picked}/15 picked`} onClick={teamXp == null || !week ? undefined : () => setDetail('xp')} />
+          <Stat label="Projected points" value={teamXp == null ? '—' : teamXp.toFixed(1)} tone="accent" sub={week ? 'what this XI should score' : `${picked}/15 picked`} delta={xpDelta} dp={1} onClick={teamXp == null || !week ? undefined : () => setDetail('xp')} />
           <Stat label="GW rating" value={rating == null ? '—' : String(rating)} tone={ratingTone(rating)} sub={rating == null ? 'complete your squad' : ratingWord(rating)} onClick={rating == null ? undefined : () => setDetail('rating')} />
-          <Stat label="Squad rating" value={squadScore == null ? '—' : String(squadScore)} tone="accent" sub="what you've built" onClick={squadScore == null ? undefined : onOpenSquadRating} />
+          <Stat label="Squad rating" value={squadScore == null ? '—' : String(squadScore)} tone="accent" sub="what you've built" delta={scoreDelta} dp={0} onClick={squadScore == null ? undefined : onOpenSquadRating} />
           <Stat label="In the bank" value={`£${(BUDGET - spend).toFixed(1)}m`} tone={spend > BUDGET ? 'bad' : 'ink'} sub={`£${spend.toFixed(1)}m squad`} />
         </div>
+
+        {trade && (
+          <div className="mb-2.5 rounded-xl border border-line bg-surface-1/60 px-3 py-2 text-[12px] leading-snug text-ink-2">
+            <span className="mr-1.5 text-[10px] font-bold tracking-[0.11em] text-ink-3 uppercase">Your last move</span>
+            {trade}
+          </div>
+        )}
 
         {/* Transfers — above the pitch, where you can act on them. At the
             opening week there are none to have: the box counts the fifteen
@@ -405,7 +482,14 @@ function StepButton({ dir, disabled, onClick }: { dir: 'prev' | 'next'; disabled
   )
 }
 
-function Stat({ label, value, tone, sub, onClick }: { label: string; value: string; tone?: 'ink' | 'bad' | 'good' | 'accent' | 'warn'; sub?: string; onClick?: () => void }) {
+function Stat({ label, value, tone, sub, onClick, delta, dp = 1 }: {
+  label: string; value: string; tone?: 'ink' | 'bad' | 'good' | 'accent' | 'warn'; sub?: string
+  onClick?: () => void
+  /** Movement since the last change to the squad — null when nothing has
+   *  changed yet, or when the change was too small to round to anything. */
+  delta?: number | null
+  dp?: number
+}) {
   const c = tone === 'bad' ? 'text-bad' : tone === 'warn' ? 'text-warn' : tone === 'good' ? 'text-good' : tone === 'accent' ? 'text-accent' : 'text-ink'
   const inner = (
     <>
@@ -415,6 +499,12 @@ function Stat({ label, value, tone, sub, onClick }: { label: string; value: stri
           boxes, and "what this XI should score" cut to "what this XI should
           sc…" — a caption that no longer says anything, to save a line. */}
       {sub && <div className="mt-0.5 text-[10px] leading-tight text-ink-3">{sub}</div>}
+      {delta != null && Math.abs(delta) >= (dp === 0 ? 1 : 0.05) && (
+        <div className={`font-num mt-1 text-[10.5px] font-bold tabular-nums ${delta > 0 ? 'text-good' : 'text-bad'}`}>
+          {delta > 0 ? '+' : '\u2212'}{Math.abs(delta).toFixed(dp)}
+          <span className="ml-1 font-sans font-medium text-ink-3">since your last change</span>
+        </div>
+      )}
     </>
   )
   const cls = 'w-full rounded-xl border border-line bg-surface-1/60 p-2.5 text-center'
