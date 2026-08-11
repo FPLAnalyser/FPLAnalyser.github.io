@@ -1,0 +1,223 @@
+<meta charset="utf-8"><title>Structure &amp; dashboard — proposal</title>
+<style>
+:root{--bg:#000;--s1:#121316;--s2:#1b1c1f;--s3:#232427;--ink:#edeff3;--ink2:#aaacb0;--ink3:#828386;
+--acc:#c9a227;--acc2:#ead188;--line:rgba(255,255,255,.1);--line2:rgba(255,255,255,.2);
+--good:#3ddc7a;--warn:#e8b04a;--bad:#f0736f;--info:#7fb0ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1060px;margin:0 auto;padding:44px 20px 90px}
+h1{font-size:31px;font-weight:800;letter-spacing:-.02em;margin:0 0 10px}
+h2{font-size:21px;font-weight:800;margin:4px 0 6px;letter-spacing:-.01em}
+h3{font-size:15px;font-weight:800;margin:0 0 8px}
+.lead{color:var(--ink2);max-width:70ch}
+.rule{height:1px;background:var(--line);margin:40px 0 26px}
+.step{font:700 11px/1 ui-sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--acc);margin-bottom:8px}
+p{max-width:72ch;color:var(--ink2)}
+b.w{color:var(--ink)}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:20px;margin-top:16px}
+.callout{border-left:3px solid var(--acc);padding:2px 0 2px 14px;margin:16px 0;color:var(--ink2);max-width:72ch}
+.bad-c{border-left-color:var(--bad)}
+
+/* IA columns */
+.ia{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.col h3{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.lvl{border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:6px;font-size:13px;background:var(--s2)}
+.lvl.sub{margin-left:18px;background:transparent;border-style:dashed;color:var(--ink2)}
+.lvl.sub2{margin-left:36px;background:transparent;border:0;color:var(--ink3);font-size:12px;padding:3px 0}
+.lvl.keep{border-color:var(--acc);background:rgba(255,255,255,.05)}
+.count{float:right;color:var(--ink3);font-size:11px}
+
+/* dashboard mock */
+.dash{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:14px}
+.dh{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.dh h4{margin:0;font-size:22px;font-weight:800;letter-spacing:-.01em}
+.dh p{margin:2px 0 0;font-size:12.5px;color:var(--ink3)}
+.dl{text-align:right}
+.dl b{display:block;font-size:13px;color:var(--warn);font-weight:700}
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.k{background:var(--s2);border:1px solid var(--line);border-radius:12px;padding:12px}
+.k .t{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink3)}
+.k .v{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-top:3px;font-variant-numeric:tabular-nums}
+.k .s{font-size:11px;color:var(--ink3)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pnl{background:var(--s2);border:1px solid var(--line);border-radius:12px;padding:14px}
+.pnl .h{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px}
+.act{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)}
+.act:last-child{border:0}
+.act .n{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;flex:0 0 auto;background:var(--acc);color:#14100a}
+.act b{display:block;font-size:13px}
+.act span{font-size:11.5px;color:var(--ink3)}
+.chip{display:inline-block;border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:700;border:1px solid;margin-left:6px}
+.chip.bad{color:var(--bad);border-color:rgba(240,115,111,.5)}
+.chip.warn{color:var(--warn);border-color:rgba(232,176,74,.5)}
+.chip.good{color:var(--good);border-color:rgba(61,220,122,.45)}
+.db{display:grid;grid-template-columns:64px 1fr 28px;gap:8px;align-items:center;margin:5px 0;font-size:11.5px;color:var(--ink2)}
+.db i{display:block;height:7px;background:var(--s3);border-radius:4px;overflow:hidden}
+.db i b{display:block;height:100%;background:var(--acc);border-radius:4px}
+.db em{font-style:normal;font-variant-numeric:tabular-nums;text-align:right;color:var(--ink)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+td{padding:7px 4px;border-bottom:1px solid var(--line)}
+td i{display:block;font-style:normal;font-size:10px;color:var(--ink3)}
+.dr{color:var(--ink2);font-size:11.5px}
+.sc{width:120px;font-variant-numeric:tabular-nums;color:var(--ink3);font-size:11px}
+.sc i{display:inline-block;width:64px;height:7px;background:var(--s3);border-radius:4px;overflow:hidden;margin-right:6px;vertical-align:middle}
+.sc i b{display:block;height:100%} .sc b.bad{background:var(--bad)} .sc b.warn{background:var(--warn)}
+.mini{font-size:11px;color:var(--ink3);margin-top:8px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tb{border:1px solid var(--line);border-radius:999px;padding:5px 13px;font-size:12.5px;color:var(--ink2)}
+.tb.on{border-color:var(--acc);color:var(--acc);background:rgba(255,255,255,.05)}
+</style>
+<div class="wrap">
+<h1>What ships, and what the home page becomes</h1>
+<p class="lead">Two proposals. First: the Squad Builder has grown 29 panels and needs an edit before it goes
+live. Second: the dashboard as a real home page for someone with their team ID saved.</p>
+
+<div class="rule"></div>
+<div class="step">Part one · the problem</div>
+<h2>29 panels, behind a tab, inside a tab</h2>
+<p>Every panel we built is good. That is exactly why this is a problem &mdash; nothing is obviously
+deletable, so it all stayed. A manager with four minutes before a deadline currently has to know which of
+six sub-tabs holds the answer.</p>
+<p class="callout bad-c"><b class="w">The test I would apply:</b> most managers, most weeks, need three
+answers &mdash; <b class="w">who do I captain, do I transfer, and is anyone in my team a problem.</b>
+Everything else is depth for the twenty minutes on a Sunday, not the four minutes on a Friday. Right now
+those three answers live in three different sub-tabs, and none of them is the first thing you see.</p>
+
+<div class="ia">
+  <div class="col"><h3>Now</h3>
+    <div class="lvl">Squad Builder</div>
+    <div class="lvl sub">Squad <span class="count">pitch + list</span></div>
+    <div class="lvl sub">Insights</div>
+    <div class="lvl sub2">Compare &nbsp;<span style="color:var(--ink3)">10 panels</span></div>
+    <div class="lvl sub2">Ladder &nbsp;<span style="color:var(--ink3)">1</span></div>
+    <div class="lvl sub2">Watch &nbsp;<span style="color:var(--ink3)">2</span></div>
+    <div class="lvl sub2">Shape &nbsp;<span style="color:var(--ink3)">4</span></div>
+    <div class="lvl sub2">Outcomes &nbsp;<span style="color:var(--ink3)">3</span></div>
+    <div class="lvl sub2">Decisions &nbsp;<span style="color:var(--ink3)">7</span></div>
+    <p class="mini">Three levels of navigation before a number. The good stuff is real, and it is buried.</p>
+  </div>
+  <div class="col"><h3>Proposed</h3>
+    <div class="lvl">Squad Builder</div>
+    <div class="lvl sub keep">Build <span class="count">pitch + list</span></div>
+    <div class="lvl sub keep">Review <span class="count">6 panels, one scroll</span></div>
+    <div class="lvl sub2">Verdict &middot; Watch &middot; Risk &middot; Captain &middot; Transfer &middot; Horizon</div>
+    <div class="lvl sub">Deep dive <span class="count">collapsed</span></div>
+    <div class="lvl sub2">Everything else, accordion, shut by default</div>
+    <div class="lvl sub">Compare <span class="count">only with 2+ plans</span></div>
+    <p class="mini">Two levels. The six panels that change a decision are one scroll with no navigation at
+    all; depth is one click away and never in the way.</p>
+  </div>
+</div>
+
+<div class="card">
+  <h3>The cut, panel by panel</h3>
+  <p style="font-size:13.5px"><b class="w" style="color:var(--good)">Review (ships prominent)</b> &mdash;
+  Squad verdict &middot; Since you last looked &middot; Squad risk monitor &middot; The armband week by week
+  &middot; What a transfer would actually buy &middot; Squad Lab horizon lead.</p>
+  <p style="font-size:13.5px"><b class="w" style="color:var(--ink3)">Deep dive (collapsed)</b> &mdash;
+  Ladder &middot; Floor and ceiling &middot; Who is carrying this squad &middot; Goal sources &middot;
+  Defence concentration &middot; Minutes risk &middot; Chip windows &middot; Fixture turn map &middot;
+  Price watch &middot; Ownership swing &middot; Projected against actual.</p>
+  <p style="font-size:13.5px"><b class="w" style="color:var(--warn)">Merge</b> &mdash; &ldquo;How much rides
+  on one result&rdquo; appears twice and &ldquo;What a transfer would actually buy&rdquo; appears twice
+  (empty-state variants). Minutes risk is also the top driver in the risk monitor, so the standalone panel
+  becomes a drill-down rather than a sibling.</p>
+</div>
+
+<div class="rule"></div>
+<div class="step">Part two · the home page</div>
+<h2>Save your team ID once, land here every week</h2>
+<p>Three layouts, same content, different priorities. All numbers are real, from the Plan A fifteen.</p>
+
+<h3 style="margin-top:26px">Option A &mdash; The Brief</h3>
+<p style="font-size:13.5px">One column, ranked by urgency. Reads top to bottom on a phone with no
+horizontal thinking. The bet: managers want to be <em>told</em>, then shown the working.</p>
+<div class="dash">
+  <div class="dh">
+    <div><h4>Morning, Ed</h4><p>Gameweek 1 &middot; your team, at a glance</p></div>
+    <div class="dl"><b>Deadline in 2d 4h</b><p style="margin:0;font-size:11.5px;color:var(--ink3)">Sat 11:30</p></div>
+  </div>
+  <div class="pnl" style="border-color:rgba(240,115,111,.4)">
+    <div class="h">Do these three things</div>
+    <div class="act"><span class="n">1</span><div><b>Garner is injured<span class="chip bad">Act now</span></b>
+      <span>Groin &middot; expected back 22 Aug &middot; he is in your starting eleven</span></div></div>
+    <div class="act"><span class="n">2</span><div><b>Save your free transfer<span class="chip good">+1.7 pts</span></b>
+      <span>No single move helps this week; two next week gains more</span></div></div>
+    <div class="act"><span class="n">3</span><div><b>Captain Haaland<span class="chip good">Clear</span></b>
+      <span>6.2 xP, 1.4 clear of the next best</span></div></div>
+  </div>
+  <div class="grid2" style="margin-top:12px">
+    <div class="pnl"><div class="h">Your squad</div>
+      <div style="font-size:30px;font-weight:800;letter-spacing:-.02em">75<span style="font-size:13px;color:var(--ink3);font-weight:600"> / 100</span></div>
+      <div class="mini" style="margin:0 0 10px">Squad rating &middot; 329 projected over 6 weeks</div>
+      <div class="db"><span>Attack</span><i><b style="width:65%"></b></i><em>65</em></div><div class="db"><span>Defence</span><i><b style="width:69%"></b></i><em>69</em></div><div class="db"><span>Def Con</span><i><b style="width:69%"></b></i><em>69</em></div><div class="db"><span>Fixtures</span><i><b style="width:58%"></b></i><em>58</em></div>
+    </div>
+    <div class="pnl"><div class="h">Needs attention</div>
+      <table><tr><td><b>Garner</b><i>MID · EVE</i></td><td class="dr">Injury</td><td class="sc"><i><b style="width:70%" class="bad"></b></i>70%</td></tr><tr><td><b>Wharton</b><i>MID · CRY</i></td><td class="dr">Minutes</td><td class="sc"><i><b style="width:55%" class="bad"></b></i>55%</td></tr><tr><td><b>Haaland</b><i>FWD · MCI</i></td><td class="dr">Fixtures</td><td class="sc"><i><b style="width:52%" class="bad"></b></i>52%</td></tr><tr><td><b>Calvert-Lewin</b><i>FWD · LEE</i></td><td class="dr">Minutes</td><td class="sc"><i><b style="width:51%" class="bad"></b></i>51%</td></tr></table>
+      <div class="mini">GW6 is the wall &mdash; 7 of your 15 in a hard game.</div>
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top:30px">Option B &mdash; Command centre</h3>
+<p style="font-size:13.5px">The layout from the dashboard you liked: a KPI strip, then panels in a grid.
+Denser, more &ldquo;tool&rdquo;. Better on desktop, and better for someone who already knows what they are
+looking for.</p>
+<div class="dash">
+  <div class="tabs"><span class="tb on">Overview</span><span class="tb">Squad</span><span class="tb">Transfers</span><span class="tb">Fixtures</span><span class="tb">League</span></div>
+  <div class="kpi">
+    <div class="k"><div class="t">Squad rating</div><div class="v">75</div><div class="s">mean of your rated players</div></div>
+    <div class="k"><div class="t">Projected · 6 GW</div><div class="v">329</div><div class="s">54.8 per week</div></div>
+    <div class="k"><div class="t">Needs attention</div><div class="v" style="color:var(--bad)">4</div><div class="s">1 injury, 3 on watch</div></div>
+    <div class="k"><div class="t">In the bank</div><div class="v">£0.0m</div><div class="s">1 free transfer</div></div>
+  </div>
+  <div class="grid2">
+    <div class="pnl"><div class="h">Squad risk monitor</div><table><tr><td><b>Garner</b><i>MID · EVE</i></td><td class="dr">Injury</td><td class="sc"><i><b style="width:70%" class="bad"></b></i>70%</td></tr><tr><td><b>Wharton</b><i>MID · CRY</i></td><td class="dr">Minutes</td><td class="sc"><i><b style="width:55%" class="bad"></b></i>55%</td></tr><tr><td><b>Haaland</b><i>FWD · MCI</i></td><td class="dr">Fixtures</td><td class="sc"><i><b style="width:52%" class="bad"></b></i>52%</td></tr><tr><td><b>Calvert-Lewin</b><i>FWD · LEE</i></td><td class="dr">Minutes</td><td class="sc"><i><b style="width:51%" class="bad"></b></i>51%</td></tr></table></div>
+    <div class="pnl"><div class="h">Since you last looked</div>
+      <div class="act"><span class="n" style="background:var(--bad);color:#fff">!</span><div><b>Garner &mdash; injured</b><span>Groin &middot; back 22 Aug &middot; 2 weeks ago</span></div></div>
+      <div class="act"><span class="n" style="background:var(--warn);color:#231400">·</span><div><b>GW6 puts 7 of 15 in a hard game</b><span>The roughest week in your window</span></div></div>
+      <div class="act"><span class="n" style="background:var(--warn);color:#231400">·</span><div><b>Three Everton players</b><span>One postponement moves a fifth of your outfield</span></div></div>
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top:30px">Option C &mdash; The deadline clock</h3>
+<p style="font-size:13.5px">Everything organised by <em>when you need to act</em> rather than by what kind
+of data it is. The most opinionated of the three, and the one that best fits a game with one deadline a
+week.</p>
+<div class="dash">
+  <div class="dh"><div><h4>2 days, 4 hours</h4><p>until the Gameweek 1 deadline</p></div>
+    <div class="dl"><b style="color:var(--good)">Squad is legal &middot; 15/15</b></div></div>
+  <div class="pnl" style="border-color:rgba(240,115,111,.4);margin-bottom:10px">
+    <div class="h" style="color:var(--bad)">Before this deadline</div>
+    <div class="act"><span class="n" style="background:var(--bad);color:#fff">1</span><div><b>Replace Garner</b><span>Injured &middot; in your eleven &middot; costs you 4.1 xP if he starts</span></div></div>
+    <div class="act"><span class="n">2</span><div><b>Set the armband on Haaland</b><span>6.2 xP &middot; clear of Thiago by 1.4</span></div></div>
+  </div>
+  <div class="pnl" style="border-color:rgba(232,176,74,.4);margin-bottom:10px">
+    <div class="h" style="color:var(--warn)">Decide next week</div>
+    <div class="act"><span class="n" style="background:var(--warn);color:#231400">·</span><div><b>Two transfers, not one</b><span>Saving this week is worth +1.7 over the next six</span></div></div>
+  </div>
+  <div class="pnl">
+    <div class="h">Plan for later</div>
+    <div class="act"><span class="n" style="background:var(--s3);color:var(--ink2)">·</span><div><b>GW6 is the wall</b><span>7 of 15 in a hard game &mdash; five weeks to prepare</span></div></div>
+    <div class="act"><span class="n" style="background:var(--s3);color:var(--ink2)">·</span><div><b>Bench Boost looks best in GW5</b><span>Worth about +15 on current projections</span></div></div>
+  </div>
+</div>
+
+<div class="rule"></div>
+<div class="step">My recommendation</div>
+<h2>A for the home page, and cut the Builder to two levels</h2>
+<p><b class="w">Option A.</b> It is the only one of the three that works on a phone without compromise, and
+phone is where a deadline gets handled. It also matches what the site already does better than anyone:
+telling you the answer and then showing the working. B is a better desktop tool but it is a tool &mdash;
+it assumes you arrive knowing what you want. C is the most original and I would keep the
+<em>&ldquo;before this deadline / decide next week / plan for later&rdquo;</em> grouping from it and fold
+that into A&rsquo;s top card, which is roughly what the mock above already does.</p>
+<div class="callout"><b class="w">The commercial argument for saving a team ID:</b> right now every visit
+starts from zero. A saved ID turns the site from a thing you look up into a thing you check &mdash; and
+weekly habit is the only metric that matters for a free site that wants an audience. It costs one input
+box and a localStorage key, and it is the single highest-leverage change on this list.</p>
+<div class="callout bad-c"><b class="w">What I would not do:</b> put the 29 panels on the home page in a
+prettier grid. The problem is not the layout, it is that no-one has decided what matters. A dashboard that
+shows everything is the same wall with better spacing.</div>
+</div>

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { Fragment, useMemo } from 'react'
 import { Panel } from './SquadShape'
 import { squadDimensions, type Dimension } from './SquadVerdict'
 import { num } from '../lib/rows'
@@ -94,6 +94,7 @@ export function SquadCompare({ plans, gws, engine, draws = 4000 }: {
 
   return (
     <div className="grid gap-4">
+      <Verdict rows={rows} />
       <Headline rows={rows} bestProj={bestProj} lowOwn={lowOwn} />
       <Dimensions rows={rows} />
       <WeekByWeek rows={rows} gws={gws} />
@@ -120,6 +121,80 @@ function buildRows() {
     weeks: { xp: number; captain: number | null; xi: PlayerSeries[]; form: string }[]
     series: PlayerSeries[]
   }[]
+}
+
+
+// ── the verdict ─────────────────────────────────────────────────────────────
+
+/* The number people came for, said once and large, with the sentence that
+   qualifies it directly underneath.
+ 
+   The table below this panel has every figure in it and is the better artefact
+   for anyone reading closely — but a table makes a reader do the comparing,
+   and most of the time the comparison has one answer. So this states it, and
+   states the contradiction when the two headline numbers disagree, which on
+   real pairs of plans they routinely do: the projection is these weeks with
+   fixtures, minutes and a captain applied, the rating is season-long quality.
+   A tab that showed only one of them would sound certain and be wrong. */
+function Verdict({ rows }: { rows: Row[] }) {
+  const byProj = [...rows].sort((a, b) => b.projection - a.projection)
+  const top = byProj[0]
+  const gap = top.projection - byProj[byProj.length - 1].projection
+  const rated = rows.filter((r) => r.rating != null)
+  const topRate = rated.length
+    ? rated.reduce((a, b) => ((b.rating ?? 0) > (a.rating ?? 0) ? b : a))
+    : null
+  const split = topRate && topRate.name !== top.name
+  // Inside a point over the window, a "winner" is a rounding artefact.
+  const tooClose = gap < 1
+
+  return (
+    <Panel
+      title="The verdict"
+      kicker="Projected points over the window, and the squad rating behind them. Two different questions, and they do not always agree."
+      note={
+        tooClose
+          ? <>These plans are within a point of each other over {rows[0].weeks.length} weeks, which is
+              nothing — the head-to-head below will land near a coin toss and should. Whatever decides
+              this, it is not the projection.</>
+          : split
+          ? <><b>{topRate!.name} has the better players; {top.name} scores more points.</b> The rating
+              averages what fifteen footballers are over a season. The projection is what this fifteen
+              returns over these {rows[0].weeks.length} weeks once fixtures, minutes and the armband are
+              applied — so a squad can be the stronger set of players and still the weaker plan for the
+              window in front of you.</>
+          : <><b>{top.name} leads on both.</b> It projects {gap.toFixed(1)} more and holds the better-rated
+              fifteen, so there is no tension to resolve here — which is the easy case, and rarer than
+              you would think.</>
+      }
+    >
+      <div className={`grid items-stretch gap-2.5 ${rows.length === 2 ? 'sm:grid-cols-[1fr_auto_1fr]' : 'sm:grid-cols-2'}`}>
+        {rows.map((r, i) => (
+          <Fragment key={r.name}>
+            {i === 1 && rows.length === 2 && (
+              <span className="hidden self-center text-[10px] tracking-[0.18em] text-ink-3 sm:block">VS</span>
+            )}
+            <div className={`rounded-xl border p-4 text-center ${
+              r.name === top.name && !tooClose ? 'border-accent/55 bg-accent-selected' : 'border-line bg-surface-2/40'
+            }`}>
+              <span className="flex items-center justify-center gap-2 text-[11.5px] font-semibold text-ink-2">
+                <span className="size-2.5 rounded-[3px]" style={{ background: r.colour }} />
+                {r.name}
+              </span>
+              <div className="font-display mt-2 text-4xl leading-none tabular-nums" style={{ color: r.colour }}>
+                {r.projection.toFixed(0)}
+              </div>
+              <div className="mt-1 text-[10px] tracking-[0.1em] text-ink-3 uppercase">
+                Projected · {r.weeks.length} weeks
+              </div>
+              <div className="font-num mt-3 text-xl leading-none tabular-nums text-ink">{r.rating ?? '—'}</div>
+              <div className="mt-1 text-[10px] tracking-[0.1em] text-ink-3 uppercase">Squad rating</div>
+            </div>
+          </Fragment>
+        ))}
+      </div>
+    </Panel>
+  )
 }
 
 // ── the table ───────────────────────────────────────────────────────────────
