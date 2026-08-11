@@ -100,7 +100,9 @@ export function SquadCompare({ plans, gws, engine, draws = 4000 }: {
       <WeekByWeek rows={rows} gws={gws} />
       <Horizon rows={rows} gws={gws} fixtureEase={fixtureEase} />
       <HeadToHead rows={rows} cmp={cmp} />
-      <SharedAndDifferent rows={rows} />
+      {rows.length === 2
+        ? <Lineups rows={rows} gw={gws[0]} />
+        : <SharedAndDifferent rows={rows} />}
       {/* Pairing two lists of players only means something when there are two
           lists. With three or four plans the shared/unique panel above is the
           honest view and this is left off rather than fudged. */}
@@ -1004,5 +1006,176 @@ function ClubRisk({ rows }: { rows: Row[] }) {
         ))}
       </div>
     </Panel>
+  )
+}
+
+// ── the two squads, side by side ────────────────────────────────────────────
+
+/* Two pitches rather than two lists of names.
+ 
+   The chip version of this panel was correct and unreadable: to find the shape
+   of a disagreement you had to read twenty-two names and hold them in your
+   head. Worse, it counted a player as "shared" whenever both plans owned him —
+   so a man starting in one plan and benched in the other showed up as
+   agreement, which is the opposite of true. Position is the whole point of a
+   squad, so the comparison is drawn on the thing that carries it. */
+
+type Role = 'xi' | 'bench'
+type Verdict = 'same' | 'moved' | 'only'
+
+function Lineups({ rows, gw }: { rows: Row[]; gw: number }) {
+  const [a, b] = rows
+
+  const roleMap = (r: Row): Map<number, Role> => {
+    const xi = new Set((r.weeks[0]?.xi ?? []).map((p) => p.element))
+    const m = new Map<number, Role>()
+    for (const p of r.series) m.set(p.element, xi.has(p.element) ? 'xi' : 'bench')
+    return m
+  }
+  const roles = [roleMap(a), roleMap(b)]
+  const caps = rows.map((r) => r.weeks[0]?.captain ?? null)
+
+  const verdictFor = (el: number, i: number): Verdict => {
+    const mine = roles[i].get(el)
+    const theirs = roles[1 - i].get(el)
+    if (!theirs) return 'only'
+    return mine === theirs ? 'same' : 'moved'
+  }
+
+  const counts = { same: 0, moved: 0, only: 0 }
+  for (const p of a.series) counts[verdictFor(p.element, 0)] += 1
+  const onlyB = b.series.filter((p) => verdictFor(p.element, 1) === 'only').length
+
+  return (
+    <Panel
+      title="The two squads, side by side"
+      kicker={`Both fifteens laid out for GW${gw}, best eleven on the grass and the four on the bench underneath. Faded means both plans agree, exactly — same player, same role.`}
+      note={
+        <>
+          {counts.moved > 0
+            ? <><b>{counts.moved} {counts.moved === 1 ? 'player is' : 'players are'} in both squads but not in the same place.</b>{' '}
+                A list of names calls that agreement; it is not. A man who starts in one plan and sits
+                on the other bench is a different decision in each, and it is worth the same to you as
+                a transfer you never made. </>
+            : <>Every player both plans own is in the same role in both, so the only disagreements here
+                are the {counts.only + onlyB} places where the squads hold different men. </>}
+          The eleven is the best legal one the engine can pick for GW{gw}, not a lineup either plan has
+          saved — so this reads as what each squad <em>would</em> put out, which is the only basis on
+          which two squads can be compared at all.
+        </>
+      }
+    >
+      <div className="grid gap-3 lg:grid-cols-2">
+        {rows.map((r, i) => (
+          <Board key={r.name} row={r} roles={roles[i]} captain={caps[i]} verdict={(el) => verdictFor(el, i)} />
+        ))}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-ink-2">
+        <span className="flex items-center gap-1.5"><Key cls="border-line bg-surface-2/40 text-ink-3" />Same player, same role</span>
+        <span className="flex items-center gap-1.5"><Key cls="border-dashed border-warn" />In both, different role</span>
+        <span className="flex items-center gap-1.5"><Key cls="border-accent/55 text-accent" />Only in this plan</span>
+      </div>
+    </Panel>
+  )
+}
+
+function Key({ cls }: { cls: string }) {
+  return <span className={`inline-block h-3 w-5 rounded-[3px] border ${cls}`} />
+}
+
+const ROWS: { pos: string; label: string }[] = [
+  { pos: 'GKP', label: 'GK' }, { pos: 'DEF', label: 'DEF' },
+  { pos: 'MID', label: 'MID' }, { pos: 'FWD', label: 'FWD' },
+]
+
+function Board({ row, roles, captain, verdict }: {
+  row: Row
+  roles: Map<number, Role>
+  captain: number | null
+  verdict: (el: number) => Verdict
+}) {
+  const xi = row.series.filter((p) => roles.get(p.element) === 'xi')
+  const bench = row.series.filter((p) => roles.get(p.element) === 'bench')
+  const moved = row.series.filter((p) => verdict(p.element) === 'moved').length
+  const only = row.series.filter((p) => verdict(p.element) === 'only').length
+
+  return (
+    <div className="rounded-xl border border-line bg-surface-1/60 p-3">
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <span className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+          <span className="size-2.5 rounded-[3px]" style={{ background: row.colour }} />
+          {row.name}
+        </span>
+        <span className="font-num text-[10.5px] tabular-nums text-ink-3">
+          {only} unique · {moved} moved · {row.weeks[0]?.xp.toFixed(1) ?? '—'} xP
+        </span>
+      </div>
+
+      {/* Not a green pitch. This is a diff, and grass would put a strong colour
+          under thirty small cards whose own colour is the entire message. */}
+      <div className="rounded-lg border border-line-subtle bg-surface-2/30 p-2">
+        {ROWS.map(({ pos, label }) => {
+          const line = xi.filter((p) => p.pos === pos)
+          if (!line.length) return null
+          return (
+            <div key={pos} className="mb-1.5 flex items-start gap-1.5 last:mb-0">
+              <span className="w-7 shrink-0 pt-1.5 text-[9px] font-bold tracking-[0.08em] text-ink-3 uppercase">{label}</span>
+              <span className="flex flex-1 flex-wrap justify-center gap-1.5">
+                {line.map((p) => (
+                  <Card key={p.element} p={p} colour={row.colour} v={verdict(p.element)} captain={p.element === captain} />
+                ))}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="mt-1.5 flex items-start gap-1.5">
+        <span className="w-7 shrink-0 pt-1.5 text-[9px] font-bold tracking-[0.08em] text-ink-3 uppercase">Sub</span>
+        <span className="flex flex-1 flex-wrap justify-center gap-1.5">
+          {bench.map((p) => (
+            <Card key={p.element} p={p} colour={row.colour} v={verdict(p.element)} bench />
+          ))}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function Card({ p, colour, v, captain, bench }: {
+  p: PlayerSeries; colour: string; v: Verdict; captain?: boolean; bench?: boolean
+}) {
+  const tone =
+    v === 'only' ? { borderColor: colour, background: `color-mix(in oklab, ${colour} 14%, transparent)` }
+    : v === 'moved' ? undefined
+    : undefined
+  /* "Moved" is drawn with a DASHED edge, not another colour. The plan colours
+     start at gold and the obvious hue for a caution is amber, which put two
+     near-identical borders side by side on the first plan every time — Enzo
+     moved and Wharton unique read as the same state. Distinguishing by the
+     shape of the border instead survives whatever colour the plan is. */
+  const cls =
+    v === 'only' ? 'text-ink'
+    : v === 'moved' ? 'border-dashed border-warn text-ink'
+    : 'border-line bg-surface-2/40 text-ink-3'
+
+  return (
+    <span
+      className={`relative block min-w-[62px] rounded-md border px-1.5 py-1 text-center ${cls} ${bench ? 'opacity-95' : ''}`}
+      style={tone}
+      title={`${String(p.row.web_name)} · ${p.pos} · ${p.team} · £${p.price.toFixed(1)}${
+        v === 'moved' ? ` — in both plans, ${bench ? 'benched here' : 'starting here'}` : v === 'only' ? ' — only in this plan' : ''}`}
+    >
+      <span className="block max-w-[70px] truncate text-[10.5px] font-semibold">{String(p.row.web_name)}</span>
+      <span className="block text-[8.5px] text-ink-3">{p.team}</span>
+      {captain && (
+        <span className="absolute -top-1 -left-1 grid size-3.5 place-items-center rounded-full bg-accent text-[7.5px] font-extrabold text-accent-contrast">C</span>
+      )}
+      {v === 'moved' && (
+        <span className="absolute -top-1 -right-1 grid size-3.5 place-items-center rounded-full bg-warn text-[7.5px] font-extrabold text-[#231400]">
+          {bench ? 'B' : 'S'}
+        </span>
+      )}
+    </span>
   )
 }
