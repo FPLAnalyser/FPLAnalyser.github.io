@@ -192,14 +192,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 /* Before he is yours: an empty outline. After you sell him: red hatching.
    Both keep the column so a transfer reads as one row ending and another
    starting, which is the whole point of drawing it. */
-/* A seam is where a row changes hands. It is an EDGE on the cell — a green
-   left border — never a replacement of the cell's content: the first cut
-   printed the new man's name over his fixture, which hid the one thing the
-   grid exists to show. The names live in a thin band above the row instead,
-   each name sitting over the stretch it owns, so a chain of any length —
-   Garner to Rice to Bruno to Saka — is four labels along one band, and
-   every fixture stays visible. */
-.cell.seam{box-shadow:inset 2.5px 0 0 var(--live)}
+/* A seam is where a row changes hands. The green left edge died on green
+   cells — an edge in the difficulty palette cannot survive sitting ON the
+   difficulty palette. So the arrival cell INVERTS instead: near-black
+   ground, the fixture text in the difficulty colour, a gold ring. Nothing
+   else in the grid is dark-with-a-gold-ring, so it reads at a glance in
+   both data views, on every difficulty. */
+.cell.seam{background:#08090b !important;box-shadow:inset 0 0 0 1.5px var(--gold)}
+.cell.seam.d1{color:var(--d1)}.cell.seam.d2{color:var(--d2)}
+.cell.seam.d3{color:#9aa6b5}.cell.seam.d4{color:var(--d4)}.cell.seam.d5{color:var(--d5)}
+.cell.seam.x0{color:var(--ink-2)}.cell.seam.x1{color:var(--ink-2)}
+.cell.seam.x2{color:var(--gold-lit)}.cell.seam.x3{color:var(--gold-lit)}.cell.seam.x4{color:var(--gold-lit)}
 .band{grid-column:2/-1;position:relative;height:11px;margin:1px 0 0}
 .band span{position:absolute;top:0;font:700 8.5px/1.2 ui-sans-serif;color:var(--ink-3);white-space:nowrap}
 .band span.nw{color:var(--live)}
@@ -218,8 +221,28 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .mode[hidden]{display:none}
 .mchip{border-radius:99px;padding:3px 9px;font-size:10.5px;color:var(--ink-3)}
 .mchip.on{background:var(--gold);color:#14100a;font-weight:800}
+.mchip.nmt{border-left:1px solid var(--line);border-radius:0 99px 99px 0;margin-left:2px}
+.mchip.nmt[aria-pressed="true"]{color:var(--live)}
+.rows.nonames .band{display:none}
 .card .arm{display:inline-block;background:var(--gold);color:#14100a;border-radius:99px;
   font:800 8px/1 ui-sans-serif;padding:2px 3.5px;margin-right:3px;vertical-align:1px}
+
+.alts{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:13px}
+.alts h2{margin:0 0 10px;font-size:14px;font-weight:800;letter-spacing:-.01em}
+.altrow{display:flex;gap:14px;flex-wrap:wrap}
+.altcase{display:flex;flex-direction:column;gap:5px;align-items:center}
+.altcase .lab{font:800 10px/1 ui-sans-serif;color:var(--ink-3)}
+.altcase .demo{display:flex;gap:3px}
+.altcase .cell{width:52px}
+.altnote{margin:11px 0 0;font-size:12px;line-height:1.6;color:var(--ink-3);max-width:80ch}
+.altnote b{color:var(--ink-2)}
+/* the four alternatives, drawn only in the strip */
+.cell.altA{box-shadow:inset 2.5px 0 0 var(--live)}
+.cell.altC{background:#08090b;box-shadow:inset 0 0 0 1.5px var(--live);color:var(--d1)}
+.cell.altD{position:relative}
+.cell.altD::after{content:'';position:absolute;top:0;left:0;border:4px solid transparent;
+  border-top-color:var(--gold);border-left-color:var(--gold)}
+.cell.altE{box-shadow:0 2.5px 0 0 var(--live)}
 
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -258,6 +281,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
           <button class="mchip" data-m="cs">CS</button>
           <button class="mchip" data-m="gi">xGI</button>
           <button class="mchip" data-m="dc">DC</button>
+          <button class="mchip nmt" id="namesToggle" aria-pressed="true">Names</button>
         </span></div>
       <div class="scroller" id="scroller">
         <div class="rail" id="rail"></div>
@@ -286,6 +310,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
     </div>
   </div>
 
+  <section class="alts">
+    <h2>Five ways to mark an arrival &mdash; on the worst case, a green cell</h2>
+    <div class="altrow" id="altrow"></div>
+    <p class="altnote">A &mdash; the green edge (what we had): invisible on easy fixtures.
+    B &mdash; <b>inverted cell, gold ring</b> (what the grid above now uses): the only dark
+    object in the grid, so it reads everywhere, and the difficulty survives in the text.
+    C &mdash; green ring, coloured text: quieter, but green-on-green returns on easy weeks.
+    D &mdash; corner flag: subtle to a fault at 17px cell height.
+    E &mdash; underline: collides with the bench-dim opacity and vanishes on phones.</p>
+  </section>
   <p class="footnote"><b>Real numbers.</b> The fifteen is a plan built in the live builder, the
   fixtures and difficulty ratings are this season&rsquo;s, and the projections and hard-fixture
   counts are what the app produces for that squad. Only the two played weeks are invented, since
@@ -297,8 +331,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   <b>squad slots</b>, not players. A transfer is one row changing hands: a green edge marks the
   week, and the names ride in a thin band above the row, each sitting over the stretch it owns
   &mdash; so Garner &rarr; Rice &rarr; Bruno &rarr; Saka is four labels on one band, and every
-  fixture stays visible. A wildcard is many handovers in one column; a free hit one column of
-  temporary names that revert. Fifteen rows in August, fifteen in May.</p>
+  fixture stays visible. A wildcard is many handovers in one column &mdash; the one above makes
+  <b>eight changes at GW9</b>, so you can judge the size honestly: eight name bands cost about
+  90px, and the <b>Names</b> toggle folds them away when you want the grid back. Fifteen rows
+  in August, fifteen in May.</p>
   <p class="footnote"><b>The four data views.</b> xP is approximated from rating and fixture, as
   before. Clean-sheet odds, xGI and Def Con start from each player&rsquo;s <b>real per-week xPts
   components</b> in the ratings file, then bend with the fixture &mdash; and Def Con bends the
@@ -311,14 +347,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 </div>
 
 <script>
-const DATA = {"gws":[1,2,3,4,5,6,7,8,9,10,11,12],"slots":[{"p":"GKP","seq":[{"n":"Raya","t":"ARS","p":"GKP","pr":6.0,"r":76,"gi":0.0,"cs":0.532,"dc":0.0,"f":[{"o":"COV","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"CHE","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BHA","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"HUL","v":"H","d":2},{"o":"NEW","v":"A","d":3},{"o":"MCI","v":"H","d":4}],"from":1}]},{"p":"GKP","seq":[{"n":"Pickford","t":"EVE","p":"GKP","pr":5.5,"r":61,"gi":0.0,"cs":0.259,"dc":0.0,"f":[{"o":"CRY","v":"H","d":3},{"o":"BOU","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"HUL","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"ARS","v":"A","d":5},{"o":"NEW","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"LIV","v":"H","d":4}],"from":1}]},{"p":"DEF","seq":[{"n":"Senesi","t":"TOT","p":"DEF","pr":6.0,"r":81,"gi":0.178,"cs":0.242,"dc":0.684,"f":[{"o":"BRE","v":"A","d":3},{"o":"NEW","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"AVL","v":"H","d":3},{"o":"MUN","v":"A","d":4},{"o":"COV","v":"H","d":2},{"o":"CHE","v":"A","d":4},{"o":"CRY","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"SUN","v":"A","d":3}],"from":1}]},{"p":"DEF","seq":[{"n":"Virgil","t":"LIV","p":"DEF","pr":6.5,"r":79,"gi":0.146,"cs":0.289,"dc":0.421,"f":[{"o":"NEW","v":"A","d":3},{"o":"NFO","v":"H","d":3},{"o":"IPS","v":"A","d":2},{"o":"FUL","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"BRE","v":"A","d":3},{"o":"BHA","v":"H","d":2},{"o":"ARS","v":"H","d":4},{"o":"CRY","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"EVE","v":"A","d":3}],"from":1}]},{"p":"DEF","seq":[{"n":"Tarkowski","t":"EVE","p":"DEF","pr":6.0,"r":78,"gi":0.132,"cs":0.263,"dc":0.579,"f":[{"o":"CRY","v":"H","d":3},{"o":"BOU","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"HUL","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"ARS","v":"A","d":5},{"o":"NEW","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"LIV","v":"H","d":4}],"from":1}]},{"p":"DEF","seq":[{"n":"Thiaw","t":"NEW","p":"DEF","pr":5.0,"r":67,"gi":0.188,"cs":0.182,"dc":0.316,"f":[{"o":"LIV","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"BOU","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"HUL","v":"H","d":2},{"o":"COV","v":"A","d":2},{"o":"AVL","v":"H","d":3},{"o":"CRY","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"FUL","v":"A","d":3},{"o":"ARS","v":"H","d":4},{"o":"BHA","v":"A","d":3}],"from":1}]},{"p":"DEF","seq":[{"n":"Kayode","t":"BRE","p":"DEF","pr":4.5,"r":60,"gi":0.116,"cs":0.257,"dc":0.079,"f":[{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"SUN","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"CHE","v":"H","d":4},{"o":"AVL","v":"A","d":4},{"o":"LIV","v":"H","d":4},{"o":"HUL","v":"A","d":2},{"o":"NFO","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"MUN","v":"A","d":4}],"from":1}]},{"p":"MID","seq":[{"n":"Enzo","t":"CHE","p":"MID","pr":7.0,"r":84,"gi":0.567,"cs":0.242,"dc":0.052,"f":[{"o":"FUL","v":"A","d":3},{"o":"BHA","v":"H","d":2},{"o":"ARS","v":"A","d":5},{"o":"HUL","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"BOU","v":"H","d":3},{"o":"EVE","v":"A","d":3},{"o":"TOT","v":"H","d":3},{"o":"MUN","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3}],"from":1}]},{"p":"MID","seq":[{"n":"Anderson","t":"MCI","p":"MID","pr":6.5,"r":80,"gi":0.205,"cs":0.249,"dc":0.684,"f":[{"o":"BOU","v":"H","d":3},{"o":"CRY","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"MUN","v":"A","d":4},{"o":"SUN","v":"H","d":2},{"o":"LIV","v":"A","d":4},{"o":"IPS","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"BHA","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"FUL","v":"H","d":2},{"o":"ARS","v":"A","d":5}],"from":1}]},{"p":"MID","seq":[{"n":"Garner","t":"EVE","p":"MID","pr":6.0,"r":76,"gi":0.213,"cs":0.258,"dc":0.526,"f":[{"o":"CRY","v":"H","d":3},{"o":"BOU","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"HUL","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"ARS","v":"A","d":5},{"o":"NEW","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"LIV","v":"H","d":4}],"from":1},{"n":"Rice","t":"ARS","p":"MID","pr":7.5,"r":80,"gi":0.318,"cs":0.486,"dc":0.368,"f":[{"o":"COV","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"CHE","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BHA","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"HUL","v":"H","d":2},{"o":"NEW","v":"A","d":3},{"o":"MCI","v":"H","d":4}],"from":6}]},{"p":"MID","seq":[{"n":"E.Le F\u00e9e","t":"SUN","p":"MID","pr":6.0,"r":71,"gi":0.341,"cs":0.251,"dc":0.21,"f":[{"o":"IPS","v":"A","d":2},{"o":"FUL","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"ARS","v":"H","d":4},{"o":"MCI","v":"A","d":5},{"o":"BHA","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"COV","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"AVL","v":"A","d":4},{"o":"TOT","v":"H","d":3}],"from":1}]},{"p":"MID","seq":[{"n":"Wharton","t":"CRY","p":"MID","pr":5.5,"r":60,"gi":0.322,"cs":0.231,"dc":0.237,"f":[{"o":"EVE","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"FUL","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"LEE","v":"A","d":3},{"o":"NFO","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"NEW","v":"H","d":2},{"o":"TOT","v":"A","d":3},{"o":"LIV","v":"H","d":4},{"o":"COV","v":"A","d":2},{"o":"HUL","v":"H","d":2}],"from":1},{"n":"Mbeumo","t":"MUN","p":"MID","pr":8.0,"r":83,"gi":0.65,"cs":0.251,"dc":0.0,"f":[{"o":"HUL","v":"A","d":2},{"o":"IPS","v":"H","d":2},{"o":"EVE","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"FUL","v":"A","d":3},{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"BOU","v":"H","d":3},{"o":"CHE","v":"A","d":4},{"o":"AVL","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"BRE","v":"H","d":3}],"from":9}]},{"p":"FWD","seq":[{"n":"Haaland","t":"MCI","p":"FWD","pr":15.5,"r":99,"gi":0.935,"cs":0.0,"dc":0.0,"f":[{"o":"BOU","v":"H","d":3},{"o":"CRY","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"MUN","v":"A","d":4},{"o":"SUN","v":"H","d":2},{"o":"LIV","v":"A","d":4},{"o":"IPS","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"BHA","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"FUL","v":"H","d":2},{"o":"ARS","v":"A","d":5}],"from":1}]},{"p":"FWD","seq":[{"n":"Thiago","t":"BRE","p":"FWD","pr":8.0,"r":87,"gi":0.667,"cs":0.0,"dc":0.026,"f":[{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"SUN","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"CHE","v":"H","d":4},{"o":"AVL","v":"A","d":4},{"o":"LIV","v":"H","d":4},{"o":"HUL","v":"A","d":2},{"o":"NFO","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"MUN","v":"A","d":4}],"from":1}]},{"p":"FWD","seq":[{"n":"Calvert-Lewin","t":"LEE","p":"FWD","pr":6.0,"r":73,"gi":0.579,"cs":0.0,"dc":0.0,"f":[{"o":"NFO","v":"A","d":3},{"o":"BRE","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"NEW","v":"H","d":2},{"o":"CRY","v":"H","d":3},{"o":"ARS","v":"A","d":5},{"o":"MUN","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BOU","v":"A","d":3},{"o":"TOT","v":"H","d":3},{"o":"CHE","v":"A","d":4},{"o":"COV","v":"H","d":2}],"from":1},{"n":"Watkins","t":"AVL","p":"FWD","pr":8.0,"r":77,"gi":0.559,"cs":0.0,"dc":0.0,"f":[{"o":"BHA","v":"A","d":3},{"o":"ARS","v":"H","d":4},{"o":"HUL","v":"A","d":2},{"o":"NFO","v":"H","d":3},{"o":"TOT","v":"A","d":3},{"o":"BRE","v":"H","d":3},{"o":"NEW","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"FUL","v":"H","d":2},{"o":"MUN","v":"A","d":4},{"o":"SUN","v":"H","d":2},{"o":"IPS","v":"A","d":2}],"from":9}]}],"xp":[54.8,53.5,55.8,53.3,56.1,51.3,59.2,53.9,54.0,56.3,58.5,51.3],"easy":[2,3,5,4,6,6,3,5,4,4,5,1],"hard":[1,2,5,3,3,7,5,5,5,2,4,8],"rating":[83,80,84,79,85,74,86,76,79,81,82,71],"best":[{"n":"B.Fernandes","x":9.7},{"n":"B.Fernandes","x":9.7},{"n":"Haaland","x":9.7},{"n":"Haaland","x":7.5},{"n":"Haaland","x":9.7},{"n":"B.Fernandes","x":8.8},{"n":"Haaland","x":9.7},{"n":"B.Fernandes","x":8.8},{"n":"Haaland","x":9.7},{"n":"Haaland","x":8.8},{"n":"Haaland","x":9.7},{"n":"B.Fernandes","x":8.8}]};
+const DATA = {"gws":[1,2,3,4,5,6,7,8,9,10,11,12],"slots":[{"p":"GKP","seq":[{"n":"Raya","t":"ARS","p":"GKP","pr":6.0,"r":76,"gi":0.0,"cs":0.532,"dc":0.0,"f":[{"o":"COV","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"CHE","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BHA","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"HUL","v":"H","d":2},{"o":"NEW","v":"A","d":3},{"o":"MCI","v":"H","d":4}],"from":1}]},{"p":"GKP","seq":[{"n":"Pickford","t":"EVE","p":"GKP","pr":5.5,"r":61,"gi":0.0,"cs":0.259,"dc":0.0,"f":[{"o":"CRY","v":"H","d":3},{"o":"BOU","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"HUL","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"ARS","v":"A","d":5},{"o":"NEW","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"LIV","v":"H","d":4}],"from":1},{"n":"Kelleher","t":"BRE","p":"GKP","pr":5.0,"r":62,"gi":0.0,"cs":0.258,"dc":0.0,"f":[{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"SUN","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"CHE","v":"H","d":4},{"o":"AVL","v":"A","d":4},{"o":"LIV","v":"H","d":4},{"o":"HUL","v":"A","d":2},{"o":"NFO","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"MUN","v":"A","d":4}],"from":9}]},{"p":"DEF","seq":[{"n":"Senesi","t":"TOT","p":"DEF","pr":6.0,"r":81,"gi":0.178,"cs":0.242,"dc":0.684,"f":[{"o":"BRE","v":"A","d":3},{"o":"NEW","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"AVL","v":"H","d":3},{"o":"MUN","v":"A","d":4},{"o":"COV","v":"H","d":2},{"o":"CHE","v":"A","d":4},{"o":"CRY","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"SUN","v":"A","d":3}],"from":1}]},{"p":"DEF","seq":[{"n":"Virgil","t":"LIV","p":"DEF","pr":6.5,"r":79,"gi":0.146,"cs":0.289,"dc":0.421,"f":[{"o":"NEW","v":"A","d":3},{"o":"NFO","v":"H","d":3},{"o":"IPS","v":"A","d":2},{"o":"FUL","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"BRE","v":"A","d":3},{"o":"BHA","v":"H","d":2},{"o":"ARS","v":"H","d":4},{"o":"CRY","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"EVE","v":"A","d":3}],"from":1}]},{"p":"DEF","seq":[{"n":"Tarkowski","t":"EVE","p":"DEF","pr":6.0,"r":78,"gi":0.132,"cs":0.263,"dc":0.579,"f":[{"o":"CRY","v":"H","d":3},{"o":"BOU","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"HUL","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"ARS","v":"A","d":5},{"o":"NEW","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"LIV","v":"H","d":4}],"from":1},{"n":"Gabriel","t":"ARS","p":"DEF","pr":8.0,"r":88,"gi":0.158,"cs":0.526,"dc":0.289,"f":[{"o":"COV","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"CHE","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BHA","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"HUL","v":"H","d":2},{"o":"NEW","v":"A","d":3},{"o":"MCI","v":"H","d":4}],"from":9}]},{"p":"DEF","seq":[{"n":"Thiaw","t":"NEW","p":"DEF","pr":5.0,"r":67,"gi":0.188,"cs":0.182,"dc":0.316,"f":[{"o":"LIV","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"BOU","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"HUL","v":"H","d":2},{"o":"COV","v":"A","d":2},{"o":"AVL","v":"H","d":3},{"o":"CRY","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"FUL","v":"A","d":3},{"o":"ARS","v":"H","d":4},{"o":"BHA","v":"A","d":3}],"from":1},{"n":"Gu\u00e9hi","t":"MCI","p":"DEF","pr":6.0,"r":78,"gi":0.196,"cs":0.328,"dc":0.289,"f":[{"o":"BOU","v":"H","d":3},{"o":"CRY","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"MUN","v":"A","d":4},{"o":"SUN","v":"H","d":2},{"o":"LIV","v":"A","d":4},{"o":"IPS","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"BHA","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"FUL","v":"H","d":2},{"o":"ARS","v":"A","d":5}],"from":9}]},{"p":"DEF","seq":[{"n":"Kayode","t":"BRE","p":"DEF","pr":4.5,"r":60,"gi":0.116,"cs":0.257,"dc":0.079,"f":[{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"SUN","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"CHE","v":"H","d":4},{"o":"AVL","v":"A","d":4},{"o":"LIV","v":"H","d":4},{"o":"HUL","v":"A","d":2},{"o":"NFO","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"MUN","v":"A","d":4}],"from":1},{"n":"J.Timber","t":"ARS","p":"DEF","pr":6.5,"r":76,"gi":0.25,"cs":0.476,"dc":0.079,"f":[{"o":"COV","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"CHE","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BHA","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"HUL","v":"H","d":2},{"o":"NEW","v":"A","d":3},{"o":"MCI","v":"H","d":4}],"from":9}]},{"p":"MID","seq":[{"n":"Enzo","t":"CHE","p":"MID","pr":7.0,"r":84,"gi":0.567,"cs":0.242,"dc":0.052,"f":[{"o":"FUL","v":"A","d":3},{"o":"BHA","v":"H","d":2},{"o":"ARS","v":"A","d":5},{"o":"HUL","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"BOU","v":"H","d":3},{"o":"EVE","v":"A","d":3},{"o":"TOT","v":"H","d":3},{"o":"MUN","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3}],"from":1}]},{"p":"MID","seq":[{"n":"Anderson","t":"MCI","p":"MID","pr":6.5,"r":80,"gi":0.205,"cs":0.249,"dc":0.684,"f":[{"o":"BOU","v":"H","d":3},{"o":"CRY","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"MUN","v":"A","d":4},{"o":"SUN","v":"H","d":2},{"o":"LIV","v":"A","d":4},{"o":"IPS","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"BHA","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"FUL","v":"H","d":2},{"o":"ARS","v":"A","d":5}],"from":1},{"n":"B.Fernandes","t":"MUN","p":"MID","pr":12.0,"r":99,"gi":0.706,"cs":0.228,"dc":0.132,"f":[{"o":"HUL","v":"A","d":2},{"o":"IPS","v":"H","d":2},{"o":"EVE","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"FUL","v":"A","d":3},{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"BOU","v":"H","d":3},{"o":"CHE","v":"A","d":4},{"o":"AVL","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"BRE","v":"H","d":3}],"from":9}]},{"p":"MID","seq":[{"n":"Garner","t":"EVE","p":"MID","pr":6.0,"r":76,"gi":0.213,"cs":0.258,"dc":0.526,"f":[{"o":"CRY","v":"H","d":3},{"o":"BOU","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"HUL","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"ARS","v":"A","d":5},{"o":"NEW","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"LIV","v":"H","d":4}],"from":1},{"n":"Rice","t":"ARS","p":"MID","pr":7.5,"r":80,"gi":0.318,"cs":0.486,"dc":0.368,"f":[{"o":"COV","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"CHE","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BHA","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"HUL","v":"H","d":2},{"o":"NEW","v":"A","d":3},{"o":"MCI","v":"H","d":4}],"from":6}]},{"p":"MID","seq":[{"n":"E.Le F\u00e9e","t":"SUN","p":"MID","pr":6.0,"r":71,"gi":0.341,"cs":0.251,"dc":0.21,"f":[{"o":"IPS","v":"A","d":2},{"o":"FUL","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"ARS","v":"H","d":4},{"o":"MCI","v":"A","d":5},{"o":"BHA","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"COV","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"AVL","v":"A","d":4},{"o":"TOT","v":"H","d":3}],"from":1},{"n":"Gibbs-White","t":"NFO","p":"MID","pr":8.0,"r":77,"gi":0.422,"cs":0.25,"dc":0.026,"f":[{"o":"LEE","v":"H","d":2},{"o":"LIV","v":"A","d":4},{"o":"TOT","v":"H","d":3},{"o":"AVL","v":"A","d":4},{"o":"COV","v":"H","d":2},{"o":"CRY","v":"A","d":3},{"o":"ARS","v":"H","d":4},{"o":"IPS","v":"A","d":2},{"o":"BRE","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"BOU","v":"A","d":3},{"o":"CHE","v":"H","d":4}],"from":9}]},{"p":"MID","seq":[{"n":"Wharton","t":"CRY","p":"MID","pr":5.5,"r":60,"gi":0.322,"cs":0.231,"dc":0.237,"f":[{"o":"EVE","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"FUL","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"LEE","v":"A","d":3},{"o":"NFO","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"NEW","v":"H","d":2},{"o":"TOT","v":"A","d":3},{"o":"LIV","v":"H","d":4},{"o":"COV","v":"A","d":2},{"o":"HUL","v":"H","d":2}],"from":1},{"n":"Mbeumo","t":"MUN","p":"MID","pr":8.0,"r":83,"gi":0.65,"cs":0.251,"dc":0.0,"f":[{"o":"HUL","v":"A","d":2},{"o":"IPS","v":"H","d":2},{"o":"EVE","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"FUL","v":"A","d":3},{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"BOU","v":"H","d":3},{"o":"CHE","v":"A","d":4},{"o":"AVL","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"BRE","v":"H","d":3}],"from":9}]},{"p":"FWD","seq":[{"n":"Haaland","t":"MCI","p":"FWD","pr":15.5,"r":99,"gi":0.935,"cs":0.0,"dc":0.0,"f":[{"o":"BOU","v":"H","d":3},{"o":"CRY","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"MUN","v":"A","d":4},{"o":"SUN","v":"H","d":2},{"o":"LIV","v":"A","d":4},{"o":"IPS","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"BHA","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"FUL","v":"H","d":2},{"o":"ARS","v":"A","d":5}],"from":1}]},{"p":"FWD","seq":[{"n":"Thiago","t":"BRE","p":"FWD","pr":8.0,"r":87,"gi":0.667,"cs":0.0,"dc":0.026,"f":[{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"SUN","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"CHE","v":"H","d":4},{"o":"AVL","v":"A","d":4},{"o":"LIV","v":"H","d":4},{"o":"HUL","v":"A","d":2},{"o":"NFO","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"MUN","v":"A","d":4}],"from":1}]},{"p":"FWD","seq":[{"n":"Calvert-Lewin","t":"LEE","p":"FWD","pr":6.0,"r":73,"gi":0.579,"cs":0.0,"dc":0.0,"f":[{"o":"NFO","v":"A","d":3},{"o":"BRE","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"NEW","v":"H","d":2},{"o":"CRY","v":"H","d":3},{"o":"ARS","v":"A","d":5},{"o":"MUN","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BOU","v":"A","d":3},{"o":"TOT","v":"H","d":3},{"o":"CHE","v":"A","d":4},{"o":"COV","v":"H","d":2}],"from":1},{"n":"Watkins","t":"AVL","p":"FWD","pr":8.0,"r":77,"gi":0.559,"cs":0.0,"dc":0.0,"f":[{"o":"BHA","v":"A","d":3},{"o":"ARS","v":"H","d":4},{"o":"HUL","v":"A","d":2},{"o":"NFO","v":"H","d":3},{"o":"TOT","v":"A","d":3},{"o":"BRE","v":"H","d":3},{"o":"NEW","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"FUL","v":"H","d":2},{"o":"MUN","v":"A","d":4},{"o":"SUN","v":"H","d":2},{"o":"IPS","v":"A","d":2}],"from":9}]}],"xp":[54.8,53.5,55.8,53.3,56.1,51.3,59.2,53.9,55.0,60.4,60.6,59.1],"easy":[2,3,5,4,6,6,3,5,3,4,5,1],"hard":[1,2,5,3,3,7,5,5,8,2,3,9],"rating":[83,80,84,79,85,74,86,76,79,81,82,71],"best":[{"n":"B.Fernandes","x":9.7},{"n":"B.Fernandes","x":9.7},{"n":"Haaland","x":9.7},{"n":"Haaland","x":7.5},{"n":"Haaland","x":9.7},{"n":"B.Fernandes","x":8.8},{"n":"Haaland","x":9.7},{"n":"B.Fernandes","x":8.8},{"n":"Haaland","x":9.7},{"n":"Haaland","x":8.8},{"n":"Haaland","x":9.7},{"n":"B.Fernandes","x":8.8}]};
 const GWS = DATA.gws, SLOTS = DATA.slots;
 /* Two weeks behind us so the past/future split is visible. Invented — the
    season starts on 21 August. */
 const SCORED = { 1: 61, 2: 48 };
 const EVENTS = {
   6: { kind: 'move', text: '1 in', long: 'Garner out, Rice in' },
-  9: { kind: 'chip', text: 'WC', long: 'Wildcard — Watkins and Mbeumo arrive' },
+  9: { kind: 'chip', text: 'WC', long: 'Wildcard — eight changes: Kelleher, Gabriel, Guéhi, J.Timber, B.Fernandes, Mbeumo, Gibbs-White, Watkins' },
 };
 const FDR = { 1: '#2fbf6e', 2: '#7fd39b', 3: '#4c5766', 4: '#e8907f', 5: '#e05b52' };
 const INK_ON = { 1: '#08120b', 2: '#08120b', 3: '#e6eaef', 4: '#160a08', 5: '#fff' };
@@ -534,10 +570,13 @@ rows.addEventListener('transitionend', (e) => {
   if (e.propertyName === 'max-height' && open) rows.classList.add('settled');
 });
 
-document.querySelectorAll('.mchip').forEach((chip) => {
+/* :not(.nmt) — the Names toggle wears the same class for its looks, and the
+   first cut let this listener claim it too: gridMode became undefined and
+   the next redraw threw before painting a cell. */
+document.querySelectorAll('.mchip:not(.nmt)').forEach((chip) => {
   chip.addEventListener('click', () => {
     gridMode = chip.dataset.m;
-    document.querySelectorAll('.mchip').forEach((c) => c.classList.toggle('on', c === chip));
+    document.querySelectorAll('.mchip:not(.nmt)').forEach((c) => c.classList.toggle('on', c === chip));
     drawRows(); paint();
   });
 });
@@ -554,6 +593,31 @@ function revealSelected(behavior) {
 document.getElementById('scroller').addEventListener('scroll', function () {
   if (this.scrollLeft > 12) { const c = document.getElementById('swipecue'); if (c) c.remove(); }
 }, { passive: true });
+
+document.getElementById('namesToggle').addEventListener('click', function () {
+  const on = this.getAttribute('aria-pressed') !== 'true';
+  this.setAttribute('aria-pressed', String(on));
+  rows.classList.toggle('nonames', !on);
+});
+
+/* The comparison strip: the same three cells — an easy home fixture, the
+   arrival, a hard away one — under each candidate marker. The arrival is
+   drawn on a GREEN cell on purpose; that is the case that killed option A. */
+(function altStrip() {
+  const el = document.getElementById('altrow');
+  if (!el) return;
+  const mk = (cls, seamCls, txt) =>
+    '<span class="cell d2">SUN</span>' +
+    '<span class="cell d1 ' + seamCls + '"' + (cls === 'B' ? ' style="background:#08090b;box-shadow:inset 0 0 0 1.5px var(--gold);color:var(--d1)"' : '') + '>' + txt + '</span>' +
+    '<span class="cell d4">liv</span>';
+  el.innerHTML = [
+    ['A · green edge', mk('A', 'altA', 'BUR')],
+    ['B · inverted + gold ✓', mk('B', '', 'BUR')],
+    ['C · inverted + green', mk('C', 'altC', 'BUR')],
+    ['D · corner flag', mk('D', 'altD', 'BUR')],
+    ['E · underline', mk('E', 'altE', 'BUR')],
+  ].map(([lab, demo]) => '<div class="altcase"><span class="lab">' + lab + '</span><span class="demo">' + demo + '</span></div>').join('');
+})();
 
 render();
 revealSelected();
