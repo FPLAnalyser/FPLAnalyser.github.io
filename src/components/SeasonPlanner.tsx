@@ -96,6 +96,98 @@ function useSquadDelta(value: number | null, squadSig: string, gw: number, ready
   return delta
 }
 
+/* Dragging a player between the bench and the eleven.
+ *
+ * The board already had tap-a-player-then-tap-his-partner, which is the right
+ * gesture on a phone and an odd one with a mouse: you can see both cards, you
+ * know where he is going, and the obvious thing is to pick him up.
+ *
+ * MOUSE AND FINGER START DIFFERENTLY, and they have to. A mouse has no other
+ * use for a drag on this page, so six pixels of movement is the signal. A
+ * finger's drag is how you scroll, and claiming it on touchdown would make the
+ * pitch — most of a phone screen — un-scrollable. So touch waits: hold still
+ * for 250ms and the card comes up, which is a gesture you cannot perform by
+ * accident while scrolling past.
+ *
+ * AND THEN THE SCROLL HAS TO BE CALLED OFF, which took a trace to get right.
+ * Holding, then moving, produced pointerdown → pointermove → **pointercancel**:
+ * Chrome had already decided the touch was a scroll, because `touch-action`
+ * was auto when the finger landed, and changing it once the hold fires does
+ * not apply to a gesture already in flight. `preventDefault()` on pointermove
+ * does not call it off either. Only a non-passive `touchmove` listener can,
+ * so there is one, live for the length of the drag and no longer — the pitch
+ * scrolls exactly as it did before for every touch that is not a hold.
+ *
+ * Nothing here bypasses the rules: the drop targets are exactly
+ * planner.partnersFor(), the same legal swaps the tap flow highlights, and the
+ * swap itself goes through planner.swap(). Drag is a second way to say it, not
+ * a second implementation. */
+function useCardDrag(planner: Planner, enabled: boolean) {
+  const [drag, setDrag] = useState<{ el: number; x: number; y: number; over: number | null } | null>(null)
+  /** Set while a drag is finishing, so the click the browser fires afterwards
+   *  does not also open the player's card. */
+  const suppressClick = useRef(false)
+
+  const start = useCallback((el: number, ev: React.PointerEvent) => {
+    if (!enabled || ev.button > 0) return
+    const partners = planner.partnersFor(el)
+    if (!partners.length) return
+    const touch = ev.pointerType !== 'mouse'
+    const x0 = ev.clientX, y0 = ev.clientY
+    let live = false
+    let hold: ReturnType<typeof setTimeout> | null = null
+
+    const at = (x: number, y: number): number | null => {
+      const hit = document.elementFromPoint(x, y)?.closest('[data-el]')
+      const to = hit ? Number(hit.getAttribute('data-el')) : NaN
+      return Number.isFinite(to) && partners.includes(to) ? to : null
+    }
+    const begin = (x: number, y: number) => {
+      live = true
+      tapHaptic('medium')
+      setDrag({ el, x, y, over: at(x, y) })
+    }
+    const move = (e: PointerEvent) => {
+      const far = Math.hypot(e.clientX - x0, e.clientY - y0)
+      if (!live) {
+        // A finger that moves before the hold lands is scrolling, not dragging.
+        if (touch) { if (far > 8 && hold) { clearTimeout(hold); hold = null; end() } return }
+        if (far > 6) begin(e.clientX, e.clientY)
+        return
+      }
+      e.preventDefault()
+      setDrag({ el, x: e.clientX, y: e.clientY, over: at(e.clientX, e.clientY) })
+    }
+    const up = (e: PointerEvent) => {
+      if (live) {
+        const to = at(e.clientX, e.clientY)
+        if (to != null && planner.swap(el, to)) tapHaptic('medium')
+        suppressClick.current = true
+        setTimeout(() => { suppressClick.current = false }, 0)
+      }
+      end()
+    }
+    // The one that actually calls the scroll off. Non-passive, or Chrome
+    // ignores the preventDefault and cancels the pointer instead.
+    const hush = (e: TouchEvent) => { if (live) e.preventDefault() }
+    function end() {
+      if (hold) clearTimeout(hold)
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', end)
+      window.removeEventListener('touchmove', hush)
+      setDrag(null)
+    }
+    if (touch) hold = setTimeout(() => begin(x0, y0), 250)
+    window.addEventListener('pointermove', move, { passive: false })
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', end)
+    if (touch) window.addEventListener('touchmove', hush, { passive: false })
+  }, [enabled, planner])
+
+  return { drag, start, suppressClick }
+}
+
 export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onSold, squadScore, onOpenSquadRating, partialSquad, onRemovePick, onPickSlot, footer, onFork, boardOverlay, boardOverlayLeft, toolbar }: {
   planner: Planner
   byEl: Map<number, RatingRow>
@@ -236,7 +328,15 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
     tapHaptic('light')
     setSubFor(el)
   }
+  const { drag, start: startDrag, suppressClick } = useCardDrag(planner, !!week)
+  const dragPartners = useMemo(
+    () => (drag ? planner.partnersFor(drag.el) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [drag?.el, planner.revision],
+  )
+
   const onCardTap = (el: number) => {
+    if (suppressClick.current) return
     if (subFor != null) {
       if (partners.includes(el)) { if (planner.swap(subFor, el)) tapHaptic('medium'); setSubFor(null) }
       else if (el === subFor) setSubFor(null)
@@ -280,9 +380,16 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
           : undefined}
       sellVerb={week && !planner.opening ? 'Sell' : 'Remove'}
       bench={onBench && !benchBoost}
-      highlight={subFor != null && partners.includes(el)}
-      dimmed={subFor != null && !partners.includes(el) && el !== subFor}
+      /* The two ways in are lit the same way: a highlighted card is one you
+         can legally swap to, whether you got here by tapping or by picking
+         somebody up. */
+      highlight={(subFor != null && partners.includes(el)) || (drag != null && dragPartners.includes(el))}
+      dimmed={(subFor != null && !partners.includes(el) && el !== subFor)
+        || (drag != null && !dragPartners.includes(el) && el !== drag.el)}
       picked={subFor === el}
+      onPointerDown={(ev) => startDrag(el, ev)}
+      dragging={drag?.el === el}
+      dropTarget={drag?.over === el}
     />
   )
 
@@ -414,6 +521,21 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
           moved. The one control you want after selling a player is the one to
           put him back, and it has to still be under the cursor that sold him.
           Nothing above the board changes height any more, so it isn't. */}
+      {/* What is in your hand. The card itself stays where it is at 40% —
+          moving the real one would reflow the row it came out of — and this
+          follows the pointer instead, so the gesture has something attached
+          to it. Fixed, translated, and pointer-events-none, or it would be
+          the thing under the pointer and every drop would land on itself. */}
+      {drag && (
+        <div
+          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 rounded-lg border border-accent bg-surface-1 px-2 py-1 text-[12px] font-bold text-ink shadow-lg"
+          style={{ left: drag.x, top: drag.y }}
+        >
+          {nameOf(drag.el)}
+          <span className="ml-1.5 font-medium text-ink-3">{drag.over == null ? 'drop on a lit card' : 'swap'}</span>
+        </div>
+      )}
+
       <Pitch maxWidth={BOARD_W} overlay={boardOverlay} overlayLeft={boardOverlayLeft}>
         {(week ? rowsByPos(week.xi).map((row) => row.map((el) => ({ el }))) : partial!.xi).map((row, i) => row.length > 0 && (
           <div key={i} className="flex justify-center gap-1.5 sm:gap-2.5">
@@ -633,11 +755,17 @@ function Stat({ label, value, tone, sub, onClick, delta, dp = 1, badge }: {
   )
 }
 
-function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner, flag, name, code, element, transferred, bench, highlight, dimmed, picked, sold, onSell, sellVerb = 'Sell' }: {
+function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner, flag, name, code, element, transferred, bench, highlight, dimmed, picked, sold, onSell, sellVerb = 'Sell', onPointerDown, dragging, dropTarget }: {
   onOpen: () => void; captain: boolean; vice: boolean; tripleCap?: boolean; fixtures: FixtureEaseRow[]; rating: number
   corner: string; flag?: AvailBadgeInfo | null
   name: string; code: number | null; element: number; transferred: boolean; bench?: boolean
   highlight?: boolean; dimmed?: boolean; picked?: boolean
+  /** Picking a player up — see useCardDrag. */
+  onPointerDown?: (ev: React.PointerEvent) => void
+  /** This is the card in your hand. */
+  dragging?: boolean
+  /** This is the card under it, and it is a legal place to put him. */
+  dropTarget?: boolean
   /** Sold this week and not yet replaced — he stays on the pitch so the shape
    *  of the team is still readable while you decide who takes his place. */
   sold?: boolean
@@ -649,7 +777,15 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
   const next = fixtures[0]
   const [bg, fg] = next ? (FDR_COLORS[next.fdr] || FDR_COLORS[3]) : ['#39424E', '#E8EDF3']
   return (
-    <span className={`${CARD_W} relative transition-opacity ${dimmed ? 'opacity-30' : ''}`}>
+    <span
+      /* The drop test reads this off whatever is under the pointer, so it has
+         to be on the outer element — elementFromPoint returns the photo or the
+         fixture chip, and .closest('[data-el]') walks up to here. */
+      data-el={element}
+      onPointerDown={onPointerDown}
+      className={`${CARD_W} relative transition-opacity ${dimmed ? 'opacity-30' : ''} ${
+        dragging ? 'opacity-40 [touch-action:none]' : ''}`}
+    >
       {onSell && (
         <button
           onClick={(ev) => { ev.stopPropagation(); onSell() }}
@@ -681,7 +817,9 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
       <FoilShell
         tier={bench ? 'graphite' : tierOf(rating || null)}
         onClick={onOpen}
-        className={`w-full ${highlight ? 'ring-2 ring-accent ring-offset-1 ring-offset-transparent' : ''} ${picked ? 'ring-2 ring-bad' : ''} ${sold ? 'opacity-70' : ''}`}
+        className={`w-full ${highlight ? 'ring-2 ring-accent ring-offset-1 ring-offset-transparent' : ''} ${
+          dropTarget ? 'ring-4 ring-accent-2 ring-offset-2 ring-offset-transparent' : ''} ${
+          picked ? 'ring-2 ring-bad' : ''} ${sold ? 'opacity-70' : ''}`}
         innerClassName="px-1 pt-1 pb-1.5 sm:px-1.5"
       >
         {/* A bar of severity colour along the top edge, with the reason
