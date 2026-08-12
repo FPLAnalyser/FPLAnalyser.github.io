@@ -1,0 +1,270 @@
+<meta charset="utf-8"><title>Squad Builder — if we started again</title>
+<style>
+:root{--bg:#000;--s1:#121316;--s2:#1b1c1f;--s3:#232427;--ink:#edeff3;--ink2:#aaacb0;--ink3:#828386;
+--acc:#c9a227;--acc2:#ead188;--line:rgba(255,255,255,.1);--line2:rgba(255,255,255,.2);
+--good:#3ddc7a;--warn:#e8b04a;--bad:#f0736f;--info:#7fb0ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:left}
+.wrap{max-width:1160px;margin:0 auto;padding:44px 20px 100px}
+h1{font-size:31px;font-weight:800;letter-spacing:-.02em;margin:0 0 10px}
+h2{font-size:21px;font-weight:800;margin:4px 0 8px;letter-spacing:-.01em}
+h3{font-size:13px;font-weight:800;margin:18px 0 6px;letter-spacing:.02em;color:var(--ink)}
+.lead{color:var(--ink2);max-width:76ch}
+.rule{height:1px;background:var(--line);margin:44px 0 26px}
+.step{font:700 11px/1 ui-sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--acc);margin-bottom:8px}
+p{max-width:76ch;color:var(--ink2)}
+b.w{color:var(--ink)}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:14px}
+.note{color:var(--ink3);font-size:12.5px;line-height:1.65;margin-top:14px;border-left:2px solid var(--line2);padding-left:12px;max-width:82ch}
+.small{font-size:12px;color:var(--ink3)}
+.sp{flex:1}
+.tag{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+
+/* inventory */
+.inv{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:14px}
+.grp{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--s1)}
+.grp h4{margin:0 0 6px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--acc)}
+.grp ul{margin:0;padding-left:16px;font-size:12.5px;color:var(--ink2);line-height:1.75}
+.n{display:inline-block;min-width:22px;font-variant-numeric:tabular-nums;color:var(--ink);font-weight:800}
+
+/* wireframe kit */
+.wf{background:#08090b;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:11px}
+.box{border:1px dashed var(--line2);border-radius:8px;padding:7px 9px;color:var(--ink3);margin-bottom:6px;background:rgba(255,255,255,.012)}
+.box.solid{border-style:solid;color:var(--ink2)}
+.box.acc{border-color:rgba(201,162,39,.5);color:var(--acc2);background:rgba(201,162,39,.06)}
+.box.gr{border-color:rgba(61,220,122,.4);color:var(--good);background:rgba(61,220,122,.05)}
+.box.mut{opacity:.5}
+.pitchbox{background:linear-gradient(180deg,#123c25,#08150d);border:1px solid rgba(255,255,255,.13);border-radius:10px;color:#bfe6cd;display:grid;place-items:center;font-size:11.5px;letter-spacing:.04em}
+.row{display:flex;gap:6px;align-items:stretch}
+.row>*{flex:1}
+.col2{display:grid;grid-template-columns:1fr 330px;gap:10px;align-items:start}
+.col2b{display:grid;grid-template-columns:1fr 400px;gap:10px;align-items:start}
+.tabs{display:flex;gap:3px;border-bottom:1px solid var(--line);margin-bottom:7px}
+.tb{padding:5px 9px;font-size:11px;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tb.on{color:var(--acc);border-bottom-color:var(--acc);font-weight:700}
+.chipsrow{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px}
+.chip{border:1px solid var(--line);border-radius:99px;padding:2px 9px;font-size:10.5px;color:var(--ink2)}
+.chip.on{border-color:var(--acc);color:var(--acc);background:rgba(201,162,39,.08)}
+.h{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin:8px 0 4px}
+.phone{width:250px;border:1px solid var(--line2);border-radius:18px;padding:8px;background:#08090b}
+.phones{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px}
+table.cmp{border-collapse:collapse;margin-top:14px;font-size:12.5px;width:100%;max-width:760px}
+table.cmp th,table.cmp td{border-bottom:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+table.cmp th{color:var(--ink3);font-weight:700;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase}
+table.cmp td b{color:var(--ink)}
+.y{color:var(--good)} .nn{color:var(--bad)} .m{color:var(--warn)}
+</style>
+<div class="wrap">
+
+<h1>Squad Builder — if we started again</h1>
+<p class="lead">Everything below is built and working. That is the problem: it was added one
+good idea at a time, and nobody has ever laid the whole thing out on a table and asked what
+shape it wants to be. This does that — the inventory first, then four ways to arrange it,
+then the one I would build.</p>
+
+<div class="rule"></div>
+<div class="step">First, honestly</div><h2>What the page holds today</h2>
+<p><b class="w">Thirty-one distinct modules</b> across three views. Measured at 1440&times;1200:
+the build view is 1,508px tall, the Read panel alone runs 1,187, Insights is 1,220. The board
+— the one object the page is named after — is 662 of that.</p>
+<div class="inv">
+  <div class="grp"><h4><span class="n">6</span> Page chrome</h4><ul>
+    <li>Section banner</li><li>View tabs</li><li>Plan library</li><li>Plan actions (rename, fork, duplicate, delete)</li><li>Compare button</li><li>Fork notice</li></ul></div>
+  <div class="grp"><h4><span class="n">9</span> The board</h4><ul>
+    <li>Gameweek nav + Fork</li><li>Auto pick / Import / Clear</li><li>12-week strip</li><li>xP / Rating tile</li><li>Squad rating tile</li><li>Bank tile</li><li>Transfers line</li><li>Pitch + bench</li><li>Share, metric toggle (on the grass)</li></ul></div>
+  <div class="grp"><h4><span class="n">4</span> Players panel</h4><ul>
+    <li>Search + position tabs</li><li>Sort tabs</li><li>Duty legend</li><li>Filters + 60 rows</li></ul></div>
+  <div class="grp"><h4><span class="n">8</span> Read panel</h4><ul>
+    <li>Squad verdict + four bars</li><li>The Analyser</li><li>Captain</li><li>Horizon</li><li>Chips</li><li>Clashes</li><li>Template risk</li><li>Needs attention</li></ul></div>
+  <div class="grp"><h4><span class="n">1</span> Fixtures panel</h4><ul>
+    <li>15&times;6 difficulty grid</li></ul></div>
+  <div class="grp"><h4><span class="n">5</span> Insights view</h4><ul>
+    <li>Ladder</li><li>Watch</li><li>Shape</li><li>Outcomes</li><li>Decisions</li></ul></div>
+  <div class="grp"><h4><span class="n">10</span> Compare view</h4><ul>
+    <li>Verdict podium</li><li>Dimensions</li><li>Week by week</li><li>Horizon</li><li>Head to head</li><li>Shared &amp; different</li><li>Lineups</li><li>Ledger</li><li>Club risk</li><li>Armbands</li></ul></div>
+</div>
+<p class="note">Read that list as a stranger would. It is not one page — it is a
+<b class="w">picker</b>, a <b class="w">planner</b> and an <b class="w">analysis suite</b>
+sharing a URL, and the reason it feels crowded is that all three are always on, whichever
+one you came for. Nothing below deletes anything. Every idea is about <b class="w">when</b>
+each of the three is on.</p>
+
+<div class="rule"></div>
+<div class="step">Idea A · smallest change</div><h2>Insights and Compare stop being tabs</h2>
+<p>They are already separate jobs; they are just wearing the builder's clothes. Give them
+their own routes and the builder page has one job again. The tab row becomes a link, and
+that is the whole change.</p>
+<div class="card"><div class="wf">
+  <div class="box solid">Squad Builder &nbsp;·&nbsp; <span style="color:var(--acc)">Plan A</span> ▾ &nbsp; GW1 &nbsp;<span class="sp"></span>&nbsp; <span class="chip">Insights ↗</span> <span class="chip">Compare ↗</span></div>
+  <div class="col2">
+    <div>
+      <div class="box">‹ Gameweek 1 › &nbsp; Fork &nbsp;<span class="sp"></span> Auto pick · Import · Clear</div>
+      <div class="box">12-week strip</div>
+      <div class="box">54.8 / 83 &nbsp; · &nbsp; 75 squad &nbsp; · &nbsp; £0.0m</div>
+      <div class="pitchbox" style="height:210px">THE BOARD</div>
+    </div>
+    <div>
+      <div class="tabs"><span class="tb on">Players</span><span class="tb">Read</span><span class="tb">Fixtures</span></div>
+      <div class="box" style="height:250px">the panel</div>
+    </div>
+  </div>
+</div>
+<p class="note"><b class="w">What it buys:</b> two whole views stop competing for the top of
+the page, and the tab row shrinks from five things to three. <b class="w">What it costs:</b>
+nothing structural, and about an hour. <b class="w">What it does not fix:</b> the build view
+is still nine modules above a board.</p>
+</div>
+
+<div class="rule"></div>
+<div class="step">Idea B · my recommendation</div><h2>One board, three modes</h2>
+<p>The page has three moods and pretends it has one. <b class="w">Pick</b> is what you do
+once — an empty pitch and a list. <b class="w">Plan</b> is the week-by-week work. <b class="w">Read</b>
+is what you do when you have stopped changing things. Each mode shows only its own furniture,
+and the board is the one thing all three keep.</p>
+<div class="card">
+  <h3>Pick · nothing but the fifteen</h3>
+  <div class="wf">
+    <div class="box solid"><span style="color:var(--acc)">Plan A</span> ▾ &nbsp;<span class="sp"></span>&nbsp; <span class="chip on">Pick</span> <span class="chip mut">Plan</span> <span class="chip mut">Read</span></div>
+    <div class="col2b">
+      <div><div class="box gr">£43.5m left · 9 of 15 · 3 DEF, 2 MID, 1 FWD to go</div><div class="pitchbox" style="height:230px">THE BOARD &nbsp; <span style="opacity:.6">— tap an empty shirt</span></div></div>
+      <div><div class="box">search · GKP DEF MID FWD · sort</div><div class="box" style="height:225px">the list</div></div>
+    </div>
+  </div>
+  <p class="note">No gameweek nav, no strip, no transfers line, no chips, no verdict — none of
+  it can tell you anything until there are fifteen. What replaces them is the one thing that
+  can: what is left to spend and what is left to fill.</p>
+
+  <h3>Plan · the week-by-week work</h3>
+  <div class="wf">
+    <div class="box solid"><span style="color:var(--acc)">Plan A</span> ▾ &nbsp;<span class="sp"></span>&nbsp; <span class="chip mut">Pick</span> <span class="chip on">Plan</span> <span class="chip mut">Read</span></div>
+    <div class="col2b">
+      <div>
+        <div class="box acc">‹ GW1 › &nbsp;|&nbsp; 12-week strip, the week you are on lit</div>
+        <div class="box">54.8 xP / 83 &nbsp;·&nbsp; 0/1 transfers, 1 free &nbsp;·&nbsp; £0.0m</div>
+        <div class="pitchbox" style="height:210px">THE BOARD &nbsp; <span style="opacity:.6">— drag, sell, captain</span></div>
+      </div>
+      <div>
+        <div class="tabs"><span class="tb on">Players</span><span class="tb">Fixtures</span><span class="tb">Chips</span></div>
+        <div class="box" style="height:240px">the market, or the run, or the chip plan</div>
+      </div>
+    </div>
+  </div>
+  <p class="note">This is close to what exists — the difference is that the squad rating, the
+  verdict, the Lab and the Insights modules are <b class="w">not here</b>. They are a verdict
+  on a thing you are still changing, and every one of them re-renders on every transfer you
+  try. Chips get a tab because chip planning is a season-long decision that currently hides
+  in a Lab tile.</p>
+
+  <h3>Read · when you have stopped changing things</h3>
+  <div class="wf">
+    <div class="box solid"><span style="color:var(--acc)">Plan A</span> ▾ &nbsp;<span class="sp"></span>&nbsp; <span class="chip mut">Pick</span> <span class="chip mut">Plan</span> <span class="chip on">Read</span> &nbsp; <span class="chip">compare with Plan B ↗</span></div>
+    <div class="row" style="margin-bottom:6px">
+      <div class="box acc" style="flex:1.3">75 · Solid at the back, nothing badly short</div>
+      <div class="box">Attack 65</div><div class="box">Defence 69</div><div class="box">Def Con 69</div><div class="box">Fixtures 58</div>
+    </div>
+    <div class="row" style="margin-bottom:6px">
+      <div class="box" style="flex:1">Needs attention — Garner injured, in your XI</div>
+      <div class="box" style="flex:1">Horizon — GW6, 7 of 15 in a hard game</div>
+    </div>
+    <div class="row" style="margin-bottom:6px">
+      <div class="box">Captain</div><div class="box">Chips</div><div class="box">Clashes</div><div class="box">Template risk</div><div class="box">Watch</div>
+    </div>
+    <div class="row"><div class="box" style="flex:1">Ladder · Shape · Outcomes · Decisions</div><div class="pitchbox" style="flex:0 0 190px;height:120px">the XI, small</div></div>
+  </div>
+  <p class="note">Read is the only mode where the board is not the point, so it stops being the
+  biggest thing on screen. This is also where Insights belongs — Ladder, Shape, Outcomes and
+  Decisions are readings of a finished squad, and a separate tab for them was only ever
+  because there was nowhere else to put them.</p>
+
+  <p class="note" style="border-left-color:rgba(201,162,39,.5)"><b class="w">Why this one.</b>
+  It is the only idea here that reduces what is on screen rather than moving it: nine modules
+  above the board becomes three in Pick and four in Plan. It needs no new components — every
+  panel already exists — and the mode is inferable, so it can default correctly: no squad →
+  Pick, squad but nothing planned → Plan, and you only ever click Read on purpose.</p>
+</div>
+
+<div class="rule"></div>
+<div class="step">Idea C · most ambitious</div><h2>A workspace that does not scroll</h2>
+<p>Fix the board on the left, dock everything else in a scrolling rail on the right, and let
+the page be exactly one screen tall — the way a desktop tool behaves rather than a document.</p>
+<div class="card"><div class="wf">
+  <div class="box solid">Plan A ▾ &nbsp;·&nbsp; ‹ GW1 › &nbsp;·&nbsp; 54.8 xP / 83 &nbsp;·&nbsp; 75 &nbsp;·&nbsp; £0.0m &nbsp;<span class="sp"></span>&nbsp; Auto · Import · Share · Clear</div>
+  <div class="col2b" style="align-items:stretch">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div class="box" style="margin:0">12-week strip</div>
+      <div class="pitchbox" style="flex:1;min-height:250px">THE BOARD — never scrolls</div>
+    </div>
+    <div style="display:flex;flex-direction:column">
+      <div class="tabs"><span class="tb on">Players</span><span class="tb">Read</span><span class="tb">Fixtures</span><span class="tb">Chips</span><span class="tb">Compare</span></div>
+      <div class="box" style="flex:1;min-height:250px;margin:0">the dock — this is the only thing that scrolls</div>
+    </div>
+  </div>
+</div>
+<p class="note"><b class="w">The appeal:</b> the team is always in front of you, and every
+number you change updates in view — right now you can be scrolled to the market with the
+board off screen, changing a projection you cannot see. <b class="w">The risk:</b> a fixed
+viewport is brutal on a 13-inch laptop, and everything currently below the fold has to
+justify a tab. It also fights the phone, where a fixed board and a dock is two thirds of a
+screen of chrome.</p>
+</div>
+
+<div class="rule"></div>
+<div class="step">Idea D</div><h2>The board answers, and the panels come to it</h2>
+<p>No tabs at all. Every panel is summoned by the thing it is about: tap a player for his
+card, tap an empty shirt for the market filtered to that position, tap a gameweek in the
+strip for that week's fixtures, tap the rating for the breakdown. The right column disappears
+entirely and the board goes full width.</p>
+<div class="card"><div class="wf">
+  <div class="box solid">Plan A ▾ &nbsp;·&nbsp; ‹ GW1 › &nbsp;·&nbsp; 54.8 / 83 &nbsp;·&nbsp; £0.0m</div>
+  <div class="pitchbox" style="height:250px">THE BOARD, full width — everything is a tap on it</div>
+  <div class="row" style="margin-top:6px">
+    <div class="box mut">↑ tap a shirt → market</div><div class="box mut">↑ tap a week → fixtures</div><div class="box mut">↑ tap the rating → why</div>
+  </div>
+</div>
+<p class="note">This is the phone layout, promoted. It is the cleanest thing on this page and
+the worst on a large screen: a 1440 monitor becomes a 680px column with 760px of black
+either side, and browsing a market list in a sheet over the board is worse than a list beside
+it. <b class="w">Worth stealing the idea, not the layout</b> — the taps should all work in
+whichever arrangement wins.</p>
+</div>
+
+<div class="rule"></div>
+<div class="step">Side by side</div><h2>What each one actually costs</h2>
+<table class="cmp">
+  <tr><th></th><th>A · split the views</th><th>B · three modes</th><th>C · workspace</th><th>D · board only</th></tr>
+  <tr><td><b>Modules above the board</b></td><td>9</td><td class="y">3 → 4</td><td class="y">2</td><td class="y">1</td></tr>
+  <tr><td><b>New components</b></td><td class="y">none</td><td class="y">none</td><td class="m">a dock, a fixed shell</td><td class="nn">sheets for everything</td></tr>
+  <tr><td><b>Phone</b></td><td>unchanged</td><td class="y">gets simpler too</td><td class="nn">fights it</td><td class="y">already is this</td></tr>
+  <tr><td><b>Risk</b></td><td class="y">near zero</td><td class="m">a mode you did not ask for</td><td class="nn">13-inch laptops</td><td class="nn">wastes a big screen</td></tr>
+  <tr><td><b>Effort</b></td><td class="y">an hour</td><td class="m">a day</td><td class="nn">two or three days</td><td class="nn">a rebuild</td></tr>
+</table>
+
+<div class="rule"></div>
+<div class="step">What I'd build</div><h2>A, then B</h2>
+<p><b class="w">Ship A first</b> — Insights and Compare become their own routes this afternoon,
+and the page immediately stops carrying two things it is not for. It is reversible and it
+costs nothing.</p>
+<p><b class="w">Then B</b>, one mode at a time, starting with Pick, because that is the mode
+with the worst ratio today: eleven modules on screen to help you do a thing none of them can
+comment on until you have finished it. Plan is nearly right already. Read absorbs Insights,
+which is where the second half of idea A lands.</p>
+<p>I would take one thing from C — <b class="w">the board should not scroll out of view while
+you are changing it</b> — and solve it with a sticky board rather than a fixed shell, which
+gets the benefit without the 13-inch problem. And I would take the taps from D regardless of
+which layout wins.</p>
+
+<h3>On a phone, all four collapse to the same thing</h3>
+<div class="phones">
+  <div class="phone"><div class="box solid" style="font-size:10px">Plan A ▾ · GW1</div><div class="box acc" style="font-size:10px">54.8 / 83 · £0.0m</div><div class="pitchbox" style="height:170px">BOARD</div><div class="box mut" style="font-size:10px;margin-top:6px">Players · Read · Fixtures ⌃</div></div>
+  <div class="phone"><div class="box solid" style="font-size:10px">Plan A ▾ · GW1</div><div class="pitchbox" style="height:150px">BOARD</div><div class="box" style="font-size:10px;margin-top:6px">▲ Players</div><div class="box" style="font-size:10px">the sheet, dragged up over the board</div></div>
+</div>
+<p class="note">The phone has already solved this: one board, and everything else arrives as a
+sheet. The left-hand sketch is roughly today; the right is what B looks like small — the
+panel becomes a sheet you pull up, so the board keeps the screen until you ask for something
+else. Whichever idea wins on the desktop, this is the phone.</p>
+
+<p class="small" style="margin-top:22px">Wireframes, not designs — boxes are modules, not
+final layouts. Module counts and heights measured on the live build at 1440&times;1200,
+2026/27 data.</p>
+</div>
