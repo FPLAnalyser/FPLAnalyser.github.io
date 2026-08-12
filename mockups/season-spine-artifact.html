@@ -1,0 +1,402 @@
+<title>The Season Spine</title>
+<style>
+/* ── Tokens ─────────────────────────────────────────────────────────────
+   Lifted from the live site so this reads as the product, not a sketch of
+   it: a cool near-black ground, aurum gold as the single accent, and the
+   fixture-difficulty ramp exactly as the app draws it. This page commits to
+   one world — it is a prototype of a dark application — so every colour is
+   painted explicitly and nothing is left to the host's theme. */
+:root{
+  --ground:#0a0b0d; --surface:#131519; --surface-2:#1b1e23; --raised:#23262c;
+  --ink:#eef0f4; --ink-2:#a8acb3; --ink-3:#7e838b;
+  --line:rgba(255,255,255,.11); --line-2:rgba(255,255,255,.2);
+  --gold:#c9a227; --gold-lit:#ead188; --gold-soft:rgba(201,162,39,.12);
+  --live:#3ddc7a; --alarm:#f0736f;
+  --d1:#2fbf6e; --d2:#7fd39b; --d3:#4c5766; --d4:#e8907f; --d5:#e05b52;
+  --tap:44px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font:15px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+:focus-visible{outline:2px solid var(--gold-lit);outline-offset:2px;border-radius:4px}
+.num{font-variant-numeric:tabular-nums}
+
+.page{max-width:1120px;margin:0 auto;padding:22px 14px 64px;display:flex;flex-direction:column;gap:18px}
+.masthead h1{
+  margin:0 0 6px; font-size:clamp(24px,6vw,34px); font-weight:800;
+  letter-spacing:-.025em; text-wrap:balance;
+}
+.masthead p{margin:0;color:var(--ink-2);font-size:14.5px;max-width:62ch}
+.masthead b{color:var(--ink);font-weight:700}
+
+/* The three things to try. Numbered because they are a sequence — each one
+   only makes sense after the one before it. */
+.try{display:flex;flex-direction:column;gap:7px;border:1px solid rgba(201,162,39,.32);
+  background:var(--gold-soft);border-radius:12px;padding:11px 13px}
+.try li{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;color:var(--ink-2);list-style:none}
+.try ol{margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+.try .no{flex:0 0 18px;height:18px;border-radius:99px;background:var(--gold);color:#14100a;
+  font:800 11px/18px ui-sans-serif;text-align:center;margin-top:1px}
+.try b{color:var(--gold-lit);font-weight:700}
+
+/* ── The app ────────────────────────────────────────────────────────── */
+.app{background:var(--surface);border:1px solid var(--line);border-radius:16px;
+  padding:11px;display:flex;flex-direction:column;gap:11px}
+.plans{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pill{border:1px solid var(--line);border-radius:99px;padding:5px 11px;font-size:12px;color:var(--ink-2)}
+.pill.on{border-color:var(--gold);color:var(--gold-lit);background:var(--gold-soft)}
+.spacer{flex:1}
+
+.tl{border:1px solid var(--line);border-radius:13px;background:var(--ground);overflow:hidden}
+.tlbar{display:flex;align-items:baseline;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line)}
+.tlbar h2{margin:0;font-size:12.5px;font-weight:800;letter-spacing:.01em}
+.tlbar span{font-size:11.5px;color:var(--ink-3);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* No horizontal padding on the scroller. Content scrolls THROUGH a padding
+   strip — the sticky name column pins to the content edge, so a 12px band of
+   fixtures showed to the left of the names. The inset lives on the first
+   column and on the grid's own right padding instead, where it scrolls with
+   the thing it is spacing. */
+.scroller{overflow-x:auto;overflow-y:hidden;padding:9px 0 7px;
+  scrollbar-width:thin;scrollbar-color:var(--line-2) transparent;-webkit-overflow-scrolling:touch}
+.rail,.rows{display:grid;gap:3px;min-width:max-content;padding-right:12px}
+.stub{position:sticky;left:0;z-index:3;background:var(--ground);
+  padding-left:12px;padding-right:7px;display:flex;align-items:center;gap:6px;
+  font-size:11px;color:var(--ink-2);white-space:nowrap}
+.stub .pos{font:800 8.5px/1 ui-sans-serif;letter-spacing:.07em;color:var(--ink-3);
+  border:1px solid var(--line);border-radius:3px;padding:2px 3px}
+.stub.cap{font:800 9px/1 ui-sans-serif;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3)}
+
+.wk{display:flex;flex-direction:column;justify-content:flex-end;gap:3px;
+  position:relative;border-radius:7px;padding:17px 2px 2px;min-height:var(--tap);
+  transition:background .15s}
+.wk:hover{background:rgba(255,255,255,.045)}
+.wk[aria-pressed="true"]{background:rgba(201,162,39,.13);box-shadow:inset 0 0 0 1px rgba(201,162,39,.45)}
+.wk .val{font:800 11px/1 ui-sans-serif;text-align:center;color:var(--ink-2)}
+.wk[aria-pressed="true"] .val{color:var(--gold-lit)}
+.wk .bar{border-radius:3px 3px 0 0;background:linear-gradient(180deg,rgba(201,162,39,.48),rgba(201,162,39,.14));
+  border:1px solid rgba(201,162,39,.38);border-bottom:0;transition:height .3s cubic-bezier(.4,0,.2,1)}
+.wk.played .bar{background:linear-gradient(180deg,#6f7887,#3e4550);border-color:transparent}
+.wk[aria-pressed="true"] .bar{background:linear-gradient(180deg,var(--gold-lit),var(--gold));border-color:transparent}
+.wk .risk{height:3px;border-radius:2px;background:var(--raised)}
+.wk .risk i{display:block;height:100%;border-radius:2px;background:var(--alarm)}
+.wk .gw{font:600 10px/1 ui-sans-serif;text-align:center;color:var(--ink-3);padding-bottom:1px}
+.wk[aria-pressed="true"] .gw{color:var(--gold);font-weight:800}
+/* Inside the button, not hanging above it. At top:-2px the transfer and chip
+   badges poked out of the grid row, which put them above the sticky name
+   column instead of behind it — a green sliver floating over "POINTS". */
+.mark{position:absolute;top:1px;left:50%;transform:translateX(-50%);
+  font:800 8.5px/1 ui-sans-serif;padding:2px 4px;border-radius:5px;white-space:nowrap}
+.mark.move{background:rgba(61,220,122,.16);color:var(--live);border:1px solid rgba(61,220,122,.45)}
+.mark.chip{background:rgba(201,162,39,.2);color:var(--gold-lit);border:1px solid rgba(201,162,39,.55)}
+
+.rows{max-height:0;opacity:0;overflow:hidden;
+  transition:max-height .42s cubic-bezier(.4,0,.2,1),opacity .28s ease,margin-top .42s}
+.rows.open{max-height:1200px;opacity:1;margin-top:8px}
+/* overflow:hidden makes THIS element the scope for the sticky name column, so
+   left:0 sticks to a box that never scrolls and the names slide away with the
+   fixtures — measured at x −261 while the bar row's stub held at 39. It has to
+   clip while the rows are sliding open and stop clipping the moment they land. */
+.rows.settled{overflow:visible}
+.cell{height:17px;border-radius:3px;background:var(--raised);
+  font:800 8.5px/17px ui-sans-serif;text-align:center;color:rgba(0,0,0,.75);letter-spacing:.02em}
+.cell.d1{background:var(--d1)}.cell.d2{background:var(--d2)}
+.cell.d3{background:var(--d3);color:#e6eaef}.cell.d4{background:var(--d4)}
+.cell.d5{background:var(--d5);color:#fff}
+.cell.void{background:repeating-linear-gradient(45deg,#2a2c31,#2a2c31 3px,#1c1e22 3px,#1c1e22 6px);color:var(--ink-3)}
+.cell.settled{opacity:.3}
+.cell.lit{outline:1.5px solid var(--gold-lit);outline-offset:-1px}
+.moves{margin-top:7px;padding-top:6px;border-top:1px solid var(--line);
+  font:800 11px/1.3 ui-sans-serif;text-align:center;color:var(--ink-3)}
+
+.handle{display:flex;align-items:center;justify-content:center;gap:10px;
+  min-height:var(--tap);border-top:1px solid var(--line);width:100%;
+  font-size:12.5px;font-weight:600;color:var(--ink-2);transition:background .15s,color .15s}
+.handle:hover{background:rgba(255,255,255,.045);color:var(--ink)}
+.handle .grip{width:30px;height:3px;border-radius:2px;background:var(--line-2)}
+
+/* ── Board and panel ───────────────────────────────────────────────── */
+.work{display:grid;gap:11px}
+@media(min-width:900px){.work{grid-template-columns:minmax(0,1fr) 300px;align-items:start}}
+.dimmed{opacity:.4;transition:opacity .3s}
+.figures{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;margin-bottom:9px}
+.fig{border:1px solid var(--line);border-radius:10px;padding:7px 6px;text-align:center;background:var(--surface-2)}
+.fig b{display:block;font:800 17px/1.1 ui-sans-serif;font-variant-numeric:tabular-nums;color:var(--gold-lit)}
+.fig .sub{display:block;margin-top:2px;font:700 9px/1.2 ui-sans-serif;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3)}
+.fig.plain b{color:var(--ink)}
+
+.pitch{background:linear-gradient(180deg,#17603a 0%,#125a30 46%,#0e4a26 100%);
+  border:1px solid rgba(255,255,255,.14);border-radius:13px;padding:11px 6px;
+  display:flex;flex-direction:column;gap:7px}
+.line{display:flex;justify-content:center;gap:4px}
+.card{flex:1 1 0;min-width:0;max-width:96px;border-radius:8px;padding:5px 3px 4px;text-align:center;
+  background:linear-gradient(168deg,#1f2023,#0f1013);border:1.5px solid #55524a}
+.card.elite{border-color:#f6edd6;box-shadow:0 0 14px -4px rgba(201,162,39,.55)}
+.card.gold{border-color:#c9a227}
+.card.silver{border-color:#99a1ab}
+.card.bronze{border-color:#c8965a}
+.card .who{display:block;font:700 10px/1.2 ui-sans-serif;color:#fff;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .club{display:block;font:600 8px/1.3 ui-sans-serif;color:#9ba1a9}
+.card .fix{display:block;margin:3px 0 2px;border-radius:3px;font:800 8px/13px ui-sans-serif}
+.card .rt{display:block;font:800 10.5px/1.1 ui-sans-serif;font-variant-numeric:tabular-nums;color:#d7d3c9}
+.subs{display:flex;justify-content:center;gap:4px;border-top:1px dashed rgba(255,255,255,.2);padding-top:7px}
+.subs .card{max-width:80px;opacity:.9}
+
+.read{margin-top:9px;border:1px solid rgba(61,220,122,.32);background:rgba(61,220,122,.06);
+  border-radius:11px;padding:9px 11px;font-size:13px;color:var(--ink-2);line-height:1.45}
+.read b{color:var(--live);font-weight:700}
+.read.past{border-color:var(--line);background:var(--surface-2)}
+.read.past b{color:var(--ink)}
+
+.panel{border:1px solid var(--line);border-radius:12px;background:var(--surface-2);padding:9px}
+.ptabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.ptab{padding:6px 10px;font-size:11.5px;color:var(--ink-3);border-bottom:2px solid transparent;margin-bottom:-1px}
+.ptab.on{color:var(--gold-lit);border-bottom-color:var(--gold);font-weight:700}
+.mkt{display:flex;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid var(--line);font-size:12px}
+.mkt:last-child{border:0}
+.mkt .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mkt .nm i{font-style:normal;color:var(--ink-3);font-size:10.5px}
+.mkt .fx{border-radius:3px;font:800 8px/1 ui-sans-serif;padding:3px 4px}
+.mkt .rt{font:800 12px/1 ui-sans-serif;font-variant-numeric:tabular-nums;color:var(--gold-lit);width:22px;text-align:right}
+
+.swipe{font-size:11px;color:var(--ink-3);padding:0 12px 8px;display:flex;align-items:center;gap:6px}
+.footnote{border-left:2px solid var(--line-2);padding-left:12px;font-size:12.5px;
+  line-height:1.65;color:var(--ink-3);max-width:80ch}
+.footnote b{color:var(--ink-2)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <h1>The Season Spine</h1>
+    <p>Layout 1, running. The thing a still picture cannot show: <b>the timeline and the plan
+    grid are one object</b>. The bars are the grid&rsquo;s top row, so expanding does not swap
+    views &mdash; it reveals the rows that were always underneath, on columns that never move.</p>
+  </header>
+
+  <div class="try">
+    <ol>
+      <li><span class="no">1</span><span>Tap a gameweek on the bars. <b>The squad below changes to that week</b> &mdash; fixtures, numbers and all.</span></li>
+      <li><span class="no">2</span><span>Tap <b>Pull down for the whole plan</b>. Fifteen rows slide in under the bars.</span></li>
+      <li><span class="no">3</span><span>Swipe the grid sideways. The names stay put and <b>the bars move with their columns</b>.</span></li>
+    </ol>
+  </div>
+
+  <div class="app">
+    <div class="plans">
+      <span class="pill on">Plan A</span><span class="pill">Plan B</span><span class="pill">+ New</span>
+      <span class="spacer"></span><span class="pill">Share</span>
+    </div>
+
+    <section class="tl">
+      <div class="tlbar"><h2>Your season</h2><span id="tlsub">scored, and projected</span></div>
+      <div class="scroller" id="scroller">
+        <div class="rail" id="rail"></div>
+        <div class="rows" id="rows"></div>
+      </div>
+      <div class="swipe" id="swipe">&#8596;&nbsp; swipe for later weeks</div>
+      <button class="handle" id="handle" aria-expanded="false">
+        <span class="grip"></span><span id="handleLabel">Pull down for the whole plan</span><span class="grip"></span>
+      </button>
+    </section>
+
+    <div class="work" id="work">
+      <div>
+        <div class="figures">
+          <div class="fig"><b id="figXp">54.8</b><span class="sub">xP &middot; rating <span id="figRt">83</span></span></div>
+          <div class="fig plain"><b>75</b><span class="sub">squad</span></div>
+          <div class="fig plain"><b id="figFree">1</b><span class="sub">free</span></div>
+        </div>
+        <div class="pitch" id="pitch"></div>
+        <div class="read" id="read"></div>
+      </div>
+      <aside class="panel">
+        <div class="ptabs"><span class="ptab on">Market</span><span class="ptab">Chips</span><span class="ptab">Moves</span></div>
+        <div id="market"></div>
+      </aside>
+    </div>
+  </div>
+
+  <p class="footnote"><b>Real numbers.</b> The fifteen is a plan built in the live builder, the
+  fixtures and difficulty ratings are this season&rsquo;s, and the projections and hard-fixture
+  counts are what the app produces for that squad. Only the two played weeks are invented, since
+  the season has not started &mdash; they are there to show the past-and-future split the line
+  is built on.</p>
+  <p class="footnote"><b>What the expand would cost to build: nothing new.</b> The bars are the
+  gameweek strip that already exists. The rows are the Fixtures tab, already built, drawn on the
+  strip&rsquo;s columns instead of its own. The moves row is data the strip already computes. One
+  CSS grid, one height animation.</p>
+</div>
+
+<script>
+const DATA = {"gws":[1,2,3,4,5,6,7,8,9,10,11,12],"squad":[{"n":"Raya","t":"ARS","p":"GKP","pr":6.0,"r":76,"f":[{"o":"COV","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"CHE","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BHA","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"HUL","v":"H","d":2},{"o":"NEW","v":"A","d":3},{"o":"MCI","v":"H","d":4}]},{"n":"Pickford","t":"EVE","p":"GKP","pr":5.5,"r":61,"f":[{"o":"CRY","v":"H","d":3},{"o":"BOU","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"HUL","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"ARS","v":"A","d":5},{"o":"NEW","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"LIV","v":"H","d":4}]},{"n":"Kayode","t":"BRE","p":"DEF","pr":4.5,"r":60,"f":[{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"SUN","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"CHE","v":"H","d":4},{"o":"AVL","v":"A","d":4},{"o":"LIV","v":"H","d":4},{"o":"HUL","v":"A","d":2},{"o":"NFO","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"MUN","v":"A","d":4}]},{"n":"Thiaw","t":"NEW","p":"DEF","pr":5.0,"r":67,"f":[{"o":"LIV","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"BOU","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"HUL","v":"H","d":2},{"o":"COV","v":"A","d":2},{"o":"AVL","v":"H","d":3},{"o":"CRY","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"FUL","v":"A","d":3},{"o":"ARS","v":"H","d":4},{"o":"BHA","v":"A","d":3}]},{"n":"Virgil","t":"LIV","p":"DEF","pr":6.5,"r":79,"f":[{"o":"NEW","v":"A","d":3},{"o":"NFO","v":"H","d":3},{"o":"IPS","v":"A","d":2},{"o":"FUL","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"BRE","v":"A","d":3},{"o":"BHA","v":"H","d":2},{"o":"ARS","v":"H","d":4},{"o":"CRY","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"EVE","v":"A","d":3}]},{"n":"Tarkowski","t":"EVE","p":"DEF","pr":6.0,"r":78,"f":[{"o":"CRY","v":"H","d":3},{"o":"BOU","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"HUL","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"ARS","v":"A","d":5},{"o":"NEW","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"LIV","v":"H","d":4}]},{"n":"Senesi","t":"TOT","p":"DEF","pr":6.0,"r":81,"f":[{"o":"BRE","v":"A","d":3},{"o":"NEW","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"AVL","v":"H","d":3},{"o":"MUN","v":"A","d":4},{"o":"COV","v":"H","d":2},{"o":"CHE","v":"A","d":4},{"o":"CRY","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"SUN","v":"A","d":3}]},{"n":"E.Le F\u00e9e","t":"SUN","p":"MID","pr":6.0,"r":71,"f":[{"o":"IPS","v":"A","d":2},{"o":"FUL","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"ARS","v":"H","d":4},{"o":"MCI","v":"A","d":5},{"o":"BHA","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"COV","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"AVL","v":"A","d":4},{"o":"TOT","v":"H","d":3}]},{"n":"Wharton","t":"CRY","p":"MID","pr":5.5,"r":60,"f":[{"o":"EVE","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"FUL","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"LEE","v":"A","d":3},{"o":"NFO","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"NEW","v":"H","d":2},{"o":"TOT","v":"A","d":3},{"o":"LIV","v":"H","d":4},{"o":"COV","v":"A","d":2},{"o":"HUL","v":"H","d":2}]},{"n":"Anderson","t":"MCI","p":"MID","pr":6.5,"r":80,"f":[{"o":"BOU","v":"H","d":3},{"o":"CRY","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"MUN","v":"A","d":4},{"o":"SUN","v":"H","d":2},{"o":"LIV","v":"A","d":4},{"o":"IPS","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"BHA","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"FUL","v":"H","d":2},{"o":"ARS","v":"A","d":5}]},{"n":"Garner","t":"EVE","p":"MID","pr":6.0,"r":76,"f":[{"o":"CRY","v":"H","d":3},{"o":"BOU","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"HUL","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"ARS","v":"A","d":5},{"o":"NEW","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"LIV","v":"H","d":4}]},{"n":"Enzo","t":"CHE","p":"MID","pr":7.0,"r":84,"f":[{"o":"FUL","v":"A","d":3},{"o":"BHA","v":"H","d":2},{"o":"ARS","v":"A","d":5},{"o":"HUL","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"BOU","v":"H","d":3},{"o":"EVE","v":"A","d":3},{"o":"TOT","v":"H","d":3},{"o":"MUN","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3}]},{"n":"Calvert-Lewin","t":"LEE","p":"FWD","pr":6.0,"r":73,"f":[{"o":"NFO","v":"A","d":3},{"o":"BRE","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"NEW","v":"H","d":2},{"o":"CRY","v":"H","d":3},{"o":"ARS","v":"A","d":5},{"o":"MUN","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BOU","v":"A","d":3},{"o":"TOT","v":"H","d":3},{"o":"CHE","v":"A","d":4},{"o":"COV","v":"H","d":2}]},{"n":"Thiago","t":"BRE","p":"FWD","pr":8.0,"r":87,"f":[{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"SUN","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"CHE","v":"H","d":4},{"o":"AVL","v":"A","d":4},{"o":"LIV","v":"H","d":4},{"o":"HUL","v":"A","d":2},{"o":"NFO","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"MUN","v":"A","d":4}]},{"n":"Haaland","t":"MCI","p":"FWD","pr":15.5,"r":99,"f":[{"o":"BOU","v":"H","d":3},{"o":"CRY","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"MUN","v":"A","d":4},{"o":"SUN","v":"H","d":2},{"o":"LIV","v":"A","d":4},{"o":"IPS","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"BHA","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"FUL","v":"H","d":2},{"o":"ARS","v":"A","d":5}]}],"xp":[54.8,53.5,55.8,53.3,56.1,50.8,57.9,51.7,53.4,54.0,55.0,48.9],"hard":[1,2,5,3,3,7,6,6,3,2,4,8],"rating":[83,80,84,79,85,74,86,76,79,81,82,71]};
+const GWS = DATA.gws, SQUAD = DATA.squad;
+/* Two weeks behind us so the past/future split is visible. Invented — the
+   season starts on 21 August. */
+const SCORED = { 1: 61, 2: 48 };
+const EVENTS = { 3: { kind: 'move', text: '2 in' }, 6: { kind: 'move', text: '1 in' }, 9: { kind: 'chip', text: 'WC' } };
+const FDR = { 1: '#2fbf6e', 2: '#7fd39b', 3: '#4c5766', 4: '#e8907f', 5: '#e05b52' };
+const INK_ON = { 1: '#08120b', 2: '#08120b', 3: '#e6eaef', 4: '#160a08', 5: '#fff' };
+
+let selected = 6, open = false, litColumn = null;
+
+const rail = document.getElementById('rail');
+const rows = document.getElementById('rows');
+const columns = () => 'minmax(96px,96px) repeat(' + GWS.length + ', minmax(46px,1fr))';
+
+const scored = Object.values(SCORED);
+/* Not `top` — that is window.top, read-only, and shadowing it throws before
+   a single row is drawn. The page rendered as an empty shell. */
+const peak = Math.max(...DATA.xp, ...scored);
+const base = Math.min(...DATA.xp, ...scored) - 9;
+const barHeight = (v) => Math.max(10, Math.round(((v - base) / (peak - base)) * 58));
+
+function drawRail() {
+  rail.style.gridTemplateColumns = columns();
+  let html = '<div class="stub cap">' + (open ? 'Points' : '') + '</div>';
+  GWS.forEach((gw, i) => {
+    const played = SCORED[gw] != null;
+    const value = played ? SCORED[gw] : DATA.xp[i];
+    const ev = EVENTS[gw];
+    html += '<button class="wk' + (played ? ' played' : '') + '" data-gw="' + gw + '" data-i="' + i + '"' +
+      ' aria-pressed="' + (gw === selected) + '"' +
+      ' aria-label="Gameweek ' + gw + ', ' + (played ? 'scored ' + value : 'projected ' + value.toFixed(1)) +
+      ', ' + DATA.hard[i] + ' of fifteen in a hard fixture">' +
+      (ev ? '<span class="mark ' + (ev.kind === 'chip' ? 'chip' : 'move') + '">' + ev.text + '</span>' : '') +
+      '<span class="val num">' + (played ? value : value.toFixed(1)) + '</span>' +
+      '<span class="bar" style="height:' + barHeight(value) + 'px"></span>' +
+      '<span class="risk"><i style="width:' + Math.round((DATA.hard[i] / 15) * 100) + '%"></i></span>' +
+      '<span class="gw">' + gw + '</span></button>';
+  });
+  rail.innerHTML = html;
+  rail.querySelectorAll('.wk').forEach((el) => {
+    el.addEventListener('click', () => { selected = +el.dataset.gw; render(); });
+    el.addEventListener('mouseenter', () => { litColumn = +el.dataset.i; paint(); });
+    el.addEventListener('mouseleave', () => { litColumn = null; paint(); });
+  });
+}
+
+function drawRows() {
+  rows.style.gridTemplateColumns = columns();
+  let html = '';
+  SQUAD.forEach((p, r) => {
+    html += '<div class="stub"><span class="pos">' + p.p + '</span>' + p.n + '</div>';
+    p.f.forEach((f, i) => {
+      const settled = SCORED[GWS[i]] != null ? ' settled' : '';
+      if (!f) { html += '<span class="cell void' + settled + '" data-c="' + i + '">&mdash;</span>'; return; }
+      html += '<span class="cell d' + f.d + settled + '" data-c="' + i + '" title="GW' + GWS[i] + ' — ' +
+        f.o + (f.v === 'H' ? ' at home' : ' away') + ', difficulty ' + f.d + '">' + f.o + '</span>';
+    });
+  });
+  html += '<div class="stub cap moves">Your moves</div>';
+  GWS.forEach((gw) => {
+    const ev = EVENTS[gw];
+    const colour = ev ? (ev.kind === 'chip' ? 'var(--gold-lit)' : 'var(--live)') : 'var(--ink-3)';
+    html += '<div class="moves" style="color:' + colour + '">' + (ev ? ev.text : '&middot;') + '</div>';
+  });
+  rows.innerHTML = html;
+  rows.querySelectorAll('.cell').forEach((el) => {
+    el.addEventListener('mouseenter', () => { litColumn = +el.dataset.c; paint(); });
+    el.addEventListener('mouseleave', () => { litColumn = null; paint(); });
+  });
+}
+
+function paint() {
+  rows.querySelectorAll('.cell').forEach((el) => el.classList.toggle('lit', +el.dataset.c === litColumn));
+}
+
+const tierOf = (r) => r >= 90 ? 'elite' : r >= 80 ? 'gold' : r >= 70 ? 'silver' : r >= 60 ? 'bronze' : '';
+
+function drawBoard() {
+  const i = GWS.indexOf(selected);
+  /* Best available in each position — a board that starts a 60 ahead of a 78
+     is the first thing anybody who knows the squad would call wrong. */
+  const inPos = (pos) => SQUAD.filter((p) => p.p === pos).slice().sort((a, b) => b.r - a.r);
+  const xi = [inPos('GKP')[0]].concat(inPos('DEF').slice(0, 3), inPos('MID').slice(0, 4), inPos('FWD').slice(0, 3));
+  const bench = SQUAD.filter((p) => xi.indexOf(p) === -1);
+  const card = (p) => {
+    const f = p.f[i];
+    const bg = f ? FDR[f.d] : '#2a2c31';
+    const fg = f ? INK_ON[f.d] : '#8a8d93';
+    return '<div class="card ' + tierOf(p.r) + '"><span class="who">' + p.n + '</span>' +
+      '<span class="club">' + p.t + '</span>' +
+      '<span class="fix" style="background:' + bg + ';color:' + fg + '">' +
+      (f ? f.o + ' (' + f.v + ')' : 'BLANK') + '</span>' +
+      '<span class="rt num">' + p.r + '</span></div>';
+  };
+  document.getElementById('pitch').innerHTML =
+    '<div class="line">' + xi.slice(0, 1).map(card).join('') + '</div>' +
+    '<div class="line">' + xi.slice(1, 4).map(card).join('') + '</div>' +
+    '<div class="line">' + xi.slice(4, 8).map(card).join('') + '</div>' +
+    '<div class="line">' + xi.slice(8, 11).map(card).join('') + '</div>' +
+    '<div class="subs">' + bench.map(card).join('') + '</div>';
+
+  const played = SCORED[selected] != null;
+  document.getElementById('figXp').textContent = played ? SCORED[selected] : DATA.xp[i].toFixed(1);
+  document.getElementById('figRt').textContent = DATA.rating[i];
+  document.getElementById('figFree').textContent = EVENTS[selected] ? '0' : '1';
+
+  const hardest = DATA.hard.indexOf(Math.max(...DATA.hard));
+  const word = DATA.rating[i] >= 85 ? 'an elite' : DATA.rating[i] >= 70 ? 'a strong' : 'a below-par';
+  const readEl = document.getElementById('read');
+  readEl.className = 'read' + (played ? ' past' : '');
+  readEl.innerHTML = played
+    ? '<b>Gameweek ' + selected + ' is played.</b> You scored ' + SCORED[selected] +
+      '. The board shows the eleven you sent out.'
+    : '<b>Gameweek ' + selected + ':</b> ' + DATA.hard[i] + ' of your fifteen walk into a fixture rated 4 or 5' +
+      (hardest === i ? ' &mdash; the most of any week in your plan.' :
+        ', against ' + Math.max(...DATA.hard) + ' in GW' + GWS[hardest] + '.') +
+      ' Projected ' + DATA.xp[i].toFixed(1) + ', which is ' + word + ' week.';
+
+  const shortlist = SQUAD.slice().sort((a, b) => b.r - a.r).slice(0, 6);
+  document.getElementById('market').innerHTML = shortlist.map((p) => {
+    const f = p.f[i];
+    return '<div class="mkt"><span class="nm">' + p.n + ' <i>' + p.t + ' &middot; &pound;' + p.pr + 'm</i></span>' +
+      '<span class="fx" style="background:' + (f ? FDR[f.d] : '#2a2c31') + ';color:' + (f ? INK_ON[f.d] : '#8a8d93') + '">' +
+      (f ? f.o : '&mdash;') + '</span><span class="rt num">' + p.r + '</span></div>';
+  }).join('');
+}
+
+function render() { drawRail(); drawRows(); drawBoard(); paint(); }
+
+document.getElementById('handle').addEventListener('click', function () {
+  open = !open;
+  rows.classList.toggle('open', open);
+  this.setAttribute('aria-expanded', String(open));
+  document.getElementById('work').classList.toggle('dimmed', open);
+  document.getElementById('handleLabel').textContent = open ? 'Close the plan' : 'Pull down for the whole plan';
+  document.getElementById('tlsub').textContent = open ? 'every man, every week' : 'scored, and projected';
+  if (!open) rows.classList.remove('settled');
+  drawRail();
+});
+
+rows.addEventListener('transitionend', (e) => {
+  if (e.propertyName === 'max-height' && open) rows.classList.add('settled');
+});
+
+/* Bring the week you are on into view. On a phone the rail is five columns
+   wide and the selected week was GW6 — off the right-hand edge, so the page
+   opened with nothing apparently selected. */
+function revealSelected(behavior) {
+  const el = rail.querySelector('.wk[aria-pressed="true"]');
+  const box = document.getElementById('scroller');
+  if (!el) return;
+  const target = el.offsetLeft - (box.clientWidth - el.offsetWidth) / 2;
+  box.scrollTo({ left: Math.max(0, target), behavior: behavior || 'auto' });
+}
+
+/* The swipe hint has done its job the moment you swipe. */
+document.getElementById('scroller').addEventListener('scroll', function () {
+  if (this.scrollLeft > 12) document.getElementById('swipe').style.display = 'none';
+}, { passive: true });
+
+render();
+revealSelected();
+</script>
