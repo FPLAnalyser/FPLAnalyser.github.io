@@ -70,6 +70,11 @@ export interface Planner {
   canFill: (inEl: number) => string | null
   /** Sign him into the empty place of his position. */
   fill: (inEl: number) => void
+  /** The fifteen as the plan leaves it in any week of the window. */
+  squadAtGw: (gw: number) => number[]
+  /** The stored lineup for a week, or null where the plan has not been
+   *  stepped that far yet. */
+  weekAt: (gw: number) => WeekPlan | null
 }
 
 export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey, onBaseChange }: {
@@ -285,6 +290,11 @@ export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey, o
 
   return {
     ready, gw, gws, setGw, startGw, week, squad, posOf, spend,
+    /* The plan as it stands in some OTHER week. The gameweek strip needs every
+       week at once to draw the road ahead, and reading one week at a time by
+       stepping the board is exactly the navigation it exists to replace. */
+    squadAtGw: (g: number) => squadAt(state, g),
+    weekAt: (g: number) => state.weeks[g] ?? null,
     ft: freeTransfers(state, gw),
     banked: Math.min(MAX_FT, bankedTransfers(state, gw)),
     hit: pointsHit(state, gw),

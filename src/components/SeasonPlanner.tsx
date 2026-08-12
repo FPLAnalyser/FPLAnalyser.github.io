@@ -4,7 +4,8 @@ import { PlayerPhoto } from './PlayerPhoto'
 import { FoilShell, Pitch, BenchSpine, CARD_W, initialsOf, tierOf, nameSize } from './Pitch'
 import { PlayerCardSheet } from './PlayerCardSheet'
 import { availBadge, availFor, SEV_COLOUR, type Availability } from '../lib/availability'
-import { xpForGw, useXpModel, useMarketOdds, gwBenchmark, gwRating } from '../lib/xp'
+import { xpForGw, useXpModel, useMarketOdds, gwBenchmark, gwRating, type XpModel, type MarketOdds } from '../lib/xp'
+import { bestXiXp } from '../lib/squadLab'
 import { Icon } from './Icon'
 import { tapHaptic } from '../lib/native'
 import { num } from '../lib/rows'
@@ -259,6 +260,14 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
           <div className="font-display text-xl font-bold text-ink">Gameweek {gw}</div>
           <StepButton dir="next" disabled={gwIdx >= gws.length - 1} onClick={() => { setGw(gws[gwIdx + 1]); tapHaptic('select') }} />
         </div>
+
+        <GameweekStrip
+          planner={planner}
+          byEl={byEl}
+          engine={{ fixtureEase, avail, model: xpModel, market }}
+          current={gw}
+          onPick={setGw}
+        />
 
         {/* One row of numbers for the whole page */}
         <div className="mb-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -712,4 +721,149 @@ function RatingSheet({ gw, total, rating, benchmark, onClose }: {
       <button className="mt-1 w-full rounded-xl px-4 py-3 text-center text-sm font-semibold text-ink-3" onClick={onClose}>Close</button>
     </Overlay>
   )
+}
+
+/* ── The gameweek strip ────────────────────────────────────────────────────
+   Two arrows tell you where you are and nothing about where you are going:
+   finding the hard week meant stepping to it, which is five clicks and a
+   memory test. This draws the whole window at once and makes each week a
+   button.
+
+   Three readings per card, and each does work the others cannot. The number
+   is precise. The bar makes the comparison instant. The hard count is the
+   thing a projection HIDES — a week can project mid-table because a strong
+   bench props it up while most of the fifteen walk into a rated-4 fixture,
+   and those are different weeks to plan around.
+
+   Not the GW rating, which was the obvious candidate and turned out to be
+   the wrong number: across a normal window it moves between about 75 and 86
+   and calls nearly every week "strong", so eight cards would carry eight
+   near-identical figures. The projection and the hard count both use their
+   range. */
+function GameweekStrip({ planner, byEl, engine, current, onPick }: {
+  planner: Planner
+  byEl: Map<number, RatingRow>
+  engine: { fixtureEase: FixtureEaseRow[]; avail?: Availability; model: XpModel | null; market: MarketOdds | null }
+  current: number
+  onPick: (gw: number) => void
+}) {
+  const { gws, startGw, squadAtGw, weekAt } = planner
+  const { fixtureEase, avail, model, market } = engine
+
+  /* The road ahead, not the whole season. `gws` runs to GW38 and drawing all
+     of it meant thirty-eight best-eleven searches on every render for a strip
+     nobody scrolls to the end of. One week back for context, ten forward. */
+  const window = useMemo(() => {
+    const i = Math.max(0, gws.indexOf(current))
+    return gws.slice(Math.max(0, i - 1), Math.max(0, i - 1) + 12)
+  }, [gws, current])
+
+  const cells = useMemo(() => {
+    const fdr = new Map<string, number>()
+    for (const f of fixtureEase) fdr.set(`${f.team}|${f.gw}`, f.fdr)
+
+    return window.map((gw) => {
+      const els = squadAtGw(gw)
+      const rows = els.map((el) => byEl.get(el)).filter(Boolean) as RatingRow[]
+
+      /* Where the plan HAS a lineup, the strip shows that lineup's points, so
+         the card for the week on screen always agrees with the big number
+         above it. Where the plan has not been stepped that far, there is no
+         lineup to show and the best legal eleven is the honest stand-in. Using
+         the best eleven everywhere would have printed a different figure from
+         the headline stat the moment anyone benched a starter on purpose. */
+      /* ONE measure for every card: the best legal eleven for that week, with
+         the armband on its top scorer.
+ 
+         The first version used each week's saved lineup where one existed and
+         the best eleven elsewhere, so the card for the week on screen always
+         matched the headline stat. That looked tidy and was wrong in a way the
+         browser showed immediately: the planner builds an unvisited week by
+         carrying the previous eleven forward and orders it by RATING, not by
+         xP, so the strip promised GW6 52.5 and delivered 50.8 the moment you
+         clicked it. A strip whose numbers move when you visit them is worse
+         than one that differs from the stat below it.
+ 
+         So every card measures the same thing — what this fifteen COULD score
+         that week — which is the only basis on which twelve weeks compare. The
+         headline stat keeps measuring your actual eleven, and the caption says
+         so. */
+      let xp: number | null = null
+      if (rows.length === 15) {
+        const { total, xi } = bestXiXp(rows, gw, { fixtureEase, avail, model, market, profiles: null })
+        const best = Math.max(0, ...xi.map((r) => xpForGw(r, gw, fixtureEase, avail, model, market) ?? 0))
+        xp = total + best
+      }
+
+      const hard = rows.filter((r) => (fdr.get(`${String(r.team)}|${gw}`) ?? 3) >= 4).length
+      return { gw, xp, hard, chip: weekAt(gw)?.chip ?? null }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [window.join(','), current, byEl, fixtureEase, avail, model, market])
+
+  const vals = cells.map((c) => c.xp).filter((v): v is number => v != null)
+  if (vals.length < 2) return null
+  /* The bar spans the window's own range, not zero to the best week. Every
+     week is 50-odd points, so a zero-based bar is eight full bars and says
+     nothing at all. */
+  const lo = Math.min(...vals) - (Math.max(...vals) - Math.min(...vals)) * 0.45 - 0.5
+  const hi = Math.max(...vals)
+  const width = (v: number) => `${Math.max(6, ((v - lo) / Math.max(hi - lo, 0.001)) * 100)}%`
+
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    // Keep the week you are on in view when it changes from the arrows.
+    ref.current?.querySelector('[data-on="1"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [current])
+
+  return (
+    <div className="mb-2.5">
+      <div ref={ref} className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
+        {cells.map((c) => {
+          const on = c.gw === current
+          const tone = c.hard >= 6 ? 'text-bad' : c.hard >= 4 ? 'text-warn' : c.hard <= 2 ? 'text-good' : 'text-ink-3'
+          return (
+            <button
+              key={c.gw}
+              data-on={on ? '1' : '0'}
+              onClick={() => { if (!on) { onPick(c.gw); tapHaptic('select') } }}
+              aria-current={on ? 'true' : undefined}
+              title={`Gameweek ${c.gw}${c.xp != null ? ` — ${c.xp.toFixed(1)} from the best legal eleven` : ''} · ${c.hard} of the fifteen in a fixture rated 4 or 5`}
+              className={`flex min-w-[86px] flex-1 shrink-0 flex-col gap-1 rounded-xl border px-2 py-1.5 text-left transition-colors ${
+                on ? 'border-accent bg-accent-selected' : 'border-line bg-surface-2/40 hover:border-line-strong'
+              }`}
+            >
+              <span className="flex items-baseline justify-between gap-1">
+                <span className={`text-[9.5px] font-bold tracking-[0.09em] uppercase ${on ? 'text-accent' : 'text-ink-3'}`}>
+                  GW{c.gw}
+                </span>
+                {c.gw === startGw && <span className="text-[8.5px] text-ink-3">now</span>}
+                {c.chip && <span className="text-[8.5px] font-bold text-accent-2">{CHIP_SHORT[c.chip] ?? ''}</span>}
+              </span>
+              <span className={`font-num text-[16px] leading-none font-bold tabular-nums ${on ? 'text-accent-2' : 'text-ink'}`}>
+                {c.xp == null ? '—' : c.xp.toFixed(1)}
+              </span>
+              <span className="block h-1 overflow-hidden rounded-full bg-surface-3">
+                <span className="block h-full rounded-full" style={{
+                  width: c.xp == null ? '0%' : width(c.xp),
+                  background: on ? 'var(--accent-2)' : 'var(--accent)',
+                  opacity: on ? 1 : 0.55,
+                }} />
+              </span>
+              <span className={`text-[9.5px] ${tone}`}>{c.hard} hard</span>
+            </button>
+          )
+        })}
+      </div>
+      <p className="mt-0.5 text-[10px] text-ink-3">
+        What your fifteen could score each week from its best legal eleven, and how many of them face a
+        fixture rated 4 or 5. Tap a week to go there — the figure above the pitch is your actual eleven,
+        so it reads lower wherever you have picked a different one.
+      </p>
+    </div>
+  )
+}
+
+const CHIP_SHORT: Record<string, string> = {
+  'wildcard': 'WC', 'free-hit': 'FH', 'bench-boost': 'BB', 'triple-captain': 'TC',
 }
