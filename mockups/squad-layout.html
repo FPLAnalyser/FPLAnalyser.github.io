@@ -1,0 +1,172 @@
+<meta charset="utf-8"><title>Squad page layout — ideas</title>
+<style>
+:root{--bg:#000;--s1:#121316;--s2:#1b1c1f;--s3:#232427;--ink:#edeff3;--ink2:#aaacb0;--ink3:#828386;
+--acc:#c9a227;--acc2:#ead188;--line:rgba(255,255,255,.1);--line2:rgba(255,255,255,.2);
+--good:#3ddc7a;--warn:#e8b04a;--bad:#f0736f;--info:#7fb0ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.wrap{max-width:1020px;margin:0 auto;padding:44px 20px 90px}
+h1{font-size:30px;font-weight:800;letter-spacing:-.02em;margin:0 0 10px}
+h2{font-size:20px;font-weight:800;margin:4px 0 6px;letter-spacing:-.01em}
+.lead{color:var(--ink2);max-width:72ch}
+.rule{height:1px;background:var(--line);margin:38px 0 24px}
+.step{font:700 11px/1 ui-sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--acc);margin-bottom:8px}
+p{max-width:72ch;color:var(--ink2)}
+b.w{color:var(--ink)}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:14px}
+.note{color:var(--ink3);font-size:12.5px;line-height:1.6;margin-top:14px;border-left:2px solid var(--line2);padding-left:12px;max-width:78ch}
+
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.seg{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.seg button{padding:5px 13px;font-size:12.5px;color:var(--ink2)}
+.seg button.on{background:rgba(255,255,255,.06);color:var(--acc)}
+.btn{border:1px solid var(--line);border-radius:999px;padding:5px 13px;font-size:12.5px;display:inline-flex;gap:6px;align-items:center}
+.btn.pri{background:var(--acc);color:#14100a;border-color:var(--acc);font-weight:700}
+.sp{flex:1}
+
+.gcs{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:10px}
+.gc{border:1px solid var(--line);border-radius:11px;padding:6px;background:var(--s2);text-align:left;display:flex;flex-direction:column;gap:3px}
+.gc.on{border-color:var(--acc);background:rgba(255,255,255,.05)}
+.gt{font-size:9px;letter-spacing:.08em;color:var(--ink3);text-transform:uppercase}
+.gx{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+.gc.on .gx{color:var(--acc2)}
+.gb{height:3px;background:var(--s3);border-radius:2px;overflow:hidden}
+.gb i{display:block;height:100%;background:var(--acc);border-radius:2px}
+.gh{font-size:9px;color:var(--ink3)}
+.gh.good{color:var(--good)} .gh.warn{color:var(--warn)} .gh.bad{color:var(--bad)}
+
+.pitch{position:relative;background:linear-gradient(180deg,#0b2417,#07130c);border:1px solid var(--line);border-radius:14px;padding:12px 10px}
+.pr{display:flex;justify-content:center;gap:6px;margin-bottom:8px}
+.pl{width:70px;background:var(--s2);border:1px solid var(--line);border-radius:8px;padding:5px 3px;text-align:center}
+.pl b{display:block;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl i{display:block;font-style:normal;font-size:8.5px;color:var(--ink3)}
+.pl.sub{opacity:.75}
+.subs{display:flex;justify-content:center;gap:6px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+.float{position:absolute;top:8px;right:8px;display:flex;gap:4px}
+.fb{width:26px;height:26px;border-radius:8px;border:1px solid var(--line2);background:rgba(0,0,0,.5);display:grid;place-items:center;font-size:10px;color:var(--ink2)}
+.fb.on{border-color:var(--acc);color:var(--acc)}
+.two{display:grid;grid-template-columns:1fr 300px;gap:14px;align-items:start}
+.mini{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+.kv{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--line)}
+.kv:last-child{border:0}
+.kv b{font-variant-numeric:tabular-nums}
+.tabs{display:flex;gap:4px;margin-bottom:8px}
+.tb{border:1px solid var(--line);border-radius:999px;padding:4px 11px;font-size:11.5px;color:var(--ink2)}
+.tb.on{border-color:var(--acc);color:var(--acc);background:rgba(255,255,255,.05)}
+.small{font-size:12px;color:var(--ink3)}
+</style>
+<div class="wrap">
+<h1>Squad page — three layouts</h1>
+<p class="lead">The page has grown a toolbar, a gameweek grid, four stat tiles, a pitch, a bench and a
+player list, and reaching the bottom of your own team takes a scroll. Three ways to tighten it.</p>
+
+<div class="rule"></div>
+<div class="step">Idea A · smallest change</div><h2>Controls onto the pitch</h2>
+<p>Rating / £ / xP is a <em>view</em> of the cards, so it belongs on the thing it changes. It moves to the
+pitch corner as three small buttons. Auto pick and Import are <em>squad</em> actions and stay in the
+toolbar, where a destructive-ish button should be.</p>
+<div class="card">
+  <div class="bar"><span class="btn pri">Auto pick</span><span class="btn">Import</span><span class="sp"></span>
+    <span class="btn">Share</span><span class="btn">Clear</span></div>
+  <div class="gcs"><button class="gc on"><span class="gt">GW1</span><span class="gx">53.7</span><span class="gb"><i style="width:71%"></i></span><span class="gh good">1 hard</span></button><button class="gc "><span class="gt">GW2</span><span class="gx">52.8</span><span class="gb"><i style="width:62%"></i></span><span class="gh good">1 hard</span></button><button class="gc "><span class="gt">GW3</span><span class="gx">54.8</span><span class="gb"><i style="width:81%"></i></span><span class="gh warn">4 hard</span></button><button class="gc "><span class="gt">GW4</span><span class="gx">52.0</span><span class="gb"><i style="width:55%"></i></span><span class="gh warn">4 hard</span></button><button class="gc "><span class="gt">GW5</span><span class="gx">55.1</span><span class="gb"><i style="width:84%"></i></span><span class="gh warn">4 hard</span></button><button class="gc "><span class="gt">GW6</span><span class="gx">49.8</span><span class="gb"><i style="width:34%"></i></span><span class="gh bad">7 hard</span></button><button class="gc "><span class="gt">GW7</span><span class="gx">56.8</span><span class="gb"><i style="width:100%"></i></span><span class="gh bad">6 hard</span></button><button class="gc "><span class="gt">GW8</span><span class="gx">50.6</span><span class="gb"><i style="width:42%"></i></span><span class="gh bad">6 hard</span></button><button class="gc "><span class="gt">GW9</span><span class="gx">53.0</span><span class="gb"><i style="width:64%"></i></span><span class="gh good">2 hard</span></button><button class="gc "><span class="gt">GW10</span><span class="gx">52.3</span><span class="gb"><i style="width:58%"></i></span><span class="gh ">3 hard</span></button><button class="gc "><span class="gt">GW11</span><span class="gx">54.2</span><span class="gb"><i style="width:75%"></i></span><span class="gh warn">5 hard</span></button><button class="gc "><span class="gt">GW12</span><span class="gx">48.7</span><span class="gb"><i style="width:24%"></i></span><span class="gh bad">7 hard</span></button></div>
+  <div class="pitch">
+    <div class="float"><span class="fb on">★</span><span class="fb">£</span><span class="fb">xP</span></div>
+    <div class="pr"><span class="pl"><b>Raya</b><i>ARS</i></span></div><div class="pr"><span class="pl"><b>Virgil</b><i>LIV</i></span><span class="pl"><b>Tarkowski</b><i>EVE</i></span><span class="pl"><b>Senesi</b><i>TOT</i></span></div><div class="pr"><span class="pl"><b>E.Le Fée</b><i>SUN</i></span><span class="pl"><b>Anderson</b><i>MCI</i></span><span class="pl"><b>Garner</b><i>EVE</i></span><span class="pl"><b>Enzo</b><i>CHE</i></span></div><div class="pr"><span class="pl"><b>Calvert-L</b><i>LEE</i></span><span class="pl"><b>Thiago</b><i>BRE</i></span><span class="pl"><b>Haaland</b><i>MCI</i></span></div><div class="subs"><span class="pl sub"><b>Pickford</b><i>EVE</i></span><span class="pl sub"><b>Kayode</b><i>BRE</i></span><span class="pl sub"><b>Thiaw</b><i>NEW</i></span><span class="pl sub"><b>Wharton</b><i>CRY</i></span></div>
+  </div>
+  <p class="note">Frees a whole row and puts the toggle where its effect is. <b class="w">The risk is
+  discoverability</b> — three 26px glyphs in a corner are easy to miss in a way a labelled pill is not, so
+  they would want a one-time hint the first time the pitch renders. I would not move Auto pick there: it
+  replaces fifteen players, and a button that big should never be a small icon floating over the thing it
+  overwrites.</p>
+</div>
+
+<div class="rule"></div>
+<div class="step">Idea B · my recommendation</div><h2>Stats beside the pitch, not above it</h2>
+<p>The four tiles are a full row of vertical space spent on four numbers. Put them in the right-hand
+column beside the pitch, where the Squad Lab already lives, and the whole team fits above the fold.</p>
+<div class="card">
+  <div class="bar"><span class="btn pri">Auto pick</span><span class="btn">Import</span><span class="sp"></span>
+    <span class="btn">Share</span><span class="btn">Clear</span></div>
+  <div class="gcs"><button class="gc on"><span class="gt">GW1</span><span class="gx">53.7</span><span class="gb"><i style="width:71%"></i></span><span class="gh good">1 hard</span></button><button class="gc "><span class="gt">GW2</span><span class="gx">52.8</span><span class="gb"><i style="width:62%"></i></span><span class="gh good">1 hard</span></button><button class="gc "><span class="gt">GW3</span><span class="gx">54.8</span><span class="gb"><i style="width:81%"></i></span><span class="gh warn">4 hard</span></button><button class="gc "><span class="gt">GW4</span><span class="gx">52.0</span><span class="gb"><i style="width:55%"></i></span><span class="gh warn">4 hard</span></button><button class="gc "><span class="gt">GW5</span><span class="gx">55.1</span><span class="gb"><i style="width:84%"></i></span><span class="gh warn">4 hard</span></button><button class="gc "><span class="gt">GW6</span><span class="gx">49.8</span><span class="gb"><i style="width:34%"></i></span><span class="gh bad">7 hard</span></button><button class="gc "><span class="gt">GW7</span><span class="gx">56.8</span><span class="gb"><i style="width:100%"></i></span><span class="gh bad">6 hard</span></button><button class="gc "><span class="gt">GW8</span><span class="gx">50.6</span><span class="gb"><i style="width:42%"></i></span><span class="gh bad">6 hard</span></button><button class="gc "><span class="gt">GW9</span><span class="gx">53.0</span><span class="gb"><i style="width:64%"></i></span><span class="gh good">2 hard</span></button><button class="gc "><span class="gt">GW10</span><span class="gx">52.3</span><span class="gb"><i style="width:58%"></i></span><span class="gh ">3 hard</span></button><button class="gc "><span class="gt">GW11</span><span class="gx">54.2</span><span class="gb"><i style="width:75%"></i></span><span class="gh warn">5 hard</span></button><button class="gc "><span class="gt">GW12</span><span class="gx">48.7</span><span class="gb"><i style="width:24%"></i></span><span class="gh bad">7 hard</span></button></div>
+  <div class="two">
+    <div class="pitch">
+      <div class="float"><span class="fb on">★</span><span class="fb">£</span><span class="fb">xP</span></div>
+      <div class="pr"><span class="pl"><b>Raya</b><i>ARS</i></span></div><div class="pr"><span class="pl"><b>Virgil</b><i>LIV</i></span><span class="pl"><b>Tarkowski</b><i>EVE</i></span><span class="pl"><b>Senesi</b><i>TOT</i></span></div><div class="pr"><span class="pl"><b>E.Le Fée</b><i>SUN</i></span><span class="pl"><b>Anderson</b><i>MCI</i></span><span class="pl"><b>Garner</b><i>EVE</i></span><span class="pl"><b>Enzo</b><i>CHE</i></span></div><div class="pr"><span class="pl"><b>Calvert-L</b><i>LEE</i></span><span class="pl"><b>Thiago</b><i>BRE</i></span><span class="pl"><b>Haaland</b><i>MCI</i></span></div><div class="subs"><span class="pl sub"><b>Pickford</b><i>EVE</i></span><span class="pl sub"><b>Kayode</b><i>BRE</i></span><span class="pl sub"><b>Thiaw</b><i>NEW</i></span><span class="pl sub"><b>Wharton</b><i>CRY</i></span></div>
+    </div>
+    <div>
+      <div class="card" style="margin:0">
+        <div class="mini">Gameweek 1</div>
+        <div class="kv"><span>Projected</span><b style="color:var(--acc2)">53.7</b></div>
+        <div class="kv"><span>GW rating</span><b style="color:var(--good)">83</b></div>
+        <div class="kv"><span>Squad rating</span><b>75</b></div>
+        <div class="kv"><span>In the bank</span><b>£0.0m</b></div>
+        <div class="kv"><span>Squad</span><b>15/15</b></div>
+      </div>
+      <div class="card" style="margin-top:10px">
+        <div class="mini">Needs attention</div>
+        <div class="small">Garner &mdash; injured, in your eleven</div>
+        <div class="small" style="margin-top:4px">GW6 &mdash; 7 of 15 in a hard game</div>
+      </div>
+    </div>
+  </div>
+  <p class="note">This is the one I would build. It costs nothing conceptually &mdash; the numbers do not
+  change, they move &mdash; and it buys back the row that currently pushes the forwards below the fold on a
+  laptop. <b class="w">On a phone the column collapses underneath</b>, which is the same as today, so
+  nothing is lost where there was nothing to gain.
+  <br><br>It also puts the numbers next to the thing they describe. A projection sitting above a
+  gameweek strip reads as a header; sitting beside the pitch it reads as that team's score, which is
+  what it is.</p>
+</div>
+
+<div class="rule"></div>
+<div class="step">Idea C · biggest change</div><h2>Pitch and list side by side</h2>
+<p>The real reason the page is long is that the player list lives underneath the pitch, so every pick is
+scroll down, choose, scroll up, check. Put them side by side and the loop closes.</p>
+<div class="card">
+  <div class="two" style="grid-template-columns:1fr 340px">
+    <div>
+      <div class="bar"><span class="btn pri">Auto pick</span><span class="btn">Import</span><span class="sp"></span><span class="btn">Share</span></div>
+      <div class="gcs" style="grid-template-columns:repeat(4,1fr)"><button class="gc on"><span class="gt">GW1</span><span class="gx">53.7</span><span class="gb"><i style="width:71%"></i></span><span class="gh good">1 hard</span></button><button class="gc "><span class="gt">GW2</span><span class="gx">52.8</span><span class="gb"><i style="width:62%"></i></span><span class="gh good">1 hard</span></button><button class="gc "><span class="gt">GW3</span><span class="gx">54.8</span><span class="gb"><i style="width:81%"></i></span><span class="gh warn">4 hard</span></button><button class="gc "><span class="gt">GW4</span><span class="gx">52.0</span><span class="gb"><i style="width:55%"></i></span><span class="gh warn">4 hard</span></button><button class="gc "><span class="gt">GW5</span><span class="gx">55.1</span><span class="gb"><i style="width:84%"></i></span><span class="gh warn">4 hard</span></button><button class="gc "><span class="gt">GW6</span><span class="gx">49.8</span><span class="gb"><i style="width:34%"></i></span><span class="gh bad">7 hard</span></button><button class="gc "><span class="gt">GW7</span><span class="gx">56.8</span><span class="gb"><i style="width:100%"></i></span><span class="gh bad">6 hard</span></button><button class="gc "><span class="gt">GW8</span><span class="gx">50.6</span><span class="gb"><i style="width:42%"></i></span><span class="gh bad">6 hard</span></button><button class="gc "><span class="gt">GW9</span><span class="gx">53.0</span><span class="gb"><i style="width:64%"></i></span><span class="gh good">2 hard</span></button><button class="gc "><span class="gt">GW10</span><span class="gx">52.3</span><span class="gb"><i style="width:58%"></i></span><span class="gh ">3 hard</span></button><button class="gc "><span class="gt">GW11</span><span class="gx">54.2</span><span class="gb"><i style="width:75%"></i></span><span class="gh warn">5 hard</span></button><button class="gc "><span class="gt">GW12</span><span class="gx">48.7</span><span class="gb"><i style="width:24%"></i></span><span class="gh bad">7 hard</span></button></div>
+      <div class="pitch">
+        <div class="float"><span class="fb on">★</span><span class="fb">£</span><span class="fb">xP</span></div>
+        <div class="pr"><span class="pl"><b>Raya</b><i>ARS</i></span></div><div class="pr"><span class="pl"><b>Virgil</b><i>LIV</i></span><span class="pl"><b>Tarkowski</b><i>EVE</i></span><span class="pl"><b>Senesi</b><i>TOT</i></span></div><div class="pr"><span class="pl"><b>E.Le Fée</b><i>SUN</i></span><span class="pl"><b>Anderson</b><i>MCI</i></span><span class="pl"><b>Garner</b><i>EVE</i></span><span class="pl"><b>Enzo</b><i>CHE</i></span></div><div class="pr"><span class="pl"><b>Calvert-L</b><i>LEE</i></span><span class="pl"><b>Thiago</b><i>BRE</i></span><span class="pl"><b>Haaland</b><i>MCI</i></span></div><div class="subs"><span class="pl sub"><b>Pickford</b><i>EVE</i></span><span class="pl sub"><b>Kayode</b><i>BRE</i></span><span class="pl sub"><b>Thiaw</b><i>NEW</i></span><span class="pl sub"><b>Wharton</b><i>CRY</i></span></div>
+      </div>
+    </div>
+    <div class="card" style="margin:0">
+      <div class="tabs"><span class="tb">GKP</span><span class="tb on">DEF</span><span class="tb">MID</span><span class="tb">FWD</span></div>
+      <div class="kv"><span>Gabriel <span class="small">ARS &middot; £8.0</span></span><b>5.4</b></div>
+      <div class="kv"><span>Virgil <span class="small">LIV &middot; £6.5</span></span><b>4.4</b></div>
+      <div class="kv"><span>Senesi <span class="small">TOT &middot; £6.0</span></span><b>4.1</b></div>
+      <div class="kv"><span>Tarkowski <span class="small">EVE &middot; £6.0</span></span><b>4.3</b></div>
+      <div class="kv"><span>N.Williams <span class="small">NFO &middot; £5.0</span></span><b>3.8</b></div>
+      <div class="small" style="margin-top:8px">Scrolls independently of the pitch.</div>
+    </div>
+  </div>
+  <p class="note">Fixes the actual problem rather than the symptom: picking a fifteen is fifteen round
+  trips, and this removes all of them. <b class="w">The cost is that it only works on a wide screen</b> —
+  below about 1100px there is no second column and the list has to go back underneath, so this is a
+  desktop layout with the current one as the phone fallback. That is a real fork in the design, not a
+  responsive tweak, and it is the reason I would do B first and hold this until B is in.</p>
+</div>
+
+<div class="rule"></div>
+<div class="step">On forking a plan</div><h2>Worth building, and cheap</h2>
+<p><b class="w">Yes.</b> &ldquo;Fork from GW6&rdquo; copies the plan, keeps every week up to GW6 and lets the
+copy diverge after it &mdash; which is exactly how you test <em>&ldquo;what if I wildcard here instead&rdquo;</em>
+without losing the plan you already trust.</p>
+<div class="card">
+  <div class="bar">
+    <span class="btn">Plan A <span class="small">15/15</span></span>
+    <span class="btn">Duplicate</span>
+    <span class="btn" style="border-color:var(--acc);color:var(--acc)">Fork from GW6</span>
+  </div>
+  <p class="note">Duplicate already exists and copies the whole plan; a fork is the same operation with a
+  cut point, so the plumbing is done. The one design decision worth getting right is what the fork
+  <em>keeps</em>: weeks up to and including the cut stay identical, everything after is cleared rather than
+  copied. Copying the tail would produce two plans that look different and behave the same until you
+  notice, which is the bug the duplicated-plans work already fixed once.
+  <br><br>It also pairs with Compare: fork at the wall, play the wildcard in one and not the other, and the
+  head-to-head is measuring exactly one decision.</p>
+</div>
+</div>
