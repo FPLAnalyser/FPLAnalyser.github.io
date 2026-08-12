@@ -75,6 +75,10 @@ export interface Planner {
   /** The stored lineup for a week, or null where the plan has not been
    *  stepped that far yet. */
   weekAt: (gw: number) => WeekPlan | null
+  /** Points paid for transfers in a given week. */
+  hitAt: (gw: number) => number
+  /** Opaque token that changes with any edit to the plan. */
+  revision: string
 }
 
 export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey, onBaseChange }: {
@@ -295,6 +299,12 @@ export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey, o
        stepping the board is exactly the navigation it exists to replace. */
     squadAtGw: (g: number) => squadAt(state, g),
     weekAt: (g: number) => state.weeks[g] ?? null,
+    hitAt: (g: number) => pointsHit(state, g),
+    /* Changes whenever anything in the plan does. Panels that read the whole
+       window rather than one week have no other handle to memoise on: they
+       call squadAtGw and weekAt, which are fresh closures every render, so a
+       dependency list built from those either never updates or never stops. */
+    revision: JSON.stringify(state.weeks),
     ft: freeTransfers(state, gw),
     banked: Math.min(MAX_FT, bankedTransfers(state, gw)),
     hit: pointsHit(state, gw),
