@@ -3,7 +3,7 @@ export type IconName =
   | 'coin' | 'calendar' | 'trend-up' | 'trend-down' | 'alert' | 'eye' | 'info'
   | 'check' | 'search' | 'users' | 'pitch' | 'trophy' | 'crown' | 'clock' | 'x'
   | 'sun' | 'moon' | 'chevron-left' | 'chevron-right' | 'arrow-right' | 'undo'
-  | 'camera'
+  | 'camera' | 'pencil' | 'copy'
 
 interface IconProps {
   name: IconName

@@ -96,13 +96,13 @@ function useSquadDelta(value: number | null, squadSig: string, gw: number, ready
   return delta
 }
 
-export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onSold, squadScore, onOpenSquadRating, partialSquad, onRemovePick, onPickSlot, footer, statsSlot, onFork, boardOverlay, toolbar }: {
+export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onSold, squadScore, onOpenSquadRating, partialSquad, onRemovePick, onPickSlot, footer, onFork, boardOverlay, boardOverlayLeft, toolbar }: {
   planner: Planner
   byEl: Map<number, RatingRow>
   pool: RatingRow[]
   fixtureEase: FixtureEaseRow[]
   /** What the card corner shows — rating, price or that week's xP. */
-  metric?: 'rating' | 'price' | 'xp'
+  metric?: 'rating' | 'price' | 'xp' | 'owned'
   avail?: Availability
   /** A player was just put on the market — the page swings the picker round
    *  to his position so the empty place is one glance away. */
@@ -125,14 +125,6 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
    *  band of their own above the board, which spent a whole section on two
    *  buttons you only reach for once the fifteen is built. */
   footer?: React.ReactNode
-  /** Where to draw the week's four numbers. On a wide screen the page hands
-   *  down a node in the right-hand column and they are portalled there, which
-   *  buys back the full-width row they used to occupy and puts them beside the
-   *  team they describe rather than above it. Null on a phone, where that
-   *  column stacks BELOW the board and the numbers are worth more above it —
-   *  so they stay inline. The state and the two detail sheets never move, so
-   *  there is still one place computing them. */
-  statsSlot?: HTMLElement | null
   /** Branch the plan at the week on screen. Omitted where there is nowhere to
    *  branch into — the library is full — and hidden at the opening week,
    *  where a fork with nothing before it is just Duplicate. */
@@ -141,6 +133,8 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
    *  shows. They float in the corner of the grass rather than taking a row
    *  above it, next to the thing they change. */
   boardOverlay?: React.ReactNode
+  /** The other corner of the grass. */
+  boardOverlayLeft?: React.ReactNode
   /** Squad-wide actions, drawn into the gameweek row. */
   toolbar?: React.ReactNode
 }) {
@@ -165,6 +159,14 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
     if (!r) return '—'
     if (metric === 'price') { const p = num(r, 'price'); return p == null ? '—' : `£${p.toFixed(1)}m` }
     if (metric === 'xp') { const v = xpOf(el); return v == null ? '—' : v.toFixed(1) }
+    /* Ownership to one decimal under 10% and whole numbers above it. The
+       difference between a 2.1% pick and a 4.7% one is the whole point of
+       looking, and both round to "3%"; nobody has ever needed to know that
+       Haaland is 62.4 rather than 62. */
+    if (metric === 'owned') {
+      const o = num(r, 'selected_by_percent')
+      return o == null ? '—' : `${o < 10 ? o.toFixed(1) : Math.round(o)}%`
+    }
     const rt = ratingOf(el)
     return rt ? String(rt) : '—'
   }
@@ -284,10 +286,26 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
     />
   )
 
+  /* THREE TILES, NOT FOUR. The projection and the GW rating were separate
+     boxes asking the same question — the rating IS the projection, expressed
+     against what this week's floor and ceiling were, so reading them apart
+     meant reading 54.8 and then being told 83 without being told they were
+     the same fact twice. Together, the number leads and the rating qualifies
+     it: 54.8, a strong week. They keep their own drill-downs, because how the
+     projection is built and where the week's posts are set are still two
+     different explanations. */
   const statTiles = (
     <>
-      <Stat label="Projected points" value={teamXp == null ? '—' : teamXp.toFixed(1)} tone="accent" sub={week ? 'what this XI should score' : `${picked}/15 picked`} delta={xpDelta} dp={1} onClick={teamXp == null || !week ? undefined : () => setDetail('xp')} />
-      <Stat label="GW rating" value={rating == null ? '—' : String(rating)} tone={ratingTone(rating)} sub={rating == null ? 'complete your squad' : ratingWord(rating)} onClick={rating == null ? undefined : () => setDetail('rating')} />
+      <Stat
+        label="This week" value={teamXp == null ? '—' : teamXp.toFixed(1)} tone="accent"
+        sub={week ? 'projected points from this XI' : `${picked}/15 picked`}
+        delta={xpDelta} dp={1}
+        onClick={teamXp == null || !week ? undefined : () => setDetail('xp')}
+        badge={rating == null ? null : {
+          value: String(rating), word: ratingWord(rating), tone: ratingTone(rating),
+          onClick: () => setDetail('rating'),
+        }}
+      />
       <Stat label="Squad rating" value={squadScore == null ? '—' : String(squadScore)} tone="accent" sub="what you've built" delta={scoreDelta} dp={0} onClick={squadScore == null ? undefined : onOpenSquadRating} />
       <Stat label="In the bank" value={`£${(BUDGET - spend).toFixed(1)}m`} tone={spend > BUDGET ? 'bad' : 'ink'} sub={`£${spend.toFixed(1)}m squad`} />
     </>
@@ -333,11 +351,16 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
           ratingOf={ratingOf}
         />
 
-        {/* The week's four numbers. Same element either way — only its
-            parent changes. */}
-        {statsSlot
-          ? createPortal(<div className="grid grid-cols-2 gap-2">{statTiles}</div>, statsSlot)
-          : <div className="mb-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">{statTiles}</div>}
+        {/* The week's numbers, above the squad at every width. They spent a
+            spell in the right-hand column, which read well beside the board
+            and put them a long way from the phone layout's board — and the
+            column is the plan library's now. Above the team is where you look
+            for what the team is worth. */}
+        {/* Two columns on a phone with the week's tile across the top of them,
+            three in a row above that. Stacked one-per-row it ran 230px of
+            screen for three numbers, which is more than the four boxes it
+            replaced ever cost. */}
+        <div className="mb-2 grid grid-cols-2 gap-2 [&>*:first-child]:col-span-2 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] sm:[&>*:first-child]:col-span-1">{statTiles}</div>
 
         {/* The week's state, above the pitch where you can act on it — one
             line of it. It was a bordered box and a second bordered box for
@@ -391,7 +414,7 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
           moved. The one control you want after selling a player is the one to
           put him back, and it has to still be under the cursor that sold him.
           Nothing above the board changes height any more, so it isn't. */}
-      <Pitch maxWidth={BOARD_W} overlay={boardOverlay}>
+      <Pitch maxWidth={BOARD_W} overlay={boardOverlay} overlayLeft={boardOverlayLeft}>
         {(week ? rowsByPos(week.xi).map((row) => row.map((el) => ({ el }))) : partial!.xi).map((row, i) => row.length > 0 && (
           <div key={i} className="flex justify-center gap-1.5 sm:gap-2.5">
             {row.map((slot, j) => (slot.el != null
@@ -553,15 +576,23 @@ function StepButton({ dir, disabled, onClick }: { dir: 'prev' | 'next'; disabled
   )
 }
 
-function Stat({ label, value, tone, sub, onClick, delta, dp = 1 }: {
+const TONE_CLASS: Record<string, string> = {
+  bad: 'text-bad', warn: 'text-warn', good: 'text-good', accent: 'text-accent', ink: 'text-ink',
+}
+
+function Stat({ label, value, tone, sub, onClick, delta, dp = 1, badge }: {
   label: string; value: string; tone?: 'ink' | 'bad' | 'good' | 'accent' | 'warn'; sub?: string
   onClick?: () => void
   /** Movement since the last change to the squad — null when nothing has
    *  changed yet, or when the change was too small to round to anything. */
   delta?: number | null
   dp?: number
+  /** A second reading of the same number, riding beside it — the gameweek
+   *  rating next to the projection it scores. Its own button, because it
+   *  opens a different explanation from the tile's. */
+  badge?: { value: string; word: string; tone: string; onClick: () => void } | null
 }) {
-  const c = tone === 'bad' ? 'text-bad' : tone === 'warn' ? 'text-warn' : tone === 'good' ? 'text-good' : tone === 'accent' ? 'text-accent' : 'text-ink'
+  const c = TONE_CLASS[tone ?? 'ink'] ?? 'text-ink'
   const inner = (
     <>
       <div className={`font-display text-lg leading-none tabular-nums ${c}`}>{value}</div>
@@ -578,10 +609,28 @@ function Stat({ label, value, tone, sub, onClick, delta, dp = 1 }: {
       )}
     </>
   )
-  const cls = 'w-full rounded-xl border border-line bg-surface-1/60 p-2.5 text-center'
-  return onClick
-    ? <button onClick={onClick} className={`${cls} transition-colors hover:border-accent/50 hover:bg-accent-selected`}>{inner}</button>
-    : <div className={cls}>{inner}</div>
+  const hit = 'transition-colors hover:border-accent/50 hover:bg-accent-selected'
+  const body = onClick
+    ? <button onClick={onClick} className={`min-w-0 flex-1 rounded-lg border border-transparent p-1 text-center ${hit}`}>{inner}</button>
+    : <div className="min-w-0 flex-1 p-1 text-center">{inner}</div>
+  /* The tile is a DIV holding buttons rather than a button holding buttons —
+     the badge opens a different sheet from the tile's, and a nested button is
+     invalid markup that browsers resolve by silently dropping one. */
+  return (
+    <div className="flex w-full items-center gap-1 rounded-xl border border-line bg-surface-1/60 p-1.5">
+      {body}
+      {badge && (
+        <button
+          onClick={badge.onClick}
+          title="How this week's rating is scored"
+          className={`shrink-0 rounded-lg border border-line px-2 py-1 text-center ${hit}`}
+        >
+          <div className={`font-display text-base leading-none tabular-nums ${TONE_CLASS[badge.tone] ?? 'text-ink'}`}>{badge.value}</div>
+          <div className="mt-0.5 text-[9px] leading-none text-ink-3">{badge.word}</div>
+        </button>
+      )}
+    </div>
+  )
 }
 
 function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner, flag, name, code, element, transferred, bench, highlight, dimmed, picked, sold, onSell, sellVerb = 'Sell' }: {

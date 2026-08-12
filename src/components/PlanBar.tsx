@@ -35,19 +35,23 @@ export function PlanBar({ plans, canCompare, onCompare }: {
   }
 
   return (
-    <div className="mb-2.5 rounded-xl border border-line bg-surface-1/60 p-2">
-      <div className="mb-1.5 flex items-center gap-2">
+    <div className="mb-3 rounded-xl border border-line bg-surface-1/60 p-2">
+      {/* One header line, not two. The count and the instruction say different
+          things and both are short, so they share a row; the rest of what the
+          paragraph under here used to say is on the label as a title. */}
+      <div className="mb-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
         <span
           className="text-[10px] font-bold tracking-[0.14em] text-ink-3 uppercase"
           title="Plans live in this browser only — no account, and nothing leaves the device."
         >Plans</span>
         <span className="text-[11px] text-ink-3">{plans.plans.length} of {MAX_PLANS}</span>
+        <span className="text-[11px] text-ink-3">· tick two or more, then Compare</span>
         {canCompare && (
           <button
             onClick={onCompare}
-            className="ml-auto inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-accent px-3 text-[12px] font-bold text-accent-contrast transition-colors hover:bg-accent-strong"
+            className="ml-auto inline-flex min-h-8 items-center gap-1.5 self-center rounded-lg bg-accent px-3 text-[12px] font-bold text-accent-contrast transition-colors hover:bg-accent-strong"
           >
-            <Icon name="users" size={13} /> Compare plans
+            <Icon name="users" size={13} /> Compare
           </button>
         )}
       </div>
@@ -98,10 +102,22 @@ export function PlanBar({ plans, canCompare, onCompare }: {
                 </button>
               )}
 
+              {/* Glyphs, not words. "Rename" and "Duplicate" spelled out ran
+                  110px of type on the one chip you are already looking at,
+                  which is what pushed this strip wide enough to need the whole
+                  page. Both keep their name in a tooltip and an aria-label —
+                  the icon is the shorthand, not the only telling. Delete is
+                  the exception in reverse: it stays a two-step, because an
+                  icon you can hit by accident should not remove a plan. */}
               {active && renaming !== p.id && (
-                <span className="flex items-center gap-1 border-l border-line pl-1.5">
-                  <TextBtn onClick={() => startRename(p.id, p.name)}>Rename</TextBtn>
-                  <TextBtn onClick={() => plans.duplicate(p.id)} disabled={plans.full}>Duplicate</TextBtn>
+                <span className="flex items-center gap-0.5 border-l border-line pl-1">
+                  <IconBtn name="pencil" label="Rename this plan" onClick={() => startRename(p.id, p.name)} />
+                  <IconBtn
+                    name="copy"
+                    label={plans.full ? `${MAX_PLANS} plans is the limit` : 'Duplicate this plan'}
+                    disabled={plans.full}
+                    onClick={() => plans.duplicate(p.id)}
+                  />
                   {confirmDel === p.id ? (
                     <button
                       onClick={() => { plans.remove(p.id); setConfirmDel(null) }}
@@ -110,15 +126,13 @@ export function PlanBar({ plans, canCompare, onCompare }: {
                       Delete it?
                     </button>
                   ) : (
-                    <button
-                      onClick={() => setConfirmDel(p.id)}
+                    <IconBtn
+                      name="x"
+                      label={plans.plans.length < 2 ? 'The last plan stays' : 'Delete this plan'}
                       disabled={plans.plans.length < 2}
-                      title={plans.plans.length < 2 ? 'The last plan stays' : 'Delete this plan'}
-                      aria-label="Delete plan"
-                      className="flex size-7 items-center justify-center rounded text-ink-3 transition-colors hover:text-bad disabled:opacity-30"
-                    >
-                      <Icon name="x" size={13} />
-                    </button>
+                      danger
+                      onClick={() => setConfirmDel(p.id)}
+                    />
                   )}
                 </span>
               )}
@@ -136,26 +150,23 @@ export function PlanBar({ plans, canCompare, onCompare }: {
         </button>
       </div>
 
-      {/* One line, not two. This sat above the pitch on a phone as a
-          three-line paragraph explaining a thing you read once; the rest of
-          it is on the Plans label as a title. */}
-      <p className="mt-1 truncate text-[11px] text-ink-3">
-        Tick two or more, then Compare — plans are stored in this browser only.
-      </p>
     </div>
   )
 }
 
-function TextBtn({ children, onClick, disabled }: {
-  children: React.ReactNode; onClick: () => void; disabled?: boolean
+function IconBtn({ name, label, onClick, disabled, danger }: {
+  name: 'pencil' | 'copy' | 'x'; label: string; onClick: () => void; disabled?: boolean; danger?: boolean
 }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className="min-h-7 rounded px-1 text-[11px] font-semibold text-ink-3 transition-colors hover:text-ink disabled:opacity-30"
+      title={label}
+      aria-label={label}
+      className={`flex size-7 items-center justify-center rounded text-ink-3 transition-colors disabled:opacity-30 ${
+        danger ? 'hover:text-bad' : 'hover:text-ink'}`}
     >
-      {children}
+      <Icon name={name} size={13} />
     </button>
   )
 }

@@ -288,7 +288,8 @@ body {
 .tier-num { -webkit-background-clip: text; background-clip: text; color: transparent; }
 .tier-elite .tier-num { background-image: linear-gradient(180deg,#fffbf0,#f6edd6 52%,#c9a227); }
 .tier-gold  .tier-num { background-image: linear-gradient(180deg,#ead188,#c9a227 52%,#9a761c); }
-.tier-steel .tier-num { background-image: linear-gradient(180deg,#e8ecf1,#aeb4bc 52%,#7c838c); }
+.tier-silver .tier-num { background-image: linear-gradient(180deg,#e8ecf1,#aeb4bc 52%,#7c838c); }
+.tier-bronze .tier-num { background-image: linear-gradient(180deg,#e6c39a,#c8965a 52%,#8a5f34); }
 .tier-graphite .tier-num { background-image: linear-gradient(180deg,#c6c3bb,#8e8a80 52%,#65625b); }
 .tier-ice   .tier-num { background-image: linear-gradient(180deg,#e8fbff,#7fd4f5 52%,#3d8fb4); }
 
@@ -385,7 +386,8 @@ body {
      (the podium's silver and bronze) names it in --tier-capture. */
   color: var(--tier-capture, #ead188) !important;
 }
-[data-capturing="legacy"] .tier-steel .tier-num { color: #dfe4ea !important; }
+[data-capturing="legacy"] .tier-silver .tier-num { color: #dfe4ea !important; }
+[data-capturing="legacy"] .tier-bronze .tier-num { color: #dcb389 !important; }
 [data-capturing="legacy"] .tier-graphite .tier-num { color: #b9b6ae !important; }
 [data-capturing="legacy"] .tier-ice .tier-num { color: #c6ecfa !important; }
 

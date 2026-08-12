@@ -80,11 +80,12 @@ const PICK_TABS: TabDef[] = [
 ]
 /** What the corner of every card shows: the rating, the price, or projected
  *  points for the gameweek being viewed. */
-export type Metric = 'rating' | 'price' | 'xp'
-const METRICS: { id: Metric; label: string }[] = [
-  { id: 'rating', label: 'Rating' },
-  { id: 'price', label: '£' },
-  { id: 'xp', label: 'xP' },
+export type Metric = 'rating' | 'price' | 'xp' | 'owned'
+const METRICS: { id: Metric; label: string; short: string; hint: string }[] = [
+  { id: 'rating', label: 'Rating', short: '★', hint: 'Show each player’s rating' },
+  { id: 'price', label: '£', short: '£', hint: 'Show each player’s price' },
+  { id: 'xp', label: 'xP', short: 'xP', hint: 'Show projected points for this gameweek' },
+  { id: 'owned', label: '%', short: '%', hint: 'Show how many managers own him' },
 ]
 
 /* The corner toggle, on the grass.
@@ -99,9 +100,11 @@ const METRICS: { id: Metric; label: string }[] = [
  *
  * It steps down on a phone, and the size is measured rather than chosen. At
  * 360 the pitch runs 10–350 and the goalkeeper's card carries its sell ✕ out
- * to 240, which leaves 102px of clear grass in that corner; the desktop pill
- * is 127 and sat on top of the ✕ — a control covering a control. At 82 it
- * clears by ten pixels on the narrowest phone anyone brings. */
+ * to 240, which leaves 102px of clear grass in that corner. The desktop pill
+ * is 159 with four chips and sat on top of that ✕ — a control covering a
+ * control — so below sm the rating chip is a star, which takes the group to
+ * 93 and clears by nine pixels on the narrowest phone anyone brings. Every
+ * chip keeps its full name in the tooltip and the aria-label either way. */
 function MetricChips({ metric, onChange }: { metric: Metric; onChange: (m: Metric) => void }) {
   return (
     <div
@@ -115,12 +118,14 @@ function MetricChips({ metric, onChange }: { metric: Metric; onChange: (m: Metri
           key={m.id}
           onClick={() => onChange(m.id)}
           aria-pressed={metric === m.id}
-          title={m.id === 'rating' ? 'Show each player’s rating' : m.id === 'price' ? 'Show each player’s price' : 'Show projected points for this gameweek'}
+          aria-label={m.hint}
+          title={m.hint}
           className={`min-h-6 rounded-full px-1.5 text-[10px] font-bold transition-colors sm:min-h-7 sm:px-2.5 sm:text-[11.5px] ${
             metric === m.id ? 'bg-accent text-accent-contrast' : 'text-white/70 hover:text-white'
           }`}
         >
-          {m.label}
+          <span className="sm:hidden">{m.short}</span>
+          <span className="hidden sm:inline">{m.label}</span>
         </button>
       ))}
     </div>
@@ -291,10 +296,10 @@ export default function SquadBuilder() {
      pitch to reach it and a phone scroll past everything. It is a different
      job from picking, so it gets its own tab rather than more page. */
   const [view, setView] = useState<View>('build')
-  /* The portal target for the stat tiles. State rather than a ref so the first
-     render after the node mounts actually re-renders the planner — a ref would
-     still be null when it read it and the tiles would stay inline. */
-  const [statsEl, setStatsEl] = useState<HTMLDivElement | null>(null)
+  /* The portal target for the plan bar. State rather than a ref so the first
+     render after the node mounts actually re-renders the page — a ref would
+     still be null when it was read and the bar would stay at the top. */
+  const [planEl, setPlanEl] = useState<HTMLDivElement | null>(null)
   const wide = useWide(1024)
   /** What the last fork did, until dismissed. */
   const [forked, setForked] = useState<{ name: string; from: string; gw: number } | null>(null)
@@ -502,6 +507,14 @@ export default function SquadBuilder() {
   const activeFilters = (maxPrice < PRICE_MAX ? 1 : 0) + (minRating > 0 ? 1 : 0) + dims.filter((d) => (minDim[d.key] ?? 0) > 0).length
   const resetFilters = () => { setMaxPrice(PRICE_MAX); setMinRating(0); setMinDim({}) }
 
+  const planBar = (
+    <PlanBar
+      plans={plans}
+      canCompare={plans.compare.length >= 2}
+      onCompare={() => setView('compare')}
+    />
+  )
+
   if (!data) {
     return (
       <PageShell>
@@ -515,13 +528,19 @@ export default function SquadBuilder() {
     <PageShell>
       <SectionBanner imgKey="squad" title="Squad Builder" subtitle={`Pick your Gameweek ${buildGw} fifteen within £100m, then step forward week by week — transfers, captain and chips`} />
 
-      {/* The library first: which squad you are looking at is the question
-          that precedes every other one on this page. */}
-      <PlanBar
-        plans={plans}
-        canCompare={plans.compare.length >= 2}
-        onCompare={() => setView('compare')}
-      />
+      {/* The library. On a wide screen it belongs beside the board rather
+          than across the top of the page — it is a switcher you reach for
+          between decisions, not a header you read before making one, and a
+          full-width band of it was the first thing between the page title and
+          the team.
+
+          It is the same element either way, portalled: a second copy would
+          have its own rename box and its own idea of which plan you were
+          renaming. Page-level whenever the board is not on screen, because
+          Compare needs the ticks and the board's column is hidden there. */}
+      {wide && view === 'build' && planEl
+        ? createPortal(planBar, planEl)
+        : planBar}
 
       {/* A fork switches you into a plan that looks identical to the one you
           were in — same fifteen, same weeks behind you — so without a line
@@ -600,8 +619,20 @@ export default function SquadBuilder() {
           <SeasonPlanner
             planner={planner} byEl={byEl} pool={pool} fixtureEase={fixtureEase}
             metric={metric} avail={avail}
-            statsSlot={wide ? statsEl : null}
             boardOverlay={<MetricChips metric={metric} onChange={setMetric} />}
+            /* Share acts on the board — it photographs exactly this — so it
+               lives on the board, in the corner opposite the toggle. Same dark
+               glass, and gone until there is a squad worth a picture. */
+            boardOverlayLeft={total > 0 ? (
+              <button
+                onClick={() => setShareOpen(true)}
+                title="Share this squad as a picture"
+                className="inline-flex min-h-6 items-center gap-1 rounded-full border border-white/15 px-2 text-[10px] font-bold text-white/80 backdrop-blur-[2px] transition-colors hover:text-white sm:min-h-7 sm:gap-1.5 sm:px-3 sm:text-[11.5px]"
+                style={{ background: 'rgba(6,14,10,.55)' }}
+              >
+                <Icon name="users" size={12} /> Share
+              </button>
+            ) : null}
             /* The squad-wide actions, handed to the planner so they can share
                the gameweek's row instead of having one of their own. Share and
                Clear used to sit UNDER the pitch on the theory that you share a
@@ -634,15 +665,11 @@ export default function SquadBuilder() {
               <button onClick={() => setImportOpen(true)} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-line-mid px-3 text-[12px] font-semibold text-ink transition-colors hover:border-line-strong">
                 <Icon name="camera" size={13} /> Import
               </button>
+              {/* Share has gone to the board — see boardOverlayLeft above. */}
               {total > 0 && (
-                <>
-                  <button onClick={() => setShareOpen(true)} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-line-mid px-3 text-[12px] font-semibold text-ink transition-colors hover:border-line-strong">
-                    <Icon name="users" size={13} /> Share
-                  </button>
-                  <button onClick={clear} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-line-mid px-3 text-[12px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink">
-                    <Icon name="x" size={13} /> Clear
-                  </button>
-                </>
+                <button onClick={clear} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-line-mid px-3 text-[12px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink">
+                  <Icon name="x" size={13} /> Clear
+                </button>
               )}
             </>}
             /* No fork once the library is full — the button would be there to
@@ -678,16 +705,8 @@ export default function SquadBuilder() {
             which is the behaviour the market had before the read arrived. */}
         <div ref={marketRef} className="mt-8 min-w-0 scroll-mt-20 lg:mt-0">
           <div className="mb-4 flex flex-col gap-3">
-            {/* Where the week's four numbers land on a wide screen. They used
-                to be a full-width row above the board, which spent a whole
-                band of vertical space on four figures and pushed the forwards
-                below the fold. At the top of this column they sit level with
-                the gameweek you are reading them for, and they read as that
-                team's score rather than as a page header. Hidden below lg,
-                where this column stacks UNDER the board and the numbers are
-                worth more above it — the planner keeps drawing them inline
-                there. */}
-            <div ref={setStatsEl} className="hidden lg:block" />
+            {/* Where the plan library lands on a wide screen. */}
+            <div ref={setPlanEl} className="hidden lg:block" />
             {/* Nothing until the fifteen exists. A verdict on nine players is
                 a verdict on a squad that isn't the one being built. */}
             {complete && (

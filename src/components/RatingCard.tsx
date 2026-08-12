@@ -19,17 +19,24 @@ export type RatingWindow = 'season' | 'gw4'
 const POS_SHORT: Record<string, string> = { GKP: 'GK', DEF: 'DEF', MID: 'MID', FWD: 'FWD' }
 
 // ── Rarity frames ────────────────────────────────────────────────────────────
-type Tier = 'bronze' | 'silver' | 'gold' | 'elite' | 'diff'
+/* Same bands as the pitch card in components/Pitch.tsx — 90 / 80 / 70 / 60.
+   They disagreed before: this card called 60–79 silver while the pitch called
+   70–79 steel and everything below it graphite, so a 65 was silver on his own
+   page and a dark card in your squad. `diff` is not a band; it overrides the
+   metal for a player almost nobody owns. */
+type Tier = 'graphite' | 'bronze' | 'silver' | 'gold' | 'elite' | 'diff'
 function tierOf(ov: number | null, ownership: number | null): Tier {
   if (ownership != null && ownership < 7 && ov != null && ov >= 65 && ov < 90) return 'diff'
   if (ov == null) return 'gold'
   if (ov >= 90) return 'elite'
   if (ov >= 80) return 'gold'
-  if (ov >= 60) return 'silver'
-  return 'bronze'
+  if (ov >= 70) return 'silver'
+  if (ov >= 60) return 'bronze'
+  return 'graphite'
 }
 interface TierStyle { bg: string; border: string; edge: string; a: string; a2: string; as: string; glow?: string }
 const TIER: Record<Tier, TierStyle> = {
+  graphite: { bg: 'linear-gradient(165deg,#1c1b19,#0b0b0a)', border: 'rgba(255,255,255,.14)', edge: 'linear-gradient(135deg,#55524a,#2f3033)', a: '#a8a49b', a2: '#c6c3bb', as: '#65625b' },
   bronze: { bg: 'linear-gradient(165deg,#1b1c1f,#0f1013)', border: 'rgba(176,124,74,.45)', edge: 'linear-gradient(135deg,#c8965a,#7a5230)', a: '#d69b63', a2: '#e0b385', as: '#8a5f34' },
   silver: { bg: 'linear-gradient(165deg,#20232a,#121317)', border: 'rgba(185,194,207,.45)', edge: 'linear-gradient(135deg,#dce3ec,#8b96a6)', a: '#ccd5e1', a2: '#e6ecf3', as: '#8b96a6' },
   gold: { bg: 'linear-gradient(165deg,#1c1d20,#0a0b0e)', border: 'rgba(201,162,39,.5)', edge: 'linear-gradient(135deg,#ead188,#9a761c)', a: '#c9a227', a2: '#ead188', as: '#9a761c' },

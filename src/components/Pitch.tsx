@@ -9,16 +9,18 @@ import { SEV_COLOUR, type AvailBadgeInfo } from '../lib/availability'
    in a shared PNG.
    ════════════════════════════════════════════════════════════════════════ */
 
-export function Pitch({ children, footer, className, maxWidth, boosted, overlay }: {
+export function Pitch({ children, footer, className, maxWidth, boosted, overlay, overlayLeft }: {
   children: ReactNode; footer?: ReactNode; className?: string; maxWidth?: number
   /** Bench Boost is on, so the bench is scoring — it gets the gold edge and
    *  says BOOST, the same signal the live board gives it. */
   boosted?: boolean
   /** Controls that belong to the board rather than to the page — they float
-   *  in the corner of the grass instead of taking a row above it. The share
+   *  in the corners of the grass instead of taking a row above it. The share
    *  export builds its own Pitch and passes nothing, so none of this lands in
    *  the picture. */
   overlay?: ReactNode
+  /** The same, in the other corner. */
+  overlayLeft?: ReactNode
 }) {
   return (
     <div
@@ -75,6 +77,7 @@ export function Pitch({ children, footer, className, maxWidth, boosted, overlay 
           six-yard box on every width the pitch is drawn at, so it never sits
           on a card. */}
       {overlay && <div className="absolute top-2 right-2 z-20 sm:top-3 sm:right-3">{overlay}</div>}
+      {overlayLeft && <div className="absolute top-2 left-2 z-20 sm:top-3 sm:left-3">{overlayLeft}</div>}
       <div className="relative col-start-1 row-start-1 flex flex-col">
         <div className="flex flex-1 flex-col justify-around gap-2">{children}</div>
         {footer && (
@@ -129,10 +132,23 @@ export function nameSize(name: string, hasArmband = false): string {
 /** Rating tiers. The band a player falls in is what the card's material says,
  *  so a shelf of them sorts itself before you read a single name. `ice` is not
  *  a rating band — it marks Team of the Week, which is a different object from
- *  your own squad and shouldn't read like one. */
-export type Tier = 'elite' | 'gold' | 'steel' | 'graphite' | 'ice'
+ *  your own squad and shouldn't read like one.
+ *
+ *  MEDALS, AND ALL OF THEM. This ran elite / gold / steel / graphite, with
+ *  nothing at all between 70 and the floor: a 65 and a 30 were the same dark
+ *  card. Meanwhile the player's own detail card called 60–79 silver and
+ *  everything below bronze, so one player carried two different metals
+ *  depending on which page you were on. One scale now, in the language the
+ *  site already speaks in on every podium it draws — and bronze exists again,
+ *  which is where a 65 belongs. Graphite is what is left below the medals. */
+export type Tier = 'elite' | 'gold' | 'silver' | 'bronze' | 'graphite' | 'ice'
 export const tierOf = (rating: number | null): Tier =>
-  rating == null ? 'graphite' : rating >= 90 ? 'elite' : rating >= 80 ? 'gold' : rating >= 70 ? 'steel' : 'graphite'
+  rating == null ? 'graphite'
+    : rating >= 90 ? 'elite'
+      : rating >= 80 ? 'gold'
+        : rating >= 70 ? 'silver'
+          : rating >= 60 ? 'bronze'
+            : 'graphite'
 
 /** The card's material, per tier — the padded gradient EDGE (the foil) and
  *  the stock behind the content. This is the thicker edge from the mockup:
@@ -149,9 +165,14 @@ const TIER_SKIN: Record<Tier, { edge: string; stock: string; glow?: string; pad?
     edge: 'linear-gradient(160deg,#5f4d26,#c9a227,#ead188,#50411f)',
     stock: 'linear-gradient(168deg,#1f2023,#0f1013 56%,#08090c)',
   },
-  steel: {
+  silver: {
     edge: 'linear-gradient(160deg,#5C636B,#C9CFD6,#e8ecf1,#4a5057)',
     stock: 'linear-gradient(168deg,#1a1d21,#12151a 56%,#0a0c0e)',
+  },
+  // The copper the detail card already uses, as an edge rather than a border.
+  bronze: {
+    edge: 'linear-gradient(160deg,#51351f,#c8965a,#e0b385,#6b4526)',
+    stock: 'linear-gradient(168deg,#1f1b17,#141110 56%,#0b0a09)',
   },
   graphite: {
     edge: 'linear-gradient(160deg,#2f3033,#55524a,#2f3033)',
