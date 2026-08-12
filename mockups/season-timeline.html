@@ -1,0 +1,371 @@
+<meta charset="utf-8"><title>Squad Builder — the season as the spine</title>
+<style>
+:root{--bg:#000;--s1:#121316;--s2:#1b1c1f;--s3:#232427;--ink:#edeff3;--ink2:#aaacb0;--ink3:#828386;
+--acc:#c9a227;--acc2:#ead188;--line:rgba(255,255,255,.1);--line2:rgba(255,255,255,.2);
+--good:#3ddc7a;--warn:#e8b04a;--bad:#f0736f;--info:#7fb0ff;--past:#5a6472}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:left}
+.wrap{max-width:1180px;margin:0 auto;padding:44px 20px 110px}
+h1{font-size:31px;font-weight:800;letter-spacing:-.02em;margin:0 0 10px}
+h2{font-size:21px;font-weight:800;margin:4px 0 8px;letter-spacing:-.01em}
+h3{font-size:13.5px;font-weight:800;margin:20px 0 8px;color:var(--ink)}
+.lead{color:var(--ink2);max-width:78ch}
+.rule{height:1px;background:var(--line);margin:46px 0 26px}
+.step{font:700 11px/1 ui-sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--acc);margin-bottom:8px}
+p{max-width:78ch;color:var(--ink2)}
+b.w{color:var(--ink)}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:14px}
+.note{color:var(--ink3);font-size:12.5px;line-height:1.65;margin-top:14px;border-left:2px solid var(--line2);padding-left:12px;max-width:84ch}
+.small{font-size:12px;color:var(--ink3)}
+.sp{flex:1}
+.tag{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink3)}
+
+/* ── THE SEASON LINE ─────────────────────────────────────────── */
+.line{position:relative;background:#0a0b0d;border:1px solid var(--line);border-radius:14px;padding:14px 12px 10px}
+.lrail{display:flex;gap:3px;align-items:flex-end;height:118px}
+.wk{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;gap:3px;position:relative;cursor:pointer}
+.wk .bar{border-radius:3px 3px 0 0;position:relative}
+.wk.done .bar{background:linear-gradient(180deg,#6c7686,#3f4753)}
+.wk.now .bar{background:linear-gradient(180deg,var(--acc2),var(--acc));box-shadow:0 0 0 1px rgba(234,209,136,.5)}
+.wk.soon .bar{background:linear-gradient(180deg,rgba(201,162,39,.55),rgba(201,162,39,.2));border:1px solid rgba(201,162,39,.45);border-bottom:0}
+.wk .v{font:800 10px/1 ui-sans-serif;font-variant-numeric:tabular-nums;text-align:center;color:var(--ink2)}
+.wk.now .v{color:var(--acc2)}
+.wk .g{font-size:8.5px;text-align:center;color:var(--ink3);letter-spacing:.02em}
+.wk.now .g{color:var(--acc)}
+.wk .hard{height:3px;border-radius:2px;background:var(--s3)}
+.wk .hard i{display:block;height:100%;border-radius:2px;background:var(--bad)}
+.evt{position:absolute;left:50%;transform:translateX(-50%);font-size:9px;line-height:1;padding:2px 4px;border-radius:5px;white-space:nowrap;font-weight:800}
+.evt.tr{top:-15px;background:rgba(61,220,122,.16);color:var(--good);border:1px solid rgba(61,220,122,.45)}
+.evt.hit{top:-15px;background:rgba(240,115,111,.16);color:var(--bad);border:1px solid rgba(240,115,111,.45)}
+.evt.chip{top:-15px;background:rgba(201,162,39,.2);color:var(--acc2);border:1px solid rgba(201,162,39,.55)}
+.nowmark{position:absolute;top:6px;bottom:26px;width:2px;background:linear-gradient(180deg,var(--acc),transparent);opacity:.9}
+.axis{display:flex;gap:3px;margin-top:6px;border-top:1px solid var(--line);padding-top:5px}
+.axis span{flex:1;text-align:center;font-size:8.5px;color:var(--ink3)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:10.5px;color:var(--ink3)}
+.sw{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:-1px;margin-right:4px}
+
+/* board + panels */
+.pitchbox{background:linear-gradient(180deg,#123c25,#08150d);border:1px solid rgba(255,255,255,.13);border-radius:12px;color:#bfe6cd;display:grid;place-items:center;font-size:11.5px;letter-spacing:.04em}
+.box{border:1px dashed var(--line2);border-radius:9px;padding:8px 10px;color:var(--ink3);font-size:11.5px;background:rgba(255,255,255,.012)}
+.box.solid{border-style:solid;color:var(--ink2)}
+.box.acc{border-color:rgba(201,162,39,.5);color:var(--acc2);background:rgba(201,162,39,.06)}
+.box.gr{border-color:rgba(61,220,122,.4);color:var(--good);background:rgba(61,220,122,.05)}
+.row{display:flex;gap:8px}
+.row>*{flex:1}
+.two{display:grid;grid-template-columns:1fr 330px;gap:12px;align-items:start}
+.three{display:grid;grid-template-columns:230px 1fr 300px;gap:12px;align-items:start}
+.stack{display:flex;flex-direction:column;gap:8px}
+.tabs{display:flex;gap:3px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.tb{padding:5px 9px;font-size:11px;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tb.on{color:var(--acc);border-bottom-color:var(--acc);font-weight:700}
+.chip{border:1px solid var(--line);border-radius:99px;padding:2px 9px;font-size:10.5px;color:var(--ink2)}
+.chip.on{border-color:var(--acc);color:var(--acc);background:rgba(201,162,39,.08)}
+
+/* vertical spine */
+.spine{display:flex;flex-direction:column;gap:5px}
+.sw2{border:1px solid var(--line);border-radius:10px;padding:6px 8px;display:flex;align-items:center;gap:8px;background:var(--s1)}
+.sw2.now{border-color:var(--acc);background:rgba(201,162,39,.07)}
+.sw2.done{opacity:.6}
+.sw2 .n{font:800 11px/1 ui-sans-serif;width:30px;color:var(--ink3)}
+.sw2.now .n{color:var(--acc)}
+.sw2 .p{font:800 14px/1 ui-sans-serif;font-variant-numeric:tabular-nums;width:42px}
+.sw2 .meta{font-size:9.5px;color:var(--ink3);line-height:1.35}
+.sw2 .flag{margin-left:auto;font-size:9px;font-weight:800;padding:2px 5px;border-radius:5px}
+
+/* plan grid */
+.grid{font-size:10px}
+.grid .hdr,.grid .r{display:grid;grid-template-columns:82px repeat(10,1fr);gap:2px;align-items:center}
+.grid .hdr span{text-align:center;font-size:8.5px;color:var(--ink3)}
+.grid .r{margin-bottom:2px}
+.grid .who{font-size:10.5px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cell{height:15px;border-radius:3px;background:var(--s3)}
+.cell.own{background:linear-gradient(180deg,#2c333c,#222830)}
+.cell.f1{background:#2fbf6e}.cell.f2{background:#7fd39b}.cell.f3{background:#4c5766}.cell.f4{background:#e8907f}.cell.f5{background:#e05b52}
+.cell.out{background:repeating-linear-gradient(45deg,#3a2020,#3a2020 3px,#241414 3px,#241414 6px)}
+.cell.in{box-shadow:inset 0 0 0 1.5px var(--good)}
+table.cmp{border-collapse:collapse;margin-top:16px;font-size:12.5px;width:100%;max-width:820px}
+table.cmp th,table.cmp td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+table.cmp th{color:var(--ink3);font-weight:700;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase}
+table.cmp td b{color:var(--ink)}
+.y{color:var(--good)} .nn{color:var(--bad)} .m{color:var(--warn)}
+.phone{width:260px;border:1px solid var(--line2);border-radius:18px;padding:8px;background:#08090b}
+.phones{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px}
+</style>
+<div class="wrap">
+
+<h1>The season is the spine</h1>
+<p class="lead">Scrap the last set. Picking a fifteen is a fortnight's job and I built a whole
+mode around it; for the other thirty-six weeks everybody already has a team and is changing
+it. So here is the page built from the three things that actually matter — <b class="w">the
+squad</b>, <b class="w">the planning</b>, and <b class="w">the timeline of weeks with what
+you scored and what you are projected to score</b> — with the timeline promoted from a strip
+above the board to the thing the page is organised around.</p>
+
+<div class="rule"></div>
+<div class="step">The idea underneath all four</div><h2>One line, GW1 to GW38, past and future on the same axis</h2>
+<p>The strip today only looks forward, and only twelve weeks. But the most useful thing a
+season view can do is put <b class="w">what you scored</b> and <b class="w">what you are
+projected to score</b> on one continuous line, with <em>now</em> marked — so the plan is not
+a separate object from the record, it is the same line continuing. Transfers, hits and chips
+are <b class="w">events drawn on it</b>, which means your whole season plan is legible at a
+glance instead of being something you have to step through to remember.</p>
+
+<div class="card">
+  <div class="line">
+    <div class="lrail">
+      <div class="wk done"><span class="v">61</span><div class="bar" style="height:52px"></div><span class="hard"><i style="width:20%"></i></span><span class="g">GW1</span></div>
+      <div class="wk done"><span class="v">48</span><div class="bar" style="height:38px"></div><span class="hard"><i style="width:40%"></i></span><span class="g">2</span></div>
+      <div class="wk done"><span class="evt tr">2 in</span><span class="v">72</span><div class="bar" style="height:64px"></div><span class="hard"><i style="width:33%"></i></span><span class="g">3</span></div>
+      <div class="wk done"><span class="v">55</span><div class="bar" style="height:45px"></div><span class="hard"><i style="width:27%"></i></span><span class="g">4</span></div>
+      <div class="wk done"><span class="evt hit">−4</span><span class="v">80</span><div class="bar" style="height:73px"></div><span class="hard"><i style="width:13%"></i></span><span class="g">5</span></div>
+      <div class="wk now"><span class="evt tr">1 in</span><span class="v">54.8</span><div class="bar" style="height:47px"></div><span class="hard"><i style="width:47%"></i></span><span class="g">GW6</span></div>
+      <div class="wk soon"><span class="v">53.5</span><div class="bar" style="height:44px"></div><span class="hard"><i style="width:13%"></i></span><span class="g">7</span></div>
+      <div class="wk soon"><span class="v">55.8</span><div class="bar" style="height:49px"></div><span class="hard"><i style="width:33%"></i></span><span class="g">8</span></div>
+      <div class="wk soon"><span class="evt chip">WC</span><span class="v">62.1</span><div class="bar" style="height:60px"></div><span class="hard"><i style="width:7%"></i></span><span class="g">9</span></div>
+      <div class="wk soon"><span class="v">56.1</span><div class="bar" style="height:50px"></div><span class="hard"><i style="width:20%"></i></span><span class="g">10</span></div>
+      <div class="wk soon"><span class="v">50.8</span><div class="bar" style="height:40px"></div><span class="hard"><i style="width:47%"></i></span><span class="g">11</span></div>
+      <div class="wk soon"><span class="v">57.9</span><div class="bar" style="height:53px"></div><span class="hard"><i style="width:40%"></i></span><span class="g">12</span></div>
+      <div class="wk soon"><span class="v">51.7</span><div class="bar" style="height:41px"></div><span class="hard"><i style="width:40%"></i></span><span class="g">13</span></div>
+      <div class="wk soon"><span class="evt chip">BB</span><span class="v">63.4</span><div class="bar" style="height:62px"></div><span class="hard"><i style="width:13%"></i></span><span class="g">14</span></div>
+      <div class="wk soon"><span class="v">53.4</span><div class="bar" style="height:43px"></div><span class="hard"><i style="width:20%"></i></span><span class="g">15</span></div>
+      <div class="wk soon"><span class="v">54.0</span><div class="bar" style="height:45px"></div><span class="hard"><i style="width:13%"></i></span><span class="g">16</span></div>
+      <div class="wk soon"><span class="v">48.9</span><div class="bar" style="height:36px"></div><span class="hard"><i style="width:53%"></i></span><span class="g">17</span></div>
+      <div class="wk soon"><span class="v">55.0</span><div class="bar" style="height:47px"></div><span class="hard"><i style="width:27%"></i></span><span class="g">18</span></div>
+    </div>
+    <div class="legend">
+      <span><i class="sw" style="background:linear-gradient(180deg,#6c7686,#3f4753)"></i>played — what you scored</span>
+      <span><i class="sw" style="background:var(--acc)"></i>the week you are on</span>
+      <span><i class="sw" style="background:rgba(201,162,39,.4);border:1px solid rgba(201,162,39,.5)"></i>projected</span>
+      <span><i class="sw" style="background:var(--bad)"></i>the thin bar: how many of the fifteen face a 4 or 5</span>
+      <span>events above: transfers, hits, chips</span>
+    </div>
+  </div>
+  <p class="note">Everything here exists already — the projection, the GW rating, the hard
+  count, the chip plan, the transfers per week. None of it has ever been drawn on one axis.
+  <b class="w">Two things this gives you that nothing on the page does today:</b> you can see
+  the shape of your season (a run of grey 50s then a gold spike where the wildcard lands),
+  and you can see <em>the cost of your own decisions</em> — a −4 sitting above a week that
+  went well or badly.</p>
+</div>
+
+<div class="rule"></div>
+<div class="step">Layout 1 · my recommendation</div><h2>Timeline across the top, squad and planning underneath</h2>
+<p>The line is the header. The board sits under it, and the right-hand column is the
+<b class="w">planning</b> column — market, chips, the moves you are considering. Insight is
+not a tab: the week you are standing on <em>explains itself</em> under the board, one line
+of it, and expands if you want the rest.</p>
+<div class="card">
+  <div class="box solid" style="margin-bottom:10px">Plan A ▾ &nbsp;·&nbsp; 2 of 8 &nbsp;·&nbsp; compare ↗ &nbsp;<span class="sp"></span>&nbsp; Auto · Import · Share · Clear</div>
+  <div class="line" style="margin-bottom:12px;padding:12px 10px 8px">
+    <div class="lrail" style="height:78px">
+      <div class="wk done"><span class="v">61</span><div class="bar" style="height:34px"></div><span class="g">1</span></div>
+      <div class="wk done"><span class="v">48</span><div class="bar" style="height:24px"></div><span class="g">2</span></div>
+      <div class="wk done"><span class="v">72</span><div class="bar" style="height:42px"></div><span class="g">3</span></div>
+      <div class="wk done"><span class="v">55</span><div class="bar" style="height:29px"></div><span class="g">4</span></div>
+      <div class="wk done"><span class="evt hit">−4</span><span class="v">80</span><div class="bar" style="height:48px"></div><span class="g">5</span></div>
+      <div class="wk now"><span class="evt tr">1 in</span><span class="v">54.8</span><div class="bar" style="height:30px"></div><span class="g">GW6</span></div>
+      <div class="wk soon"><span class="v">53.5</span><div class="bar" style="height:28px"></div><span class="g">7</span></div>
+      <div class="wk soon"><span class="v">55.8</span><div class="bar" style="height:32px"></div><span class="g">8</span></div>
+      <div class="wk soon"><span class="evt chip">WC</span><span class="v">62.1</span><div class="bar" style="height:39px"></div><span class="g">9</span></div>
+      <div class="wk soon"><span class="v">56.1</span><div class="bar" style="height:33px"></div><span class="g">10</span></div>
+      <div class="wk soon"><span class="v">50.8</span><div class="bar" style="height:26px"></div><span class="g">11</span></div>
+      <div class="wk soon"><span class="v">57.9</span><div class="bar" style="height:35px"></div><span class="g">12</span></div>
+      <div class="wk soon"><span class="v">51.7</span><div class="bar" style="height:27px"></div><span class="g">13</span></div>
+      <div class="wk soon"><span class="evt chip">BB</span><span class="v">63.4</span><div class="bar" style="height:41px"></div><span class="g">14</span></div>
+    </div>
+  </div>
+  <div class="two">
+    <div class="stack">
+      <div class="row">
+        <div class="box acc" style="flex:1.2">54.8 xP / 83 strong</div>
+        <div class="box">75 squad</div><div class="box">£0.5m bank</div><div class="box">1 free · 0 used</div>
+      </div>
+      <div class="pitchbox" style="height:230px">THE BOARD — GW6</div>
+      <div class="box gr">▸ <b class="w" style="color:var(--good)">This week:</b> Anderson captain by a whisker, 0.2 over Virgil · 7 of your 15 in a hard game — the most of any week in your plan</div>
+    </div>
+    <div class="stack">
+      <div class="tabs"><span class="tb on">Market</span><span class="tb">Chips</span><span class="tb">Moves</span></div>
+      <div class="box" style="height:270px">the planning column</div>
+    </div>
+  </div>
+  <p class="note"><b class="w">Why the insight goes there.</b> Every panel we have — Analyser,
+  Captain, Horizon, Clashes, Template, Watch — is a sentence about a week. Standing on GW6
+  and being told what GW6's problem is, in one line under the team it is about, is worth more
+  than eight boxes in a column you have to scroll to. The full set lives one click deeper,
+  in the same place, expanded. <b class="w">Insight becomes a property of the week, not a
+  tab.</b></p>
+</div>
+
+<div class="rule"></div>
+<div class="step">Layout 2 · the out-there one</div><h2>The season is a document you scroll — the board follows you</h2>
+<p>Turn it ninety degrees. The weeks run <em>down</em> the page as a rail of cards, each one
+carrying its own points, rating, moves and warnings. The board is <b class="w">sticky beside
+them</b>, and it morphs as you scroll: scroll to GW9 and the board shows the wildcard squad.
+Your season becomes a document you read top to bottom, with the team always in view.</p>
+<div class="card">
+  <div class="three">
+    <div class="spine">
+      <div class="sw2 done"><span class="n">GW4</span><span class="p">55</span><span class="meta">scored<br>2 hard</span></div>
+      <div class="sw2 done"><span class="n">GW5</span><span class="p">80</span><span class="meta">scored<br>−4 hit</span><span class="flag" style="background:rgba(61,220,122,.15);color:var(--good)">best week</span></div>
+      <div class="sw2 now"><span class="n">GW6</span><span class="p" style="color:var(--acc2)">54.8</span><span class="meta">projected · 83<br>7 hard</span><span class="flag" style="background:rgba(240,115,111,.15);color:var(--bad)">hardest</span></div>
+      <div class="sw2"><span class="n">GW7</span><span class="p">53.5</span><span class="meta">projected · 79<br>2 hard</span></div>
+      <div class="sw2"><span class="n">GW8</span><span class="p">55.8</span><span class="meta">projected · 81<br>5 hard</span></div>
+      <div class="sw2"><span class="n">GW9</span><span class="p" style="color:var(--acc2)">62.1</span><span class="meta">projected · 88<br>1 hard</span><span class="flag" style="background:rgba(201,162,39,.18);color:var(--acc2)">WC</span></div>
+      <div class="sw2"><span class="n">GW10</span><span class="p">56.1</span><span class="meta">projected · 82<br>3 hard</span></div>
+      <div class="sw2"><span class="n">GW11</span><span class="p">50.8</span><span class="meta">projected · 74<br>7 hard</span></div>
+    </div>
+    <div class="stack">
+      <div class="pitchbox" style="height:220px">THE BOARD — follows the week you scroll to</div>
+      <div class="box gr">▸ 7 of your 15 in a hard game this week, the most of any week you have planned</div>
+      <div class="box">Moves this week: Garner → Rice (£0.1m, 1 free)</div>
+    </div>
+    <div class="stack">
+      <div class="tabs"><span class="tb on">Market</span><span class="tb">Chips</span></div>
+      <div class="box" style="height:250px">the planning column</div>
+    </div>
+  </div>
+  <p class="note"><b class="w">What makes this different:</b> the season stops being something
+  you step through one week at a time and becomes something you <em>read</em>. The rail is
+  also the natural phone layout — scrolling down IS moving through time, so the desktop and
+  the phone are the same idea rather than two layouts. <b class="w">The risk is scroll-jacking:</b>
+  a board that changes as you scroll can feel like the page is arguing with you, so it would
+  need the board to change on a deliberate stop, not continuously.</p>
+</div>
+
+<div class="rule"></div>
+<div class="step">Layout 3 · for the planners</div><h2>The plan as a grid: who is in your squad, and when</h2>
+<p>Fifteen rows, the next ten weeks across. Each cell is that player's fixture, coloured by
+difficulty. A transfer is a row <b class="w">ending</b> and another <b class="w">starting</b>
+— so a plan four weeks deep is one picture, and the thing you are actually deciding (is this
+run worth a hit?) is right there in the pattern.</p>
+<div class="card">
+  <div class="grid">
+    <div class="hdr"><span></span><span>GW6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span></div>
+    <div class="r"><span class="who">Raya</span><span class="cell f2"></span><span class="cell f3"></span><span class="cell f1"></span><span class="cell f2"></span><span class="cell f3"></span><span class="cell f4"></span><span class="cell f2"></span><span class="cell f3"></span><span class="cell f2"></span><span class="cell f1"></span></div>
+    <div class="r"><span class="who">Virgil</span><span class="cell f3"></span><span class="cell f2"></span><span class="cell f4"></span><span class="cell f2"></span><span class="cell f1"></span><span class="cell f3"></span><span class="cell f2"></span><span class="cell f4"></span><span class="cell f3"></span><span class="cell f2"></span></div>
+    <div class="r"><span class="who">Senesi</span><span class="cell f4"></span><span class="cell f3"></span><span class="cell f2"></span><span class="cell f1"></span><span class="cell f2"></span><span class="cell f3"></span><span class="cell f3"></span><span class="cell f2"></span><span class="cell f4"></span><span class="cell f3"></span></div>
+    <div class="r"><span class="who" style="color:var(--bad)">Garner</span><span class="cell f5"></span><span class="cell out"></span><span class="cell out"></span><span class="cell out"></span><span class="cell out"></span><span class="cell out"></span><span class="cell out"></span><span class="cell out"></span><span class="cell out"></span><span class="cell out"></span></div>
+    <div class="r"><span class="who" style="color:var(--good)">Rice</span><span class="cell" style="background:var(--s3)"></span><span class="cell f2 in"></span><span class="cell f2"></span><span class="cell f1"></span><span class="cell f3"></span><span class="cell f2"></span><span class="cell f4"></span><span class="cell f2"></span><span class="cell f1"></span><span class="cell f3"></span></div>
+    <div class="r"><span class="who">Anderson</span><span class="cell f2"></span><span class="cell f4"></span><span class="cell f3"></span><span class="cell f2"></span><span class="cell f5"></span><span class="cell f3"></span><span class="cell f2"></span><span class="cell f1"></span><span class="cell f2"></span><span class="cell f3"></span></div>
+    <div class="r"><span class="who">Haaland</span><span class="cell f2"></span><span class="cell f1"></span><span class="cell f3"></span><span class="cell f4"></span><span class="cell f2"></span><span class="cell f2"></span><span class="cell f3"></span><span class="cell f1"></span><span class="cell f4"></span><span class="cell f2"></span></div>
+    <div class="r"><span class="who">Thiago</span><span class="cell f3"></span><span class="cell f2"></span><span class="cell f2"></span><span class="cell f4"></span><span class="cell f3"></span><span class="cell f1"></span><span class="cell f2"></span><span class="cell f3"></span><span class="cell f2"></span><span class="cell f4"></span></div>
+    <div class="r"><span class="who" style="opacity:.55">…seven more</span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span></div>
+    <div class="hdr" style="margin-top:8px;border-top:1px solid var(--line);padding-top:6px"><span style="text-align:left;color:var(--ink2);font-size:10px">xP</span><span style="color:var(--acc2);font-weight:800">54.8</span><span>53.5</span><span>55.8</span><span style="color:var(--acc2);font-weight:800">62.1</span><span>56.1</span><span>50.8</span><span>57.9</span><span>51.7</span><span style="color:var(--acc2);font-weight:800">63.4</span><span>53.4</span></div>
+    <div class="hdr"><span style="text-align:left;color:var(--ink2);font-size:10px">moves</span><span style="color:var(--good)">1 in</span><span></span><span></span><span style="color:var(--acc2)">WC</span><span></span><span></span><span></span><span></span><span style="color:var(--acc2)">BB</span><span></span></div>
+  </div>
+  <p class="note">This is the view a serious planner would screenshot. It is also the one that
+  <b class="w">cannot be the whole page</b> — you can read a plan in it but you cannot pick a
+  captain or make a substitution, so it belongs as a full-width band under the board, or as
+  the thing the timeline expands into when you pull it down. Half of it is already built:
+  the Fixtures tab is this grid without the transfers and without the totals.</p>
+</div>
+
+<div class="rule"></div>
+<div class="step">Layout 4 · the properly mad one</div><h2>Two boards: this week, and the week you are planning for</h2>
+<p>Put GW6 and GW9 side by side. You edit the right-hand one. The difference between them
+<em>is</em> your transfer plan, drawn as arrows down the middle, and the number under each
+board is what that squad is worth. Planning stops being "remember what you changed" and
+becomes "look at the two teams".</p>
+<div class="card">
+  <div style="display:grid;grid-template-columns:1fr 116px 1fr;gap:10px;align-items:center">
+    <div class="stack">
+      <div class="box solid" style="text-align:center">GW6 &nbsp;·&nbsp; <b class="w">54.8</b> xP &nbsp;·&nbsp; now</div>
+      <div class="pitchbox" style="height:200px">TODAY'S ELEVEN</div>
+    </div>
+    <div class="stack" style="text-align:center">
+      <div class="box" style="border-color:rgba(240,115,111,.5);color:var(--bad)">Garner ↓</div>
+      <div class="box" style="border-color:rgba(61,220,122,.5);color:var(--good)">Rice ↑</div>
+      <div class="box" style="border-color:rgba(240,115,111,.5);color:var(--bad)">E.Le Fée ↓</div>
+      <div class="box" style="border-color:rgba(61,220,122,.5);color:var(--good)">Wharton ↑</div>
+      <div class="box acc" style="text-align:center">2 moves<br>−4 pts<br><b class="w" style="color:var(--good)">+7.3 xP</b></div>
+    </div>
+    <div class="stack">
+      <div class="box acc" style="text-align:center">GW9 &nbsp;·&nbsp; <b class="w">62.1</b> xP &nbsp;·&nbsp; wildcard</div>
+      <div class="pitchbox" style="height:200px;border-color:rgba(201,162,39,.5)">THE TEAM YOU ARE BUILDING</div>
+    </div>
+  </div>
+  <p class="note">The honest case for it: the question people actually ask is "is this worth
+  it?", and that is a comparison of two squads — which is exactly what Compare already does
+  for two <em>plans</em>, pointed at two <em>weeks</em> of one plan instead. The honest case
+  against: two boards is 1,360px of pitch, so on anything under a big monitor one of them is
+  a list, and the middle column is the interesting part on every screen size. <b class="w">I
+  would build this as a mode you can enter from the timeline</b> — drag GW6 onto GW9 — rather
+  than as the page.</p>
+</div>
+
+<div class="rule"></div>
+<div class="step">Where the insight goes</div><h2>Three answers, and I only believe one</h2>
+<div class="row" style="align-items:stretch;margin-top:14px">
+  <div class="card" style="margin:0"><h3 style="margin-top:0">a · a tab, as now</h3>
+    <p class="small">Eight panels in a column you open on purpose. Honest, and nobody opens it —
+    it is a room you have to decide to walk into, and the decision it helps with was made two
+    clicks ago.</p></div>
+  <div class="card" style="margin:0"><h3 style="margin-top:0">b · attached to the week ✓</h3>
+    <p class="small">One line under the board about the week you are standing on, expanding to
+    the full set. Every panel we have is already a sentence about a week — Horizon, Captain,
+    Clashes, Watch, Template. They were only ever grouped because they had nowhere to be.</p></div>
+  <div class="card" style="margin:0"><h3 style="margin-top:0">c · painted on the board</h3>
+    <p class="small">The insight becomes a lens on the pitch: shade the cards by rotation risk,
+    ownership, form. Lovely, and it can only ever say things that are true of individuals —
+    "GW6 is your hardest week" has nowhere to live.</p></div>
+</div>
+<p class="note">Which is why <b class="w">b</b>, with <b class="w">c</b> as a bonus once the
+metric toggle grows a couple more options. The Insights tab does not disappear so much as get
+distributed: each panel moves next to the week or the player it is about.</p>
+
+<div class="rule"></div>
+<div class="step">Side by side</div><h2>What each one is good at</h2>
+<table class="cmp">
+  <tr><th></th><th>1 · timeline on top</th><th>2 · vertical rail</th><th>3 · plan grid</th><th>4 · two boards</th></tr>
+  <tr><td><b>Squad front and centre</b></td><td class="y">yes</td><td class="y">yes, sticky</td><td class="nn">no board at all</td><td class="m">two half-boards</td></tr>
+  <tr><td><b>Season legible at a glance</b></td><td class="y">18 weeks</td><td class="m">8 weeks a screen</td><td class="y">10 weeks, in detail</td><td class="nn">two weeks</td></tr>
+  <tr><td><b>Planning</b></td><td class="y">column beside</td><td class="y">column beside</td><td class="y">the grid IS the plan</td><td class="y">the diff IS the plan</td></tr>
+  <tr><td><b>Phone</b></td><td class="m">timeline scrolls sideways</td><td class="y">it is already this</td><td class="nn">too wide</td><td class="nn">impossible</td></tr>
+  <tr><td><b>Built from</b></td><td class="y">all of it exists</td><td class="y">all of it exists</td><td class="m">Fixtures tab + transfers</td><td class="m">Compare, re-pointed</td></tr>
+</table>
+
+<div class="rule"></div>
+<div class="step">What I'd build</div><h2>1 as the page, 3 as what it opens into, 2 as the phone</h2>
+<p><b class="w">Layout 1 is the page.</b> The timeline across the top from GW1 to the end of
+your horizon, past and future on one axis, transfers and chips drawn on it. The board under
+it, the planning column beside it, and the week's insight as one line under the board that
+expands.</p>
+<p><b class="w">Pull the timeline down and it becomes layout 3</b> — the same weeks, the same
+axis, but every player's run in it and your transfers as rows starting and ending. One
+gesture between "the shape of my season" and "the detail of my plan".</p>
+<p><b class="w">On a phone the timeline turns ninety degrees</b> and becomes layout 2's rail,
+because on a phone scrolling down is already how you move through time. Same information,
+same order, no second design.</p>
+<p>And layout 4 is the thing the timeline can do that nothing else can: <b class="w">pick two
+weeks and put them side by side</b>. Not the page — a thing you ask the page for.</p>
+
+<h3>On a phone</h3>
+<div class="phones">
+  <div class="phone">
+    <div class="box solid" style="font-size:10px;margin-bottom:6px">Plan A ▾ · GW6</div>
+    <div class="spine" style="margin-bottom:6px">
+      <div class="sw2 done" style="padding:4px 6px"><span class="n" style="font-size:10px">GW5</span><span class="p" style="font-size:12px">80</span><span class="meta" style="font-size:8.5px">scored · −4</span></div>
+      <div class="sw2 now" style="padding:4px 6px"><span class="n" style="font-size:10px">GW6</span><span class="p" style="font-size:12px;color:var(--acc2)">54.8</span><span class="meta" style="font-size:8.5px">83 · 7 hard</span></div>
+    </div>
+    <div class="pitchbox" style="height:150px">BOARD</div>
+    <div class="box gr" style="font-size:9.5px;margin-top:6px">▸ 7 of 15 in a hard game — your worst week</div>
+    <div class="box" style="font-size:9.5px;margin-top:5px">▲ Market · Chips · Moves</div>
+  </div>
+  <div class="phone">
+    <div class="box solid" style="font-size:10px;margin-bottom:6px">the rail, scrolled</div>
+    <div class="spine">
+      <div class="sw2 done" style="padding:4px 6px"><span class="n" style="font-size:10px">GW6</span><span class="p" style="font-size:12px">54.8</span><span class="meta" style="font-size:8.5px">1 in</span></div>
+      <div class="sw2" style="padding:4px 6px"><span class="n" style="font-size:10px">GW7</span><span class="p" style="font-size:12px">53.5</span><span class="meta" style="font-size:8.5px">2 hard</span></div>
+      <div class="sw2" style="padding:4px 6px"><span class="n" style="font-size:10px">GW8</span><span class="p" style="font-size:12px">55.8</span><span class="meta" style="font-size:8.5px">5 hard</span></div>
+      <div class="sw2 now" style="padding:4px 6px"><span class="n" style="font-size:10px">GW9</span><span class="p" style="font-size:12px;color:var(--acc2)">62.1</span><span class="meta" style="font-size:8.5px">wildcard</span><span class="flag" style="background:rgba(201,162,39,.18);color:var(--acc2);font-size:8px">WC</span></div>
+    </div>
+    <div class="pitchbox" style="height:130px;margin-top:6px">the GW9 board</div>
+    <div class="box" style="font-size:9.5px;margin-top:5px">tap a week → the board is that week</div>
+  </div>
+</div>
+
+<p class="small" style="margin-top:24px">Wireframes. Bars, ratings and hard counts are shaped
+from real 2026/27 projections; the played weeks and the chip plan are invented, because the
+season has not started.</p>
+</div>
