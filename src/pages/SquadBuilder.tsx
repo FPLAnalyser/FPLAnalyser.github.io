@@ -87,15 +87,37 @@ const METRICS: { id: Metric; label: string }[] = [
   { id: 'xp', label: 'xP' },
 ]
 
+/* The corner toggle, on the grass.
+ *
+ * It changes one number on fifteen cards, and it used to live in a row above
+ * the board — far from what it changes, and costing height on a page whose
+ * problem is height. On the pitch it sits beside the cards it rewrites, and
+ * the row above the board is one control lighter.
+ *
+ * Dark glass rather than the page's chip styling: over a lit green pitch, a
+ * surface-coloured pill reads as a hole cut in the grass.
+ *
+ * It steps down on a phone, and the size is measured rather than chosen. At
+ * 360 the pitch runs 10–350 and the goalkeeper's card carries its sell ✕ out
+ * to 240, which leaves 102px of clear grass in that corner; the desktop pill
+ * is 127 and sat on top of the ✕ — a control covering a control. At 82 it
+ * clears by ten pixels on the narrowest phone anyone brings. */
 function MetricChips({ metric, onChange }: { metric: Metric; onChange: (m: Metric) => void }) {
   return (
-    <div className="flex gap-1.5">
+    <div
+      className="flex gap-0.5 rounded-full border border-white/15 p-0.5 backdrop-blur-[2px]"
+      style={{ background: 'rgba(6,14,10,.55)' }}
+      role="group"
+      aria-label="What each card's corner shows"
+    >
       {METRICS.map((m) => (
         <button
           key={m.id}
           onClick={() => onChange(m.id)}
-          className={`min-h-8 rounded-full border px-3 text-[12px] font-semibold transition-colors ${
-            metric === m.id ? 'border-accent bg-accent-selected text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
+          aria-pressed={metric === m.id}
+          title={m.id === 'rating' ? 'Show each player’s rating' : m.id === 'price' ? 'Show each player’s price' : 'Show projected points for this gameweek'}
+          className={`min-h-6 rounded-full px-1.5 text-[10px] font-bold transition-colors sm:min-h-7 sm:px-2.5 sm:text-[11.5px] ${
+            metric === m.id ? 'bg-accent text-accent-contrast' : 'text-white/70 hover:text-white'
           }`}
         >
           {m.label}
@@ -575,18 +597,26 @@ export default function SquadBuilder() {
         {/* The board — the same object from an empty squad to a full one:
             unfilled places are just empty slots you tap to fill. */}
         <div className="min-w-0">
-          {/* One control row above the board: what the cards show, and the two
-              things you do to the squad as a whole. Share and Clear used to
-              sit under the pitch on the theory that you share a squad once
-              you've built one — but on a laptop that puts them below the fold
-              of the thing they act on, and on a phone it means scrolling past
-              fifteen cards to start again. Beside the metric chips they are
-              where the eye already is. */}
-          <div className="mx-auto mb-2 flex max-w-[860px] flex-wrap items-center gap-2">
-            <div className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">Your squad — week by week</div>
-            {complete && !valid && <span className="text-[13px] font-semibold text-bad">Over budget by £{Math.abs(remaining).toFixed(1)}m</span>}
-            <div className="ml-auto flex flex-wrap items-center gap-2">
-              <MetricChips metric={metric} onChange={setMetric} />
+          <SeasonPlanner
+            planner={planner} byEl={byEl} pool={pool} fixtureEase={fixtureEase}
+            metric={metric} avail={avail}
+            statsSlot={wide ? statsEl : null}
+            boardOverlay={<MetricChips metric={metric} onChange={setMetric} />}
+            /* The squad-wide actions, handed to the planner so they can share
+               the gameweek's row instead of having one of their own. Share and
+               Clear used to sit UNDER the pitch on the theory that you share a
+               squad once you've built one — but on a laptop that puts them
+               below the fold of the thing they act on, and on a phone it means
+               scrolling past fifteen cards to start again.
+
+               What used to open this row — "Your squad — week by week" — has
+               gone. The page is titled Squad Builder, the tab under it says
+               Squad, and the row itself says which gameweek. A fourth label
+               saying the same thing was a line of type between you and the
+               team. The metric chips have gone the other way, onto the pitch,
+               beside the number they change. */
+            toolbar={<>
+              {complete && !valid && <span className="text-[13px] font-semibold text-bad">Over budget by £{Math.abs(remaining).toFixed(1)}m</span>}
               {/* Auto pick used to sit in the chip row under the board, which
                   is past fifteen cards on a phone and below the fold on a
                   laptop — a long way from the empty pitch it exists to fill.
@@ -614,12 +644,7 @@ export default function SquadBuilder() {
                   </button>
                 </>
               )}
-            </div>
-          </div>
-          <SeasonPlanner
-            planner={planner} byEl={byEl} pool={pool} fixtureEase={fixtureEase}
-            metric={metric} avail={avail}
-            statsSlot={wide ? statsEl : null}
+            </>}
             /* No fork once the library is full — the button would be there to
                tell you it can't, which is worse than not being there. */
             onFork={plans.full || !plans.activeId ? undefined : (gw) => {

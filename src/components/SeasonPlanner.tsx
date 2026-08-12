@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { PlayerPhoto } from './PlayerPhoto'
 import { FoilShell, Pitch, BenchSpine, CARD_W, initialsOf, tierOf, nameSize } from './Pitch'
@@ -96,7 +96,7 @@ function useSquadDelta(value: number | null, squadSig: string, gw: number, ready
   return delta
 }
 
-export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onSold, squadScore, onOpenSquadRating, partialSquad, onRemovePick, onPickSlot, footer, statsSlot, onFork }: {
+export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onSold, squadScore, onOpenSquadRating, partialSquad, onRemovePick, onPickSlot, footer, statsSlot, onFork, boardOverlay, toolbar }: {
   planner: Planner
   byEl: Map<number, RatingRow>
   pool: RatingRow[]
@@ -137,6 +137,12 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
    *  branch into — the library is full — and hidden at the opening week,
    *  where a fork with nothing before it is just Duplicate. */
   onFork?: (gw: number) => void
+  /** Controls that act on the cards themselves — what the corner figure
+   *  shows. They float in the corner of the grass rather than taking a row
+   *  above it, next to the thing they change. */
+  boardOverlay?: React.ReactNode
+  /** Squad-wide actions, drawn into the gameweek row. */
+  toolbar?: React.ReactNode
 }) {
   const xpModel = useXpModel()
   const market = useMarketOdds()
@@ -292,26 +298,30 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
       {/* Everything above the pitch is held to the pitch's own width, so the
           page reads as one column instead of a wide band of boxes. */}
       <div className="mx-auto" style={{ maxWidth: BOARD_W }}>
-        {/* Gameweek nav */}
-        <div className="mb-3 flex items-center justify-between gap-3">
+        {/* Gameweek nav. Smaller than it was: the strip below now carries the
+            week you are on and eleven you could be on, so this row is a nudge
+            either side of it rather than the only way through the season. */}
+        <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5">
           <StepButton dir="prev" disabled={gwIdx <= 0} onClick={() => { setGw(gws[gwIdx - 1]); tapHaptic('select') }} />
+          <div className="font-display text-lg font-bold text-ink">Gameweek {gw}</div>
+          <StepButton dir="next" disabled={gwIdx >= gws.length - 1} onClick={() => { setGw(gws[gwIdx + 1]); tapHaptic('select') }} />
           {/* Fork sits on the gameweek, not in the plan bar, because it is a
               gameweek-scoped action: it means "from HERE, try something else".
               A Fork button next to Duplicate would have to name the week it
               cut at, and by then you have said the same thing twice. */}
-          <div className="flex items-center gap-2">
-            <div className="font-display text-xl font-bold text-ink">Gameweek {gw}</div>
-            {onFork && !planner.opening && (
-              <button
-                onClick={() => { tapHaptic('medium'); onFork(gw) }}
-                title={`Copy this plan up to GW${gw - 1} into a new one, and re-decide GW${gw} onwards`}
-                className="inline-flex min-h-7 items-center gap-1 rounded-lg border border-line-mid px-2 text-[11px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
-              >
-                <Icon name="target" size={12} /> Fork
-              </button>
-            )}
-          </div>
-          <StepButton dir="next" disabled={gwIdx >= gws.length - 1} onClick={() => { setGw(gws[gwIdx + 1]); tapHaptic('select') }} />
+          {onFork && !planner.opening && (
+            <button
+              onClick={() => { tapHaptic('medium'); onFork(gw) }}
+              title={`Copy this plan up to GW${gw - 1} into a new one, and re-decide GW${gw} onwards`}
+              className="inline-flex min-h-7 items-center gap-1 rounded-lg border border-line-mid px-2 text-[11px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+            >
+              <Icon name="target" size={12} /> Fork
+            </button>
+          )}
+          {/* The squad-wide actions ride in this row rather than one of their
+              own. Two rows of chrome for four buttons and a week number was
+              two rows the team could have had. */}
+          {toolbar && <div className="ml-auto flex flex-wrap items-center gap-2">{toolbar}</div>}
         </div>
 
         <GameweekStrip
@@ -329,40 +339,37 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
           ? createPortal(<div className="grid grid-cols-2 gap-2">{statTiles}</div>, statsSlot)
           : <div className="mb-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">{statTiles}</div>}
 
-        {trade && (
-          <div className="mb-2.5 rounded-xl border border-line bg-surface-1/60 px-3 py-2 text-[12px] leading-snug text-ink-2">
-            <span className="mr-1.5 text-[10px] font-bold tracking-[0.11em] text-ink-3 uppercase">Your last move</span>
-            {trade}
-          </div>
-        )}
+        {/* The week's state, above the pitch where you can act on it — one
+            line of it. It was a bordered box and a second bordered box for
+            the last move, which between them spent about ninety pixels on two
+            short sentences and pushed the forwards off a laptop screen. The
+            words are the same; the boxes are gone.
 
-        {/* Transfers — above the pitch, where you can act on them. At the
-            opening week there are none to have, so there is no count to keep:
-            the pitch already shows how many places are filled, and the line
-            beside it says how many are left in words. The "15/15" chip that
-            used to sit here was the same fact a third time. */}
-        <div className="mb-2.5 rounded-2xl border border-line bg-surface-1/60 px-3 py-2.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">{week && !planner.opening ? 'Transfers' : 'Squad'}</span>
-            {week && !planner.opening && (
-              <span className={`font-num rounded-md px-2 py-0.5 text-sm font-bold tabular-nums ${hit > 0 ? 'bg-bad/15 text-bad' : 'bg-surface-3 text-ink'}`}>
-                {ft === Infinity ? `${week.transfers.filter((t) => t.in != null).length} · unlimited` : `${week.transfers.filter((t) => t.in != null).length}/${banked}`}
-              </span>
-            )}
-            {!week
-              ? <span className="text-xs text-ink-3">Pick {15 - picked} more from the list{picked === 0 ? ' — or hit Auto pick' : ''}</span>
-              : planner.opening
-                ? <span className="text-xs text-ink-3">{week.chip ? `${CHIP_LABEL[week.chip]} — ` : ''}Building your opening squad — changes are free until the season starts</span>
-                : ft === Infinity
-                  ? <span className="text-xs font-semibold text-accent">{week.chip ? CHIP_LABEL[week.chip] : 'Free hit'} — no limit</span>
-                  : <span className="text-xs text-ink-3">{ftLeft} free left{hit > 0 ? <span className="font-semibold text-bad"> · −{hit} pts</span> : ''}</span>}
-            {week && !planner.opening && week.transfers.length === 0 && <span className="ml-auto text-xs text-ink-3">Tap ✕ on a player to sell him</span>}
-            {week && planner.pendingOut.length > 0 && (
-              <span className="ml-auto text-xs font-semibold text-accent">
-                £{(BUDGET - spend).toFixed(1)}m to spend on {planner.pendingOut.length} {planner.pendingOut.length === 1 ? 'place' : 'places'}
-              </span>
-            )}
-          </div>
+            At the opening week there is no count to keep: the pitch shows how
+            many places are filled, and this line says how many are left in
+            words. The "15/15" chip was that fact a third time. */}
+        <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs leading-snug">
+          <span className="text-[10px] font-bold tracking-[0.12em] text-ink-3 uppercase">{week && !planner.opening ? 'Transfers' : 'Squad'}</span>
+          {week && !planner.opening && (
+            <span className={`font-num rounded px-1.5 text-[12.5px] font-bold tabular-nums ${hit > 0 ? 'bg-bad/15 text-bad' : 'bg-surface-3 text-ink'}`}>
+              {ft === Infinity ? `${week.transfers.filter((t) => t.in != null).length} · unlimited` : `${week.transfers.filter((t) => t.in != null).length}/${banked}`}
+            </span>
+          )}
+          {!week
+            ? <span className="text-ink-3">Pick {15 - picked} more from the list{picked === 0 ? ' — or hit Auto pick' : ''}</span>
+            : planner.opening
+              ? <span className="text-ink-3">{week.chip ? `${CHIP_LABEL[week.chip]} — ` : ''}Changes are free until the season starts</span>
+              : ft === Infinity
+                ? <span className="font-semibold text-accent">{week.chip ? CHIP_LABEL[week.chip] : 'Free hit'} — no limit</span>
+                : <span className="text-ink-3">{ftLeft} free left{hit > 0 ? <span className="font-semibold text-bad"> · −{hit} pts</span> : ''}</span>}
+          {trade && <span className="text-ink-2">· {trade}</span>}
+          {week && planner.pendingOut.length > 0 ? (
+            <span className="ml-auto font-semibold text-accent">
+              £{(BUDGET - spend).toFixed(1)}m to spend on {planner.pendingOut.length} {planner.pendingOut.length === 1 ? 'place' : 'places'}
+            </span>
+          ) : week && !planner.opening && week.transfers.length === 0 && !trade ? (
+            <span className="ml-auto hidden text-ink-3 sm:inline">Tap ✕ on a player to sell him</span>
+          ) : null}
         </div>
 
         {subFor != null && week && (
@@ -384,7 +391,7 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
           moved. The one control you want after selling a player is the one to
           put him back, and it has to still be under the cursor that sold him.
           Nothing above the board changes height any more, so it isn't. */}
-      <Pitch maxWidth={BOARD_W}>
+      <Pitch maxWidth={BOARD_W} overlay={boardOverlay}>
         {(week ? rowsByPos(week.xi).map((row) => row.map((el) => ({ el }))) : partial!.xi).map((row, i) => row.length > 0 && (
           <div key={i} className="flex justify-center gap-1.5 sm:gap-2.5">
             {row.map((slot, j) => (slot.el != null
@@ -887,6 +894,26 @@ function GameweekStrip({ planner, byEl, engine, current, onPick, ratingOf }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [window.join(','), revision, byEl, fixtureEase, avail, model, market])
 
+  /* Keep the week you are on in view. Stepping with the arrows moves the
+     selection, and on one line the selection can be off the end of the rail —
+     a strip that shows twelve weeks is no use if it is showing the wrong six.
+     `nearest` for the block so this never scrolls the PAGE to reach it. */
+  const rail = useRef<HTMLDivElement | null>(null)
+  const here = useRef<HTMLButtonElement | null>(null)
+  const [edge, setEdge] = useState({ left: false, right: false })
+  const measureEdges = useCallback(() => {
+    const el = rail.current
+    if (!el) return
+    setEdge({ left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 })
+  }, [])
+  useEffect(() => {
+    if (here.current && rail.current) here.current.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' })
+    // After the smooth scroll lands, not before it starts.
+    const t = setTimeout(measureEdges, 450)
+    measureEdges()
+    return () => clearTimeout(t)
+  }, [current, measureEdges])
+
   const vals = cells.map((c) => c.xp).filter((v): v is number => v != null)
   if (vals.length < 2) return null
   const lo = Math.min(...vals) - (Math.max(...vals) - Math.min(...vals)) * 0.45 - 0.5
@@ -894,24 +921,39 @@ function GameweekStrip({ planner, byEl, engine, current, onPick, ratingOf }: {
   const width = (v: number) => `${Math.max(6, ((v - lo) / Math.max(hi - lo, 0.001)) * 100)}%`
 
   return (
-    <div className="mb-2.5">
-      {/* A grid, not a scroller. The row of cards used to run off the edge
-          behind a drag bar, which hides half the window on exactly the screens
-          where the window matters most. Wrapping shows all twelve at once:
-          three rows of four on a phone, two of six on a laptop. */}
-      <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
+    <div className="relative mb-2">
+      {/* ONE LINE. Wrapping the twelve weeks into two or three rows showed
+          them all at once and cost eighty pixels of the only thing on this
+          page anybody came for — the team. So it is a single line that
+          scrolls, and the week you are on is scrolled to the middle of it
+          rather than left for you to find.
+
+          Not the drag bar this replaced: there is no separate control to aim
+          at. You flick the row, or you use the arrows, which move the week
+          and bring the strip with them. */}
+      {/* A hard edge on a scrolling row reads as a clipped layout, not as more
+          to come — the last card cut down the middle looked like a bug. The
+          rail fades into the page at whichever end still has weeks on it. */}
+      {edge.left && <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-bg-0 to-transparent" />}
+      {edge.right && <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-bg-0 to-transparent" />}
+      <div
+        ref={rail}
+        onScroll={measureEdges}
+        className="flex snap-x snap-mandatory gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {cells.map((c) => {
           const on = c.gw === current
           const tone = c.hard >= 6 ? 'text-bad' : c.hard >= 4 ? 'text-warn' : c.hard <= 2 ? 'text-good' : 'text-ink-3'
           return (
             <button
               key={c.gw}
+              ref={on ? here : undefined}
               onClick={() => { if (!on) { onPick(c.gw); tapHaptic('select') } }}
               aria-current={on ? 'true' : undefined}
               title={`Gameweek ${c.gw}${c.xp != null ? ` — ${c.xp.toFixed(1)} from your eleven` : ''}${
                 c.capName ? `, ${c.capName} captain` : ''} · ${c.hard} of the fifteen in a fixture rated 4 or 5${
                 c.planned ? '' : ' · not opened yet, carrying this eleven forward'}`}
-              className={`flex flex-col gap-1 rounded-xl border px-1.5 py-1.5 text-left transition-colors ${
+              className={`flex w-[74px] shrink-0 snap-center flex-col gap-0.5 rounded-xl border px-1.5 py-1 text-left transition-colors sm:w-[82px] ${
                 on ? 'border-accent bg-accent-selected' : 'border-line bg-surface-2/40 hover:border-line-strong'
               }`}
             >
@@ -938,10 +980,9 @@ function GameweekStrip({ planner, byEl, engine, current, onPick, ratingOf }: {
           )
         })}
       </div>
-      <p className="mt-1 text-[10px] text-ink-3">
-        What your eleven scores each week with your captain, and how many of the fifteen face a fixture rated
-        4 or 5. Weeks you have not opened carry this eleven forward, the same way the board does. Tap to go there.
-      </p>
+      {/* The paragraph that used to explain these cards is now on each card,
+          as its title — two lines of ten-pixel type above the pitch was a
+          poor trade for a sentence you read once. */}
     </div>
   )
 }

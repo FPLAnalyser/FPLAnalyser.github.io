@@ -35,9 +35,12 @@ export function PlanBar({ plans, canCompare, onCompare }: {
   }
 
   return (
-    <div className="mb-4 rounded-xl border border-line bg-surface-1/60 p-2.5">
-      <div className="mb-2 flex items-center gap-2">
-        <span className="text-[10px] font-bold tracking-[0.14em] text-ink-3 uppercase">Plans</span>
+    <div className="mb-2.5 rounded-xl border border-line bg-surface-1/60 p-2">
+      <div className="mb-1.5 flex items-center gap-2">
+        <span
+          className="text-[10px] font-bold tracking-[0.14em] text-ink-3 uppercase"
+          title="Plans live in this browser only — no account, and nothing leaves the device."
+        >Plans</span>
         <span className="text-[11px] text-ink-3">{plans.plans.length} of {MAX_PLANS}</span>
         {canCompare && (
           <button
@@ -133,8 +136,11 @@ export function PlanBar({ plans, canCompare, onCompare }: {
         </button>
       </div>
 
-      <p className="mt-1.5 text-[11px] text-ink-3">
-        Tick two or more, then Compare. Plans live in this browser only — no account, and nothing leaves the device.
+      {/* One line, not two. This sat above the pitch on a phone as a
+          three-line paragraph explaining a thing you read once; the rest of
+          it is on the Plans label as a title. */}
+      <p className="mt-1 truncate text-[11px] text-ink-3">
+        Tick two or more, then Compare — plans are stored in this browser only.
       </p>
     </div>
   )

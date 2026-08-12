@@ -9,11 +9,16 @@ import { SEV_COLOUR, type AvailBadgeInfo } from '../lib/availability'
    in a shared PNG.
    ════════════════════════════════════════════════════════════════════════ */
 
-export function Pitch({ children, footer, className, maxWidth, boosted }: {
+export function Pitch({ children, footer, className, maxWidth, boosted, overlay }: {
   children: ReactNode; footer?: ReactNode; className?: string; maxWidth?: number
   /** Bench Boost is on, so the bench is scoring — it gets the gold edge and
    *  says BOOST, the same signal the live board gives it. */
   boosted?: boolean
+  /** Controls that belong to the board rather than to the page — they float
+   *  in the corner of the grass instead of taking a row above it. The share
+   *  export builds its own Pitch and passes nothing, so none of this lands in
+   *  the picture. */
+  overlay?: ReactNode
 }) {
   return (
     <div
@@ -66,6 +71,10 @@ export function Pitch({ children, footer, className, maxWidth, boosted }: {
           full portrait shape to fit four rows of cards; a wide pitch does
           not, and holding 92:68 there just paints empty grass. */}
       <div aria-hidden="true" className="col-start-1 row-start-1 w-full pt-[135%] sm:pt-[104%] lg:pt-[96%]" />
+      {/* The corner of the grass. Above the goalkeeper's row and outside the
+          six-yard box on every width the pitch is drawn at, so it never sits
+          on a card. */}
+      {overlay && <div className="absolute top-2 right-2 z-20 sm:top-3 sm:right-3">{overlay}</div>}
       <div className="relative col-start-1 row-start-1 flex flex-col">
         <div className="flex flex-1 flex-col justify-around gap-2">{children}</div>
         {footer && (
