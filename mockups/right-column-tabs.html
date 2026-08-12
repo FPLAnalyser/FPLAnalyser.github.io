@@ -1,0 +1,230 @@
+<meta charset="utf-8"><title>Squad Builder — the right-hand column as tabs</title>
+<style>
+:root{--bg:#000;--s1:#121316;--s2:#1b1c1f;--s3:#232427;--ink:#edeff3;--ink2:#aaacb0;--ink3:#828386;
+--acc:#c9a227;--acc2:#ead188;--line:rgba(255,255,255,.1);--line2:rgba(255,255,255,.2);
+--good:#3ddc7a;--warn:#e8b04a;--bad:#f0736f;--info:#7fb0ff;--bronze:#c8965a;--silver:#c9cfd6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:left}
+.wrap{max-width:1120px;margin:0 auto;padding:44px 20px 90px}
+h1{font-size:30px;font-weight:800;letter-spacing:-.02em;margin:0 0 10px}
+h2{font-size:20px;font-weight:800;margin:4px 0 6px;letter-spacing:-.01em}
+.lead{color:var(--ink2);max-width:74ch}
+.rule{height:1px;background:var(--line);margin:40px 0 24px}
+.step{font:700 11px/1 ui-sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--acc);margin-bottom:8px}
+p{max-width:74ch;color:var(--ink2)}
+b.w{color:var(--ink)}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:14px}
+.note{color:var(--ink3);font-size:12.5px;line-height:1.6;margin-top:14px;border-left:2px solid var(--line2);padding-left:12px;max-width:80ch}
+.mini{font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+.small{font-size:12px;color:var(--ink3)}
+.sp{flex:1}
+
+/* the page shell: board on the left, column on the right */
+.two{display:grid;grid-template-columns:1fr 360px;gap:16px;align-items:start}
+.board{background:linear-gradient(180deg,#0b2417,#07130c);border:1px solid var(--line);border-radius:14px;padding:14px 10px;min-height:330px;position:relative}
+.pr{display:flex;justify-content:center;gap:6px;margin-bottom:9px}
+.pl{width:64px;background:var(--s2);border:1px solid var(--line);border-radius:8px;padding:5px 3px;text-align:center}
+.pl b{display:block;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl i{display:block;font-style:normal;font-size:8.5px;color:var(--ink3)}
+.pl.g{border-color:rgba(201,162,39,.55)} .pl.s{border-color:rgba(201,207,214,.4)} .pl.b{border-color:rgba(200,150,90,.5)}
+.float{position:absolute;top:9px;right:9px;display:flex;gap:3px;background:rgba(6,14,10,.6);border:1px solid var(--line2);border-radius:999px;padding:2px}
+.fb{border-radius:999px;padding:2px 8px;font-size:10px;color:var(--ink2)}
+.fb.on{background:var(--acc);color:#14100a;font-weight:700}
+.shr{position:absolute;top:9px;left:9px;background:rgba(6,14,10,.6);border:1px solid var(--line2);border-radius:999px;padding:3px 10px;font-size:10px;color:var(--ink2)}
+
+/* tabs */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.tb{padding:7px 11px;font-size:12.5px;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tb.on{color:var(--acc);border-bottom-color:var(--acc);font-weight:600}
+.tb .dot{display:inline-block;width:6px;height:6px;border-radius:99px;background:var(--bad);margin-left:5px;vertical-align:middle}
+.pill{display:flex;gap:3px;background:var(--s2);border:1px solid var(--line);border-radius:999px;padding:3px}
+.pill button{padding:4px 11px;font-size:12px;color:var(--ink2);border-radius:999px}
+.pill button.on{background:var(--acc);color:#14100a;font-weight:700}
+
+/* market rows */
+.row{display:flex;align-items:center;gap:9px;padding:7px 8px;border-bottom:1px solid var(--line)}
+.row:last-child{border:0}
+.av{width:26px;height:26px;border-radius:7px;background:var(--s3);flex:0 0 auto}
+.row .nm{font-size:12.5px;font-weight:600;display:block;line-height:1.25}
+.row .sb{font-size:10.5px;color:var(--ink3);display:block;line-height:1.25}
+.row .num{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:700;font-size:13px}
+.add{border:1px solid rgba(201,162,39,.5);color:var(--acc);border-radius:8px;width:26px;height:26px;display:grid;place-items:center;font-size:13px}
+.srch{display:block;width:100%;background:var(--s2);border:1px solid var(--line);border-radius:9px;padding:6px 10px;font-size:12.5px;color:var(--ink3);margin-bottom:8px}
+
+/* bars + tickers */
+.kv{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--line)}
+.kv:last-child{border:0}
+.kv b{font-variant-numeric:tabular-nums}
+.bar{height:6px;background:var(--s3);border-radius:99px;overflow:hidden;flex:1}
+.bar i{display:block;height:100%;background:var(--acc);border-radius:99px}
+.br{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink3);margin:5px 0}
+.br .lab{width:62px;text-transform:uppercase;letter-spacing:.08em;font-size:9.5px}
+.br .n{width:22px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums;font-weight:700}
+.tick{display:grid;grid-template-columns:64px repeat(6,1fr);gap:3px;align-items:center;font-size:10px}
+.tick .who{color:var(--ink2);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fx{border-radius:5px;padding:3px 0;text-align:center;font-size:9px;color:#0b0b0b;font-weight:700}
+.f1{background:#2fbf6e}.f2{background:#7fd39b}.f3{background:#5a6472;color:#e8edf3}.f4{background:#e8907f;}.f5{background:#e05b52;color:#fff}
+.hdr{display:grid;grid-template-columns:64px repeat(6,1fr);gap:3px;font-size:9px;color:var(--ink3);letter-spacing:.06em;margin-bottom:4px;text-transform:uppercase}
+.warnbox{border:1px solid rgba(240,115,111,.4);background:rgba(240,115,111,.08);border-radius:10px;padding:8px 10px;font-size:12px;color:var(--ink2);margin-bottom:8px}
+.goodbox{border:1px solid rgba(61,220,122,.35);background:rgba(61,220,122,.07);border-radius:10px;padding:8px 10px;font-size:12px;color:var(--ink2);margin-bottom:8px}
+.plans{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--ink3);margin-bottom:10px}
+.chip{border:1px solid var(--line);border-radius:9px;padding:4px 8px;font-size:11.5px;color:var(--ink)}
+.chip.on{border-color:var(--acc);color:var(--acc);background:rgba(201,162,39,.08)}
+.stack{display:flex;flex-direction:column;gap:10px}
+.tag{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3)}
+</style>
+<div class="wrap">
+
+<h1>The right-hand column, as tabs</h1>
+<p class="lead">The column now carries four things stacked: the plan library, the squad's
+verdict, the Squad Lab and the transfer market. On a full squad that is about
+1,400 pixels of column against 660 of board — so three of the four are always
+scrolled past, and the market, which is the one you act with, is the one at the
+bottom. Tabs fix the order. What follows is four ways to cut them, then what I'd
+actually build.</p>
+
+<div class="rule"></div>
+<div class="step">Idea 1</div><h2>Everything is a tab</h2>
+<p>Four tabs, equal billing: <b class="w">Players</b>, <b class="w">Squad</b>,
+<b class="w">Fixtures</b>, <b class="w">Plans</b>. The column becomes one panel
+with one job at a time.</p>
+<div class="card">
+  <div class="two">
+    <div class="board">
+      <span class="shr">Share</span>
+      <span class="float"><span class="fb on">Rating</span><span class="fb">£</span><span class="fb">xP</span><span class="fb">%</span></span>
+      <div class="pr" style="margin-top:26px"><span class="pl s"><b>Raya</b><i>ARS · 76</i></span></div>
+      <div class="pr"><span class="pl g"><b>Senesi</b><i>BOU · 81</i></span><span class="pl s"><b>Virgil</b><i>LIV · 79</i></span><span class="pl s"><b>Tarkowski</b><i>EVE · 78</i></span></div>
+      <div class="pr"><span class="pl g"><b>Enzo</b><i>CHE · 84</i></span><span class="pl g"><b>Anderson</b><i>NFO · 80</i></span><span class="pl s"><b>Garner</b><i>EVE · 76</i></span><span class="pl s"><b>E.Le Fée</b><i>SUN · 71</i></span></div>
+      <div class="pr"><span class="pl g"><b>Haaland</b><i>MCI · 99</i></span><span class="pl g"><b>Thiago</b><i>BRE · 87</i></span><span class="pl s"><b>Calvert-L</b><i>LEE · 73</i></span></div>
+    </div>
+    <div>
+      <div class="tabs">
+        <button class="tb on">Players</button>
+        <button class="tb">Squad<span class="dot"></span></button>
+        <button class="tb">Fixtures</button>
+        <button class="tb">Plans</button>
+      </div>
+      <span class="srch">Search players…</span>
+      <div class="plans" style="margin-bottom:8px">
+        <span class="chip on">GKP</span><span class="chip">DEF</span><span class="chip">MID</span><span class="chip">FWD</span>
+        <span class="sp"></span><span class="tag">by xP</span>
+      </div>
+      <div class="row"><span class="av"></span><span><span class="nm">Sánchez</span><span class="sb">CHE · £5.0m · 21%</span></span><span class="num">4.4</span><span class="add">+</span></div>
+      <div class="row"><span class="av"></span><span><span class="nm">Petrović</span><span class="sb">BOU · £4.5m · 8%</span></span><span class="num">4.2</span><span class="add">+</span></div>
+      <div class="row"><span class="av"></span><span><span class="nm">Verbruggen</span><span class="sb">BHA · £4.5m · 5%</span></span><span class="num">4.0</span><span class="add">+</span></div>
+      <div class="row"><span class="av"></span><span><span class="nm">Donnarumma</span><span class="sb">MCI · £5.5m · 12%</span></span><span class="num">3.9</span><span class="add">+</span></div>
+    </div>
+  </div>
+  <p class="note"><b class="w">The catch.</b> Plans as a tab buries the switcher inside the
+  panel you are using for something else — you cannot see which plan you are editing
+  while you edit it, which is the one thing that strip exists to say. And the red dot
+  on Squad is doing a lot of work: it is the only route to "Garner is injured and in
+  your eleven", on a tab you have no reason to open.</p>
+</div>
+
+<div class="rule"></div>
+<div class="step">Idea 2 · my recommendation</div><h2>Plans stay put; the rest is tabbed</h2>
+<p>The library keeps its place at the top of the column, because it names the thing
+you are looking at. Below it, one tabbed panel: <b class="w">Market</b> — the list
+you build and transfer with — <b class="w">Read</b>, the verdict and the Lab, and
+<b class="w">Fixtures</b>, which is new.</p>
+<div class="card">
+  <div class="two">
+    <div class="board">
+      <span class="shr">Share</span>
+      <span class="float"><span class="fb on">Rating</span><span class="fb">£</span><span class="fb">xP</span><span class="fb">%</span></span>
+      <div class="pr" style="margin-top:26px"><span class="pl s"><b>Raya</b><i>ARS · 76</i></span></div>
+      <div class="pr"><span class="pl g"><b>Senesi</b><i>BOU · 81</i></span><span class="pl s"><b>Virgil</b><i>LIV · 79</i></span><span class="pl s"><b>Tarkowski</b><i>EVE · 78</i></span></div>
+      <div class="pr"><span class="pl g"><b>Enzo</b><i>CHE · 84</i></span><span class="pl g"><b>Anderson</b><i>NFO · 80</i></span><span class="pl s"><b>Garner</b><i>EVE · 76</i></span><span class="pl s"><b>E.Le Fée</b><i>SUN · 71</i></span></div>
+      <div class="pr"><span class="pl g"><b>Haaland</b><i>MCI · 99</i></span><span class="pl g"><b>Thiago</b><i>BRE · 87</i></span><span class="pl b"><b>Calvert-L</b><i>LEE · 68</i></span></div>
+    </div>
+    <div class="stack">
+      <div style="border:1px solid var(--line);border-radius:12px;padding:8px">
+        <div class="plans" style="margin:0 0 6px">
+          <span class="tag">Plans</span><span>2 of 8 · tick two or more, then Compare</span>
+          <span class="sp"></span><span class="chip on">Compare</span>
+        </div>
+        <div style="display:flex;gap:6px"><span class="chip on">Plan A ✎ ⧉ ✕</span><span class="chip">Plan B</span><span class="chip">+ New</span></div>
+      </div>
+      <div>
+        <div class="tabs">
+          <button class="tb on">Market</button>
+          <button class="tb">Read</button>
+          <button class="tb">Fixtures</button>
+        </div>
+        <span class="srch">Search players…</span>
+        <div class="plans" style="margin-bottom:8px">
+          <span class="chip on">GKP</span><span class="chip">DEF</span><span class="chip">MID</span><span class="chip">FWD</span>
+          <span class="sp"></span><span class="tag">by xP</span>
+        </div>
+        <div class="row"><span class="av"></span><span><span class="nm">Sánchez</span><span class="sb">CHE · £5.0m · 21%</span></span><span class="num">4.4</span><span class="add">+</span></div>
+        <div class="row"><span class="av"></span><span><span class="nm">Petrović</span><span class="sb">BOU · £4.5m · 8%</span></span><span class="num">4.2</span><span class="add">+</span></div>
+        <div class="row"><span class="av"></span><span><span class="nm">Verbruggen</span><span class="sb">BHA · £4.5m · 5%</span></span><span class="num">4.0</span><span class="add">+</span></div>
+        <div class="row"><span class="av"></span><span><span class="nm">Donnarumma</span><span class="sb">MCI · £5.5m · 12%</span></span><span class="num">3.9</span><span class="add">+</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="note">Three tabs, and each answers a different question: <b class="w">who
+  could I sign</b>, <b class="w">what have I got</b>, <b class="w">what is coming</b>.
+  The market is the default because it is the only one you act in — the other two are
+  reading. Nothing is lost: the verdict and the Lab move together into Read, which is
+  where they belonged anyway, and the column stops being a scroll.</p>
+</div>
+
+<div class="rule"></div>
+<div class="step">Idea 3</div><h2>What "Fixtures" would actually hold</h2>
+<p>This is the tab that does not exist yet, so it is worth being concrete about. Your
+fifteen, six weeks out, coloured by difficulty — one row per player, sorted by how bad
+the run is. It answers the question the Horizon panel currently answers as a sentence.</p>
+<div class="card" style="max-width:420px">
+  <div class="tabs"><button class="tb">Market</button><button class="tb">Read</button><button class="tb on">Fixtures</button></div>
+  <div class="warnbox"><b class="w">GW6 is the week to plan for</b> — 7 of your 15 walk into a rated-4 or 5 fixture.</div>
+  <div class="hdr"><span></span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span></div>
+  <div class="tick" style="margin-bottom:3px"><span class="who">Calvert-L</span><span class="fx f5">MCI</span><span class="fx f4">ARS</span><span class="fx f4">LIV</span><span class="fx f3">BHA</span><span class="fx f2">BUR</span><span class="fx f2">SUN</span></div>
+  <div class="tick" style="margin-bottom:3px"><span class="who">Tarkowski</span><span class="fx f5">LIV</span><span class="fx f4">MCI</span><span class="fx f3">FUL</span><span class="fx f2">WOL</span><span class="fx f3">BRE</span><span class="fx f1">BUR</span></div>
+  <div class="tick" style="margin-bottom:3px"><span class="who">Garner</span><span class="fx f5">LIV</span><span class="fx f4">MCI</span><span class="fx f3">FUL</span><span class="fx f2">WOL</span><span class="fx f3">BRE</span><span class="fx f1">BUR</span></div>
+  <div class="tick" style="margin-bottom:3px"><span class="who">Haaland</span><span class="fx f2">EVE</span><span class="fx f1">BUR</span><span class="fx f3">NEW</span><span class="fx f4">ARS</span><span class="fx f2">WOL</span><span class="fx f2">LEE</span></div>
+  <div class="tick" style="margin-bottom:3px"><span class="who">Senesi</span><span class="fx f3">CRY</span><span class="fx f2">SUN</span><span class="fx f1">BUR</span><span class="fx f2">WOL</span><span class="fx f4">CHE</span><span class="fx f3">NEW</span></div>
+  <div class="tick"><span class="who">Enzo</span><span class="fx f2">WOL</span><span class="fx f3">BHA</span><span class="fx f1">BUR</span><span class="fx f2">LEE</span><span class="fx f4">MCI</span><span class="fx f3">AVL</span></div>
+  <p class="note" style="margin-top:12px">Sorted worst-run-first, so the men you need to plan
+  around are the men at the top. Tapping a row could jump the board to that gameweek —
+  the strip above the pitch is already the same six weeks.</p>
+</div>
+
+<div class="rule"></div>
+<div class="step">Idea 4</div><h2>The tab follows what you just did</h2>
+<p>Same three tabs as idea 2, but the panel switches itself: sell a player and it opens
+Market filtered to his position; step to a gameweek where three of your fifteen are
+in a hard fixture and it opens Fixtures.</p>
+<div class="card" style="max-width:420px">
+  <div class="tabs"><button class="tb on">Market</button><button class="tb">Read</button><button class="tb">Fixtures</button></div>
+  <div class="goodbox">You sold <b class="w">Garner</b> — showing midfielders you can afford with
+  <b class="w">£6.6m</b>. <span class="small">Undo</span></div>
+  <div class="row"><span class="av"></span><span><span class="nm">Rice</span><span class="sb">ARS · £6.5m · 18%</span></span><span class="num">5.1</span><span class="add">+</span></div>
+  <div class="row"><span class="av"></span><span><span class="nm">Wharton</span><span class="sb">CRY · £5.5m · 9%</span></span><span class="num">4.6</span><span class="add">+</span></div>
+  <div class="row"><span class="av"></span><span><span class="nm">Scott</span><span class="sb">BOU · £5.0m · 4%</span></span><span class="num">4.5</span><span class="add">+</span></div>
+  <p class="note">Half of this exists already — selling a player does swing the market round
+  to his position. The new part is the tab switch and the sentence saying why the list
+  changed. <b class="w">The risk is a panel that moves when you did not ask it to</b>,
+  which is the most annoying thing an interface can do, so it should only ever fire on an
+  action you took deliberately — a sale, never a scroll.</p>
+</div>
+
+<div class="rule"></div>
+<div class="step">What I'd build</div><h2>Idea 2, with idea 3 inside it</h2>
+<p><b class="w">Plans stay pinned, three tabs below: Market · Read · Fixtures.</b>
+Market is the default and keeps its sticky behaviour, so the thing you act with is
+never more than one click away and usually zero. Read collects the verdict and the
+Lab — they are one thought and they were two boxes. Fixtures is the new one, and it
+is worth building because the run your fifteen are walking into is currently a
+sentence in a panel rather than something you can look at.</p>
+<p>I would <b class="w">not</b> do idea 1: the plan you are editing has to stay
+visible while you edit it. And idea 4's auto-switching I would add only after the tabs
+have been lived with — it is a good idea that becomes a bad one the first time it
+fires when you did not mean it.</p>
+<p class="small" style="margin-top:18px">Mock-up only. Numbers are from the current
+2026/27 data where they are real and invented where they are not — the fixture grid is
+illustrative.</p>
+</div>
