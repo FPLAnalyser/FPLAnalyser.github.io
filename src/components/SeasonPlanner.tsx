@@ -44,13 +44,25 @@ const POS_ORDER = ['GKP', 'DEF', 'MID', 'FWD'] as const
  * to another gameweek clears it rather than presenting a different fixture
  * list as if it were your decision. And it holds the last real delta until
  * the next one, so the answer is still there after you have looked away. */
-function useSquadDelta(value: number | null, squadSig: string, gw: number, ready: boolean) {
+function useSquadDelta(value: number | null, squadSig: string, gw: number, ready: boolean, plan: string) {
   const [delta, setDelta] = useState<number | null>(null)
-  const base = useRef({ sig: squadSig, gw, value })
+  const base = useRef({ sig: squadSig, gw, value, plan, settling: false })
   useEffect(() => {
-    if (base.current.gw !== gw) {
-      // Another gameweek is a different fixture list, not a decision you made.
-      base.current = { sig: squadSig, gw, value }
+    /* Another gameweek is a different fixture list, and another plan is
+       somebody else's decisions — neither is a thing you just did. Forking
+       made the second case one click away: the branch keeps the same fifteen
+       but re-decides the week, so the projection moves without the squad
+       signature moving, and the board read "+7.2 since your last change" for
+       a change nobody had made.
+
+       Re-baselining ONCE on the switch is not enough, and this was measured:
+       a plan's weeks load an effect later than the click that selected it, so
+       the value captured at the switch is still the OLD plan's, and the new
+       one's first figure then reads as a change. It read "+8.4" for clicking
+       Plan B. So the switch opens a settling window instead — the baseline
+       follows the number until it stops moving, and only then arms. */
+    if (base.current.gw !== gw || base.current.plan !== plan) {
+      base.current = { sig: squadSig, gw, value, plan, settling: true }
       setDelta(null)
       return
     }
@@ -59,6 +71,11 @@ function useSquadDelta(value: number | null, squadSig: string, gw: number, ready
        projection is null. The baseline only moves on a complete fifteen, so a
        delta always compares one finished squad with another. */
     if (!ready) return
+    if (base.current.settling) {
+      base.current = { ...base.current, sig: squadSig, value }
+      const t = setTimeout(() => { base.current = { ...base.current, settling: false } }, 400)
+      return () => clearTimeout(t)
+    }
     if (base.current.sig === squadSig) {
       base.current = { ...base.current, value }
       return
@@ -71,15 +88,15 @@ function useSquadDelta(value: number | null, squadSig: string, gw: number, ready
        still, which is also the moment it is worth reading. */
     const before = base.current.value
     const t = setTimeout(() => {
-      base.current = { sig: squadSig, gw, value }
+      base.current = { sig: squadSig, gw, value, plan, settling: false }
       setDelta(before != null && value != null ? value - before : null)
     }, 400)
     return () => clearTimeout(t)
-  }, [squadSig, gw, value, ready])
+  }, [squadSig, gw, value, ready, plan])
   return delta
 }
 
-export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onSold, squadScore, onOpenSquadRating, partialSquad, onRemovePick, onPickSlot, footer }: {
+export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onSold, squadScore, onOpenSquadRating, partialSquad, onRemovePick, onPickSlot, footer, statsSlot, onFork }: {
   planner: Planner
   byEl: Map<number, RatingRow>
   pool: RatingRow[]
@@ -108,6 +125,18 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
    *  band of their own above the board, which spent a whole section on two
    *  buttons you only reach for once the fifteen is built. */
   footer?: React.ReactNode
+  /** Where to draw the week's four numbers. On a wide screen the page hands
+   *  down a node in the right-hand column and they are portalled there, which
+   *  buys back the full-width row they used to occupy and puts them beside the
+   *  team they describe rather than above it. Null on a phone, where that
+   *  column stacks BELOW the board and the numbers are worth more above it —
+   *  so they stay inline. The state and the two detail sheets never move, so
+   *  there is still one place computing them. */
+  statsSlot?: HTMLElement | null
+  /** Branch the plan at the week on screen. Omitted where there is nowhere to
+   *  branch into — the library is full — and hidden at the opening week,
+   *  where a fork with nothing before it is just Duplicate. */
+  onFork?: (gw: number) => void
 }) {
   const xpModel = useXpModel()
   const market = useMarketOdds()
@@ -176,8 +205,8 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
     return [...list].sort((a, b) => a - b).join(',')
   }, [week, partialSquad])
   const complete = Boolean(week)
-  const xpDelta = useSquadDelta(teamXp, squadSig, gw, complete)
-  const scoreDelta = useSquadDelta(squadScore ?? null, squadSig, gw, complete)
+  const xpDelta = useSquadDelta(teamXp, squadSig, gw, complete, planner.store)
+  const scoreDelta = useSquadDelta(squadScore ?? null, squadSig, gw, complete, planner.store)
 
   /* When the two headline numbers move opposite ways, that IS the trade you
      just made, and it is worth one sentence — a rating is season-long quality
@@ -249,6 +278,15 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
     />
   )
 
+  const statTiles = (
+    <>
+      <Stat label="Projected points" value={teamXp == null ? '—' : teamXp.toFixed(1)} tone="accent" sub={week ? 'what this XI should score' : `${picked}/15 picked`} delta={xpDelta} dp={1} onClick={teamXp == null || !week ? undefined : () => setDetail('xp')} />
+      <Stat label="GW rating" value={rating == null ? '—' : String(rating)} tone={ratingTone(rating)} sub={rating == null ? 'complete your squad' : ratingWord(rating)} onClick={rating == null ? undefined : () => setDetail('rating')} />
+      <Stat label="Squad rating" value={squadScore == null ? '—' : String(squadScore)} tone="accent" sub="what you've built" delta={scoreDelta} dp={0} onClick={squadScore == null ? undefined : onOpenSquadRating} />
+      <Stat label="In the bank" value={`£${(BUDGET - spend).toFixed(1)}m`} tone={spend > BUDGET ? 'bad' : 'ink'} sub={`£${spend.toFixed(1)}m squad`} />
+    </>
+  )
+
   return (
     <div>
       {/* Everything above the pitch is held to the pitch's own width, so the
@@ -257,7 +295,22 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
         {/* Gameweek nav */}
         <div className="mb-3 flex items-center justify-between gap-3">
           <StepButton dir="prev" disabled={gwIdx <= 0} onClick={() => { setGw(gws[gwIdx - 1]); tapHaptic('select') }} />
-          <div className="font-display text-xl font-bold text-ink">Gameweek {gw}</div>
+          {/* Fork sits on the gameweek, not in the plan bar, because it is a
+              gameweek-scoped action: it means "from HERE, try something else".
+              A Fork button next to Duplicate would have to name the week it
+              cut at, and by then you have said the same thing twice. */}
+          <div className="flex items-center gap-2">
+            <div className="font-display text-xl font-bold text-ink">Gameweek {gw}</div>
+            {onFork && !planner.opening && (
+              <button
+                onClick={() => { tapHaptic('medium'); onFork(gw) }}
+                title={`Copy this plan up to GW${gw - 1} into a new one, and re-decide GW${gw} onwards`}
+                className="inline-flex min-h-7 items-center gap-1 rounded-lg border border-line-mid px-2 text-[11px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+              >
+                <Icon name="target" size={12} /> Fork
+              </button>
+            )}
+          </div>
           <StepButton dir="next" disabled={gwIdx >= gws.length - 1} onClick={() => { setGw(gws[gwIdx + 1]); tapHaptic('select') }} />
         </div>
 
@@ -270,13 +323,11 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
           ratingOf={ratingOf}
         />
 
-        {/* One row of numbers for the whole page */}
-        <div className="mb-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Stat label="Projected points" value={teamXp == null ? '—' : teamXp.toFixed(1)} tone="accent" sub={week ? 'what this XI should score' : `${picked}/15 picked`} delta={xpDelta} dp={1} onClick={teamXp == null || !week ? undefined : () => setDetail('xp')} />
-          <Stat label="GW rating" value={rating == null ? '—' : String(rating)} tone={ratingTone(rating)} sub={rating == null ? 'complete your squad' : ratingWord(rating)} onClick={rating == null ? undefined : () => setDetail('rating')} />
-          <Stat label="Squad rating" value={squadScore == null ? '—' : String(squadScore)} tone="accent" sub="what you've built" delta={scoreDelta} dp={0} onClick={squadScore == null ? undefined : onOpenSquadRating} />
-          <Stat label="In the bank" value={`£${(BUDGET - spend).toFixed(1)}m`} tone={spend > BUDGET ? 'bad' : 'ink'} sub={`£${spend.toFixed(1)}m squad`} />
-        </div>
+        {/* The week's four numbers. Same element either way — only its
+            parent changes. */}
+        {statsSlot
+          ? createPortal(<div className="grid grid-cols-2 gap-2">{statTiles}</div>, statsSlot)
+          : <div className="mb-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">{statTiles}</div>}
 
         {trade && (
           <div className="mb-2.5 rounded-xl border border-line bg-surface-1/60 px-3 py-2 text-[12px] leading-snug text-ink-2">
@@ -286,15 +337,18 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
         )}
 
         {/* Transfers — above the pitch, where you can act on them. At the
-            opening week there are none to have: the box counts the fifteen
-            you are assembling instead of counting moves against a limit that
-            does not apply. */}
+            opening week there are none to have, so there is no count to keep:
+            the pitch already shows how many places are filled, and the line
+            beside it says how many are left in words. The "15/15" chip that
+            used to sit here was the same fact a third time. */}
         <div className="mb-2.5 rounded-2xl border border-line bg-surface-1/60 px-3 py-2.5">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">{week && !planner.opening ? 'Transfers' : 'Squad'}</span>
-            <span className={`font-num rounded-md px-2 py-0.5 text-sm font-bold tabular-nums ${hit > 0 ? 'bg-bad/15 text-bad' : 'bg-surface-3 text-ink'}`}>
-              {!week || planner.opening ? `${picked}/15` : ft === Infinity ? `${week.transfers.filter((t) => t.in != null).length} · unlimited` : `${week.transfers.filter((t) => t.in != null).length}/${banked}`}
-            </span>
+            {week && !planner.opening && (
+              <span className={`font-num rounded-md px-2 py-0.5 text-sm font-bold tabular-nums ${hit > 0 ? 'bg-bad/15 text-bad' : 'bg-surface-3 text-ink'}`}>
+                {ft === Infinity ? `${week.transfers.filter((t) => t.in != null).length} · unlimited` : `${week.transfers.filter((t) => t.in != null).length}/${banked}`}
+              </span>
+            )}
             {!week
               ? <span className="text-xs text-ink-3">Pick {15 - picked} more from the list{picked === 0 ? ' — or hit Auto pick' : ''}</span>
               : planner.opening

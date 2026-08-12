@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { PlannerState } from './planner'
 
 /* ════════════════════════════════════════════════════════════════════════
    More than one squad.
@@ -108,6 +109,11 @@ export interface Plans {
   /** Create a plan and make it active. Returns its id. */
   create: (name: string, base: number[]) => string
   duplicate: (id: string) => string | null
+  /** Branch a plan at a gameweek: the weeks BEFORE `gw` come across, `gw`
+   *  itself and everything after it start empty. Returns the new plan — the
+   *  caller needs its name to say what just happened, and asking for it back
+   *  out of the library means guessing at the same de-duplication twice. */
+  fork: (id: string, gw: number) => StoredPlan | null
   rename: (id: string, name: string) => void
   remove: (id: string) => void
   /** Replace the active plan's fifteen — what the builder calls on every pick. */
@@ -169,6 +175,40 @@ export function usePlans(): Plans {
     const copy: StoredPlan = { id: nid, name: nextName(lib.plans, src.name), base: [...src.base], updated: Date.now() }
     save({ ...lib, plans: [...lib.plans, copy], activeId: nid })
     return nid
+  }, [lib, save])
+
+  /* FORK. Duplicate copies a whole plan; a fork copies the part of it you
+     have already committed to and leaves the rest empty.
+
+     Everything before `gw` comes across — those transfers are what makes the
+     fifteen you are looking at, so dropping them would fork a different squad
+     — and `gw` itself does not, because the week you are standing in is the
+     week you want to answer differently. Copying it forward would hand you
+     two plans that look different in the bar and behave identically until you
+     noticed, which is the bug the duplicated-plans work already fixed once.
+
+     `base` is copied unchanged: the weeks that survive replay against it, so
+     the fork enters `gw` with exactly the fifteen the original had. */
+  const fork = useCallback((id: string, gw: number) => {
+    const src = lib.plans.find((p) => p.id === id)
+    if (!src || lib.plans.length >= MAX_PLANS) return null
+    const nid = newId()
+    try {
+      const raw = localStorage.getItem(weeksKey(id))
+      if (raw) {
+        const s = JSON.parse(raw) as PlannerState
+        const weeks: PlannerState['weeks'] = {}
+        for (const k of Object.keys(s.weeks ?? {})) {
+          if (Number(k) < gw) weeks[Number(k)] = s.weeks[Number(k)]
+        }
+        localStorage.setItem(weeksKey(nid), JSON.stringify({ ...s, weeks }))
+      }
+    } catch { /* ignore — a fork with no weeks is still a usable plan */ }
+    const copy: StoredPlan = {
+      id: nid, name: forkName(lib.plans, src.name, gw), base: [...src.base], updated: Date.now(),
+    }
+    save({ ...lib, plans: [...lib.plans, copy], activeId: nid })
+    return copy
   }, [lib, save])
 
   const rename = useCallback((id: string, name: string) => {
@@ -240,9 +280,21 @@ export function usePlans(): Plans {
     active,
     activeId: active?.id ?? null,
     compare: lib.compare.filter((id) => lib.plans.some((p) => p.id === id)),
-    setActive, create, duplicate, rename, remove, setBase, toggleCompare,
+    setActive, create, duplicate, fork, rename, remove, setBase, toggleCompare,
     full: lib.plans.length >= MAX_PLANS,
   }
+}
+
+/** "Balanced" forked at GW6 → "Balanced GW6". Forked again at the same week
+ *  → "Balanced GW6 2", because two branches off one point is the normal case
+ *  and they cannot both be called the same thing. The stem drops any previous
+ *  fork suffix, so a fork of a fork is "Balanced GW9", not a name that grows
+ *  a gameweek every time. */
+function forkName(plans: StoredPlan[], from: string, gw: number): string {
+  const stem = from.replace(/\s+\d+$/, '').replace(/\s+GW\d+$/, '').slice(0, 20)
+  const first = `${stem} GW${gw}`
+  if (!plans.some((p) => p.name === first)) return first
+  return nextName(plans, first)
 }
 
 /** "Balanced" → "Balanced 2" → "Balanced 3". */

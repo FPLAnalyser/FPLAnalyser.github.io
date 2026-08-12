@@ -79,6 +79,10 @@ export interface Planner {
   hitAt: (gw: number) => number
   /** Opaque token that changes with any edit to the plan. */
   revision: string
+  /** Which plan's weeks these are — the store key, used as identity rather
+   *  than as data. The board needs it to tell "you changed the squad" from
+   *  "you opened a different plan", which look the same from the numbers. */
+  store: string
 }
 
 export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey, onBaseChange }: {
@@ -305,6 +309,7 @@ export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey, o
        call squadAtGw and weekAt, which are fresh closures every render, so a
        dependency list built from those either never updates or never stops. */
     revision: JSON.stringify(state.weeks),
+    store: key,
     ft: freeTransfers(state, gw),
     banked: Math.min(MAX_FT, bankedTransfers(state, gw)),
     hit: pointsHit(state, gw),

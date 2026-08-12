@@ -28,6 +28,7 @@ import { deliverImage } from '../lib/share'
 import { num } from '../lib/rows'
 import { useDiffScale } from '../lib/fixtureRuns'
 import { usePlans, weeksKey } from '../lib/plans'
+import { useWide } from '../lib/useWide'
 import { useAvailability, availBadge, availFor, SEV_COLOUR, type Availability } from '../lib/availability'
 import { xpForGw, useXpModel, useMarketOdds, useShotProfiles } from '../lib/xp'
 import { usePlanner } from '../lib/usePlanner'
@@ -268,6 +269,13 @@ export default function SquadBuilder() {
      pitch to reach it and a phone scroll past everything. It is a different
      job from picking, so it gets its own tab rather than more page. */
   const [view, setView] = useState<View>('build')
+  /* The portal target for the stat tiles. State rather than a ref so the first
+     render after the node mounts actually re-renders the planner — a ref would
+     still be null when it read it and the tiles would stay inline. */
+  const [statsEl, setStatsEl] = useState<HTMLDivElement | null>(null)
+  const wide = useWide(1024)
+  /** What the last fork did, until dismissed. */
+  const [forked, setForked] = useState<{ name: string; from: string; gw: number } | null>(null)
 
   const avail = useAvailability()
   // The site's own fixture difficulty — the turn map colours by it, so its
@@ -493,6 +501,22 @@ export default function SquadBuilder() {
         onCompare={() => setView('compare')}
       />
 
+      {/* A fork switches you into a plan that looks identical to the one you
+          were in — same fifteen, same weeks behind you — so without a line
+          saying so the only evidence is a name in the strip above. It says
+          which plan you are now in and what is different about it. */}
+      {forked && (
+        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-accent/45 bg-accent-soft px-3 py-2 text-[12.5px]">
+          <Icon name="target" size={14} className="shrink-0 text-accent" />
+          <span className="font-semibold text-accent">Forked into “{forked.name}”.</span>
+          <span className="text-ink-2">
+            Everything up to GW{forked.gw - 1} came with it; GW{forked.gw} onwards is empty, so you can
+            take a different route. “{forked.from}” is untouched.
+          </span>
+          <button onClick={() => setForked(null)} className="ml-auto text-[11px] font-semibold text-ink-3 hover:text-ink">Got it</button>
+        </div>
+      )}
+
       {/* Insights only exists once there are fifteen players to read. Offering
           the tab on an empty squad and landing on empty panels is worse than
           not offering it, so it appears when the squad does. */}
@@ -595,6 +619,14 @@ export default function SquadBuilder() {
           <SeasonPlanner
             planner={planner} byEl={byEl} pool={pool} fixtureEase={fixtureEase}
             metric={metric} avail={avail}
+            statsSlot={wide ? statsEl : null}
+            /* No fork once the library is full — the button would be there to
+               tell you it can't, which is worse than not being there. */
+            onFork={plans.full || !plans.activeId ? undefined : (gw) => {
+              const from = plans.active?.name ?? 'this plan'
+              const made = plans.fork(plans.activeId!, gw)
+              if (made) setForked({ name: made.name, from, gw })
+            }}
             squadScore={liveScore}
             onOpenSquadRating={() => setRatingOpen(true)}
             partialSquad={picked}
@@ -621,6 +653,16 @@ export default function SquadBuilder() {
             which is the behaviour the market had before the read arrived. */}
         <div ref={marketRef} className="mt-8 min-w-0 scroll-mt-20 lg:mt-0">
           <div className="mb-4 flex flex-col gap-3">
+            {/* Where the week's four numbers land on a wide screen. They used
+                to be a full-width row above the board, which spent a whole
+                band of vertical space on four figures and pushed the forwards
+                below the fold. At the top of this column they sit level with
+                the gameweek you are reading them for, and they read as that
+                team's score rather than as a page header. Hidden below lg,
+                where this column stacks UNDER the board and the numbers are
+                worth more above it — the planner keeps drawing them inline
+                there. */}
+            <div ref={setStatsEl} className="hidden lg:block" />
             {/* Nothing until the fifteen exists. A verdict on nine players is
                 a verdict on a squad that isn't the one being built. */}
             {complete && (
