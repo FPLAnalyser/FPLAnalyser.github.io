@@ -830,7 +830,7 @@ export default function SquadBuilder() {
               the filters, the legend and the money banner between them run to
               three hundred, which pushed the bottom of the list off the screen
               with nothing you could scroll to reach it. */}
-          <div className="overflow-hidden rounded-xl border border-line lg:min-h-48 lg:flex-1 lg:overflow-y-auto">
+          <div className="@container overflow-hidden rounded-xl border border-line lg:min-h-48 lg:flex-1 lg:overflow-y-auto">
             {list.map((r) => {
               // A player on the market is still yours until someone replaces
               // him, so the list has to say so rather than showing him as a
@@ -845,16 +845,25 @@ export default function SquadBuilder() {
                 : blockReason(r)
               const o = ovOf(r)
               return (
-                <div key={r.element} className={`flex items-center gap-2.5 border-b border-line px-3 py-2 last:border-0 ${inSquad ? 'bg-surface-2/40' : ''}`}>
+                <div key={r.element} className={`flex items-center gap-2 border-b border-line px-2.5 py-2 last:border-0 @[430px]:gap-2.5 @[430px]:px-3 ${inSquad ? 'bg-surface-2/40' : ''}`}>
                   <TeamBadge team={String(r.team)} size={16} />
                   <div className="min-w-0 flex-1">
                     <button className="block w-full text-left" onClick={() => navigate(playerHref(String(r.web_name), num(r, 'code')))}>
                       <div className="flex items-center gap-1.5">
                         <span className="truncate text-sm font-medium text-ink hover:text-accent">{String(r.web_name)}</span>
                         <DutyBadges d={dutiesOf(avail, num(r, 'element'), num(r, 'code'), streakByEl.get(Number(r.element)), nameOfEl)} />
+                        {/* "IN SQUAD" is 52px of chip on the line a name has
+                            to fit in, and on a phone that is the difference
+                            between Donnarumma and Donnaru…. It keeps the words
+                            where there is room and becomes a tick where there
+                            is not; the row is also tinted either way. */}
                         {inSquad && (
-                          <span className={`shrink-0 rounded px-1 py-0.5 text-[10px] leading-none font-bold ${onMarket ? 'bg-bad/15 text-bad' : 'bg-surface-3 text-ink-3'}`}>
-                            {onMarket ? 'SOLD' : 'IN SQUAD'}
+                          <span
+                            title={onMarket ? 'Sold this week — not yet replaced' : 'Already in your squad'}
+                            className={`shrink-0 rounded px-1 py-0.5 text-[10px] leading-none font-bold ${onMarket ? 'bg-bad/15 text-bad' : 'bg-surface-3 text-ink-3'}`}
+                          >
+                            <span className="@[430px]:hidden">{onMarket ? '✕' : '✓'}</span>
+                            <span className="hidden @[430px]:inline">{onMarket ? 'SOLD' : 'IN SQUAD'}</span>
                           </span>
                         )}
                         {(() => {
@@ -870,15 +879,38 @@ export default function SquadBuilder() {
                           ) : null
                         })()}
                       </div>
-                      <div className="text-[11px] text-ink-3">{teamLabel(String(r.team))} · £{priceOf(r).toFixed(1)}m · {Math.round(num(r, 'selected_by_percent') ?? 0)}% owned</div>
+                      <div className="text-[11px] text-ink-3">{teamLabel(String(r.team))} · {Math.round(num(r, 'selected_by_percent') ?? 0)}% owned</div>
                     </button>
-                    <div className="mt-1"><FixtureChips fixtureEase={fixtureEase} team={String(r.team)} n={4} fromGw={liveGw} /></div>
                   </div>
+                  {/* THE NEXT FOUR, ON THE SAME LINE. They used to sit under
+                      the name, which made every row two-and-a-bit lines tall
+                      and put the run — the thing you are comparing signings on
+                      — out of column with the price and the projection you are
+                      comparing them against. Container-queried rather than
+                      breakpointed: this list is a 400px side column at lg, a
+                      680px one at 1400, and a full-width phone panel below
+                      that, so what matters is how wide the LIST is, not the
+                      window. Below 430 of column there is no room and they
+                      drop out; the fixtures are on the player's card and on
+                      the Fixtures tab either way. */}
+                  <span className="hidden shrink-0 @[430px]:inline-flex @[600px]:hidden">
+                    <FixtureChips fixtureEase={fixtureEase} team={String(r.team)} n={3} fromGw={liveGw} dense />
+                  </span>
+                  <span className="hidden shrink-0 @[600px]:inline-flex">
+                    <FixtureChips fixtureEase={fixtureEase} team={String(r.team)} n={4} fromGw={liveGw} dense />
+                  </span>
+                  <span className="w-12 shrink-0 text-right">
+                    <span className="font-num block text-[13px] font-bold tabular-nums text-ink">£{priceOf(r).toFixed(1)}m</span>
+                    <span className="block text-[9px] font-extrabold tracking-[0.1em] text-ink-3">PRICE</span>
+                  </span>
                   <span className="w-11 shrink-0 text-right">
-                    <span className="block font-num text-sm font-extrabold tabular-nums text-accent-2">{xpOf(r)?.toFixed(1) ?? '—'}</span>
+                    <span className="font-num block text-sm font-extrabold tabular-nums text-accent-2">{xpOf(r)?.toFixed(1) ?? '—'}</span>
                     <span className="block text-[9px] font-extrabold tracking-[0.1em] text-ink-3">XP</span>
                   </span>
-                  <span className="w-9 shrink-0 text-right font-num text-sm font-semibold tabular-nums text-ink-2">{o ?? '—'}</span>
+                  <span className="w-9 shrink-0 text-right">
+                    <span className="font-num block text-sm font-semibold tabular-nums text-ink-2">{o ?? '—'}</span>
+                    <span className="block text-[9px] font-extrabold tracking-[0.1em] text-ink-3">RTG</span>
+                  </span>
                   {/* Once he's on the market the sign-him button is dead, and a
                       greyed-out tick just looks broken. The one thing you can
                       actually do with him is take him back. */}

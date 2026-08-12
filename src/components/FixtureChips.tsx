@@ -10,6 +10,7 @@ export function FixtureChips({
   team,
   n = 3,
   compact = false,
+  dense = false,
   fromGw,
 }: {
   fixtureEase: FixtureEaseRow[]
@@ -17,6 +18,12 @@ export function FixtureChips({
   n?: number
   /** Tiny colour ticks instead of labelled chips — for pitch cards. */
   compact?: boolean
+  /** Smaller chips that keep the opponent and the venue but drop the
+   *  brackets and a point and a half of type: `COV·H` rather than `COV (H)`.
+   *  For the market list, where four of these have to sit on the same line as
+   *  a name, a price, a projection and a rating — 56px a chip does not fit
+   *  and 33 does. */
+  dense?: boolean
   /** Start from this gameweek rather than the first in the table — the
    *  planner steps through the season, and a list still showing GW1 while
    *  the board is on GW5 is worse than showing nothing. */
@@ -45,17 +52,19 @@ export function FixtureChips({
     )
   }
   return (
-    <span className="inline-flex flex-wrap gap-1">
+    <span className={dense ? 'inline-flex gap-0.5' : 'inline-flex flex-wrap gap-1'}>
       {upcoming.map((f, i) => {
         const [bg, fg] = FDR_COLORS[f.fdr] || FDR_COLORS[3]
         return (
           <span
             key={i}
-            className="capture-pill rounded px-1.5 py-0.5 text-[11px] font-medium"
+            className={dense
+              ? 'capture-pill rounded px-1 py-px text-[9px] leading-[13px] font-bold'
+              : 'capture-pill rounded px-1.5 py-0.5 text-[11px] font-medium'}
             style={{ background: bg, color: fg }}
             title={`GW${f.gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamFullNames[f.opponent] || f.opponent} (FDR ${f.fdr})`}
           >
-            {f.opponent} ({f.venue})
+            {dense ? `${f.opponent}·${f.venue}` : `${f.opponent} (${f.venue})`}
           </span>
         )
       })}
