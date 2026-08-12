@@ -112,14 +112,20 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
    fixtures — measured at x −261 while the bar row's stub held at 39. It has to
    clip while the rows are sliding open and stop clipping the moment they land. */
 .rows.settled{overflow:visible}
-.cell{height:17px;border-radius:3px;background:var(--raised);
-  font:800 8.5px/17px ui-sans-serif;text-align:center;color:rgba(0,0,0,.75);letter-spacing:.02em}
-.cell.d1{background:var(--d1)}.cell.d2{background:var(--d2)}
-.cell.d3{background:var(--d3);color:#e6eaef}.cell.d4{background:var(--d4)}
-.cell.d5{background:var(--d5);color:#fff}
+/* THE GRID IS DARK GLASS. Every cell is near-black with a faint gold edge
+   and the fixture in the difficulty colour — the difficulty moves from the
+   fill to the ink. Filled chips were a wall of colour, and they used up the
+   very device an arrival needed: now the only strong edge in the grid is
+   the green ring on a new signing, and it stands out at any difficulty. */
+.cell{height:17px;border-radius:3px;background:#0b0c0f;
+  box-shadow:inset 0 0 0 1px rgba(201,162,39,.28);
+  font:800 8.5px/17px ui-sans-serif;text-align:center;letter-spacing:.02em;color:var(--ink-2)}
+.cell.d1{color:var(--d1)}.cell.d2{color:var(--d2)}
+.cell.d3{color:#9aa6b5}.cell.d4{color:var(--d4)}
+.cell.d5{color:var(--d5)}
 .cell.void{background:repeating-linear-gradient(45deg,#2a2c31,#2a2c31 3px,#1c1e22 3px,#1c1e22 6px);color:var(--ink-3)}
 .cell.settled{opacity:.3}
-.cell.lit{outline:1.5px solid var(--gold-lit);outline-offset:-1px}
+.cell.lit{outline:1.5px solid rgba(255,255,255,.75);outline-offset:-1px}
 .moves{margin-top:7px;padding-top:6px;border-top:1px solid var(--line);
   font:800 11px/1.3 ui-sans-serif;text-align:center;color:var(--ink-3)}
 
@@ -192,17 +198,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 /* Before he is yours: an empty outline. After you sell him: red hatching.
    Both keep the column so a transfer reads as one row ending and another
    starting, which is the whole point of drawing it. */
-/* A seam is where a row changes hands. The green left edge died on green
-   cells — an edge in the difficulty palette cannot survive sitting ON the
-   difficulty palette. So the arrival cell INVERTS instead: near-black
-   ground, the fixture text in the difficulty colour, a gold ring. Nothing
-   else in the grid is dark-with-a-gold-ring, so it reads at a glance in
-   both data views, on every difficulty. */
-.cell.seam{background:#08090b !important;box-shadow:inset 0 0 0 1.5px var(--gold)}
-.cell.seam.d1{color:var(--d1)}.cell.seam.d2{color:var(--d2)}
-.cell.seam.d3{color:#9aa6b5}.cell.seam.d4{color:var(--d4)}.cell.seam.d5{color:var(--d5)}
-.cell.seam.x0{color:var(--ink-2)}.cell.seam.x1{color:var(--ink-2)}
-.cell.seam.x2{color:var(--gold-lit)}.cell.seam.x3{color:var(--gold-lit)}.cell.seam.x4{color:var(--gold-lit)}
+/* The arrival: the one green ring in a gold-edged grid. */
+.cell.seam{box-shadow:inset 0 0 0 1.5px var(--live)}
 .band{grid-column:2/-1;position:relative;height:11px;margin:1px 0 0}
 .band span{position:absolute;top:0;font:700 8.5px/1.2 ui-sans-serif;color:var(--ink-3);white-space:nowrap}
 .band span.nw{color:var(--live)}
@@ -210,11 +207,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 
 /* xP heat: five steps of the accent, never the difficulty ramp — points and
    difficulty are different questions and must not share a colour language. */
-.cell.x0{background:var(--raised);color:var(--ink-3)}
-.cell.x1{background:rgba(201,162,39,.16);color:var(--ink-2)}
-.cell.x2{background:rgba(201,162,39,.34);color:var(--gold-lit)}
-.cell.x3{background:rgba(201,162,39,.6);color:#fff7dc}
-.cell.x4{background:var(--gold-lit);color:#14100a}
+.cell.x0{color:var(--ink-3)}
+.cell.x1{color:var(--ink-2)}
+.cell.x2{color:var(--gold)}
+.cell.x3{color:var(--gold-lit)}
+.cell.x4{color:#fff3c4;text-shadow:0 0 7px rgba(234,209,136,.6)}
 
 .mode{margin-left:auto;display:flex;gap:2px;background:var(--surface-2);
   border:1px solid var(--line);border-radius:99px;padding:2px}
@@ -287,7 +284,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
         <div class="rail" id="rail"></div>
         <div class="rows" id="rows"></div>
       </div>
-      <div class="swipe" id="swipe"><span id="swipecue">&#8596;&nbsp; swipe &middot;&nbsp;</span>ABC home &middot; abc away &middot; <span style="color:var(--live)">&#9656; green edge = new signing</span></div>
+      <div class="swipe" id="swipe"><span id="swipecue">&#8596;&nbsp; swipe &middot;&nbsp;</span>ABC home &middot; abc away &middot; difficulty is the text colour &middot; <span style="color:var(--live)">&#9656; green ring = new signing</span></div>
       <button class="handle" id="handle" aria-expanded="false">
         <span class="grip"></span><span id="handleLabel">Pull down for the whole plan</span><span class="grip"></span>
       </button>
@@ -311,14 +308,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   </div>
 
   <section class="alts">
-    <h2>Five ways to mark an arrival &mdash; on the worst case, a green cell</h2>
+    <h2>How the arrival marker got here</h2>
     <div class="altrow" id="altrow"></div>
-    <p class="altnote">A &mdash; the green edge (what we had): invisible on easy fixtures.
-    B &mdash; <b>inverted cell, gold ring</b> (what the grid above now uses): the only dark
-    object in the grid, so it reads everywhere, and the difficulty survives in the text.
-    C &mdash; green ring, coloured text: quieter, but green-on-green returns on easy weeks.
-    D &mdash; corner flag: subtle to a fault at 17px cell height.
-    E &mdash; underline: collides with the bench-dim opacity and vanishes on phones.</p>
+    <p class="altnote">A &mdash; a green edge on filled chips: invisible on easy fixtures.
+    B &mdash; one inverted cell in a filled grid: read well, but begged the question the grid
+    above now answers &mdash; <b>if dark-with-an-edge is the best-reading cell, why is only one
+    cell drawn that way?</b> C &mdash; the whole grid goes dark glass: every cell near-black
+    with a faint gold edge, difficulty in the ink, and the arrival takes the <b>one green
+    ring</b> &mdash; which now stands out at every difficulty precisely because nothing else
+    owns an edge colour.</p>
   </section>
   <p class="footnote"><b>Real numbers.</b> The fifteen is a plan built in the live builder, the
   fixtures and difficulty ratings are this season&rsquo;s, and the projections and hard-fixture
@@ -606,16 +604,12 @@ document.getElementById('namesToggle').addEventListener('click', function () {
 (function altStrip() {
   const el = document.getElementById('altrow');
   if (!el) return;
-  const mk = (cls, seamCls, txt) =>
-    '<span class="cell d2">SUN</span>' +
-    '<span class="cell d1 ' + seamCls + '"' + (cls === 'B' ? ' style="background:#08090b;box-shadow:inset 0 0 0 1.5px var(--gold);color:var(--d1)"' : '') + '>' + txt + '</span>' +
-    '<span class="cell d4">liv</span>';
+  const filled = (d, txt, extra) => '<span class="cell" style="background:' +
+    ({1:'#2fbf6e',2:'#7fd39b',4:'#e8907f'})[d] + ';box-shadow:none;color:rgba(0,0,0,.75);' + (extra || '') + '">' + txt + '</span>';
   el.innerHTML = [
-    ['A · green edge', mk('A', 'altA', 'BUR')],
-    ['B · inverted + gold ✓', mk('B', '', 'BUR')],
-    ['C · inverted + green', mk('C', 'altC', 'BUR')],
-    ['D · corner flag', mk('D', 'altD', 'BUR')],
-    ['E · underline', mk('E', 'altE', 'BUR')],
+    ['A · filled chips, green edge', filled(2, 'SUN') + filled(1, 'BUR', 'box-shadow:inset 2.5px 0 0 #3ddc7a;') + filled(4, 'liv')],
+    ['B · one inverted cell', filled(2, 'SUN') + '<span class="cell" style="box-shadow:inset 0 0 0 1.5px var(--gold);color:var(--d1)">BUR</span>' + filled(4, 'liv')],
+    ['C · dark glass everywhere ✓', '<span class="cell d2">SUN</span><span class="cell d1 seam">BUR</span><span class="cell d4">liv</span>'],
   ].map(([lab, demo]) => '<div class="altcase"><span class="lab">' + lab + '</span><span class="demo">' + demo + '</span></div>').join('');
 })();
 
