@@ -34,29 +34,19 @@ export function PlanBar({ plans, canCompare, onCompare }: {
     setRenaming(null)
   }
 
+  /* ONE ROW, because it now shares a line with the view tabs. It was a
+     bordered panel with a header line above a chip row; the border and the
+     header were both spending height to say things the row itself says. The
+     count stays — it is the only place the eight-plan limit appears — and
+     everything the old paragraph carried is on the label as a title. */
   return (
-    <div className="mb-3 rounded-xl border border-line bg-surface-1/60 p-2">
-      {/* One header line, not two. The count and the instruction say different
-          things and both are short, so they share a row; the rest of what the
-          paragraph under here used to say is on the label as a title. */}
-      <div className="mb-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-        <span
-          className="text-[10px] font-bold tracking-[0.14em] text-ink-3 uppercase"
-          title="Plans live in this browser only — no account, and nothing leaves the device."
-        >Plans</span>
-        <span className="text-[11px] text-ink-3">{plans.plans.length} of {MAX_PLANS}</span>
-        <span className="text-[11px] text-ink-3">· tick two or more, then Compare</span>
-        {canCompare && (
-          <button
-            onClick={onCompare}
-            className="ml-auto inline-flex min-h-8 items-center gap-1.5 self-center rounded-lg bg-accent px-3 text-[12px] font-bold text-accent-contrast transition-colors hover:bg-accent-strong"
-          >
-            <Icon name="users" size={13} /> Compare
-          </button>
-        )}
-      </div>
+    <div className="flex min-w-0 items-center gap-2">
+      <span
+        className="shrink-0 text-[10px] font-bold tracking-[0.14em] text-ink-3 uppercase"
+        title="Tick two or more, then Compare. Plans live in this browser only — no account, and nothing leaves the device."
+      >Plans <span className="font-medium normal-case">{plans.plans.length}/{MAX_PLANS}</span></span>
 
-      <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {plans.plans.map((p) => {
           const active = p.id === plans.activeId
           const ticked = plans.compare.includes(p.id)
@@ -150,6 +140,16 @@ export function PlanBar({ plans, canCompare, onCompare }: {
         </button>
       </div>
 
+      {/* Outside the scroller, so it stays reachable however many plans are
+          in it — the one thing you cannot afford to have scrolled off. */}
+      {canCompare && (
+        <button
+          onClick={onCompare}
+          className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg bg-accent px-3 text-[12px] font-bold text-accent-contrast transition-colors hover:bg-accent-strong"
+        >
+          <Icon name="users" size={13} /> Compare
+        </button>
+      )}
     </div>
   )
 }

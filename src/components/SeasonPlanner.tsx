@@ -123,7 +123,7 @@ function useSquadDelta(value: number | null, squadSig: string, gw: number, ready
  * swap itself goes through planner.swap(). Drag is a second way to say it, not
  * a second implementation. */
 function useCardDrag(planner: Planner, enabled: boolean) {
-  const [drag, setDrag] = useState<{ el: number; x: number; y: number; over: number | null } | null>(null)
+  const [drag, setDrag] = useState<{ el: number; x: number; y: number; over: number | null; w: number } | null>(null)
   /** Set while a drag is finishing, so the click the browser fires afterwards
    *  does not also open the player's card. */
   const suppressClick = useRef(false)
@@ -134,6 +134,10 @@ function useCardDrag(planner: Planner, enabled: boolean) {
     if (!partners.length) return
     const touch = ev.pointerType !== 'mouse'
     const x0 = ev.clientX, y0 = ev.clientY
+    /* The width the card is being drawn at right now. The cards are flex
+       children that divide their row, so they have no width of their own to
+       inherit — a copy in a fixed layer would collapse to its text. */
+    const w = (ev.currentTarget as HTMLElement).getBoundingClientRect().width
     let live = false
     let hold: ReturnType<typeof setTimeout> | null = null
 
@@ -145,7 +149,7 @@ function useCardDrag(planner: Planner, enabled: boolean) {
     const begin = (x: number, y: number) => {
       live = true
       tapHaptic('medium')
-      setDrag({ el, x, y, over: at(x, y) })
+      setDrag({ el, x, y, over: at(x, y), w })
     }
     const move = (e: PointerEvent) => {
       const far = Math.hypot(e.clientX - x0, e.clientY - y0)
@@ -156,7 +160,7 @@ function useCardDrag(planner: Planner, enabled: boolean) {
         return
       }
       e.preventDefault()
-      setDrag({ el, x: e.clientX, y: e.clientY, over: at(e.clientX, e.clientY) })
+      setDrag({ el, x: e.clientX, y: e.clientY, over: at(e.clientX, e.clientY), w })
     }
     const up = (e: PointerEvent) => {
       if (live) {
@@ -349,7 +353,9 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
   const tripleCap = week?.chip === 'triple-captain'
   const ftLeft = ft === Infinity ? Infinity : Math.max(0, ft - (week?.transfers.filter((t) => t.in != null).length ?? 0))
 
-  const card = (el: number, onBench: boolean) => (
+  /** `ghost` draws the same card for the drag layer: no drag state on it, so
+   *  the copy in your hand is not also faded out as "the one being moved". */
+  const card = (el: number, onBench: boolean, ghost = false) => (
     <PlayerChip
       key={el}
       onOpen={() => onCardTap(el)}
@@ -368,7 +374,7 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
          was marking the act of building it. */
       transferred={!planner.opening && !!week?.transfers.some((t) => t.in === el)}
       sold={planner.pendingOut.includes(el)}
-      onSell={week
+      onSell={ghost ? undefined : week
         ? () => {
             const isSold = planner.pendingOut.includes(el)
             tapHaptic(isSold ? 'light' : 'medium')
@@ -383,35 +389,32 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
       /* The two ways in are lit the same way: a highlighted card is one you
          can legally swap to, whether you got here by tapping or by picking
          somebody up. */
-      highlight={(subFor != null && partners.includes(el)) || (drag != null && dragPartners.includes(el))}
-      dimmed={(subFor != null && !partners.includes(el) && el !== subFor)
-        || (drag != null && !dragPartners.includes(el) && el !== drag.el)}
-      picked={subFor === el}
-      onPointerDown={(ev) => startDrag(el, ev)}
-      dragging={drag?.el === el}
-      dropTarget={drag?.over === el}
+      highlight={!ghost && ((subFor != null && partners.includes(el)) || (drag != null && dragPartners.includes(el)))}
+      dimmed={!ghost && ((subFor != null && !partners.includes(el) && el !== subFor)
+        || (drag != null && !dragPartners.includes(el) && el !== drag.el))}
+      picked={!ghost && subFor === el}
+      onPointerDown={ghost ? undefined : (ev) => startDrag(el, ev)}
+      dragging={!ghost && drag?.el === el}
+      dropTarget={!ghost && drag?.over === el}
     />
   )
 
-  /* THREE TILES, NOT FOUR. The projection and the GW rating were separate
-     boxes asking the same question — the rating IS the projection, expressed
-     against what this week's floor and ceiling were, so reading them apart
-     meant reading 54.8 and then being told 83 without being told they were
-     the same fact twice. Together, the number leads and the rating qualifies
-     it: 54.8, a strong week. They keep their own drill-downs, because how the
-     projection is built and where the week's posts are set are still two
-     different explanations. */
+  /* THREE TILES, NOT FOUR, and the first holds two numbers at the same size.
+     The projection and the GW rating were separate boxes asking the same
+     question — the rating IS the projection, scored against what this week's
+     floor and ceiling were. Putting the rating in a small badge beside the
+     projection said one outranked the other, and it does not: 54.8 is what
+     you should score and 83 is whether that is any good, and you need both
+     to know anything. So they are one tile, two equal halves, each opening
+     its own explanation — how the projection is built and where the week's
+     posts are set are still different answers. */
   const statTiles = (
     <>
-      <Stat
-        label="This week" value={teamXp == null ? '—' : teamXp.toFixed(1)} tone="accent"
-        sub={week ? 'projected points from this XI' : `${picked}/15 picked`}
-        delta={xpDelta} dp={1}
-        onClick={teamXp == null || !week ? undefined : () => setDetail('xp')}
-        badge={rating == null ? null : {
-          value: String(rating), word: ratingWord(rating), tone: ratingTone(rating),
-          onClick: () => setDetail('rating'),
-        }}
+      <Pair
+        label="xP / Rating"
+        sub={week ? 'what this XI should score, and how good that is' : `${picked}/15 picked`}
+        left={{ value: teamXp == null ? '—' : teamXp.toFixed(1), tone: 'accent', delta: xpDelta, dp: 1, onClick: teamXp == null || !week ? undefined : () => setDetail('xp') }}
+        right={{ value: rating == null ? '—' : String(rating), tone: ratingTone(rating), word: rating == null ? '' : ratingWord(rating), onClick: rating == null ? undefined : () => setDetail('rating') }}
       />
       <Stat label="Squad rating" value={squadScore == null ? '—' : String(squadScore)} tone="accent" sub="what you've built" delta={scoreDelta} dp={0} onClick={squadScore == null ? undefined : onOpenSquadRating} />
       <Stat label="In the bank" value={`£${(BUDGET - spend).toFixed(1)}m`} tone={spend > BUDGET ? 'bad' : 'ink'} sub={`£${spend.toFixed(1)}m squad`} />
@@ -521,18 +524,22 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
           moved. The one control you want after selling a player is the one to
           put him back, and it has to still be under the cursor that sold him.
           Nothing above the board changes height any more, so it isn't. */}
-      {/* What is in your hand. The card itself stays where it is at 40% —
-          moving the real one would reflow the row it came out of — and this
-          follows the pointer instead, so the gesture has something attached
-          to it. Fixed, translated, and pointer-events-none, or it would be
-          the thing under the pointer and every drop would land on itself. */}
+      {/* WHAT IS IN YOUR HAND IS THE CARD. It was a name on a label, which
+          told you a drag was happening without looking like one; this is the
+          player's own card, drawn again, following the pointer. The original
+          stays in place at 40% rather than being moved — taking it out of its
+          row would reflow the row, so the board would rearrange itself under
+          the thing you are trying to aim at.
+
+          It carries its own width because the cards are flex children that
+          divide their row, and it is pointer-events-none, or it would be the
+          element under the pointer and every drop would land on itself. */}
       {drag && (
         <div
-          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 rounded-lg border border-accent bg-surface-1 px-2 py-1 text-[12px] font-bold text-ink shadow-lg"
-          style={{ left: drag.x, top: drag.y }}
+          className="pointer-events-none fixed z-50 flex -translate-x-1/2 -translate-y-1/2 rotate-2 drop-shadow-[0_10px_22px_rgba(0,0,0,.6)]"
+          style={{ left: drag.x, top: drag.y, width: drag.w }}
         >
-          {nameOf(drag.el)}
-          <span className="ml-1.5 font-medium text-ink-3">{drag.over == null ? 'drop on a lit card' : 'swap'}</span>
+          {card(drag.el, false, true)}
         </div>
       )}
 
@@ -701,6 +708,44 @@ function StepButton({ dir, disabled, onClick }: { dir: 'prev' | 'next'; disabled
 const TONE_CLASS: Record<string, string> = {
   bad: 'text-bad', warn: 'text-warn', good: 'text-good', accent: 'text-accent', ink: 'text-ink',
 }
+const TILE_HIT = 'transition-colors hover:border-accent/50 hover:bg-accent-selected'
+
+/** Two numbers that only mean something together, at the same size, in one
+ *  tile — the week's projection and the rating that scores it. Each half is
+ *  its own button because each opens a different explanation. */
+function Pair({ label, sub, left, right }: {
+  label: string
+  sub?: string
+  left: { value: string; tone: string; delta?: number | null; dp?: number; onClick?: () => void }
+  right: { value: string; tone: string; word: string; onClick?: () => void }
+}) {
+  const half = (h: { value: string; tone: string; onClick?: () => void }, foot: React.ReactNode) => {
+    const inner = (
+      <>
+        <div className={`font-display text-lg leading-none tabular-nums ${TONE_CLASS[h.tone] ?? 'text-ink'}`}>{h.value}</div>
+        <div className="mt-0.5 h-[13px] text-[10px] leading-tight text-ink-3">{foot}</div>
+      </>
+    )
+    return h.onClick
+      ? <button onClick={h.onClick} className={`min-w-0 flex-1 rounded-lg border border-transparent px-1 py-0.5 ${TILE_HIT}`}>{inner}</button>
+      : <div className="min-w-0 flex-1 px-1 py-0.5">{inner}</div>
+  }
+  const d = left.delta
+  const dp = left.dp ?? 1
+  return (
+    <div className="w-full rounded-xl border border-line bg-surface-1/60 p-1.5 text-center">
+      <div className="flex items-start justify-center gap-1">
+        {half(left, d != null && Math.abs(d) >= (dp === 0 ? 1 : 0.05)
+          ? <span className={`font-num font-bold ${d > 0 ? 'text-good' : 'text-bad'}`}>{d > 0 ? '+' : '−'}{Math.abs(d).toFixed(dp)}</span>
+          : 'xP')}
+        <span aria-hidden className="mt-1 text-sm text-line-strong">/</span>
+        {half(right, right.word || 'rating')}
+      </div>
+      <div className="mt-0.5 text-[10px] font-semibold tracking-[0.1em] text-ink-2 uppercase">{label}</div>
+      {sub && <div className="mt-0.5 text-[10px] leading-tight text-ink-3">{sub}</div>}
+    </div>
+  )
+}
 
 function Stat({ label, value, tone, sub, onClick, delta, dp = 1, badge }: {
   label: string; value: string; tone?: 'ink' | 'bad' | 'good' | 'accent' | 'warn'; sub?: string
@@ -731,7 +776,7 @@ function Stat({ label, value, tone, sub, onClick, delta, dp = 1, badge }: {
       )}
     </>
   )
-  const hit = 'transition-colors hover:border-accent/50 hover:bg-accent-selected'
+  const hit = TILE_HIT
   const body = onClick
     ? <button onClick={onClick} className={`min-w-0 flex-1 rounded-lg border border-transparent p-1 text-center ${hit}`}>{inner}</button>
     : <div className="min-w-0 flex-1 p-1 text-center">{inner}</div>
@@ -783,7 +828,7 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
          fixture chip, and .closest('[data-el]') walks up to here. */
       data-el={element}
       onPointerDown={onPointerDown}
-      className={`${CARD_W} relative transition-opacity ${dimmed ? 'opacity-30' : ''} ${
+      className={`${CARD_W} relative transition-opacity ${dimmed ? 'opacity-30' : bench ? 'opacity-[0.88]' : ''} ${
         dragging ? 'opacity-40 [touch-action:none]' : ''}`}
     >
       {onSell && (
@@ -814,8 +859,16 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
           cross. One overhanging thing per corner, and the two that are used
           are never on the same edge of the gap between cards. */}
       {transferred && <span className="absolute -bottom-1.5 -left-1.5 z-10 grid size-4 place-items-center rounded-full bg-good text-[10px] text-white"><Icon name="check" size={10} /></span>}
+      {/* THE BENCH KEEPS ITS METAL. It used to be forced to graphite — the
+          bench is not playing, so it was greyed as a set — and that quietly
+          threw away the one thing the card material is for. A 65 keeper on
+          the bench looked exactly like a 30, which is how bronze went missing
+          for Donnarumma: he was never on the grass to show it. The bench is
+          already marked as the bench by the spine it sits in and by being
+          under the pitch; it does not also need every man in it to look
+          worthless. It reads back a shade, and that is all. */}
       <FoilShell
-        tier={bench ? 'graphite' : tierOf(rating || null)}
+        tier={tierOf(rating || null)}
         onClick={onOpen}
         className={`w-full ${highlight ? 'ring-2 ring-accent ring-offset-1 ring-offset-transparent' : ''} ${
           dropTarget ? 'ring-4 ring-accent-2 ring-offset-2 ring-offset-transparent' : ''} ${

@@ -11,6 +11,7 @@ import { ShareFooter } from '../components/ShareFooter'
 import { SeasonPlanner } from '../components/SeasonPlanner'
 import { SquadLab } from '../components/SquadLab'
 import { SquadAnalysis } from '../components/SquadAnalysis'
+import { SquadFixtures } from '../components/SquadFixtures'
 import { SquadCompare } from '../components/SquadCompare'
 import { PlanBar } from '../components/PlanBar'
 import { Icon } from '../components/Icon'
@@ -28,7 +29,6 @@ import { deliverImage } from '../lib/share'
 import { num } from '../lib/rows'
 import { useDiffScale } from '../lib/fixtureRuns'
 import { usePlans, weeksKey } from '../lib/plans'
-import { useWide } from '../lib/useWide'
 import { useAvailability, availBadge, availFor, SEV_COLOUR, type Availability } from '../lib/availability'
 import { xpForGw, useXpModel, useMarketOdds, useShotProfiles } from '../lib/xp'
 import { usePlanner } from '../lib/usePlanner'
@@ -46,6 +46,9 @@ const SLOTS: { pos: Pos; count: number }[] = [
 const NEED: Record<Pos, number> = { GKP: 2, DEF: 5, MID: 5, FWD: 3 }
 const POS_LABEL: Record<Pos, string> = { GKP: 'Goalkeepers', DEF: 'Defenders', MID: 'Midfielders', FWD: 'Forwards' }
 type View = 'build' | 'insights' | 'compare'
+/** The right-hand column: the list you sign from, the read on the squad, and
+ *  the run it is walking into. */
+type Panel = 'market' | 'read' | 'fixtures'
 
 /** Moves a stored plan spends after its opening week. Reads the plan's own
  *  week store; a plan that has never been stepped forward has none. */
@@ -296,11 +299,8 @@ export default function SquadBuilder() {
      pitch to reach it and a phone scroll past everything. It is a different
      job from picking, so it gets its own tab rather than more page. */
   const [view, setView] = useState<View>('build')
-  /* The portal target for the plan bar. State rather than a ref so the first
-     render after the node mounts actually re-renders the page — a ref would
-     still be null when it was read and the bar would stay at the top. */
-  const [planEl, setPlanEl] = useState<HTMLDivElement | null>(null)
-  const wide = useWide(1024)
+  /** Which panel the right-hand column is showing. */
+  const [panel, setPanel] = useState<Panel>('market')
   /** What the last fork did, until dismissed. */
   const [forked, setForked] = useState<{ name: string; from: string; gw: number } | null>(null)
 
@@ -528,20 +528,6 @@ export default function SquadBuilder() {
     <PageShell>
       <SectionBanner imgKey="squad" title="Squad Builder" subtitle={`Pick your Gameweek ${buildGw} fifteen within £100m, then step forward week by week — transfers, captain and chips`} />
 
-      {/* The library. On a wide screen it belongs beside the board rather
-          than across the top of the page — it is a switcher you reach for
-          between decisions, not a header you read before making one, and a
-          full-width band of it was the first thing between the page title and
-          the team.
-
-          It is the same element either way, portalled: a second copy would
-          have its own rename box and its own idea of which plan you were
-          renaming. Page-level whenever the board is not on screen, because
-          Compare needs the ticks and the board's column is hidden there. */}
-      {wide && view === 'build' && planEl
-        ? createPortal(planBar, planEl)
-        : planBar}
-
       {/* A fork switches you into a plan that looks identical to the one you
           were in — same fifteen, same weeks behind you — so without a line
           saying so the only evidence is a name in the strip above. It says
@@ -558,27 +544,41 @@ export default function SquadBuilder() {
         </div>
       )}
 
-      {/* Insights only exists once there are fifteen players to read. Offering
-          the tab on an empty squad and landing on empty panels is worse than
-          not offering it, so it appears when the squad does. */}
-      {(complete || plans.compare.length >= 2) && (
-        <div className="mb-4">
+      {/* THE VIEW AND THE PLAN, ON ONE LINE. Which squad you are looking at
+          and which reading of it you want are the two questions that precede
+          every other one on this page, and they were answered in two separate
+          bands — the library across the top, the tabs under it. Together they
+          are one row: tabs on the left, the library filling the rest.
+
+          Below lg the library wraps under the tabs, which is the same order,
+          just stacked — a phone cannot hold both across. */}
+      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+        {/* Insights only exists once there are fifteen players to read.
+            Offering the tab on an empty squad and landing on empty panels is
+            worse than not offering it, so it appears when the squad does. */}
+        {(complete || plans.compare.length >= 2) && (
           <Tabs
             tabs={[
               { id: 'build', label: 'Squad' },
               ...(complete ? [{ id: 'insights', label: 'Insights' }] : []),
               /* Comparing plans is its own job, not a reading of one squad, so
                  it sits beside Insights rather than inside it. No count in the
-                 label — the strip above already says how many are ticked, and
-                 a number in a tab reads as a badge for something unread. */
+                 label — the strip beside it already says how many are ticked,
+                 and a number in a tab reads as a badge for something unread. */
               ...(plans.compare.length >= 2 ? [{ id: 'compare', label: 'Compare plans' }] : []),
             ]}
             active={view}
             onChange={(id) => setView(id as View)}
             layoutId="squad-view"
           />
-        </div>
-      )}
+        )}
+        {/* basis-full below lg, or it tries to share the line with the tabs
+            on a phone and loses: the tabs take 330 of 390, the library is left
+            with 44, and the Compare button — which cannot shrink — hangs 85px
+            off the right of the document. Measured as a sideways scroll on
+            the whole page. From lg there is room for both. */}
+        <div className="min-w-0 basis-full lg:flex-1 lg:basis-0">{planBar}</div>
+      </div>
 
       {view === 'compare' && (
         <SquadCompare
@@ -704,18 +704,45 @@ export default function SquadBuilder() {
             reach. So the read scrolls away and the market pins behind it,
             which is the behaviour the market had before the read arrived. */}
         <div ref={marketRef} className="mt-8 min-w-0 scroll-mt-20 lg:mt-0">
-          <div className="mb-4 flex flex-col gap-3">
-            {/* Where the plan library lands on a wide screen. */}
-            <div ref={setPlanEl} className="hidden lg:block" />
-            {/* Nothing until the fifteen exists. A verdict on nine players is
-                a verdict on a squad that isn't the one being built. */}
-            {complete && (
+          {/* THREE PANELS, ONE AT A TIME. This column used to be a stack: the
+              verdict, the Lab, then the market. On a full squad that is about
+              1,400 pixels against 660 of board, so two thirds of it was always
+              scrolled past — and the market, the one thing here you ACT with,
+              was the part at the bottom.
+
+              Each tab answers a different question. Market: who could I sign.
+              Read: what have I got. Fixtures: what is coming. Market leads
+              because it is the only one you do anything in; the other two are
+              reading, and reading can wait for you to ask for it.
+
+              Read and Fixtures need a fifteen to be about, so before there is
+              one there are no tabs at all — just the list. */}
+          {complete && (
+            <div className="mb-3">
+              <Tabs
+                tabs={[
+                  /* "Players", not "Market" or "Squad" — the first because
+                     there is no market at the opening week, where you are
+                     picking rather than trading, and the second because the
+                     row above already has a tab called Squad and two of them
+                     on one screen meaning different things is a puzzle. */
+                  { id: 'market', label: 'Players' },
+                  { id: 'read', label: 'Read' },
+                  { id: 'fixtures', label: 'Fixtures' },
+                ]}
+                active={panel}
+                onChange={(id) => setPanel(id as Panel)}
+                layoutId="squad-panel"
+              />
+            </div>
+          )}
+
+          {complete && panel === 'read' && (
+            <div className="mb-4 flex flex-col gap-3">
               <SquadVerdict
                 chosen={liveChosen} fixtureEase={fixtureEase} gw={liveGw} avail={avail}
                 score={liveScore} bestXI={liveBestXI} onOpen={() => setRatingOpen(true)}
               />
-            )}
-            {complete && (
               <SquadLab
                 squad={liveChosen} xi={liveXI} pool={pool} fixtureEase={fixtureEase} avail={avail}
                 gw={liveGw} gws={planner.gws} bank={BUDGET - planner.spend} freeTransfers={planner.banked}
@@ -723,9 +750,19 @@ export default function SquadBuilder() {
                 chipSpentAt={planner.chipSpent}
                 onApplyMove={(outEl, inEl) => { planner.doTransfer(outEl, inEl); setPendingIn(null) }}
               />
-            )}
-          </div>
-          <div className="lg:sticky lg:top-20 lg:flex lg:max-h-[calc(100vh-6rem)] lg:flex-col">
+            </div>
+          )}
+
+          {complete && panel === 'fixtures' && (
+            <div className="mb-4">
+              <SquadFixtures
+                squad={plannerSquad} xi={planner.week?.xi ?? []} byEl={byEl} fixtureEase={fixtureEase}
+                gw={liveGw} onPickGw={(g) => planner.setGw(g)}
+              />
+            </div>
+          )}
+
+          <div hidden={complete && panel !== 'market'} className="lg:sticky lg:top-20 lg:flex lg:max-h-[calc(100vh-6rem)] lg:flex-col">
           <div className="lg:shrink-0">
           <div className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase">
             {!complete ? 'Add players' : planner.opening ? `Your fifteen — GW${planner.gw}` : `Transfer market — GW${planner.gw}`}
