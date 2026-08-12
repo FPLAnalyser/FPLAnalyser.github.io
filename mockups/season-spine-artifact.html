@@ -53,7 +53,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .spacer{flex:1}
 
 .tl{border:1px solid var(--line);border-radius:13px;background:var(--ground);overflow:hidden}
-.tlbar{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line)}
+/* Wraps so five mode chips can take their own line on a phone — clipped
+   at the screen edge, DC was a view nobody could reach. */
+.tlbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:9px 12px;border-bottom:1px solid var(--line)}
 .tlbar h2{margin:0;font-size:12.5px;font-weight:800;letter-spacing:.01em}
 .tlbar span{font-size:11.5px;color:var(--ink-3);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
@@ -190,13 +192,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 /* Before he is yours: an empty outline. After you sell him: red hatching.
    Both keep the column so a transfer reads as one row ending and another
    starting, which is the whole point of drawing it. */
-/* A seam is where a row changes hands: the incoming man's name IS the cell
-   at that column, ringed in green, and the row simply carries on. This is
-   what keeps the table fifteen rows for a whole season — a wildcard is not
-   eleven new rows, it is a vertical line of seams. */
-.cell.seam{box-shadow:inset 0 0 0 1.5px var(--live);font-size:7.5px;letter-spacing:.03em}
-.stub .lin{color:var(--ink-3);font:600 8px/1.2 ui-sans-serif}
-.stub .lin b{color:var(--live);font-weight:800}
+/* A seam is where a row changes hands. It is an EDGE on the cell — a green
+   left border — never a replacement of the cell's content: the first cut
+   printed the new man's name over his fixture, which hid the one thing the
+   grid exists to show. The names live in a thin band above the row instead,
+   each name sitting over the stretch it owns, so a chain of any length —
+   Garner to Rice to Bruno to Saka — is four labels along one band, and
+   every fixture stays visible. */
+.cell.seam{box-shadow:inset 2.5px 0 0 var(--live)}
+.band{grid-column:2/-1;position:relative;height:11px;margin:1px 0 0}
+.band span{position:absolute;top:0;font:700 8.5px/1.2 ui-sans-serif;color:var(--ink-3);white-space:nowrap}
+.band span.nw{color:var(--live)}
+.band span.nw::before{content:'\25B8 '}
 
 /* xP heat: five steps of the accent, never the difficulty ramp — points and
    difficulty are different questions and must not share a colour language. */
@@ -231,8 +238,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
       <li><span class="no">2</span><span>Tap <b>Pull down for the whole plan</b>. Fifteen rows slide in under the bars.</span></li>
       <li><span class="no">3</span><span>With the plan open, flip <b>Fixtures &rarr; xP</b> to see every
       man&rsquo;s projected points per week. The <b>C</b> on a cell is your armband; dim rows are that week&rsquo;s bench. On the bars, a
-      <b>C</b> means your squad holds <b>the game&rsquo;s best projected captain</b> that week &mdash;
-      no C, and the best pick is someone you don&rsquo;t own.</span></li>
+      <b>C</b> means your squad holds <b>the game&rsquo;s best projected captain</b> that week.
+      Then flip the plan between <b>Fix &middot; xP &middot; CS &middot; xGI &middot; DC</b> &mdash;
+      clean-sheet odds, attacking involvement and Def Con, per man per week.</span></li>
     </ol>
   </div>
 
@@ -245,14 +253,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
     <section class="tl">
       <div class="tlbar"><h2>Your season</h2><span id="tlsub">scored, and projected</span>
         <span class="mode" id="mode" hidden>
-          <button class="mchip on" data-m="fix">Fixtures</button>
+          <button class="mchip on" data-m="fix">Fix</button>
           <button class="mchip" data-m="xp">xP</button>
+          <button class="mchip" data-m="cs">CS</button>
+          <button class="mchip" data-m="gi">xGI</button>
+          <button class="mchip" data-m="dc">DC</button>
         </span></div>
       <div class="scroller" id="scroller">
         <div class="rail" id="rail"></div>
         <div class="rows" id="rows"></div>
       </div>
-      <div class="swipe" id="swipe">&#8596;&nbsp; swipe for later weeks</div>
+      <div class="swipe" id="swipe"><span id="swipecue">&#8596;&nbsp; swipe &middot;&nbsp;</span>ABC home &middot; abc away &middot; <span style="color:var(--live)">&#9656; green edge = new signing</span></div>
       <button class="handle" id="handle" aria-expanded="false">
         <span class="grip"></span><span id="handleLabel">Pull down for the whole plan</span><span class="grip"></span>
       </button>
@@ -283,11 +294,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   rating and fixture &mdash; the weekly totals on the bars are the app&rsquo;s real
   projections, and the live build would read both from the same model.</p>
   <p class="footnote"><b>Why the table never grows.</b> The rows are your fifteen
-  <b>squad slots</b>, not players. A transfer is one row changing hands &mdash; the incoming
-  name sits in the cell where he arrives, ringed green, and the lineage reads under the name
-  on the left. A wildcard is the same thing eleven times in one column: a vertical seam, not
-  eleven new rows. A free hit would be one column of temporary names that revert the following
-  week. Fifteen rows in August, fifteen in May, however much you tinker.</p>
+  <b>squad slots</b>, not players. A transfer is one row changing hands: a green edge marks the
+  week, and the names ride in a thin band above the row, each sitting over the stretch it owns
+  &mdash; so Garner &rarr; Rice &rarr; Bruno &rarr; Saka is four labels on one band, and every
+  fixture stays visible. A wildcard is many handovers in one column; a free hit one column of
+  temporary names that revert. Fifteen rows in August, fifteen in May.</p>
+  <p class="footnote"><b>The four data views.</b> xP is approximated from rating and fixture, as
+  before. Clean-sheet odds, xGI and Def Con start from each player&rsquo;s <b>real per-week xPts
+  components</b> in the ratings file, then bend with the fixture &mdash; and Def Con bends the
+  other way, because defenders defend more in hard games. Venue is in the letterform everywhere:
+  ABC at home, abc away.</p>
   <p class="footnote"><b>What the expand would cost to build: nothing new.</b> The bars are the
   gameweek strip that already exists. The rows are the Fixtures tab, already built, drawn on the
   strip&rsquo;s columns instead of its own. The moves row is data the strip already computes. One
@@ -295,7 +311,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 </div>
 
 <script>
-const DATA = {"gws":[1,2,3,4,5,6,7,8,9,10,11,12],"slots":[{"p":"GKP","seq":[{"n":"Raya","t":"ARS","p":"GKP","pr":6.0,"r":76,"f":[{"o":"COV","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"CHE","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BHA","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"HUL","v":"H","d":2},{"o":"NEW","v":"A","d":3},{"o":"MCI","v":"H","d":4}],"from":1}]},{"p":"GKP","seq":[{"n":"Pickford","t":"EVE","p":"GKP","pr":5.5,"r":61,"f":[{"o":"CRY","v":"H","d":3},{"o":"BOU","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"HUL","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"ARS","v":"A","d":5},{"o":"NEW","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"LIV","v":"H","d":4}],"from":1}]},{"p":"DEF","seq":[{"n":"Senesi","t":"TOT","p":"DEF","pr":6.0,"r":81,"f":[{"o":"BRE","v":"A","d":3},{"o":"NEW","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"AVL","v":"H","d":3},{"o":"MUN","v":"A","d":4},{"o":"COV","v":"H","d":2},{"o":"CHE","v":"A","d":4},{"o":"CRY","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"SUN","v":"A","d":3}],"from":1}]},{"p":"DEF","seq":[{"n":"Virgil","t":"LIV","p":"DEF","pr":6.5,"r":79,"f":[{"o":"NEW","v":"A","d":3},{"o":"NFO","v":"H","d":3},{"o":"IPS","v":"A","d":2},{"o":"FUL","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"BRE","v":"A","d":3},{"o":"BHA","v":"H","d":2},{"o":"ARS","v":"H","d":4},{"o":"CRY","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"EVE","v":"A","d":3}],"from":1}]},{"p":"DEF","seq":[{"n":"Tarkowski","t":"EVE","p":"DEF","pr":6.0,"r":78,"f":[{"o":"CRY","v":"H","d":3},{"o":"BOU","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"HUL","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"ARS","v":"A","d":5},{"o":"NEW","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"LIV","v":"H","d":4}],"from":1}]},{"p":"DEF","seq":[{"n":"Thiaw","t":"NEW","p":"DEF","pr":5.0,"r":67,"f":[{"o":"LIV","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"BOU","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"HUL","v":"H","d":2},{"o":"COV","v":"A","d":2},{"o":"AVL","v":"H","d":3},{"o":"CRY","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"FUL","v":"A","d":3},{"o":"ARS","v":"H","d":4},{"o":"BHA","v":"A","d":3}],"from":1}]},{"p":"DEF","seq":[{"n":"Kayode","t":"BRE","p":"DEF","pr":4.5,"r":60,"f":[{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"SUN","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"CHE","v":"H","d":4},{"o":"AVL","v":"A","d":4},{"o":"LIV","v":"H","d":4},{"o":"HUL","v":"A","d":2},{"o":"NFO","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"MUN","v":"A","d":4}],"from":1}]},{"p":"MID","seq":[{"n":"Enzo","t":"CHE","p":"MID","pr":7.0,"r":84,"f":[{"o":"FUL","v":"A","d":3},{"o":"BHA","v":"H","d":2},{"o":"ARS","v":"A","d":5},{"o":"HUL","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"BOU","v":"H","d":3},{"o":"EVE","v":"A","d":3},{"o":"TOT","v":"H","d":3},{"o":"MUN","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3}],"from":1}]},{"p":"MID","seq":[{"n":"Anderson","t":"MCI","p":"MID","pr":6.5,"r":80,"f":[{"o":"BOU","v":"H","d":3},{"o":"CRY","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"MUN","v":"A","d":4},{"o":"SUN","v":"H","d":2},{"o":"LIV","v":"A","d":4},{"o":"IPS","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"BHA","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"FUL","v":"H","d":2},{"o":"ARS","v":"A","d":5}],"from":1}]},{"p":"MID","seq":[{"n":"Garner","t":"EVE","p":"MID","pr":6.0,"r":76,"f":[{"o":"CRY","v":"H","d":3},{"o":"BOU","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"HUL","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"ARS","v":"A","d":5},{"o":"NEW","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"LIV","v":"H","d":4}],"from":1},{"n":"Rice","t":"ARS","p":"MID","pr":7.5,"r":80,"f":[{"o":"COV","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"CHE","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BHA","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"HUL","v":"H","d":2},{"o":"NEW","v":"A","d":3},{"o":"MCI","v":"H","d":4}],"from":6}]},{"p":"MID","seq":[{"n":"E.Le F\u00e9e","t":"SUN","p":"MID","pr":6.0,"r":71,"f":[{"o":"IPS","v":"A","d":2},{"o":"FUL","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"ARS","v":"H","d":4},{"o":"MCI","v":"A","d":5},{"o":"BHA","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"COV","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"AVL","v":"A","d":4},{"o":"TOT","v":"H","d":3}],"from":1}]},{"p":"MID","seq":[{"n":"Wharton","t":"CRY","p":"MID","pr":5.5,"r":60,"f":[{"o":"EVE","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"FUL","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"LEE","v":"A","d":3},{"o":"NFO","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"NEW","v":"H","d":2},{"o":"TOT","v":"A","d":3},{"o":"LIV","v":"H","d":4},{"o":"COV","v":"A","d":2},{"o":"HUL","v":"H","d":2}],"from":1},{"n":"Mbeumo","t":"MUN","p":"MID","pr":8.0,"r":83,"f":[{"o":"HUL","v":"A","d":2},{"o":"IPS","v":"H","d":2},{"o":"EVE","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"FUL","v":"A","d":3},{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"BOU","v":"H","d":3},{"o":"CHE","v":"A","d":4},{"o":"AVL","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"BRE","v":"H","d":3}],"from":9}]},{"p":"FWD","seq":[{"n":"Haaland","t":"MCI","p":"FWD","pr":15.5,"r":99,"f":[{"o":"BOU","v":"H","d":3},{"o":"CRY","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"MUN","v":"A","d":4},{"o":"SUN","v":"H","d":2},{"o":"LIV","v":"A","d":4},{"o":"IPS","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"BHA","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"FUL","v":"H","d":2},{"o":"ARS","v":"A","d":5}],"from":1}]},{"p":"FWD","seq":[{"n":"Thiago","t":"BRE","p":"FWD","pr":8.0,"r":87,"f":[{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"SUN","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"CHE","v":"H","d":4},{"o":"AVL","v":"A","d":4},{"o":"LIV","v":"H","d":4},{"o":"HUL","v":"A","d":2},{"o":"NFO","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"MUN","v":"A","d":4}],"from":1}]},{"p":"FWD","seq":[{"n":"Calvert-Lewin","t":"LEE","p":"FWD","pr":6.0,"r":73,"f":[{"o":"NFO","v":"A","d":3},{"o":"BRE","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"NEW","v":"H","d":2},{"o":"CRY","v":"H","d":3},{"o":"ARS","v":"A","d":5},{"o":"MUN","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BOU","v":"A","d":3},{"o":"TOT","v":"H","d":3},{"o":"CHE","v":"A","d":4},{"o":"COV","v":"H","d":2}],"from":1},{"n":"Watkins","t":"AVL","p":"FWD","pr":8.0,"r":77,"f":[{"o":"BHA","v":"A","d":3},{"o":"ARS","v":"H","d":4},{"o":"HUL","v":"A","d":2},{"o":"NFO","v":"H","d":3},{"o":"TOT","v":"A","d":3},{"o":"BRE","v":"H","d":3},{"o":"NEW","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"FUL","v":"H","d":2},{"o":"MUN","v":"A","d":4},{"o":"SUN","v":"H","d":2},{"o":"IPS","v":"A","d":2}],"from":9}]}],"xp":[54.8,53.5,55.8,53.3,56.1,51.3,59.2,53.9,54.0,56.3,58.5,51.3],"easy":[2,3,5,4,6,6,3,5,4,4,5,1],"hard":[1,2,5,3,3,7,5,5,5,2,4,8],"rating":[83,80,84,79,85,74,86,76,79,81,82,71],"best":[{"n":"B.Fernandes","x":9.7},{"n":"B.Fernandes","x":9.7},{"n":"Haaland","x":9.7},{"n":"Haaland","x":7.5},{"n":"Haaland","x":9.7},{"n":"B.Fernandes","x":8.8},{"n":"Haaland","x":9.7},{"n":"B.Fernandes","x":8.8},{"n":"Haaland","x":9.7},{"n":"Haaland","x":8.8},{"n":"Haaland","x":9.7},{"n":"B.Fernandes","x":8.8}]};
+const DATA = {"gws":[1,2,3,4,5,6,7,8,9,10,11,12],"slots":[{"p":"GKP","seq":[{"n":"Raya","t":"ARS","p":"GKP","pr":6.0,"r":76,"gi":0.0,"cs":0.532,"dc":0.0,"f":[{"o":"COV","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"CHE","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BHA","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"HUL","v":"H","d":2},{"o":"NEW","v":"A","d":3},{"o":"MCI","v":"H","d":4}],"from":1}]},{"p":"GKP","seq":[{"n":"Pickford","t":"EVE","p":"GKP","pr":5.5,"r":61,"gi":0.0,"cs":0.259,"dc":0.0,"f":[{"o":"CRY","v":"H","d":3},{"o":"BOU","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"HUL","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"ARS","v":"A","d":5},{"o":"NEW","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"LIV","v":"H","d":4}],"from":1}]},{"p":"DEF","seq":[{"n":"Senesi","t":"TOT","p":"DEF","pr":6.0,"r":81,"gi":0.178,"cs":0.242,"dc":0.684,"f":[{"o":"BRE","v":"A","d":3},{"o":"NEW","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"AVL","v":"H","d":3},{"o":"MUN","v":"A","d":4},{"o":"COV","v":"H","d":2},{"o":"CHE","v":"A","d":4},{"o":"CRY","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"SUN","v":"A","d":3}],"from":1}]},{"p":"DEF","seq":[{"n":"Virgil","t":"LIV","p":"DEF","pr":6.5,"r":79,"gi":0.146,"cs":0.289,"dc":0.421,"f":[{"o":"NEW","v":"A","d":3},{"o":"NFO","v":"H","d":3},{"o":"IPS","v":"A","d":2},{"o":"FUL","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"BRE","v":"A","d":3},{"o":"BHA","v":"H","d":2},{"o":"ARS","v":"H","d":4},{"o":"CRY","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"EVE","v":"A","d":3}],"from":1}]},{"p":"DEF","seq":[{"n":"Tarkowski","t":"EVE","p":"DEF","pr":6.0,"r":78,"gi":0.132,"cs":0.263,"dc":0.579,"f":[{"o":"CRY","v":"H","d":3},{"o":"BOU","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"HUL","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"ARS","v":"A","d":5},{"o":"NEW","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"LIV","v":"H","d":4}],"from":1}]},{"p":"DEF","seq":[{"n":"Thiaw","t":"NEW","p":"DEF","pr":5.0,"r":67,"gi":0.188,"cs":0.182,"dc":0.316,"f":[{"o":"LIV","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"BOU","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"HUL","v":"H","d":2},{"o":"COV","v":"A","d":2},{"o":"AVL","v":"H","d":3},{"o":"CRY","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"FUL","v":"A","d":3},{"o":"ARS","v":"H","d":4},{"o":"BHA","v":"A","d":3}],"from":1}]},{"p":"DEF","seq":[{"n":"Kayode","t":"BRE","p":"DEF","pr":4.5,"r":60,"gi":0.116,"cs":0.257,"dc":0.079,"f":[{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"SUN","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"CHE","v":"H","d":4},{"o":"AVL","v":"A","d":4},{"o":"LIV","v":"H","d":4},{"o":"HUL","v":"A","d":2},{"o":"NFO","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"MUN","v":"A","d":4}],"from":1}]},{"p":"MID","seq":[{"n":"Enzo","t":"CHE","p":"MID","pr":7.0,"r":84,"gi":0.567,"cs":0.242,"dc":0.052,"f":[{"o":"FUL","v":"A","d":3},{"o":"BHA","v":"H","d":2},{"o":"ARS","v":"A","d":5},{"o":"HUL","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"BOU","v":"H","d":3},{"o":"EVE","v":"A","d":3},{"o":"TOT","v":"H","d":3},{"o":"MUN","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3}],"from":1}]},{"p":"MID","seq":[{"n":"Anderson","t":"MCI","p":"MID","pr":6.5,"r":80,"gi":0.205,"cs":0.249,"dc":0.684,"f":[{"o":"BOU","v":"H","d":3},{"o":"CRY","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"MUN","v":"A","d":4},{"o":"SUN","v":"H","d":2},{"o":"LIV","v":"A","d":4},{"o":"IPS","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"BHA","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"FUL","v":"H","d":2},{"o":"ARS","v":"A","d":5}],"from":1}]},{"p":"MID","seq":[{"n":"Garner","t":"EVE","p":"MID","pr":6.0,"r":76,"gi":0.213,"cs":0.258,"dc":0.526,"f":[{"o":"CRY","v":"H","d":3},{"o":"BOU","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"HUL","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"ARS","v":"A","d":5},{"o":"NEW","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"LIV","v":"H","d":4}],"from":1},{"n":"Rice","t":"ARS","p":"MID","pr":7.5,"r":80,"gi":0.318,"cs":0.486,"dc":0.368,"f":[{"o":"COV","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"CHE","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BHA","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"HUL","v":"H","d":2},{"o":"NEW","v":"A","d":3},{"o":"MCI","v":"H","d":4}],"from":6}]},{"p":"MID","seq":[{"n":"E.Le F\u00e9e","t":"SUN","p":"MID","pr":6.0,"r":71,"gi":0.341,"cs":0.251,"dc":0.21,"f":[{"o":"IPS","v":"A","d":2},{"o":"FUL","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"ARS","v":"H","d":4},{"o":"MCI","v":"A","d":5},{"o":"BHA","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"COV","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"AVL","v":"A","d":4},{"o":"TOT","v":"H","d":3}],"from":1}]},{"p":"MID","seq":[{"n":"Wharton","t":"CRY","p":"MID","pr":5.5,"r":60,"gi":0.322,"cs":0.231,"dc":0.237,"f":[{"o":"EVE","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"FUL","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"LEE","v":"A","d":3},{"o":"NFO","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"NEW","v":"H","d":2},{"o":"TOT","v":"A","d":3},{"o":"LIV","v":"H","d":4},{"o":"COV","v":"A","d":2},{"o":"HUL","v":"H","d":2}],"from":1},{"n":"Mbeumo","t":"MUN","p":"MID","pr":8.0,"r":83,"gi":0.65,"cs":0.251,"dc":0.0,"f":[{"o":"HUL","v":"A","d":2},{"o":"IPS","v":"H","d":2},{"o":"EVE","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"FUL","v":"A","d":3},{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"BOU","v":"H","d":3},{"o":"CHE","v":"A","d":4},{"o":"AVL","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"BRE","v":"H","d":3}],"from":9}]},{"p":"FWD","seq":[{"n":"Haaland","t":"MCI","p":"FWD","pr":15.5,"r":99,"gi":0.935,"cs":0.0,"dc":0.0,"f":[{"o":"BOU","v":"H","d":3},{"o":"CRY","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"MUN","v":"A","d":4},{"o":"SUN","v":"H","d":2},{"o":"LIV","v":"A","d":4},{"o":"IPS","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"BHA","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"FUL","v":"H","d":2},{"o":"ARS","v":"A","d":5}],"from":1}]},{"p":"FWD","seq":[{"n":"Thiago","t":"BRE","p":"FWD","pr":8.0,"r":87,"gi":0.667,"cs":0.0,"dc":0.026,"f":[{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"SUN","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"CHE","v":"H","d":4},{"o":"AVL","v":"A","d":4},{"o":"LIV","v":"H","d":4},{"o":"HUL","v":"A","d":2},{"o":"NFO","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"MUN","v":"A","d":4}],"from":1}]},{"p":"FWD","seq":[{"n":"Calvert-Lewin","t":"LEE","p":"FWD","pr":6.0,"r":73,"gi":0.579,"cs":0.0,"dc":0.0,"f":[{"o":"NFO","v":"A","d":3},{"o":"BRE","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"NEW","v":"H","d":2},{"o":"CRY","v":"H","d":3},{"o":"ARS","v":"A","d":5},{"o":"MUN","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BOU","v":"A","d":3},{"o":"TOT","v":"H","d":3},{"o":"CHE","v":"A","d":4},{"o":"COV","v":"H","d":2}],"from":1},{"n":"Watkins","t":"AVL","p":"FWD","pr":8.0,"r":77,"gi":0.559,"cs":0.0,"dc":0.0,"f":[{"o":"BHA","v":"A","d":3},{"o":"ARS","v":"H","d":4},{"o":"HUL","v":"A","d":2},{"o":"NFO","v":"H","d":3},{"o":"TOT","v":"A","d":3},{"o":"BRE","v":"H","d":3},{"o":"NEW","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"FUL","v":"H","d":2},{"o":"MUN","v":"A","d":4},{"o":"SUN","v":"H","d":2},{"o":"IPS","v":"A","d":2}],"from":9}]}],"xp":[54.8,53.5,55.8,53.3,56.1,51.3,59.2,53.9,54.0,56.3,58.5,51.3],"easy":[2,3,5,4,6,6,3,5,4,4,5,1],"hard":[1,2,5,3,3,7,5,5,5,2,4,8],"rating":[83,80,84,79,85,74,86,76,79,81,82,71],"best":[{"n":"B.Fernandes","x":9.7},{"n":"B.Fernandes","x":9.7},{"n":"Haaland","x":9.7},{"n":"Haaland","x":7.5},{"n":"Haaland","x":9.7},{"n":"B.Fernandes","x":8.8},{"n":"Haaland","x":9.7},{"n":"B.Fernandes","x":8.8},{"n":"Haaland","x":9.7},{"n":"Haaland","x":8.8},{"n":"Haaland","x":9.7},{"n":"B.Fernandes","x":8.8}]};
 const GWS = DATA.gws, SLOTS = DATA.slots;
 /* Two weeks behind us so the past/future split is visible. Invented — the
    season starts on 21 August. */
@@ -306,6 +322,9 @@ const EVENTS = {
 };
 const FDR = { 1: '#2fbf6e', 2: '#7fd39b', 3: '#4c5766', 4: '#e8907f', 5: '#e05b52' };
 const INK_ON = { 1: '#08120b', 2: '#08120b', 3: '#e6eaef', 4: '#160a08', 5: '#fff' };
+/* CAPS at home, lower case away — the venue in the letterform, since the
+   cell has no room for a (H). */
+const oppText = (f) => (f.v === 'H' ? f.o.toUpperCase() : f.o.toLowerCase());
 
 let selected = 6, open = false, litColumn = null, gridMode = 'fix';
 
@@ -314,16 +333,11 @@ const rows = document.getElementById('rows');
 const columns = () => 'minmax(112px,112px) repeat(' + GWS.length + ', minmax(46px,1fr))';
 
 const scoredVals = Object.values(SCORED);
-/* Not `top` — that is window.top, read-only, and shadowing it throws before
-   a single row is drawn. */
 const peak = Math.max(...DATA.xp, ...scoredVals);
 const floorV = Math.min(...DATA.xp, ...scoredVals) - 9;
 const barHeight = (v) => Math.max(10, Math.round(((v - floorV) / (peak - floorV)) * 58));
 
-/* THE ROW IS A SLOT, NOT A PLAYER. Each slot carries a sequence of owners
-   with the week they arrive; whoever holds it in a given week draws that
-   week's cell. A transfer is one handover, a wildcard is many handovers in
-   one column, and the table is fifteen rows in August and fifteen in May. */
+/* THE ROW IS A SLOT, NOT A PLAYER — fifteen rows in August, fifteen in May. */
 const memberAt = (slot, i) => {
   const gw = GWS[i];
   let m = slot.seq[0];
@@ -331,16 +345,25 @@ const memberAt = (slot, i) => {
   return m;
 };
 
-/* Per-player projection, approximated for the prototype from rating and
-   fixture — the weekly totals on the bars are the app's real projections
-   plus the wildcard's approximate uplift; the live build reads both from
-   the same model. */
+/* Weekly values. xP is approximated from rating and fixture; CS, xGI and
+   Def Con start from each player's REAL per-week xPts components in the
+   ratings file and are modulated by the fixture. Def Con runs the other
+   way: defenders defend more in hard games. */
 const MULT = { 1: 1.25, 2: 1.1, 3: 1, 4: 0.85, 5: 0.7 };
-function xpOf(m, i) {
-  const f = m.f[i];
-  if (!f) return 0;
-  return Math.round((Math.pow(m.r / 100, 2) * 8 + 1) * MULT[f.d] * 10) / 10;
-}
+const CS_MULT = { 1: 1.35, 2: 1.15, 3: 1, 4: 0.7, 5: 0.5 };
+const DC_MULT = { 1: 0.9, 2: 0.95, 3: 1, 4: 1.1, 5: 1.15 };
+const xpOf = (m, i) => { const f = m.f[i]; return f ? Math.round((Math.pow(m.r / 100, 2) * 8 + 1) * MULT[f.d] * 10) / 10 : 0; };
+const MODES = {
+  xp: { val: xpOf, fmt: (v) => v.toFixed(1), cuts: [7.4, 6, 4.5, 3] },
+  cs: { val: (m, i) => { const f = m.f[i]; return f ? Math.min(0.9, m.cs * CS_MULT[f.d]) * 100 : 0; },
+        fmt: (v) => Math.round(v) + '%', cuts: [40, 30, 20, 10] },
+  gi: { val: (m, i) => { const f = m.f[i]; return f ? m.gi * MULT[f.d] : 0; },
+        fmt: (v) => v.toFixed(1), cuts: [0.7, 0.5, 0.35, 0.2] },
+  dc: { val: (m, i) => { const f = m.f[i]; return f ? Math.min(0.9, m.dc * DC_MULT[f.d]) * 100 : 0; },
+        fmt: (v) => Math.round(v) + '%', cuts: [40, 30, 20, 10] },
+};
+const bucket = (v, cuts) => v >= cuts[0] ? 'x4' : v >= cuts[1] ? 'x3' : v >= cuts[2] ? 'x2' : v >= cuts[3] ? 'x1' : 'x0';
+
 function xiAt(i) {
   const act = SLOTS.map((s) => memberAt(s, i));
   const pos = (q, n) => act.filter((m) => m.p === q).sort((a, b) => b.r - a.r).slice(0, n);
@@ -357,8 +380,6 @@ function drawRail() {
     const value = played ? SCORED[gw] : DATA.xp[i];
     const ev = EVENTS[gw];
     const cap = CAPS[i], capX = xpOf(cap, i);
-    /* C = your squad holds the game's best projected captain this week.
-       DATA.best is the maximum over every player in the game, same model. */
     const ownBest = capX >= DATA.best[i].x - 0.05;
     html += '<button class="wk' + (played ? ' played' : '') + '" data-gw="' + gw + '" data-i="' + i + '"' +
       ' aria-pressed="' + (gw === selected) + '"' +
@@ -388,28 +409,36 @@ function drawRows() {
   let html = '';
   SLOTS.forEach((slot) => {
     const now = memberAt(slot, selIdx);
-    const lineage = slot.seq.length > 1
-      ? '<span class="lin">' + slot.seq.map((m, k) => (k ? '<b>' + m.n + ' GW' + m.from + '</b>' : m.n)).join(' → ') + '</span>'
-      : '';
-    html += '<div class="stub"><span class="pos">' + slot.p + '</span><span class="nm2"><span>' + now.n + '</span>' + lineage + '</span></div>';
+    /* The name band: one label per owner, sitting over the weeks he holds.
+       Left position is the segment's start column as a share of the window.
+       Any chain length is just more labels on the same 11px band. */
+    if (slot.seq.length > 1) {
+      html += '<div class="stub"></div><div class="band">' + slot.seq.map((m, k) => {
+        const startIdx = Math.max(0, GWS.indexOf(Math.max(m.from, GWS[0])));
+        return '<span class="' + (k ? 'nw' : '') + '" style="left:' + (startIdx / GWS.length * 100).toFixed(1) + '%"' +
+          (k ? ' title="' + m.n + ' arrives in GW' + m.from + '"' : '') + '>' + m.n + '</span>';
+      }).join('') + '</div>';
+    }
+    html += '<div class="stub"><span class="pos">' + slot.p + '</span><span class="nm2"><span>' + now.n + '</span></span></div>';
     GWS.forEach((gw, i) => {
       const m = memberAt(slot, i);
       const seam = i > 0 && memberAt(slot, i - 1) !== m;
       const f = m.f[i];
       const settled = SCORED[gw] != null ? ' settled' : '';
       const bench = XIS[i].indexOf(m) === -1 ? ' bn' : '';
+      const sm = seam ? ' seam' : '';
       const capBadge = CAPS[i] === m ? '<b class="cb2" title="Captain this week">C</b>' : '';
+      const arrive = seam ? m.n + ' arrives. ' : '';
+      if (!f) { html += '<span class="cell void' + settled + bench + sm + '" data-c="' + i + '" title="' + arrive + 'GW' + gw + ' — blank">&mdash;</span>'; return; }
+      const where = f.v === 'H' ? ' at home' : ' away';
       if (gridMode === 'fix') {
-        if (!f) { html += '<span class="cell void' + settled + bench + '" data-c="' + i + '">&mdash;</span>'; return; }
-        html += '<span class="cell d' + f.d + settled + bench + (seam ? ' seam' : '') + '" data-c="' + i + '" title="' +
-          (seam ? m.n + ' arrives — GW' + gw + ' vs ' + f.o : 'GW' + gw + ' — ' + f.o + (f.v === 'H' ? ' at home' : ' away') + ', difficulty ' + f.d) + '">' +
-          (seam ? m.n.slice(0, 6).toUpperCase() : f.o) + capBadge + '</span>';
+        html += '<span class="cell d' + f.d + settled + bench + sm + '" data-c="' + i + '" title="' + arrive +
+          'GW' + gw + ' — ' + f.o + where + ', difficulty ' + f.d + '">' + oppText(f) + capBadge + '</span>';
       } else {
-        const x = xpOf(m, i);
-        const cls = x >= 7.4 ? 'x4' : x >= 6 ? 'x3' : x >= 4.5 ? 'x2' : x >= 3 ? 'x1' : 'x0';
-        html += '<span class="cell ' + cls + settled + bench + (seam ? ' seam' : '') + '" data-c="' + i + '" title="GW' + gw + ' — ' +
-          m.n + (f ? ' vs ' + f.o : ', blank') + ', projected ' + x.toFixed(1) + '">' +
-          (seam ? m.n.slice(0, 6).toUpperCase() : x.toFixed(1)) + capBadge + '</span>';
+        const M = MODES[gridMode];
+        const v = M.val(m, i);
+        html += '<span class="cell ' + bucket(v, M.cuts) + settled + bench + sm + '" data-c="' + i + '" title="' + arrive +
+          'GW' + gw + ' — ' + m.n + ' vs ' + f.o + where + ': ' + M.fmt(v) + '">' + M.fmt(v) + capBadge + '</span>';
       }
     });
   });
@@ -481,8 +510,9 @@ function drawBoard() {
   document.getElementById('market').innerHTML = shortlist.map((m) => {
     const f = m.f[i];
     return '<div class="mkt"><span class="nm">' + m.n + ' <i>' + m.t + ' &middot; &pound;' + m.pr + 'm</i></span>' +
-      '<span class="fx" style="background:' + (f ? FDR[f.d] : '#2a2c31') + ';color:' + (f ? INK_ON[f.d] : '#8a8d93') + '">' +
-      (f ? f.o : '&mdash;') + '</span><span class="rt num">' + m.r + '</span></div>';
+      '<span class="fx" style="background:' + (f ? FDR[f.d] : '#2a2c31') + ';color:' + (f ? INK_ON[f.d] : '#8a8d93') +
+      '" title="' + (f ? f.o + (f.v === 'H' ? ' at home' : ' away') : 'blank') + '">' +
+      (f ? oppText(f) : '&mdash;') + '</span><span class="rt num">' + m.r + '</span></div>';
   }).join('');
 }
 
@@ -512,8 +542,6 @@ document.querySelectorAll('.mchip').forEach((chip) => {
   });
 });
 
-/* Bring the week you are on into view — on a phone the rail is five columns
-   wide and GW6 started off the right-hand edge. */
 function revealSelected(behavior) {
   const el = rail.querySelector('.wk[aria-pressed="true"]');
   const box = document.getElementById('scroller');
@@ -522,8 +550,9 @@ function revealSelected(behavior) {
   box.scrollTo({ left: Math.max(0, target), behavior: behavior || 'auto' });
 }
 
+/* The swipe cue has done its job the moment you swipe; the venue key stays. */
 document.getElementById('scroller').addEventListener('scroll', function () {
-  if (this.scrollLeft > 12) document.getElementById('swipe').style.display = 'none';
+  if (this.scrollLeft > 12) { const c = document.getElementById('swipecue'); if (c) c.remove(); }
 }, { passive: true });
 
 render();
