@@ -1,0 +1,149 @@
+<meta charset="utf-8"><title>Gameweek navigation — five ideas</title>
+<style>
+:root{--bg:#000;--s1:#121316;--s2:#1b1c1f;--s3:#232427;--ink:#edeff3;--ink2:#aaacb0;--ink3:#828386;
+--acc:#c9a227;--acc2:#ead188;--line:rgba(255,255,255,.1);--line2:rgba(255,255,255,.2);
+--good:#3ddc7a;--warn:#e8b04a;--bad:#f0736f;--info:#7fb0ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.wrap{max-width:960px;margin:0 auto;padding:44px 20px 90px}
+h1{font-size:30px;font-weight:800;letter-spacing:-.02em;margin:0 0 10px}
+h2{font-size:20px;font-weight:800;margin:4px 0 6px;letter-spacing:-.01em}
+.lead{color:var(--ink2);max-width:72ch}
+.rule{height:1px;background:var(--line);margin:38px 0 24px}
+.step{font:700 11px/1 ui-sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--acc);margin-bottom:8px}
+p{max-width:72ch;color:var(--ink2)}
+b.w{color:var(--ink)}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:20px;margin-top:14px}
+.note{color:var(--ink3);font-size:12.5px;line-height:1.6;margin-top:14px;border-left:2px solid var(--line2);padding-left:12px;max-width:78ch}
+.now{display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:6px}
+.arw{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);color:var(--ink3);display:grid;place-items:center}
+.ttl{font-size:22px;font-weight:800}
+
+/* 1 bars */
+.bars{display:flex;gap:6px;align-items:flex-end;overflow-x:auto;padding-bottom:4px}
+.bw{flex:1 0 auto;min-width:64px;display:flex;flex-direction:column;align-items:center;gap:4px;border-radius:10px;padding:6px 2px;border:1px solid transparent}
+.bw.on{border-color:var(--acc);background:rgba(255,255,255,.05)}
+.bwb{width:100%;height:64px;display:flex;align-items:flex-end;background:var(--s3);border-radius:6px;overflow:hidden}
+.bwb i{display:block;width:100%;background:var(--acc);border-radius:6px}
+.bw.on .bwb i{background:var(--acc2)}
+.bw b{font-size:12px;font-variant-numeric:tabular-nums}
+.g{font-size:9.5px;color:var(--ink3);letter-spacing:.06em}
+
+/* 2 rings */
+.rings{display:flex;gap:10px;justify-content:space-between}
+.rg{display:flex;flex-direction:column;align-items:center;gap:5px}
+.ring{width:42px;height:42px;border-radius:50%;display:grid;place-items:center}
+.rin{width:33px;height:33px;border-radius:50%;background:var(--s1);display:grid;place-items:center;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums}
+.rg.on .rin{background:var(--s3);color:var(--acc2)}
+.rg.on .g{color:var(--acc)}
+
+/* 3 rich */
+.rich{display:flex;gap:6px;overflow-x:auto;scroll-snap-type:x mandatory;
+ padding-bottom:4px;scrollbar-width:thin}
+.rc{flex:1 0 auto;min-width:96px;scroll-snap-align:start;display:flex;flex-direction:column;gap:3px;border:1px solid var(--line);border-radius:11px;padding:8px 6px;background:var(--s2);text-align:left}
+.rc.on{border-color:var(--acc);background:rgba(255,255,255,.05)}
+.rt{font-size:9.5px;letter-spacing:.09em;color:var(--ink3);text-transform:uppercase}
+.rx{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+.rc.on .rx{color:var(--acc2)}
+.rb{height:4px;background:var(--s3);border-radius:2px;overflow:hidden}
+.rb i{display:block;height:100%;background:var(--acc);border-radius:2px}
+.rh{font-size:9.5px;color:var(--ink3)}
+.rh.good{color:var(--good)} .rh.warn{color:var(--warn)} .rh.bad{color:var(--bad)}
+
+/* 4 segmented */
+.seg{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.sg{flex:1;padding:7px 2px;text-align:center;border-right:1px solid var(--line)}
+.sg:last-child{border-right:0}
+.sg.on{background:rgba(255,255,255,.06)}
+.sg b{display:block;font-size:11px} .sg.on b{color:var(--acc)}
+.sg span{display:block;font-size:11px;color:var(--ink3);font-variant-numeric:tabular-nums}
+
+/* 5 timeline */
+.tl{display:flex;gap:4px;position:relative;padding-top:14px}
+.tl::before{content:"";position:absolute;left:2%;right:2%;top:18px;height:1px;background:var(--line)}
+.tc{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;z-index:1}
+.td{width:9px;height:9px;border-radius:50%;background:var(--s3);border:1px solid var(--line2)}
+.tc.on .td{background:var(--acc);border-color:var(--acc);box-shadow:0 0 0 4px rgba(201,162,39,.18)}
+.tg{font-size:9.5px;color:var(--ink3)}
+.tx{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.mk{font-style:normal;font-size:8.5px;font-weight:700;border-radius:999px;padding:1px 5px;border:1px solid;white-space:nowrap}
+.mk.bad{color:var(--bad);border-color:rgba(240,115,111,.5)}
+.mk.good{color:var(--good);border-color:rgba(61,220,122,.45)}
+.mk.acc{color:var(--acc);border-color:rgba(201,162,39,.5)}
+.small{font-size:12.5px;color:var(--ink3);margin-top:10px}
+</style>
+<div class="wrap">
+<h1>Stepping through gameweeks</h1>
+<p class="lead">Five ways to replace the two arrows with something that shows the road ahead. Every figure is
+this squad's real projection, read straight out of the app by stepping the current control eight times.</p>
+
+<div class="card" style="margin-top:22px">
+  <div class="now"><span class="arw">‹</span><span class="ttl">Gameweek 1</span><span class="arw">›</span></div>
+  <p class="small" style="text-align:center;margin:0">What is there now. It works, and it tells you nothing about
+  GW6 until you have clicked five times to find it.</p>
+</div>
+
+<div class="rule"></div>
+<div class="step">Idea 1</div><h2>The bars are the buttons</h2>
+<p>A mini bar chart where each bar is the week's projected points — and clicking one goes there. The shape of
+the next two months is the navigation.</p>
+<div class="card"><div class="bars"><button class="bw on"><span class="bwb"><i style="height:59%"></i></span><b>54.8</b><span class="g">GW1</span></button><button class="bw "><span class="bwb"><i style="height:47%"></i></span><b>53.5</b><span class="g">GW2</span></button><button class="bw "><span class="bwb"><i style="height:69%"></i></span><b>55.8</b><span class="g">GW3</span></button><button class="bw "><span class="bwb"><i style="height:45%"></i></span><b>53.3</b><span class="g">GW4</span></button><button class="bw "><span class="bwb"><i style="height:72%"></i></span><b>56.1</b><span class="g">GW5</span></button><button class="bw "><span class="bwb"><i style="height:20%"></i></span><b>50.8</b><span class="g">GW6</span></button><button class="bw "><span class="bwb"><i style="height:90%"></i></span><b>57.9</b><span class="g">GW7</span></button><button class="bw "><span class="bwb"><i style="height:29%"></i></span><b>51.7</b><span class="g">GW8</span></button></div>
+  <p class="note">Strongest at showing <b class="w">where the good and bad weeks are</b>. GW6 is visibly the
+  trough and GW7 the peak before you have read a single number. Weakest on a phone: eight bars in 390px gives
+  each one about 44px, which is at the edge of a comfortable tap target — it would want to scroll horizontally
+  past six.</p></div>
+
+<div class="rule"></div>
+<div class="step">Idea 2</div><h2>Rating rings</h2>
+<p>The GW rating you already compute, drawn as a ring. The number is the rating; the fill is the same thing
+so it reads at a glance.</p>
+<div class="card"><div class="rings"><button class="rg on"><span class="ring" style="background:conic-gradient(var(--acc) 83%, var(--s3) 0)"><span class="rin">83</span></span><span class="g">GW1</span></button><button class="rg "><span class="ring" style="background:conic-gradient(var(--acc) 76%, var(--s3) 0)"><span class="rin">76</span></span><span class="g">GW2</span></button><button class="rg "><span class="ring" style="background:conic-gradient(var(--acc) 82%, var(--s3) 0)"><span class="rin">82</span></span><span class="g">GW3</span></button><button class="rg "><span class="ring" style="background:conic-gradient(var(--acc) 80%, var(--s3) 0)"><span class="rin">80</span></span><span class="g">GW4</span></button><button class="rg "><span class="ring" style="background:conic-gradient(var(--acc) 86%, var(--s3) 0)"><span class="rin">86</span></span><span class="g">GW5</span></button><button class="rg "><span class="ring" style="background:conic-gradient(var(--acc) 76%, var(--s3) 0)"><span class="rin">76</span></span><span class="g">GW6</span></button><button class="rg "><span class="ring" style="background:conic-gradient(var(--acc) 84%, var(--s3) 0)"><span class="rin">84</span></span><span class="g">GW7</span></button><button class="rg "><span class="ring" style="background:conic-gradient(var(--acc) 75%, var(--s3) 0)"><span class="rin">75</span></span><span class="g">GW8</span></button></div>
+  <p class="note">Handsome, and it uses a figure the site already has and mostly hides. But <b class="w">the
+  ratings barely move</b> — 75 to 86 across eight weeks — so eight nearly-full rings look almost identical
+  and the chart says less than the bars do. A ring is a good shape for a number that uses its whole range,
+  and this one does not.</p></div>
+
+<div class="rule"></div>
+<div class="step">Idea 3 · my recommendation</div><h2>A card per week</h2>
+<p>Gameweek, projected points, a bar for the shape, and the one thing that changes a decision — how many of
+your fifteen face a hard game.</p>
+<div class="card"><div class="rich"><button class="rc on"><span class="rt">GW1</span><span class="rx">54.8</span><span class="rb"><i style="width:59%"></i></span><span class="rh good">1 hard</span></button><button class="rc "><span class="rt">GW2</span><span class="rx">53.5</span><span class="rb"><i style="width:47%"></i></span><span class="rh good">2 hard</span></button><button class="rc "><span class="rt">GW3</span><span class="rx">55.8</span><span class="rb"><i style="width:69%"></i></span><span class="rh warn">5 hard</span></button><button class="rc "><span class="rt">GW4</span><span class="rx">53.3</span><span class="rb"><i style="width:45%"></i></span><span class="rh ">3 hard</span></button><button class="rc "><span class="rt">GW5</span><span class="rx">56.1</span><span class="rb"><i style="width:72%"></i></span><span class="rh ">3 hard</span></button><button class="rc "><span class="rt">GW6</span><span class="rx">50.8</span><span class="rb"><i style="width:20%"></i></span><span class="rh bad">7 hard</span></button><button class="rc "><span class="rt">GW7</span><span class="rx">57.9</span><span class="rb"><i style="width:90%"></i></span><span class="rh bad">6 hard</span></button><button class="rc "><span class="rt">GW8</span><span class="rx">51.7</span><span class="rb"><i style="width:29%"></i></span><span class="rh bad">6 hard</span></button></div>
+  <p class="note">This is the one I would build. It carries <b class="w">three readings at once</b> and each is
+  doing work the others cannot: the number is precise, the bar makes the comparison instant, and the hard count
+  is the thing a projection hides — GW6 projects 50.8 <em>and</em> walks 7 of 15 into a hard game, which is a
+  different kind of bad week from GW8's 51.7 with 6.
+  <br><br><b class="w">On a phone it scrolls.</b> Eight of these will not fit 390px at a legible size and
+  the first draft of this mock-up simply clipped them off the right edge — so the row snaps and scrolls,
+  showing about four weeks at a time with the current one anchored left. That is a real cost: the whole
+  window is no longer visible at once on the device where most deadlines are handled, which is the argument
+  for idea 4 as the phone layout rather than this.</p></div>
+
+<div class="rule"></div>
+<div class="step">Idea 4</div><h2>Segmented control</h2>
+<p>The plainest version. One row, eight cells, the number under each.</p>
+<div class="card"><div class="seg"><button class="sg on"><b>GW1</b><span>54.8</span></button><button class="sg "><b>GW2</b><span>53.5</span></button><button class="sg "><b>GW3</b><span>55.8</span></button><button class="sg "><b>GW4</b><span>53.3</span></button><button class="sg "><b>GW5</b><span>56.1</span></button><button class="sg "><b>GW6</b><span>50.8</span></button><button class="sg "><b>GW7</b><span>57.9</span></button><button class="sg "><b>GW8</b><span>51.7</span></button></div>
+  <p class="note">Cheapest to build and the least likely to be misread. It is also the least useful: with no
+  bar and no colour, spotting that GW6 is the problem means comparing eight numbers by eye, which is exactly
+  the work a chart is supposed to do for you. Worth keeping in mind as the <b class="w">mobile fallback</b>
+  for idea 3 rather than as a design of its own.</p></div>
+
+<div class="rule"></div>
+<div class="step">Idea 5</div><h2>Timeline with events</h2>
+<p>A dotted line through the window, with markers where something actually happens — the wall, the peak, a
+chip worth playing.</p>
+<div class="card"><div class="tl"><button class="tc on"><span class="td"></span><span class="tg">GW1</span><span class="tx">54.8</span></button><button class="tc "><span class="td"></span><span class="tg">GW2</span><span class="tx">53.5</span></button><button class="tc "><span class="td"></span><span class="tg">GW3</span><span class="tx">55.8</span></button><button class="tc "><span class="td"></span><span class="tg">GW4</span><span class="tx">53.3</span></button><button class="tc "><span class="td"></span><span class="tg">GW5</span><span class="tx">56.1</span><em class="mk good">Peak</em><em class="mk acc">Bench Boost</em></button><button class="tc "><span class="td"></span><span class="tg">GW6</span><span class="tx">50.8</span><em class="mk bad">Wall</em></button><button class="tc "><span class="td"></span><span class="tg">GW7</span><span class="tx">57.9</span><em class="mk bad">Wall</em></button><button class="tc "><span class="td"></span><span class="tg">GW8</span><span class="tx">51.7</span><em class="mk bad">Wall</em></button></div>
+  <p class="note">The most <em>editorial</em> of the five, and the one that fits a season rather than a
+  fortnight. It answers "when should I do something" instead of "how many points is this week", which is a
+  better question — but it depends on having events worth marking, and outside a chip window or a fixture
+  wall most weeks have none. <b class="w">A timeline of eight unmarked dots is worse than a bar chart.</b>
+  I would hold this until the chip and blank/double logic is richer, then revisit.</p></div>
+
+<div class="rule"></div>
+<p class="note" style="border-color:var(--acc);max-width:none"><b class="w">Recommendation: idea 3, with idea
+4 as the phone layout.</b> Keep the arrows — they are how you move one week at a time, and a strip does not
+replace that — but put the strip above them so the whole window is visible and one tap away. The figures here
+are the projection and the hard count rather than the GW rating, because those two vary enough to be worth
+drawing: across these eight weeks the projection moves 50.8 to 57.9 and the hard count 1 to 7, while the
+rating sits between 75 and 86 and calls seven of the eight weeks "strong".</p>
+</div>
