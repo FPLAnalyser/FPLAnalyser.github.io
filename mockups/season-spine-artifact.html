@@ -198,8 +198,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 /* Before he is yours: an empty outline. After you sell him: red hatching.
    Both keep the column so a transfer reads as one row ending and another
    starting, which is the whole point of drawing it. */
-/* The arrival: the one green ring in a gold-edged grid. */
-.cell.seam{box-shadow:inset 0 0 0 1.5px var(--live)}
+/* The arrival: a green left edge. This is the marker that FAILED on the
+   filled chips — drowned whenever it sat on a green fixture — and works
+   here, because the dark glass gave it nothing to drown in. Quieter than
+   ringing the whole cell, and the eight wildcard edges still line up into
+   one visible cut down the GW9 column. The gold-alpha ring stays on the
+   other three sides. */
+.cell.seam{box-shadow:inset 2.5px 0 0 var(--live), inset 0 0 0 1px rgba(201,162,39,.28)}
 .band{grid-column:2/-1;position:relative;height:11px;margin:1px 0 0}
 .band span{position:absolute;top:0;font:700 8.5px/1.2 ui-sans-serif;color:var(--ink-3);white-space:nowrap}
 .band span.nw{color:var(--live)}
@@ -284,7 +289,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
         <div class="rail" id="rail"></div>
         <div class="rows" id="rows"></div>
       </div>
-      <div class="swipe" id="swipe"><span id="swipecue">&#8596;&nbsp; swipe &middot;&nbsp;</span>ABC home &middot; abc away &middot; difficulty is the text colour &middot; <span style="color:var(--live)">&#9656; green ring = new signing</span></div>
+      <div class="swipe" id="swipe"><span id="swipecue">&#8596;&nbsp; swipe &middot;&nbsp;</span>ABC home &middot; abc away &middot; difficulty is the text colour &middot; <span style="color:var(--live)">&#9656; green left edge = new signing</span></div>
       <button class="handle" id="handle" aria-expanded="false">
         <span class="grip"></span><span id="handleLabel">Pull down for the whole plan</span><span class="grip"></span>
       </button>
@@ -314,9 +319,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
     B &mdash; one inverted cell in a filled grid: read well, but begged the question the grid
     above now answers &mdash; <b>if dark-with-an-edge is the best-reading cell, why is only one
     cell drawn that way?</b> C &mdash; the whole grid goes dark glass: every cell near-black
-    with a faint gold edge, difficulty in the ink, and the arrival takes the <b>one green
-    ring</b> &mdash; which now stands out at every difficulty precisely because nothing else
-    owns an edge colour.</p>
+    with a faint gold edge, difficulty in the ink, and the arrival keeps the original <b>green left edge</b> &mdash; the marker that drowned
+    on filled chips works here, because the dark glass gives it nothing to drown in.</p>
   </section>
   <p class="footnote"><b>Real numbers.</b> The fifteen is a plan built in the live builder, the
   fixtures and difficulty ratings are this season&rsquo;s, and the projections and hard-fixture
@@ -609,7 +613,7 @@ document.getElementById('namesToggle').addEventListener('click', function () {
   el.innerHTML = [
     ['A · filled chips, green edge', filled(2, 'SUN') + filled(1, 'BUR', 'box-shadow:inset 2.5px 0 0 #3ddc7a;') + filled(4, 'liv')],
     ['B · one inverted cell', filled(2, 'SUN') + '<span class="cell" style="box-shadow:inset 0 0 0 1.5px var(--gold);color:var(--d1)">BUR</span>' + filled(4, 'liv')],
-    ['C · dark glass everywhere ✓', '<span class="cell d2">SUN</span><span class="cell d1 seam">BUR</span><span class="cell d4">liv</span>'],
+    ['C · dark glass, green edge ✓', '<span class="cell d2">SUN</span><span class="cell d1 seam">BUR</span><span class="cell d4">liv</span>'],
   ].map(([lab, demo]) => '<div class="altcase"><span class="lab">' + lab + '</span><span class="demo">' + demo + '</span></div>').join('');
 })();
 
