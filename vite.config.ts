@@ -69,6 +69,11 @@ export default defineConfig({
         // keeps it once it has actually been fetched.
         globIgnores: ['**/img/players/**', '**/img/badges/**', '**/ocr/**'],
         navigateFallback: 'index.html',
+        // The preview build carries static prototypes under /mockups/ (see
+        // preview.yml). Without this, an installed service worker answers
+        // those navigations with the app shell and the prototype can never
+        // be reached on a device that has visited the app before.
+        navigateFallbackDenylist: [/\/mockups\//],
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
