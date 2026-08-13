@@ -72,7 +72,29 @@ jobs:
       # build serves each one at /mockups/<name>.html on the preview host,
       # which is where you want to open them on a real phone.
       - name: Carry the design mockups
-        run: cp -r mockups dist/mockups
+        run: |
+          set -euo pipefail
+          cp -r mockups dist/mockups
+          # No index means the folder is only reachable by typing an exact
+          # filename, which is how the prototypes end up unfindable. Built
+          # from the directory so it cannot go stale.
+          {
+            printf '<!doctype html><meta charset=utf8>'
+            printf '<meta name=viewport content="width=device-width,initial-scale=1">'
+            printf '<title>Design mockups</title>'
+            printf '<style>body{margin:0;padding:28px 18px;background:#0a0b0d;color:#eef0f4;'
+            printf 'font:16px/1.6 ui-sans-serif,system-ui,-apple-system,sans-serif}'
+            printf 'h1{font-size:20px;margin:0 0 4px}p{color:#a8acb3;font-size:14px;margin:0 0 18px}'
+            printf 'a{display:block;padding:13px 12px;margin:0 0 7px;border:1px solid rgba(255,255,255,.12);'
+            printf 'border-radius:10px;color:#ead188;text-decoration:none}</style>'
+            printf '<h1>Design mockups</h1><p>Prototypes carried by the preview build. Not part of the app.</p>'
+            for f in dist/mockups/*.html; do
+              n=$(basename "$f")
+              [ "$n" = "index.html" ] && continue
+              printf '<a href="%s">%s</a>' "$n" "$n"
+            done
+          } > dist/mockups/index.html
+          echo "mockups published: $(ls dist/mockups/*.html | wc -l) pages"
 
       - name: Make it unpublishable to search engines
         run: |
@@ -85,8 +107,16 @@ jobs:
           rm -f dist/sitemap.xml
           # Two Pages sites cannot both claim the custom domain.
           rm -f dist/CNAME
+          # Load-bearing, and its absence is silent. Without it Pages runs
+          # Jekyll over 37MB of build output; a Jekyll build that fails or
+          # times out publishes NOTHING, so the whole preview 404s while this
+          # workflow still reports success — the push is all it can see. The
+          # mirror job in deploy.yml has always had this line; the preview was
+          # modelled on that job and lost it.
+          touch dist/.nojekyll
 
       - name: Publish to the preview site
+        id: publish
         env:
           PREVIEW_REPO: ${{ vars.PREVIEW_REPO }}
           PREVIEW_TOKEN: ${{ secrets.PREVIEW_TOKEN }}
@@ -123,7 +153,49 @@ jobs:
           # which this is rather than printing a URL that 404s.
           org="${PREVIEW_REPO%%/*}"; repo="${PREVIEW_REPO#*/}"
           if [ "$repo" = "${org}.github.io" ]; then
-            echo "published ${BRANCH} → https://${org}.github.io/"
+            base="https://${org}.github.io/"
           else
-            echo "published ${BRANCH} → https://${org}.github.io/${repo}/"
+            base="https://${org}.github.io/${repo}/"
+          fi
+          echo "published ${BRANCH} → ${base}"
+          echo "base=${base}" >> "$GITHUB_OUTPUT"
+
+      # Pushing is not publishing. Pages builds the branch AFTER the push, in
+      # the other repo, and a failure there is invisible here — which is how a
+      # preview can be green in Actions and 404 in a phone browser for weeks.
+      # So fetch the actual URLs and print what the internet returns.
+      - name: Check the preview actually serves
+        if: always() && steps.publish.outputs.base != ''
+        env:
+          PREVIEW_REPO: ${{ vars.PREVIEW_REPO }}
+          PREVIEW_TOKEN: ${{ secrets.PREVIEW_TOKEN }}
+          BASE: ${{ steps.publish.outputs.base }}
+        run: |
+          set -uo pipefail
+          # Pages state first: "not configured" and "built but stale" look the
+          # same from the outside and need different fixes.
+          pages=$(curl -sS --max-time 20 \
+            -H "Authorization: Bearer ${PREVIEW_TOKEN}" \
+            "https://api.github.com/repos/${PREVIEW_REPO}/pages")
+          if [ -n "$(printf '%s' "$pages" | jq -r '.message // empty')" ]; then
+            echo "pages api says: $(printf '%s' "$pages" | jq -r '.message')"
+            echo "→ that usually means Pages is not enabled on ${PREVIEW_REPO}: Settings → Pages → Deploy from a branch → main / root."
+          else
+            printf '%s' "$pages" | jq -r '"pages: status=\(.status) url=\(.html_url) source=\(.source.branch)\(.source.path) build_type=\(.build_type)"'
+          fi
+          # Pages takes a little while to rebuild after a push, so give it a
+          # few tries before believing a 404.
+          probe() {
+            for _ in 1 2 3 4 5 6 7 8 9 10; do
+              c=$(curl -sSL -o /dev/null -w '%{http_code}' --max-time 20 "$1")
+              [ "$c" = "200" ] && { echo "$c"; return; }
+              sleep 15
+            done
+            echo "$c"
+          }
+          root=$(probe "${BASE}")
+          mock=$(probe "${BASE}mockups/season-spine-artifact.html")
+          echo "LIVE: root=${root}  mockups/season-spine-artifact.html=${mock}"
+          if [ "$root" != "200" ] || [ "$mock" != "200" ]; then
+            echo "::warning::The preview pushed but is not serving (root ${root}, mockup ${mock}). If Pages reports no configuration above, enable it on ${PREVIEW_REPO}: Settings → Pages → Deploy from a branch → main / root."
           fi
