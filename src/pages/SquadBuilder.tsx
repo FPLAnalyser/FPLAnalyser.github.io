@@ -186,18 +186,20 @@ const PRICE_MAX = 15.5 // a hair above the most expensive player so nobody is fi
 
 /** Weeks the spine draws at once.
 
-    Twelve was the half-season planning unit, and it fitted — but "fitted" was
-    doing a lot of work: on a 1280 laptop each column had about 87px for a
-    crest, a number and its margins, and the crest came out too small to name
-    at a glance.
+    Twelve — and the route here is worth keeping, because two rounds of it
+    were spent solving the wrong problem. The crest looked too small, so the
+    count went twelve to ten, then ten to eight was measured as well. Eight
+    gives 130px columns while the contents of a cell — a 19px crest and a
+    three-character number — need about 40px. Ninety pixels of every cell was
+    empty.
 
-    Ten, not eight. Eight was measured too: it gives 130px columns, and the
-    contents of a cell — a 19px crest and a three-character number — need
-    about 40px of that. Ninety pixels of every cell was empty. The crest was
-    never limited by how many columns there were, only by the size chosen for
-    it, so ten columns carry the same big crest with room to spare and two
-    more weeks of season. The arrows walk a week at a time either way. */
-const SPINE_WEEKS = 10
+    The crest was never short of COLUMNS. It was short of SIZE: it was drawn
+    at 11px in a cell that had room for far more, and no number of columns
+    removed was ever going to change that. With the crest at 19px and the
+    number at 13, twelve columns fit a 1280 laptop at 86x32px each with
+    nothing clipped and no horizontal scrollbar — the same badge eight columns
+    would have bought, with four more weeks of season beside it. */
+const SPINE_WEEKS = 12
 
 export default function SquadBuilder() {
   const { data, error } = useCore()
