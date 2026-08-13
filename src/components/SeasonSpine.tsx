@@ -42,6 +42,16 @@ const CHIP_SHORT: Record<string, string> = {
   wildcard: 'WC', 'bench-boost': 'BB', 'triple-captain': 'TC', 'free-hit': 'FH',
 }
 
+/* Crests on or off, remembered. Whether twelve columns of club badges read as
+   context or as clutter is a matter of taste, and taste is not something to
+   settle on someone else's behalf — so it is a switch, and it survives the
+   next visit. Default on: the badge answers "6.9 against whom", which is the
+   question the number raises. */
+const CRESTS_KEY = 'fpl_spine_crests'
+const readCrests = (): boolean => {
+  try { return localStorage.getItem(CRESTS_KEY) !== '0' } catch { return true }
+}
+
 /** Difficulty as ink. d3 is lifted off the mid-grey it shares with the
  *  chrome, or a run of average fixtures reads as a run of empty cells. */
 const FDR_INK: Record<number, string> = {
@@ -96,6 +106,7 @@ export function SeasonSpine({
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<SpineMode>('fix')
   const [names, setNames] = useState(true)
+  const [crests, setCrests] = useState(readCrests)
   /* Fifteen rows of twelve numbers is a lot to read a single man out of, so
      tapping a row pins him and drops everything else back. Tap again to
      release. Held as the SLOT index, not the player: a slot that changes
@@ -166,11 +177,25 @@ export function SeasonSpine({
             <button
               onClick={() => setNames((v) => !v)}
               aria-pressed={names}
-              className={`ml-0.5 rounded-r-full border-l border-line px-2.5 py-1 text-[10.5px] ${
+              className={`ml-0.5 border-l border-line px-2.5 py-1 text-[10.5px] ${
                 names ? 'text-good' : 'text-ink-3'
               }`}
             >
               Names
+            </button>
+            <button
+              onClick={() => setCrests((v) => {
+                const next = !v
+                try { localStorage.setItem(CRESTS_KEY, next ? '1' : '0') } catch { /* private mode */ }
+                return next
+              })}
+              aria-pressed={crests}
+              title="Show the opponent's badge beside each number"
+              className={`rounded-r-full border-l border-line px-2.5 py-1 text-[10.5px] ${
+                crests ? 'text-good' : 'text-ink-3'
+              }`}
+            >
+              Crests
             </button>
           </span>
         )}
@@ -255,6 +280,7 @@ export function SeasonSpine({
                 gw={gw}
                 mode={mode}
                 names={names}
+                crests={crests}
                 moves={moves}
                 focus={focus}
                 onFocus={(n) => setFocus((cur) => (cur === n ? null : n))}
@@ -334,7 +360,7 @@ function Step({ dir, disabled, onClick }: { dir: 'back' | 'fwd'; disabled?: bool
 /* ── one slot, across the window ─────────────────────────────────────── */
 
 function SlotRow({
-  slot, index, gws, gw, mode, names, moves, focus, onFocus, xiByGw, captainByGw,
+  slot, index, gws, gw, mode, names, crests, moves, focus, onFocus, xiByGw, captainByGw,
   byEl, fixtureEase, avail, model, market, profiles,
 }: {
   slot: Slot
@@ -343,6 +369,7 @@ function SlotRow({
   gw: number
   mode: SpineMode
   names: boolean
+  crests: boolean
   moves: ReturnType<typeof handovers>
   focus: number | null
   onFocus: (i: number) => void
@@ -433,7 +460,7 @@ function SlotRow({
         /* Only one crest, and only where there is a number rather than a
            fixture: a double gameweek would want two and there is not room, so
            it keeps the first and the tooltip still names both. */
-        const crest = mode !== 'fix' && !cell.blank && !cell.na && cell.value != null
+        const crest = crests && mode !== 'fix' && !cell.blank && !cell.na && cell.value != null
           ? cell.opponents[0] ?? null
           : null
         const text = cell.na ? 'NA'
