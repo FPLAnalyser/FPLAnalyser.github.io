@@ -54,6 +54,15 @@ export default defineConfig({
     serveSiteData(),
     VitePWA({
       registerType: 'autoUpdate', // injects skipWaiting + clientsClaim for a clean takeover
+      // A preview ships a service worker that unregisters itself and drops its
+      // caches. Offline support is pointless on a throwaway build, and an
+      // installed worker actively hurts one: it answers every navigation in
+      // scope from the app shell — which is how the design mockups carried by
+      // the preview became unreachable on a phone that had opened the app —
+      // and it can serve a stale build after the branch has moved on. The
+      // preview workflow is the only thing that sets VITE_PREVIEW, so
+      // production is untouched.
+      selfDestroying: !!process.env.VITE_PREVIEW,
       manifest: false, // public/manifest.webmanifest is hand-maintained
       workbox: {
         // Hashed assets are precached (immutable → effectively self-updating,

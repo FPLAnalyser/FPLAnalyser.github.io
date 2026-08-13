@@ -75,6 +75,19 @@ jobs:
         run: |
           set -euo pipefail
           cp -r mockups dist/mockups
+          # Most of these were authored as artifact bodies — the host supplies
+          # the doctype, charset and viewport, so the files start at <title>.
+          # Served raw they land in quirks mode with no viewport, which on a
+          # phone means a 980px layout scaled down to illegibility. Give the
+          # PUBLISHED COPY the head the host would have added; the sources stay
+          # as they are, because that is what the artifact publisher wants.
+          for f in dist/mockups/*.html; do
+            head -c 200 "$f" | grep -qi '<!doctype' && continue
+            { printf '<!doctype html><meta charset="utf-8">'
+              printf '<meta name="viewport" content="width=device-width,initial-scale=1">'
+              cat "$f"; } > "$f.wrapped"
+            mv "$f.wrapped" "$f"
+          done
           # No index means the folder is only reachable by typing an exact
           # filename, which is how the prototypes end up unfindable. Built
           # from the directory so it cannot go stale.
