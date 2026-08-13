@@ -151,7 +151,7 @@ export function SeasonSpine({
         {onShift && (
           <span className="flex items-center gap-0.5">
             <Step dir="back" disabled={!canShift?.back} onClick={() => onShift('back')} />
-            <span className="min-w-[3.4rem] text-center text-[11px] font-bold text-ink-3 tabular-nums">
+            <span className="min-w-[4.6rem] rounded-full border border-line bg-surface-2 px-2 py-1 text-center text-[13px] font-extrabold text-ink tabular-nums">
               GW{gws[0]}&ndash;{gws[gws.length - 1]}
             </span>
             <Step dir="fwd" disabled={!canShift?.fwd} onClick={() => onShift('fwd')} />
@@ -258,7 +258,7 @@ export function SeasonSpine({
                   {holdsBest.has(g) && (
                     <i
                       title="Your squad holds the best captain in the game this week"
-                      className="ml-0.5 inline-block rounded-full bg-accent px-[3px] align-[1px] text-[7.5px] font-extrabold text-accent-contrast not-italic"
+                      className="ml-1 inline-block rounded-full bg-accent px-[4px] align-[1px] text-[9px] font-extrabold text-accent-contrast not-italic"
                     >
                       C
                     </i>
@@ -498,7 +498,7 @@ function SlotRow({
             {/* The armband, on the man wearing it. A plan that cannot say who
                 you are captaining is not showing you the plan. */}
             {isCap && (
-              <i className="absolute -top-px -right-0.5 rounded-full bg-accent px-[2.5px] text-[7px] leading-[1.4] font-extrabold text-accent-contrast not-italic shadow-[0_0_0_1.5px_#0b0c0f]">
+              <i className="absolute top-0 right-0 rounded-full rounded-tr-[4px] bg-accent px-[3.5px] text-[9px] leading-[1.45] font-extrabold text-accent-contrast not-italic shadow-[0_0_0_1.5px_#0b0c0f]">
                 C
               </i>
             )}
