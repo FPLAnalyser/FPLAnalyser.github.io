@@ -16,6 +16,9 @@ dev-dist/
 # TS build cache
 *.tsbuildinfo
 
+# rendered video — regenerate with tools/video/render.mjs
+build/video/
+
 # local scratch verification
 _verify.mjs
 _share_test.mjs

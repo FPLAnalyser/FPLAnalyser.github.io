@@ -294,10 +294,19 @@ A 60–75 second screen recording with captions, cut down into three 15-second
 verticals for Shorts, Reels and TikTok. No voiceover needed for the short cuts —
 most are watched muted, so captions do the work.
 
+**This is now built and automated.** `tools/video/render.mjs` films the built
+site and encodes it — no screen recorder, no editor. The shot list below is
+implemented in `tools/video/shots.mjs`; `docs/VIDEO.md` covers what to upload
+and with what copy. The rest of this section is the reasoning behind the edit,
+which is still worth reading before changing it.
+
 ### Shot list
 
-Record at 1440×900 for the wide cut, then reframe to 1080×1920 for verticals.
-Move slowly; fast cursor movement looks frantic when scaled down.
+The renderer films the wide cut at 1920×1080 from the desktop layout, and the
+verticals at 1080×1920 from the **mobile** layout rather than reframing the
+desktop capture — cropping a 16:9 recording to 9:16 leaves the text too small to
+read on a phone. Motion is eased and deliberately slow; fast cursor movement
+looks frantic when scaled down.
 
 | # | Time | Screen | Action | Caption |
 |---|---|---|---|---|
@@ -332,6 +341,18 @@ Move slowly; fast cursor movement looks frantic when scaled down.
 
 ### What I can and cannot do
 
-I can produce every still frame, the caption text, and the exact route and
-click sequence — all of the above. I cannot record or encode video. The
-recording itself needs a screen recorder on your machine.
+This used to say "I cannot record or encode video". That is no longer true:
+Playwright's Chromium and its bundled ffmpeg are both present, so
+`tools/video/render.mjs` produces finished, captioned video files.
+
+What still does not work here:
+
+- **No MP4.** The bundled ffmpeg has no H.264 encoder, so output is VP8/WebM.
+  YouTube takes WebM directly for normal uploads and Shorts. Instagram and
+  TikTok want MP4 — convert those two on your own machine.
+- **No audio.** No audio encoders are compiled in, so the cuts are silent by
+  design and carry burned-in captions. A voiceover has to be muxed elsewhere;
+  the render writes a `.json` manifest with per-shot timings for that.
+- **Shot 8 (My Team) cannot be filmed yet.** Not a tooling limit — the page is
+  gated behind "Available after Gameweek 1" because it reads a live FPL squad.
+  Scouting stands in until GW1 is played.
