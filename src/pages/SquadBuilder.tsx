@@ -184,9 +184,15 @@ function glideTo(y: number) {
 const PRICE_MIN = 4.0
 const PRICE_MAX = 15.5 // a hair above the most expensive player so nobody is filtered out by default
 
-/** Weeks the spine draws at once: the half-season planning unit, and as
- *  many columns as a phone carries with a name still legible in the cell. */
-const SPINE_WEEKS = 12
+/** Weeks the spine draws at once.
+
+    Twelve was the half-season planning unit, and it fitted — but "fitted" was
+    doing a lot of work: on a 1400px laptop each column had 97px for a crest,
+    a number and whatever margin was left, and the crest came out too small to
+    recognise at a glance. Ten columns is a fifth more width each, which is
+    what pays for a crest you can actually name. The arrows walk a week at a
+    time, so the two weeks are still one tap away. */
+const SPINE_WEEKS = 10
 
 export default function SquadBuilder() {
   const { data, error } = useCore()
