@@ -449,29 +449,6 @@ export default function SquadBuilder() {
     () => spineAll.slice(spineStart, spineStart + SPINE_WEEKS),
     [spineAll, spineStart],
   )
-  /* Bar heights: the XI's projection in each week of the window, captain
-     doubled, because that is the score the week actually returns. Keyed on
-     the plan's revision — squadAtGw and weekAt are fresh closures every
-     render, so nothing else in the planner can be memoised against. */
-  const spineXp = useMemo(() => {
-    const out = new Map<number, number>()
-    if (!complete) return out
-    for (const g of spineGws) {
-      const week = planner.weekAt(g)
-      const xi = week?.xi?.length ? week.xi : planner.squadAtGw(g).slice(0, 11)
-      let total = 0
-      for (const el of xi) {
-        const r = byEl.get(el)
-        if (!r) continue
-        const v = xpForGw(r, g, fixtureEase, avail, listXpModel, listMarket, listProfiles) ?? 0
-        total += el === week?.captain ? v * 2 : v
-      }
-      out.set(g, total)
-    }
-    return out
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spineGws, complete, planner.revision, byEl, fixtureEase, avail, listXpModel, listMarket, listProfiles])
-
   /* The plan's own decisions for each week in the window.
 
      The planner only MATERIALISES a week when you visit it — the effect that
@@ -522,6 +499,33 @@ export default function SquadBuilder() {
     return { xi, captain, chip, movesIn }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spineGws, complete, planner.revision, byEl])
+
+  /* Bar heights, read off the SAME lineups the grid draws.
+
+     They were not, and it showed: the bar totalled the first eleven of the
+     squad array with nobody captained, while the grid derived the best legal
+     eleven and an armband. Tapping a week swapped one for the other, so the
+     number jumped up the moment you looked at it — the plan appearing to
+     improve because you clicked on it. One source, so there is nothing left
+     to disagree. */
+  const spineXp = useMemo(() => {
+    const out = new Map<number, number>()
+    if (!complete) return out
+    for (const g of spineGws) {
+      const xi = spinePlan.xi.get(g)
+      if (!xi) continue
+      const cap = spinePlan.captain.get(g)
+      let total = 0
+      for (const el of xi) {
+        const r = byEl.get(el)
+        if (!r) continue
+        const v = xpForGw(r, g, fixtureEase, avail, listXpModel, listMarket, listProfiles) ?? 0
+        total += el === cap ? v * 2 : v
+      }
+      out.set(g, total)
+    }
+    return out
+  }, [spineGws, complete, spinePlan, byEl, fixtureEase, avail, listXpModel, listMarket, listProfiles])
 
   const spineBest = useMemo(
     () => (complete && spineGws.length

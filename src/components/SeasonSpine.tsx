@@ -410,29 +410,39 @@ function SlotRow({
            a band, eight across a four-transfer plan. The line box is pinned to
            the band rather than left to default leading, which at 11px built a
            17px box and pushed the names into the fixtures below. */
-        <span className="relative col-start-2 -col-end-1 h-[14px]">
-          {here.map((m) => {
-            const at = gws.indexOf(m.gw)
-            return (
-              <span key={m.gw}>
-                {at > 0 && (
+        <>
+          {/* The band's own first column. Without it that cell is EMPTY, and a
+              name anchored near the left edge — they are right-anchored, so
+              they grow leftwards — spilled out of the grid and slid under the
+              player names as you scrolled. The stubs above and below are
+              sticky and opaque; this row had nothing there to be opaque WITH,
+              so the transfer names showed through the one column that must
+              stay solid. */}
+          <span className="sticky left-0 z-[4] bg-bg-0" />
+          <span className="relative col-start-2 -col-end-1 h-[14px] overflow-hidden">
+            {here.map((m) => {
+              const at = gws.indexOf(m.gw)
+              return (
+                <span key={m.gw}>
+                  {at > 0 && (
+                    <span
+                      className="absolute top-0 text-[11px] leading-[14px] font-bold whitespace-nowrap text-bad"
+                      style={{ right: `${((gws.length - at) / gws.length) * 100}%` }}
+                    >
+                      {nameOf(m.out)} ◂
+                    </span>
+                  )}
                   <span
-                    className="absolute top-0 text-[11px] leading-[14px] font-bold whitespace-nowrap text-bad"
-                    style={{ right: `${((gws.length - at) / gws.length) * 100}%` }}
+                    className="absolute top-0 text-[11px] leading-[14px] font-bold whitespace-nowrap text-good"
+                    style={{ left: `${(at / gws.length) * 100}%` }}
                   >
-                    {nameOf(m.out)} ◂
+                    ▸ {nameOf(m.in)}
                   </span>
-                )}
-                <span
-                  className="absolute top-0 text-[11px] leading-[14px] font-bold whitespace-nowrap text-good"
-                  style={{ left: `${(at / gws.length) * 100}%` }}
-                >
-                  ▸ {nameOf(m.in)}
                 </span>
-              </span>
-            )
-          })}
-        </span>
+              )
+            })}
+          </span>
+        </>
       )}
       <button
         onClick={() => onFocus(index)}
