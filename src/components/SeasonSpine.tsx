@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { str } from '../lib/rows'
+import { TeamBadge } from './badges'
 import {
   buildSlots, orderSlots, handovers, memberAt, spineCell, weekRisk, formatCell, toneOf,
   MODE_LABEL, MODE_NOTE, type SpineMode, type Slot, type Tone,
@@ -126,7 +127,7 @@ export function SeasonSpine({
     return out
   }, [bestCaptain, gws, slots])
 
-  const cols = `minmax(0,8.5rem) repeat(${gws.length}, minmax(3.1rem, 1fr))`
+  const cols = `minmax(0,8.5rem) repeat(${gws.length}, minmax(3.5rem, 1fr))`
 
   return (
     <section className="mb-3 overflow-hidden rounded-2xl border border-line bg-bg-0">
@@ -429,6 +430,12 @@ function SlotRow({
         const benched = !focused && el != null && xi != null && xi.length > 0 && !xi.includes(el)
         const isCap = el != null && captainByGw?.get(g) === el
         const tone = toneOf(mode, cell.value, r ? String(r.position) : undefined)
+        /* Only one crest, and only where there is a number rather than a
+           fixture: a double gameweek would want two and there is not room, so
+           it keeps the first and the tooltip still names both. */
+        const crest = mode !== 'fix' && !cell.blank && !cell.na && cell.value != null
+          ? cell.opponents[0] ?? null
+          : null
         const text = cell.na ? 'NA'
           : mode === 'fix' ? (cell.fixture || '—')
           : formatCell(mode, cell.value)
@@ -453,6 +460,13 @@ function SlotRow({
             } ${cell.blank ? 'opacity-40' : ''} ${benched ? 'opacity-35' : ''} ${muted ? 'opacity-25' : ''}`}
             style={{ boxShadow: shadow }}
           >
+            {/* WHO he is playing, in the views that dropped the opponent to
+                make room for a number. Switching to xP used to lose the one
+                thing that explains the number — 6.9 against whom? — and a
+                crest costs a glyph's width where the name cost the cell. */}
+            {crest && (
+              <TeamBadge team={crest} size={11} className="mr-[3px] shrink-0 opacity-90" />
+            )}
             {text}
             {/* The armband, on the man wearing it. A plan that cannot say who
                 you are captaining is not showing you the plan. */}

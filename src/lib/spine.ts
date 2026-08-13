@@ -140,6 +140,10 @@ export interface SpineCell {
    *  to keep and a keeper has no defensive-contribution threshold to clear.
    *  A zero would read as "unlikely" when the truth is "not a thing". */
   na: boolean
+  /** Opponent short codes for the week, in fixture order. The value views
+   *  drop the fixture text to make room for a number, and then nothing on
+   *  screen says who the number is against. */
+  opponents: string[]
 }
 
 /** Does this mode ask a question this position can answer? Clean sheets pay
@@ -233,20 +237,21 @@ export function spineCell(
   market: MarketOdds | null,
   profiles: ShotProfiles | null,
 ): SpineCell {
-  if (!r) return { fixture: '', fdr: 3, value: null, blank: true, na: false }
+  if (!r) return { fixture: '', fdr: 3, value: null, blank: true, na: false, opponents: [] }
   const fixes = fixtureEase.filter((f) => f.team === r.team && f.gw === gw)
   const fixture = fixes
     .map((f) => (f.venue === 'H' ? f.opponent.toUpperCase() : f.opponent.toLowerCase()))
     .join('+')
   const fdr = fixes.length ? Math.round(fixes.reduce((a, f) => a + f.fdr, 0) / fixes.length) : 3
-  if (!fixes.length) return { fixture: '', fdr: 3, value: null, blank: true, na: false }
-  if (mode === 'fix') return { fixture, fdr, value: null, blank: false, na: false }
+  const opponents = fixes.map((f) => f.opponent)
+  if (!fixes.length) return { fixture: '', fdr: 3, value: null, blank: true, na: false, opponents }
+  if (mode === 'fix') return { fixture, fdr, value: null, blank: false, na: false, opponents }
   if (!modeApplies(mode, String(r.position))) {
-    return { fixture, fdr, value: null, blank: false, na: true }
+    return { fixture, fdr, value: null, blank: false, na: true, opponents }
   }
 
   const parts = xpPartsForGw(r, gw, fixtureEase, avail, model, market, profiles)
-  if (!parts) return { fixture, fdr, value: null, blank: false, na: false }
+  if (!parts) return { fixture, fdr, value: null, blank: false, na: false, opponents }
   /* Each mode answers its own question in its own unit, and three of them are
      not points. CS is the chance of a clean sheet, straight off the goals the
      team is expected to concede — as POINTS it was a forward's flat zero and a
@@ -259,7 +264,7 @@ export function spineCell(
     : mode === 'cs' ? Math.exp(-parts.lamAgainst)
     : mode === 'gi' ? parts.lamGoal + parts.lamAssist
     : Math.min(1, parts.dc / 2)
-  return { fixture, fdr, value, blank: false, na: false }
+  return { fixture, fdr, value, blank: false, na: false, opponents }
 }
 
 /** The scale a heat view colours against: modes have wildly different ranges

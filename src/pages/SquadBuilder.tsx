@@ -747,10 +747,12 @@ export default function SquadBuilder() {
           captainByGw={spinePlan.captain}
           chipByGw={spinePlan.chip}
           movesByGw={spinePlan.movesIn}
+          /* One week a step. Half a window jumped the whole strip and you had
+             to find your place again; a single column keeps every other week
+             where it was and just brings the next one in. */
           onShift={(dir) => setSpineStart((cur) => {
             const max = Math.max(0, spineAll.length - SPINE_WEEKS)
-            const step = Math.max(1, Math.floor(SPINE_WEEKS / 2))
-            return Math.min(max, Math.max(0, cur + (dir === 'fwd' ? step : -step)))
+            return Math.min(max, Math.max(0, cur + (dir === 'fwd' ? 1 : -1)))
           })}
           canShift={{
             back: spineStart > 0,
