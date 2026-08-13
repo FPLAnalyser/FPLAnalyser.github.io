@@ -45,6 +45,10 @@ const IMG_BASE = import.meta.env.BASE_URL
 
 interface HomeWin {
   key: string; to: string; kicker: string; title: string; desc: string; stat: string
+  /** Photo/gradient to borrow when a tile has no art of its own. The key
+   *  itself cannot double as that: it is also React's key, and two tiles
+   *  sharing one silently breaks reconciliation. */
+  photoKey?: string
   /** No licensed photo yet — the branded `.hw-<key>` gradient stands alone. */
   noPhoto?: boolean
   ghost?: { text: string; style: CSSProperties }
@@ -56,6 +60,7 @@ const WINDOWS: HomeWin[] = [
   // Top row
   { key: 'preview', to: '/preview', kicker: 'This week', title: 'GW Preview', desc: 'The whole gameweek before the deadline — captain, chips, every fixture and who is missing.', stat: 'Getting you ready for the deadline' },
   { key: 'squad', to: '/squad', kicker: 'Build', title: 'Squad Builder', desc: 'Draft an XI and plan the season week by week.', stat: 'Import your side, get immediate analysis' },
+  { key: 'captaincy', photoKey: 'squad', to: '/captaincy', kicker: 'Decide', title: 'Captaincy', desc: 'Who to captain, what the bet looks like, and when the Triple Captain is worth spending.', stat: 'Priced against what the field is doing' },
   { key: 'fixtures', to: '/fixtures', kicker: 'Plan', title: 'Fixtures', desc: 'Our own fixture rating and rotation planner.', stat: 'Rotations, Projected xG and Clean Sheets' },
   { key: 'players', to: '/players', kicker: 'Explore', title: 'Players', desc: 'Every player rated 0–100 — form, value, fixtures and the editorial player hero.', stat: 'Work out who is worth the money' },
   // Bottom row
@@ -92,10 +97,10 @@ function WindowCard({ w }: { w: HomeWin }) {
       className="hw-card group aspect-[3/4] sm:aspect-[10/15] lg:aspect-auto lg:h-full lg:min-h-0 lg:flex-1 lg:basis-0"
       aria-label={`${w.title} — ${w.desc}`}
     >
-      <div className={`hw-photo hw-${w.key}`}>
+      <div className={`hw-photo hw-${w.photoKey ?? w.key}`}>
         {!w.noPhoto && (
           <img
-            src={`${IMG_BASE}home/${w.key}.jpg`}
+            src={`${IMG_BASE}home/${w.photoKey ?? w.key}.jpg`}
             alt=""
             loading="lazy"
             onLoad={() => setLoaded(true)}

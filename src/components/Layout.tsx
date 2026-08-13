@@ -26,6 +26,7 @@ const LINKS: { to: string; label: string }[] = [
   { to: '/', label: 'Home' },
   { to: '/preview', label: 'Preview' },
   { to: '/squad', label: 'Squad' },
+  { to: '/captaincy', label: 'Captaincy' },
   { to: '/fixtures', label: 'Fixtures' },
   { to: '/players', label: 'Players' },
   { to: '/scout', label: 'Scouting' },
