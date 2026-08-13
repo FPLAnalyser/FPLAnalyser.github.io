@@ -54,6 +54,7 @@ const FDR_INK: Record<number, string> = {
  *  uses: both are answering "is this a good week", so they should not read
  *  in opposite directions. */
 const TONE_INK: Record<Tone, string> = {
+  none: 'text-ink-3/60',
   bad: 'text-[#e05b52]',
   weak: 'text-[#e8a15b]',
   ok: 'text-ink-2',
@@ -63,7 +64,7 @@ const TONE_INK: Record<Tone, string> = {
 
 export function SeasonSpine({
   state, byEl, fixtureEase, gws, gw, onPickGw, weekXp, bestCaptain,
-  xiByGw, captainByGw, chipByGw, movesByGw, avail, model, market, profiles,
+  xiByGw, captainByGw, chipByGw, movesByGw, onShift, canShift, avail, model, market, profiles,
 }: {
   state: PlannerState
   byEl: Map<number, RatingRow>
@@ -83,6 +84,9 @@ export function SeasonSpine({
   captainByGw?: Map<number, number | null>
   chipByGw?: Map<number, string | null>
   movesByGw?: Map<number, number>
+  /** Scroll the window a few weeks without changing the selected gameweek. */
+  onShift?: (dir: 'back' | 'fwd') => void
+  canShift?: { back: boolean; fwd: boolean }
   avail?: Availability
   model: XpModel | null
   market: MarketOdds | null
@@ -128,6 +132,19 @@ export function SeasonSpine({
     <section className="mb-3 overflow-hidden rounded-2xl border border-line bg-bg-0">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-line px-3 py-2">
         <h2 className="text-[12.5px] font-extrabold tracking-tight text-ink">Your season</h2>
+        {/* Walking the window without moving the selected week. Tapping a bar
+            changes which week the board shows; these only change which twelve
+            weeks you are looking at, which is a different question and needs
+            its own control. */}
+        {onShift && (
+          <span className="flex items-center gap-0.5">
+            <Step dir="back" disabled={!canShift?.back} onClick={() => onShift('back')} />
+            <span className="min-w-[3.4rem] text-center text-[11px] font-bold text-ink-3 tabular-nums">
+              GW{gws[0]}&ndash;{gws[gws.length - 1]}
+            </span>
+            <Step dir="fwd" disabled={!canShift?.fwd} onClick={() => onShift('fwd')} />
+          </span>
+        )}
         <span className="truncate text-[11.5px] text-ink-3">
           {open ? 'every man, every week' : 'projected, week by week'}
         </span>
@@ -298,6 +315,21 @@ export function SeasonSpine({
   )
 }
 
+function Step({ dir, disabled, onClick }: { dir: 'back' | 'fwd'; disabled?: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={dir === 'back' ? 'Earlier gameweeks' : 'Later gameweeks'}
+      className="flex h-7 w-7 items-center justify-center rounded-full border border-line text-ink-2 transition hover:border-accent/60 hover:text-ink disabled:opacity-30 disabled:hover:border-line disabled:hover:text-ink-2"
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <path d={dir === 'back' ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6'} />
+      </svg>
+    </button>
+  )
+}
+
 /* ── one slot, across the window ─────────────────────────────────────── */
 
 function SlotRow({
@@ -391,9 +423,12 @@ function SlotRow({
         const leaving = here.some((m) => m.gw === g + 1)
         // Who is actually playing that week, and who is wearing the armband.
         const xi = xiByGw?.get(g)
-        const benched = el != null && xi != null && xi.length > 0 && !xi.includes(el)
+        /* Benched weeks fade — except on the row you have pinned. You pinned
+           him to read him, and the weeks he is on the bench are exactly the
+           ones you are checking. */
+        const benched = !focused && el != null && xi != null && xi.length > 0 && !xi.includes(el)
         const isCap = el != null && captainByGw?.get(g) === el
-        const tone = toneOf(mode, cell.value)
+        const tone = toneOf(mode, cell.value, r ? String(r.position) : undefined)
         const text = cell.na ? 'NA'
           : mode === 'fix' ? (cell.fixture || '—')
           : formatCell(mode, cell.value)

@@ -166,23 +166,53 @@ export function formatCell(mode: SpineMode, v: number | null): string {
    to worry about, green a week to build around. The cuts are FPL judgements,
    not statistics — three points from a starter is a bad week, six is a good
    one — and they live here so every view agrees on what "good" means. */
-export type Tone = 'bad' | 'weak' | 'ok' | 'good' | 'elite'
+export type Tone = 'none' | 'bad' | 'weak' | 'ok' | 'good' | 'elite'
 
-const BANDS: Record<Exclude<SpineMode, 'fix'>, [number, number, number, number]> = {
-  //        bad below | weak below | good above | elite above
-  /* Under three points from a man you are starting is a bad week — that cut
-     is the one that matters and everything else is spaced around it. The
-     first pass put the amber band at 4.5 and turned an ordinary week amber:
-     104 of 180 cells, which is a warning colour saying nothing. */
+type Band = [number, number, number, number]  // bad below | weak below | good above | elite above
+
+/* Points are points, so xP is judged on one absolute scale — under three from
+   a man you are starting is a bad week whoever he is, which is the cut that
+   matters and the one everything else is spaced around.
+
+   THE OTHER THREE ARE NOT. Judging a defender's attacking involvement against
+   a forward's makes every defender red and every forward green, which is not
+   information — it is just a picture of what position they play. Scored
+   against his own kind instead, 0.2 xGI is a genuinely threatening full-back
+   and 0.2 from a striker is a bad week, and the grid says so. Same for
+   def-con: a midfielder clearing the threshold 40% of the time is elite for a
+   midfielder, middling for a centre-half. */
+const BANDS: Record<Exclude<SpineMode, 'fix'>, Band | Record<string, Band>> = {
   xp: [3, 4, 5.5, 7],
+  // A clean sheet is a property of the TEAM, so it is the same bar for
+  // everyone who is paid for one.
   cs: [0.2, 0.3, 0.45, 0.6],
-  gi: [0.25, 0.4, 0.6, 0.85],
-  dc: [0.2, 0.35, 0.5, 0.65],
+  gi: {
+    GKP: [0.02, 0.04, 0.07, 0.12],
+    DEF: [0.08, 0.13, 0.2, 0.3],
+    MID: [0.15, 0.25, 0.4, 0.6],
+    FWD: [0.25, 0.4, 0.6, 0.85],
+  },
+  dc: {
+    DEF: [0.2, 0.3, 0.45, 0.6],
+    MID: [0.12, 0.22, 0.35, 0.5],
+    FWD: [0.04, 0.08, 0.15, 0.25],
+  },
 }
 
-export function toneOf(mode: SpineMode, v: number | null): Tone | null {
+export function toneOf(mode: SpineMode, v: number | null, pos?: string): Tone | null {
   if (mode === 'fix' || v == null) return null
-  const [bad, weak, good, elite] = BANDS[mode]
+  /* A flat zero on a RATE is an absence, not a bad score. Three forwards who
+     will never clear the def-con threshold put 36 red cells on the grid,
+     which reads as a warning about something nobody was ever going to get.
+     Points are different — nought expected points is a real and alarming
+     number — so this applies to the rates only. */
+  if (v <= 0 && (mode === 'gi' || mode === 'dc')) return 'none'
+  const band = BANDS[mode]
+  const cuts: Band | undefined = Array.isArray(band)
+    ? band
+    : (band as Record<string, Band>)[pos ?? ''] ?? undefined
+  if (!cuts) return null
+  const [bad, weak, good, elite] = cuts
   if (v >= elite) return 'elite'
   if (v >= good) return 'good'
   if (v >= weak) return 'ok'

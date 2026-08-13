@@ -34,7 +34,7 @@ import { useAvailability, availBadge, availFor, SEV_COLOUR, type Availability } 
 import { xpForGw, useXpModel, useMarketOdds, useShotProfiles } from '../lib/xp'
 import { bestCaptainByGw } from '../lib/spine'
 import { usePlanner } from '../lib/usePlanner'
-import { CHIP_LABEL, type Chip } from '../lib/planner'
+import { CHIP_LABEL, autoLineup, type Chip, type Pos as PlannerPos } from '../lib/planner'
 import { teamLabel, playerHref } from '../lib/util'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
@@ -459,27 +459,56 @@ export default function SquadBuilder() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spineGws, complete, planner.revision, byEl, fixtureEase, avail, listXpModel, listMarket, listProfiles])
 
-  /* The plan's own decisions for each week in the window. Keyed on the plan
-     revision for the reason the planner's own comment gives: weekAt is a
-     fresh closure every render, so nothing built from it can be memoised on
-     the function itself. */
+  /* The plan's own decisions for each week in the window.
+
+     The planner only MATERIALISES a week when you visit it — the effect that
+     writes state.weeks[gw] runs for the current week and no other — so every
+     week you had not stepped through had no XI and no captain, and the grid
+     showed neither. You had to click all twelve to light them up, which is
+     not a plan, it is a chore.
+
+     So unvisited weeks are derived here the same way the planner will derive
+     them when you do arrive: carry the last lineup forward while it is still
+     legal for that week's fifteen, else auto-pick the best eleven. Read-only
+     — nothing is written, and what you see now is what the planner will
+     commit when you get there. */
   const spinePlan = useMemo(() => {
     const xi = new Map<number, number[]>()
     const captain = new Map<number, number | null>()
     const chip = new Map<number, string | null>()
     const movesIn = new Map<number, number>()
+    if (!complete) return { xi, captain, chip, movesIn }
+    const ratingOf = (el: number) => (num(byEl.get(el) ?? {}, 'season_overall_score') ?? 0) * 20
+    const posOf = (el: number) => String(byEl.get(el)?.position ?? 'MID') as PlannerPos
+    type Line = { xi: number[]; bench: number[]; captain: number | null }
+    let carried: Line | null = null
     for (const g of spineGws) {
+      const squad = planner.squadAtGw(g)
       const w = planner.weekAt(g)
-      if (!w) continue
-      if (w.xi?.length) xi.set(g, w.xi)
-      captain.set(g, w.captain ?? null)
-      chip.set(g, w.chip ?? null)
-      const n = (w.transfers ?? []).filter((t) => t.in != null).length
-      if (n) movesIn.set(g, n)
+      if (w) {
+        chip.set(g, w.chip ?? null)
+        const n = (w.transfers ?? []).filter((t) => t.in != null).length
+        if (n) movesIn.set(g, n)
+      }
+      const stored: Line | null = w && w.xi?.length === 11
+        ? { xi: w.xi, bench: w.bench ?? [], captain: w.captain ?? null }
+        : null
+      const carryOk: boolean = !!carried && carried.xi.length === 11
+        && carried.xi.every((e) => squad.includes(e))
+      const auto = () => {
+        const a = autoLineup(squad, posOf, ratingOf)
+        return { xi: a.xi, bench: a.bench, captain: a.captain } as Line
+      }
+      const line: Line = stored ?? (carryOk && carried ? carried : auto())
+      xi.set(g, line.xi)
+      // A stored week can have no captain; fall back to the best of the eleven
+      // rather than leaving the armband off the grid entirely.
+      captain.set(g, line.captain ?? autoLineup(line.xi, posOf, ratingOf).captain)
+      carried = line
     }
     return { xi, captain, chip, movesIn }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spineGws, planner.revision])
+  }, [spineGws, complete, planner.revision, byEl])
 
   const spineBest = useMemo(
     () => (complete && spineGws.length
@@ -718,6 +747,15 @@ export default function SquadBuilder() {
           captainByGw={spinePlan.captain}
           chipByGw={spinePlan.chip}
           movesByGw={spinePlan.movesIn}
+          onShift={(dir) => setSpineStart((cur) => {
+            const max = Math.max(0, spineAll.length - SPINE_WEEKS)
+            const step = Math.max(1, Math.floor(SPINE_WEEKS / 2))
+            return Math.min(max, Math.max(0, cur + (dir === 'fwd' ? step : -step)))
+          })}
+          canShift={{
+            back: spineStart > 0,
+            fwd: spineStart < Math.max(0, spineAll.length - SPINE_WEEKS),
+          }}
           avail={avail}
           model={listXpModel}
           market={listMarket}
