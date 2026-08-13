@@ -404,21 +404,27 @@ function SlotRow({
           is just more pairs on one band, so a wildcard costs one thin row per
           slot instead of a row per player. */}
       {names && here.length > 0 && (
-        <span className="relative col-start-2 -col-end-1 h-[12px]">
+        /* 14px of band for an 11px name. The names were 9.5px and too small to
+           read at a glance, but this row repeats for every transfer in view,
+           so its height is the whole cost of making them legible — two pixels
+           a band, eight across a four-transfer plan. The line box is pinned to
+           the band rather than left to default leading, which at 11px built a
+           17px box and pushed the names into the fixtures below. */
+        <span className="relative col-start-2 -col-end-1 h-[14px]">
           {here.map((m) => {
             const at = gws.indexOf(m.gw)
             return (
               <span key={m.gw}>
                 {at > 0 && (
                   <span
-                    className="absolute top-0 text-[9.5px] font-bold whitespace-nowrap text-bad"
+                    className="absolute top-0 text-[11px] leading-[14px] font-bold whitespace-nowrap text-bad"
                     style={{ right: `${((gws.length - at) / gws.length) * 100}%` }}
                   >
                     {nameOf(m.out)} ◂
                   </span>
                 )}
                 <span
-                  className="absolute top-0 text-[9.5px] font-bold whitespace-nowrap text-good"
+                  className="absolute top-0 text-[11px] leading-[14px] font-bold whitespace-nowrap text-good"
                   style={{ left: `${(at / gws.length) * 100}%` }}
                 >
                   ▸ {nameOf(m.in)}
