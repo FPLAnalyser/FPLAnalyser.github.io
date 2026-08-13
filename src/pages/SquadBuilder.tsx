@@ -9,6 +9,7 @@ import { TeamBadge } from '../components/badges'
 import { FixtureChips, FixtureNames } from '../components/FixtureChips'
 import { ShareFooter } from '../components/ShareFooter'
 import { SeasonPlanner } from '../components/SeasonPlanner'
+import { SeasonSpine } from '../components/SeasonSpine'
 import { SquadLab } from '../components/SquadLab'
 import { SquadAnalysis } from '../components/SquadAnalysis'
 import { SquadFixtures } from '../components/SquadFixtures'
@@ -31,6 +32,7 @@ import { useDiffScale } from '../lib/fixtureRuns'
 import { usePlans, weeksKey } from '../lib/plans'
 import { useAvailability, availBadge, availFor, SEV_COLOUR, type Availability } from '../lib/availability'
 import { xpForGw, useXpModel, useMarketOdds, useShotProfiles } from '../lib/xp'
+import { bestCaptainByGw } from '../lib/spine'
 import { usePlanner } from '../lib/usePlanner'
 import { CHIP_LABEL, type Chip } from '../lib/planner'
 import { teamLabel, playerHref } from '../lib/util'
@@ -403,6 +405,44 @@ export default function SquadBuilder() {
   const liveBestXI = useMemo(() => bestElevenScore(liveChosen), [liveChosen])
   const liveGw = complete ? planner.gw : buildGw
 
+  /* ── the season spine's three inputs ──────────────────────────────────
+     Twelve weeks: the half-season the fixtures page settled on as a planning
+     unit, and as many columns as a phone carries with a name still legible
+     in the cell. */
+  const spineGws = useMemo(
+    () => planner.gws.filter((g) => g >= buildGw).slice(0, 12),
+    [planner.gws, buildGw],
+  )
+  /* Bar heights: the XI's projection in each week of the window, captain
+     doubled, because that is the score the week actually returns. Keyed on
+     the plan's revision — squadAtGw and weekAt are fresh closures every
+     render, so nothing else in the planner can be memoised against. */
+  const spineXp = useMemo(() => {
+    const out = new Map<number, number>()
+    if (!complete) return out
+    for (const g of spineGws) {
+      const week = planner.weekAt(g)
+      const xi = week?.xi?.length ? week.xi : planner.squadAtGw(g).slice(0, 11)
+      let total = 0
+      for (const el of xi) {
+        const r = byEl.get(el)
+        if (!r) continue
+        const v = xpForGw(r, g, fixtureEase, avail, listXpModel, listMarket, listProfiles) ?? 0
+        total += el === week?.captain ? v * 2 : v
+      }
+      out.set(g, total)
+    }
+    return out
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spineGws, complete, planner.revision, byEl, fixtureEase, avail, listXpModel, listMarket, listProfiles])
+
+  const spineBest = useMemo(
+    () => (complete && spineGws.length
+      ? bestCaptainByGw(pool, spineGws, fixtureEase, avail, listXpModel, listMarket, listProfiles)
+      : undefined),
+    [complete, spineGws, pool, fixtureEase, avail, listXpModel, listMarket, listProfiles],
+  )
+
   /* Expected points for the gameweek you are actually picking. Cached because
      the market list re-renders on every keystroke in the search box and the
      projection is not free. */
@@ -616,9 +656,29 @@ export default function SquadBuilder() {
         {/* The board — the same object from an empty squad to a full one:
             unfilled places are just empty slots you tap to fill. */}
         <div className="min-w-0">
+          {/* The spine sits above the board because it is the question the
+              board answers: which week am I looking at, and what does the
+              plan do either side of it. Only with a full fifteen — the rows
+              are the squad, and there is nothing to draw without one. */}
+          {complete && (
+            <SeasonSpine
+              state={planner.state}
+              byEl={byEl}
+              fixtureEase={fixtureEase}
+              gws={spineGws}
+              gw={planner.gw}
+              onPickGw={planner.setGw}
+              weekXp={spineXp}
+              bestCaptain={spineBest}
+              avail={avail}
+              model={listXpModel}
+              market={listMarket}
+              profiles={listProfiles}
+            />
+          )}
           <SeasonPlanner
             planner={planner} byEl={byEl} pool={pool} fixtureEase={fixtureEase}
-            metric={metric} avail={avail}
+            metric={metric} avail={avail} spineAbove={complete}
             boardOverlay={<MetricChips metric={metric} onChange={setMetric} />}
             /* Share acts on the board — it photographs exactly this — so it
                lives on the board, in the corner opposite the toggle. Same dark

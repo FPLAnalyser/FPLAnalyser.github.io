@@ -24,6 +24,10 @@ const STORE = 'fpl_planner'
 
 export interface Planner {
   ready: boolean
+  /** The plan itself. Read it only when the SHAPE of the plan is the
+   *  subject — the season spine needs the transfer list to work out which
+   *  slot changed hands when. Everything else should use the answers below. */
+  state: PlannerState
   gw: number
   gws: number[]
   setGw: (g: number) => void
@@ -298,6 +302,10 @@ export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey, o
 
   return {
     ready, gw, gws, setGw, startGw, week, squad, posOf, spend,
+    /* The whole plan, for the one reader that needs its shape rather than
+       its answers: the season spine draws fifteen SLOTS across the window,
+       and a slot's history only exists in the transfer list. */
+    state,
     /* The plan as it stands in some OTHER week. The gameweek strip needs every
        week at once to draw the road ahead, and reading one week at a time by
        stepping the board is exactly the navigation it exists to replace. */

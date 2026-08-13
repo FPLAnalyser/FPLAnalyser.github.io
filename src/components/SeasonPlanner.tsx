@@ -192,11 +192,13 @@ function useCardDrag(planner: Planner, enabled: boolean) {
   return { drag, start, suppressClick }
 }
 
-export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onSold, squadScore, onOpenSquadRating, partialSquad, onRemovePick, onPickSlot, footer, onFork, boardOverlay, boardOverlayLeft, toolbar }: {
+export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rating', avail, onSold, squadScore, onOpenSquadRating, partialSquad, onRemovePick, onPickSlot, footer, onFork, boardOverlay, boardOverlayLeft, toolbar, spineAbove }: {
   planner: Planner
   byEl: Map<number, RatingRow>
   pool: RatingRow[]
   fixtureEase: FixtureEaseRow[]
+  /** The season spine is drawn above the board, so the week strip stands down. */
+  spineAbove?: boolean
   /** What the card corner shows — rating, price or that week's xP. */
   metric?: 'rating' | 'price' | 'xp' | 'owned'
   avail?: Availability
@@ -452,14 +454,20 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
           {toolbar && <div className="ml-auto flex flex-wrap items-center gap-2">{toolbar}</div>}
         </div>
 
-        <GameweekStrip
+        {/* The season spine above the board says everything this strip said —
+            the week, its projection, how many hard fixtures — and says it
+            across twelve weeks instead of one row of tiles. Two of them is two
+            gameweek pickers stacked, so the strip stands down when the spine
+            is up. It is still the picker whenever there is no full fifteen for
+            the spine to draw. */}
+        {!spineAbove && <GameweekStrip
           planner={planner}
           byEl={byEl}
           engine={{ fixtureEase, avail, model: xpModel, market }}
           current={gw}
           onPick={setGw}
           ratingOf={ratingOf}
-        />
+        />}
 
         {/* The week's numbers, above the squad at every width. They spent a
             spell in the right-hand column, which read well beside the board
