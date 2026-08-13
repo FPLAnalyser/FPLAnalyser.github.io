@@ -56,9 +56,20 @@ const shotIds = CUTS[cutName]
 
 // Caption sizing differs per format: the vertical cut renders at 432 CSS px, so
 // a size tuned for the 1280px desktop layout would come out unreadably small.
+//
+// The vertical caption sits at the TOP. A lower third is conventional, but in
+// this layout the bottom of the frame holds the site's own tab bar, and the
+// Shorts/Reels/TikTok chrome (title, handle, action rail) covers the bottom
+// third on top of that — so a bottom caption collides twice, and in cut A it
+// landed squarely over the captain pick's name and xP.
 const CAPTION = formatName === 'vertical'
-  ? { px: 19, bottom: '24%', pad: '14px 16px', maxWidth: '86%' }
-  : { px: 30, bottom: '7%', pad: '18px 24px', maxWidth: '72%' }
+  ? { px: 20, edge: 'top', offset: '11%', pad: '14px 18px', maxWidth: '92%' }
+  : { px: 30, edge: 'bottom', offset: '7%', pad: '18px 24px', maxWidth: '72%' }
+
+// The drawn pointer belongs in the desktop cut only. A mouse cursor floating
+// over a phone-shaped mobile layout reads as a desktop screen recording that
+// has been cropped, which is exactly what these are not.
+const SHOW_CURSOR = formatName !== 'vertical'
 
 // ---------------------------------------------------------------- static server
 
@@ -108,7 +119,7 @@ function installDirector({ caption, text }) {
   cap.id = '__director_caption'
   cap.style.cssText = `
     position:absolute;left:50%;transform:translateX(-50%);
-    bottom:${caption.bottom};max-width:${caption.maxWidth};
+    ${caption.edge}:${caption.offset};max-width:${caption.maxWidth};
     padding:${caption.pad};box-sizing:border-box;
     font-family:'Manrope',system-ui,sans-serif;font-weight:700;
     font-size:${caption.px}px;line-height:1.28;letter-spacing:-0.01em;
@@ -347,7 +358,7 @@ for (const id of shotIds) {
     if (tSec < FADE) capOpacity = tSec / FADE
     else if (tSec > seconds - FADE) capOpacity = Math.max(0, (seconds - tSec) / FADE)
 
-    const p = pathAt(shot.cursor, t)
+    const p = SHOW_CURSOR ? pathAt(shot.cursor, t) : null
     const cursor = p ? { x: Math.round(p.fx * vw), y: Math.round(p.fy * vh) } : null
 
     let ring = null

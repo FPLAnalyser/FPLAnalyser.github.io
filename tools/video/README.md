@@ -74,6 +74,16 @@ The pointer is drawn, not real — screenshots do not capture the OS cursor, and
 as fake. Captions are drawn in the page in Manrope on the brand gold, because
 this ffmpeg has no `drawtext` filter.
 
+Two things differ in the vertical cuts, and both matter more than they sound:
+
+- **No pointer.** A mouse cursor floating over a phone-shaped mobile layout
+  reads as a cropped desktop recording, which is the one thing these are not.
+- **Caption at the top, not a lower third.** The bottom of a vertical frame
+  already holds the site's own tab bar, and Shorts/Reels/TikTok stack their
+  title, handle and action rail over the bottom third on top of that. A bottom
+  caption collides twice — in cut A it sat squarely over the captain pick's
+  name and xP, hiding the single most persuasive number in the shot.
+
 ## Limits
 
 - **WebM/VP8 only.** No H.264, so no MP4. YouTube accepts WebM directly, for
