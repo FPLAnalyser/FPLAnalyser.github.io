@@ -66,6 +66,14 @@ jobs:
           VITE_PREVIEW: ${{ github.ref_name }}
           # VITE_GOATCOUNTER intentionally omitted — previews count nothing.
 
+      # PREVIEW ONLY — deploy.yml has no equivalent step, so nothing in
+      # mockups/ can ever reach fplanalyser.co.uk. The design prototypes are
+      # static HTML that Vite does not know about; copying them after the
+      # build serves each one at /mockups/<name>.html on the preview host,
+      # which is where you want to open them on a real phone.
+      - name: Carry the design mockups
+        run: cp -r mockups dist/mockups
+
       - name: Make it unpublishable to search engines
         run: |
           set -euo pipefail
