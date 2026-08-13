@@ -413,18 +413,29 @@ export default function SquadBuilder() {
      Twelve weeks: the half-season the fixtures page settled on as a planning
      unit, and as many columns as a phone carries with a name still legible
      in the cell. */
-  const spineGws = useMemo(() => {
-    const all = planner.gws.filter((g) => g >= buildGw)
-    if (all.length <= SPINE_WEEKS) return all
-    /* The window SLIDES with the board. Fixed at the first twelve, stepping
-       the squad to GW13 left the spine showing a season that had already
-       ended — the selected week simply was not on it. Keep the chosen week
-       in view with a few behind it for context, and stop at the end rather
-       than running off it. */
-    const i = Math.max(0, all.indexOf(planner.gw))
-    const start = Math.min(Math.max(0, i - 4), all.length - SPINE_WEEKS)
-    return all.slice(start, start + SPINE_WEEKS)
-  }, [planner.gws, buildGw, planner.gw])
+  /* The window is REMEMBERED, not recomputed from the selection. Deriving it
+     from the selected week meant every click re-centred the strip, so the
+     column you tapped slid out from under your finger and the one you landed
+     on was somewhere else — clicking forward and clicking back both moved the
+     week you had just chosen. It only moves when the chosen week is not on
+     screen, and then by the least it can. */
+  const spineAll = useMemo(() => planner.gws.filter((g) => g >= buildGw), [planner.gws, buildGw])
+  const [spineStart, setSpineStart] = useState(0)
+  useEffect(() => {
+    const i = spineAll.indexOf(planner.gw)
+    if (i < 0) return
+    setSpineStart((cur) => {
+      const max = Math.max(0, spineAll.length - SPINE_WEEKS)
+      const from = Math.min(cur, max)
+      if (i < from) return i                                  // stepped off the left
+      if (i > from + SPINE_WEEKS - 1) return Math.min(i - SPINE_WEEKS + 1, max)
+      return from                                             // already in view: hold still
+    })
+  }, [planner.gw, spineAll])
+  const spineGws = useMemo(
+    () => spineAll.slice(spineStart, spineStart + SPINE_WEEKS),
+    [spineAll, spineStart],
+  )
   /* Bar heights: the XI's projection in each week of the window, captain
      doubled, because that is the score the week actually returns. Keyed on
      the plan's revision — squadAtGw and weekAt are fresh closures every
@@ -447,6 +458,28 @@ export default function SquadBuilder() {
     return out
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spineGws, complete, planner.revision, byEl, fixtureEase, avail, listXpModel, listMarket, listProfiles])
+
+  /* The plan's own decisions for each week in the window. Keyed on the plan
+     revision for the reason the planner's own comment gives: weekAt is a
+     fresh closure every render, so nothing built from it can be memoised on
+     the function itself. */
+  const spinePlan = useMemo(() => {
+    const xi = new Map<number, number[]>()
+    const captain = new Map<number, number | null>()
+    const chip = new Map<number, string | null>()
+    const movesIn = new Map<number, number>()
+    for (const g of spineGws) {
+      const w = planner.weekAt(g)
+      if (!w) continue
+      if (w.xi?.length) xi.set(g, w.xi)
+      captain.set(g, w.captain ?? null)
+      chip.set(g, w.chip ?? null)
+      const n = (w.transfers ?? []).filter((t) => t.in != null).length
+      if (n) movesIn.set(g, n)
+    }
+    return { xi, captain, chip, movesIn }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spineGws, planner.revision])
 
   const spineBest = useMemo(
     () => (complete && spineGws.length
@@ -681,6 +714,10 @@ export default function SquadBuilder() {
           onPickGw={planner.setGw}
           weekXp={spineXp}
           bestCaptain={spineBest}
+          xiByGw={spinePlan.xi}
+          captainByGw={spinePlan.captain}
+          chipByGw={spinePlan.chip}
+          movesByGw={spinePlan.movesIn}
           avail={avail}
           model={listXpModel}
           market={listMarket}

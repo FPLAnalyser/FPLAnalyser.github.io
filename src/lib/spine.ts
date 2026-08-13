@@ -136,6 +136,19 @@ export interface SpineCell {
   /** The number this cell shows in the current mode; null in fixture mode. */
   value: number | null
   blank: boolean
+  /** The question does not apply to this shirt — a forward has no clean sheet
+   *  to keep and a keeper has no defensive-contribution threshold to clear.
+   *  A zero would read as "unlikely" when the truth is "not a thing". */
+  na: boolean
+}
+
+/** Does this mode ask a question this position can answer? Clean sheets pay
+ *  keepers, defenders and (one point) midfielders, never forwards; the
+ *  defensive-contribution threshold exists for outfielders only. */
+export function modeApplies(mode: SpineMode, pos: string): boolean {
+  if (mode === 'cs') return pos !== 'FWD'
+  if (mode === 'dc') return pos !== 'GKP'
+  return true
 }
 
 /** How a mode's number reads. Clean sheets and defensive contribution are
@@ -145,6 +158,36 @@ export function formatCell(mode: SpineMode, v: number | null): string {
   if (v == null) return '—'
   if (mode === 'cs' || mode === 'dc') return `${Math.round(v * 100)}%`
   return v.toFixed(1)
+}
+
+/* ── how good is that number ─────────────────────────────────────────────
+   A grid of numbers you have to read one at a time is a table, not an
+   instrument. Each mode gets bands so a column can be scanned: red is a week
+   to worry about, green a week to build around. The cuts are FPL judgements,
+   not statistics — three points from a starter is a bad week, six is a good
+   one — and they live here so every view agrees on what "good" means. */
+export type Tone = 'bad' | 'weak' | 'ok' | 'good' | 'elite'
+
+const BANDS: Record<Exclude<SpineMode, 'fix'>, [number, number, number, number]> = {
+  //        bad below | weak below | good above | elite above
+  /* Under three points from a man you are starting is a bad week — that cut
+     is the one that matters and everything else is spaced around it. The
+     first pass put the amber band at 4.5 and turned an ordinary week amber:
+     104 of 180 cells, which is a warning colour saying nothing. */
+  xp: [3, 4, 5.5, 7],
+  cs: [0.2, 0.3, 0.45, 0.6],
+  gi: [0.25, 0.4, 0.6, 0.85],
+  dc: [0.2, 0.35, 0.5, 0.65],
+}
+
+export function toneOf(mode: SpineMode, v: number | null): Tone | null {
+  if (mode === 'fix' || v == null) return null
+  const [bad, weak, good, elite] = BANDS[mode]
+  if (v >= elite) return 'elite'
+  if (v >= good) return 'good'
+  if (v >= weak) return 'ok'
+  if (v >= bad) return 'weak'
+  return 'bad'
 }
 
 /** One player, one week, in whichever language the grid is currently
@@ -160,17 +203,20 @@ export function spineCell(
   market: MarketOdds | null,
   profiles: ShotProfiles | null,
 ): SpineCell {
-  if (!r) return { fixture: '', fdr: 3, value: null, blank: true }
+  if (!r) return { fixture: '', fdr: 3, value: null, blank: true, na: false }
   const fixes = fixtureEase.filter((f) => f.team === r.team && f.gw === gw)
   const fixture = fixes
     .map((f) => (f.venue === 'H' ? f.opponent.toUpperCase() : f.opponent.toLowerCase()))
     .join('+')
   const fdr = fixes.length ? Math.round(fixes.reduce((a, f) => a + f.fdr, 0) / fixes.length) : 3
-  if (!fixes.length) return { fixture: '', fdr: 3, value: mode === 'fix' ? null : 0, blank: true }
-  if (mode === 'fix') return { fixture, fdr, value: null, blank: false }
+  if (!fixes.length) return { fixture: '', fdr: 3, value: null, blank: true, na: false }
+  if (mode === 'fix') return { fixture, fdr, value: null, blank: false, na: false }
+  if (!modeApplies(mode, String(r.position))) {
+    return { fixture, fdr, value: null, blank: false, na: true }
+  }
 
   const parts = xpPartsForGw(r, gw, fixtureEase, avail, model, market, profiles)
-  if (!parts) return { fixture, fdr, value: null, blank: false }
+  if (!parts) return { fixture, fdr, value: null, blank: false, na: false }
   /* Each mode answers its own question in its own unit, and three of them are
      not points. CS is the chance of a clean sheet, straight off the goals the
      team is expected to concede — as POINTS it was a forward's flat zero and a
@@ -183,7 +229,7 @@ export function spineCell(
     : mode === 'cs' ? Math.exp(-parts.lamAgainst)
     : mode === 'gi' ? parts.lamGoal + parts.lamAssist
     : Math.min(1, parts.dc / 2)
-  return { fixture, fdr, value, blank: false }
+  return { fixture, fdr, value, blank: false, na: false }
 }
 
 /** The scale a heat view colours against: modes have wildly different ranges
