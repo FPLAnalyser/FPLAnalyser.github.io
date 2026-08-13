@@ -184,6 +184,10 @@ function glideTo(y: number) {
 const PRICE_MIN = 4.0
 const PRICE_MAX = 15.5 // a hair above the most expensive player so nobody is filtered out by default
 
+/** Weeks the spine draws at once: the half-season planning unit, and as
+ *  many columns as a phone carries with a name still legible in the cell. */
+const SPINE_WEEKS = 12
+
 export default function SquadBuilder() {
   const { data, error } = useCore()
   const navigate = useNavigate()
@@ -409,10 +413,18 @@ export default function SquadBuilder() {
      Twelve weeks: the half-season the fixtures page settled on as a planning
      unit, and as many columns as a phone carries with a name still legible
      in the cell. */
-  const spineGws = useMemo(
-    () => planner.gws.filter((g) => g >= buildGw).slice(0, 12),
-    [planner.gws, buildGw],
-  )
+  const spineGws = useMemo(() => {
+    const all = planner.gws.filter((g) => g >= buildGw)
+    if (all.length <= SPINE_WEEKS) return all
+    /* The window SLIDES with the board. Fixed at the first twelve, stepping
+       the squad to GW13 left the spine showing a season that had already
+       ended — the selected week simply was not on it. Keep the chosen week
+       in view with a few behind it for context, and stop at the end rather
+       than running off it. */
+    const i = Math.max(0, all.indexOf(planner.gw))
+    const start = Math.min(Math.max(0, i - 4), all.length - SPINE_WEEKS)
+    return all.slice(start, start + SPINE_WEEKS)
+  }, [planner.gws, buildGw, planner.gw])
   /* Bar heights: the XI's projection in each week of the window, captain
      doubled, because that is the score the week actually returns. Keyed on
      the plan's revision — squadAtGw and weekAt are fresh closures every
@@ -652,30 +664,34 @@ export default function SquadBuilder() {
           where a 1440 screen lands and where the lab's five tiles reach 124px
           each — enough for the longest thing one ever says, a captain's name,
           which needed 103px of the 98 it had. */}
+          {/* FULL WIDTH, above the two columns rather than inside the left one.
+          It is twelve columns of grid plus a name stub; squeezed into the
+          board's column beside a 400–680px panel it had room for nine of
+          them, so the instrument that is supposed to show the season could
+          not show the season. It answers the question the board below then
+          works on — which week am I looking at — so it sits above both.
+          Only with a full fifteen: the rows ARE the squad. */}
+      {complete && (
+        <SeasonSpine
+          state={planner.state}
+          byEl={byEl}
+          fixtureEase={fixtureEase}
+          gws={spineGws}
+          gw={planner.gw}
+          onPickGw={planner.setGw}
+          weekXp={spineXp}
+          bestCaptain={spineBest}
+          avail={avail}
+          model={listXpModel}
+          market={listMarket}
+          profiles={listProfiles}
+        />
+      )}
+
       <div className="no-anchor grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_520px] wide:grid-cols-[minmax(0,1fr)_680px] lg:items-start">
         {/* The board — the same object from an empty squad to a full one:
             unfilled places are just empty slots you tap to fill. */}
         <div className="min-w-0">
-          {/* The spine sits above the board because it is the question the
-              board answers: which week am I looking at, and what does the
-              plan do either side of it. Only with a full fifteen — the rows
-              are the squad, and there is nothing to draw without one. */}
-          {complete && (
-            <SeasonSpine
-              state={planner.state}
-              byEl={byEl}
-              fixtureEase={fixtureEase}
-              gws={spineGws}
-              gw={planner.gw}
-              onPickGw={planner.setGw}
-              weekXp={spineXp}
-              bestCaptain={spineBest}
-              avail={avail}
-              model={listXpModel}
-              market={listMarket}
-              profiles={listProfiles}
-            />
-          )}
           <SeasonPlanner
             planner={planner} byEl={byEl} pool={pool} fixtureEase={fixtureEase}
             metric={metric} avail={avail} spineAbove={complete}

@@ -72,6 +72,25 @@ export function buildSlots(state: PlannerState): Slot[] {
   return slots
 }
 
+const POS_ORDER: Record<string, number> = { GKP: 0, DEF: 1, MID: 2, FWD: 3 }
+
+/** Slots in team-sheet order — keepers, defenders, midfielders, forwards.
+ *  `base` arrives in whatever order the squad was picked in, which put a
+ *  forward between two defenders and made the grid unreadable as a squad.
+ *  Ordered on the FIRST holder so the rows never reshuffle as you scrub
+ *  through the weeks; a transfer is a slot changing hands, not moving. */
+export function orderSlots(slots: Slot[], byEl: Map<number, RatingRow>): Slot[] {
+  return [...slots].sort((a, b) => {
+    const pa = byEl.get(a.stints[0]?.element ?? -1)
+    const pb = byEl.get(b.stints[0]?.element ?? -1)
+    const oa = POS_ORDER[String(pa?.position ?? '')] ?? 9
+    const ob = POS_ORDER[String(pb?.position ?? '')] ?? 9
+    if (oa !== ob) return oa - ob
+    // Within a line, the expensive man first — that is how a team sheet reads.
+    return (num(pb ?? {}, 'price') ?? 0) - (num(pa ?? {}, 'price') ?? 0)
+  })
+}
+
 /** The gameweek a stint begins, for every slot that changes hands — what the
  *  grid draws as a seam, and the name bands hang off. */
 export interface Handover {
@@ -97,7 +116,17 @@ export function handovers(slots: Slot[]): Handover[] {
 export type SpineMode = 'fix' | 'xp' | 'cs' | 'gi' | 'dc'
 
 export const MODE_LABEL: Record<SpineMode, string> = {
-  fix: 'Fix', xp: 'xP', cs: 'CS', gi: 'xGI', dc: 'DC',
+  fix: 'Fix', xp: 'xP', cs: 'CS%', gi: 'xGI', dc: 'DC%',
+}
+
+/** What the numbers in each mode actually are, said on the page rather than
+ *  left for a reader to infer from a decimal point. */
+export const MODE_NOTE: Record<SpineMode, string> = {
+  fix: 'opponent, upper case at home',
+  xp: 'projected points that week',
+  cs: 'chance his team keeps a clean sheet',
+  gi: 'expected goals + assists',
+  dc: 'chance he hits the defensive-contribution threshold',
 }
 
 export interface SpineCell {
@@ -107,6 +136,15 @@ export interface SpineCell {
   /** The number this cell shows in the current mode; null in fixture mode. */
   value: number | null
   blank: boolean
+}
+
+/** How a mode's number reads. Clean sheets and defensive contribution are
+ *  CHANCES — "0.4" in a cell is meaningless where "42%" is the whole answer —
+ *  so they carry their own formatter rather than every caller guessing. */
+export function formatCell(mode: SpineMode, v: number | null): string {
+  if (v == null) return '—'
+  if (mode === 'cs' || mode === 'dc') return `${Math.round(v * 100)}%`
+  return v.toFixed(1)
 }
 
 /** One player, one week, in whichever language the grid is currently
@@ -133,13 +171,18 @@ export function spineCell(
 
   const parts = xpPartsForGw(r, gw, fixtureEase, avail, model, market, profiles)
   if (!parts) return { fixture, fdr, value: null, blank: false }
+  /* Each mode answers its own question in its own unit, and three of them are
+     not points. CS is the chance of a clean sheet, straight off the goals the
+     team is expected to concede — as POINTS it was a forward's flat zero and a
+     keeper's 1.4, which says nothing about the fixture. DC is the chance of
+     hitting the defensive-contribution threshold: the engine prices that at
+     two points a hit, so halving its points recovers the probability. xGI is
+     expected goal involvement, which is what the letters mean — xG plus xA,
+     not the points they happen to be worth to this shirt. */
   const value = mode === 'xp' ? sumParts(parts)
-    : mode === 'cs' ? parts.cs
-    // Attacking involvement in points, not in expected goals: the grid is a
-    // points instrument, and goals and assists are worth different amounts to
-    // different shirts.
-    : mode === 'gi' ? parts.goal + parts.assist
-    : parts.dc
+    : mode === 'cs' ? Math.exp(-parts.lamAgainst)
+    : mode === 'gi' ? parts.lamGoal + parts.lamAssist
+    : Math.min(1, parts.dc / 2)
   return { fixture, fdr, value, blank: false }
 }
 
@@ -147,7 +190,8 @@ export function spineCell(
  *  (a keeper's clean-sheet points against a forward's goal points), so each
  *  gets its own top rather than a shared one that flattens four of them. */
 export function heatTop(mode: SpineMode): number {
-  return mode === 'xp' ? 8 : mode === 'gi' ? 5 : mode === 'cs' ? 3 : 2
+  // CS and DC are probabilities now, so their scale is 1, not a points range.
+  return mode === 'xp' ? 8 : mode === 'gi' ? 1.2 : 1
 }
 
 /* ── the armband marker ──────────────────────────────────────────────── */

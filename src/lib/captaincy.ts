@@ -67,6 +67,9 @@ export interface CapOutlook {
   /** The doubled score at the 90th and 10th percentile of the distribution. */
   ceiling: number
   floor: number
+  /** False when there is no component baseline to build a distribution from,
+   *  so haul, blank, ceiling and floor mean nothing and must not be shown. */
+  modelled: boolean
 }
 
 /** The week's points distribution, keyed on the DOUBLED score against its
@@ -214,7 +217,18 @@ export function capOutlook(
   const parts = xpPartsForGw(r, gw, fixtureEase, avail, model, market, profiles)
   if (!parts) return null
   const xp = sumParts(parts)
-  if (xp <= 0) return { xp: 0, haul: 0, blank: 1, ceiling: 0, floor: 0 }
+  if (xp <= 0) return { xp: 0, haul: 0, blank: 1, ceiling: 0, floor: 0, modelled: true }
+
+  /* Some players have no component baseline — a signing from abroad, a
+     promoted club's forward — and for them the engine falls back to a flat
+     projection dropped whole into `appearance`. Read as minutes points that
+     becomes "he plays, he scores one point", which put Isak on the board at
+     9.2 expected points with a 100% chance of blanking. There is no
+     distribution to be had here, so the honest answer is to say so rather
+     than compute one from a field that means something else. */
+  if (parts.p60 === 0 && parts.appearance > 0) {
+    return { xp, haul: 0, blank: 0, ceiling: 0, floor: 0, modelled: false }
+  }
 
   const dist = distributionFor(parts, String(r.position))
   const keys = [...dist.keys()].sort((x, y) => x - y)
@@ -233,7 +247,7 @@ export function capOutlook(
     }
     return keys[keys.length - 1] ?? 0
   }
-  return { xp, haul, blank, ceiling: at(0.9), floor: at(0.1) }
+  return { xp, haul, blank, ceiling: at(0.9), floor: at(0.1), modelled: true }
 }
 
 export interface CapRow {

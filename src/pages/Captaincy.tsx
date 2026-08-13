@@ -159,7 +159,7 @@ function Wide({ children }: { children: React.ReactNode }) {
 
 function Board({ board, gw }: { board: { rows: CapRow[]; field: number } | null; gw: number | null }) {
   if (!board || !board.rows.length) return <EmptyState>No projections for this gameweek yet.</EmptyState>
-  const rows = board.rows.slice(0, 12)
+  const rows = board.rows.slice(0, 10)
   return (
     <section>
       <Why>
@@ -182,8 +182,9 @@ function Board({ board, gw }: { board: { rows: CapRow[]; field: number } | null;
                 Haul <InfoTip text="12 or more after the armband." />
               </th>
               <th className="px-2 py-2 text-right">Blank</th>
-              <th className="px-2 py-2 text-right">Ceil / floor</th>
+              <th className="px-2 py-2 text-left">Ceiling / floor</th>
               <th className="px-2 py-2 text-right">Owned</th>
+              <th className="px-2 py-2 text-right">Cap %</th>
               <th className="px-2 py-2 text-right">
                 EO <InfoTip text="Ownership times one plus the modelled captaincy share. FPL does not publish captaincy before a deadline, so that share is modelled from projection and ownership, not observed." />
               </th>
@@ -206,12 +207,34 @@ function Board({ board, gw }: { board: { rows: CapRow[]; field: number } | null;
                 <td className="px-2 py-1.5 text-right font-extrabold tabular-nums text-ink">
                   {one(r.outlook.xp * 2)}
                 </td>
-                <td className="px-2 py-1.5 text-right tabular-nums text-good">{pc(r.outlook.haul)}</td>
-                <td className="px-2 py-1.5 text-right tabular-nums text-ink-2">{pc(r.outlook.blank)}</td>
+                <td className="px-2 py-1.5 text-right tabular-nums text-good">
+                  {r.outlook.modelled ? pc(r.outlook.haul) : '—'}
+                </td>
                 <td className="px-2 py-1.5 text-right tabular-nums text-ink-2">
-                  {r.outlook.ceiling} / {r.outlook.floor}
+                  {r.outlook.modelled ? pc(r.outlook.blank) : '—'}
+                </td>
+                {/* The shape of the bet, drawn: haul from the left in green,
+                    blank from the right in red, and the gap between them the
+                    ordinary weeks. Two numbers side by side say the same
+                    thing and nobody reads them; a bar is comparable down the
+                    column at a glance. */}
+                <td className="px-2 py-1.5">
+                  {r.outlook.modelled ? (
+                    <span
+                      className="flex h-1.5 min-w-[90px] overflow-hidden rounded-sm bg-surface-3"
+                      title={`ceiling ${r.outlook.ceiling} · floor ${r.outlook.floor} (captained)`}
+                    >
+                      <i className="block h-full rounded-sm bg-good" style={{ width: `${r.outlook.haul * 100}%` }} />
+                      <i className="ml-auto block h-full rounded-sm bg-bad/65" style={{ width: `${r.outlook.blank * 100}%` }} />
+                    </span>
+                  ) : (
+                    <span className="text-[10.5px] text-ink-3" title="No component baseline for this player yet — his projection is a flat estimate, so there is no distribution behind it.">
+                      no baseline
+                    </span>
+                  )}
                 </td>
                 <td className="px-2 py-1.5 text-right tabular-nums text-ink-2">{r.owned.toFixed(0)}%</td>
+                <td className="px-2 py-1.5 text-right tabular-nums text-ink-2">{pc(r.capShare)}</td>
                 <td className="px-2 py-1.5 text-right tabular-nums text-ink-2">{r.eo.toFixed(0)}%</td>
                 <td className={`px-2 py-1.5 text-right font-extrabold tabular-nums ${r.edge >= 0 ? 'text-good' : 'text-bad'}`}>
                   {signed(r.edge)}
@@ -221,10 +244,12 @@ function Board({ board, gw }: { board: { rows: CapRow[]; field: number } | null;
           </tbody>
         </table>
       </Wide>
-      <p className="mt-2 text-[11.5px] text-ink-3">
-        Haul and blank come from the full points distribution, not a rule of thumb: goals, assists,
-        goals conceded and the sixty minutes are drawn as random; bonus, defensive contribution,
-        saves and cards enter at their expected value, which makes both tails mildly conservative.
+      <p className="mt-2 text-[11.5px] leading-relaxed text-ink-3">
+        Haul = 12+ as captain · blank = 4 or fewer · EO = ownership × (1 + captaincy share). FPL
+        does not publish captaincy before the deadline, so that share is modelled from expected
+        points weighted by ownership, not observed. Haul and blank come from the full points
+        distribution: whether he features, whether he lasts the hour, goals, assists and goals
+        conceded are drawn as random, and bonus is paid only when it is earned.
       </p>
     </section>
   )

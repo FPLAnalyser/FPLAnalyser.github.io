@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { str } from '../lib/rows'
 import {
-  buildSlots, handovers, memberAt, spineCell, heatTop, weekRisk,
-  MODE_LABEL, type SpineMode, type Slot,
+  buildSlots, orderSlots, handovers, memberAt, spineCell, heatTop, weekRisk, formatCell,
+  MODE_LABEL, MODE_NOTE, type SpineMode, type Slot,
 } from '../lib/spine'
 import type { Availability } from '../lib/availability'
 import type { XpModel, MarketOdds, ShotProfiles } from '../lib/xp'
@@ -28,6 +28,12 @@ import type { FixtureEaseRow, RatingRow } from '../lib/types'
    ════════════════════════════════════════════════════════════════════════ */
 
 const MODES: SpineMode[] = ['fix', 'xp', 'cs', 'gi', 'dc']
+
+/** Tallest bar, in pixels. At 46 the chart was a rumour — a 20% difference
+ *  between two weeks was nine pixels, which is not a difference anyone can
+ *  see. The column is the primary instrument on the page and is sized like
+ *  one. */
+const BAR_H = 104
 
 /** Difficulty as ink. d3 is lifted off the mid-grey it shares with the
  *  chrome, or a run of average fixtures reads as a run of empty cells. */
@@ -67,7 +73,10 @@ export function SeasonSpine({
   const [mode, setMode] = useState<SpineMode>('fix')
   const [names, setNames] = useState(true)
 
-  const slots = useMemo(() => buildSlots(state), [state])
+  // Ordered FIRST, then handovers, because a handover is keyed on the slot's
+  // index — read them off the unordered array and every seam lands on the
+  // wrong row.
+  const slots = useMemo(() => orderSlots(buildSlots(state), byEl), [state, byEl])
   const moves = useMemo(() => handovers(slots), [slots])
 
   const top = Math.max(...gws.map((g) => weekXp.get(g) ?? 0), 1)
@@ -89,7 +98,7 @@ export function SeasonSpine({
     return out
   }, [bestCaptain, gws, slots])
 
-  const cols = `minmax(0,7rem) repeat(${gws.length}, minmax(2.6rem, 1fr))`
+  const cols = `minmax(0,8.5rem) repeat(${gws.length}, minmax(3.1rem, 1fr))`
 
   return (
     <section className="mb-3 overflow-hidden rounded-2xl border border-line bg-bg-0">
@@ -143,24 +152,24 @@ export function SeasonSpine({
                   on ? 'bg-accent/15 ring-1 ring-accent/45 ring-inset' : 'hover:bg-white/5'
                 }`}
               >
-                <span className={`text-center text-[11px] font-extrabold ${on ? 'text-accent-2' : 'text-ink-2'}`}>
+                <span className={`text-center text-[12.5px] font-extrabold tabular-nums ${on ? 'text-accent-2' : 'text-ink-2'}`}>
                   {xp.toFixed(1)}
                 </span>
                 <span
                   className={`rounded-t-[3px] border border-b-0 ${
                     on ? 'border-transparent bg-accent' : 'border-accent/40 bg-accent/25'
                   }`}
-                  style={{ height: `${Math.max(4, (xp / top) * 46)}px` }}
+                  style={{ height: `${Math.max(6, (xp / top) * BAR_H)}px` }}
                 />
                 {/* Diverging: easy grows from the left, hard from the right,
                     and they can meet but never cross — fifteen is fifteen. */}
                 {rk && rk.total > 0 && (
-                  <span className="flex h-[3px] justify-between rounded-sm bg-surface-3">
+                  <span className="flex h-[5px] justify-between rounded-sm bg-surface-3">
                     <i className="block h-full rounded-sm bg-good" style={{ width: `${(rk.easy / rk.total) * 100}%` }} />
                     <i className="block h-full rounded-sm bg-bad/80" style={{ width: `${(rk.hard / rk.total) * 100}%` }} />
                   </span>
                 )}
-                <span className={`pb-px text-center text-[10px] font-semibold ${on ? 'font-extrabold text-accent' : 'text-ink-3'}`}>
+                <span className={`pb-px text-center text-[11px] font-semibold ${on ? 'font-extrabold text-accent' : 'text-ink-3'}`}>
                   GW{g}
                   {holdsBest.has(g) && (
                     <i
@@ -200,12 +209,30 @@ export function SeasonSpine({
         )}
       </div>
 
-      <p className="flex flex-wrap items-center gap-x-1.5 px-3 pb-2 text-[11px] text-ink-3">
-        <span>ABC home · abc away</span>
-        {open && <span>· difficulty is the text colour</span>}
-        {open && <span className="text-good">· ▸ green edge in</span>}
-        {open && <span className="text-bad">· red edge out</span>}
-      </p>
+      {/* A key, because none of this is self-evident. The diverging bar and
+          the armband badge were both shipped with nothing on the page saying
+          what they meant, which makes them decoration rather than data. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 pb-2 text-[11px] text-ink-3">
+        <span className="flex items-center gap-1.5">
+          <i className="h-[5px] w-4 rounded-sm bg-good" />easy fixtures that week
+        </span>
+        <span className="flex items-center gap-1.5">
+          <i className="h-[5px] w-4 rounded-sm bg-bad/80" />hard ones, and blanks
+        </span>
+        <span className="flex items-center gap-1.5">
+          <i className="rounded-full bg-accent px-[3px] text-[7.5px] font-extrabold text-accent-contrast not-italic">C</i>
+          you own the best captain in the game
+        </span>
+        {open && (
+          <>
+            <span>ABC home · abc away</span>
+            <span>difficulty is the text colour</span>
+            <span className="text-good">▸ green edge in</span>
+            <span className="text-bad">red edge out</span>
+            <span className="text-ink-2">{MODE_LABEL[mode]} — {MODE_NOTE[mode]}</span>
+          </>
+        )}
+      </div>
 
       <button
         onClick={() => setOpen((v) => !v)}
@@ -257,21 +284,21 @@ function SlotRow({
           is just more pairs on one band, so a wildcard costs one thin row per
           slot instead of a row per player. */}
       {names && here.length > 0 && (
-        <span className="relative col-start-2 -col-end-1 h-[11px]">
+        <span className="relative col-start-2 -col-end-1 h-[12px]">
           {here.map((m) => {
             const at = gws.indexOf(m.gw)
             return (
               <span key={m.gw}>
                 {at > 0 && (
                   <span
-                    className="absolute top-0 text-[8.5px] font-bold whitespace-nowrap text-bad"
+                    className="absolute top-0 text-[9.5px] font-bold whitespace-nowrap text-bad"
                     style={{ right: `${((gws.length - at) / gws.length) * 100}%` }}
                   >
                     {nameOf(m.out)} ◂
                   </span>
                 )}
                 <span
-                  className="absolute top-0 text-[8.5px] font-bold whitespace-nowrap text-good"
+                  className="absolute top-0 text-[9.5px] font-bold whitespace-nowrap text-good"
                   style={{ left: `${(at / gws.length) * 100}%` }}
                 >
                   ▸ {nameOf(m.in)}
@@ -281,8 +308,8 @@ function SlotRow({
           })}
         </span>
       )}
-      <span className="sticky left-0 z-[3] flex min-w-0 items-center gap-1.5 bg-bg-0 pr-2 pl-3 text-[11px] whitespace-nowrap text-ink-2">
-        <span className="rounded-sm border border-line px-[3px] py-px text-[8.5px] font-extrabold tracking-[0.07em] text-ink-3">
+      <span className="sticky left-0 z-[3] flex min-w-0 items-center gap-1.5 bg-bg-0 pr-2 pl-3 text-[12.5px] whitespace-nowrap text-ink-2">
+        <span className="rounded-sm border border-line px-[3px] py-px text-[9.5px] font-extrabold tracking-[0.07em] text-ink-3">
           {first ? String(first.position) : '—'}
         </span>
         <span className="min-w-0 overflow-hidden text-ellipsis">{nameOf(holder)}</span>
@@ -293,9 +320,7 @@ function SlotRow({
         const cell = spineCell(r, g, mode, fixtureEase, avail, model, market, profiles)
         const arriving = here.some((m) => m.gw === g)
         const leaving = here.some((m) => m.gw === g + 1)
-        const text = mode === 'fix' || cell.value == null
-          ? cell.fixture || '—'
-          : cell.value.toFixed(1)
+        const text = mode === 'fix' ? (cell.fixture || '—') : formatCell(mode, cell.value)
         const ink = mode === 'fix'
           ? FDR_INK[cell.fdr] ?? 'text-ink-2'
           : HEAT_INK[Math.min(4, Math.floor((cell.value ?? 0) / (heatTop(mode) / 4)))]
@@ -312,7 +337,7 @@ function SlotRow({
           <span
             key={g}
             title={r ? `${str(r, 'web_name')} · GW${g}` : undefined}
-            className={`flex h-[17px] items-center justify-center rounded-[3px] bg-[#0b0c0f] text-center text-[8.5px] font-extrabold tracking-[0.02em] ${ink} ${
+            className={`flex h-[25px] items-center justify-center rounded-[4px] bg-[#0b0c0f] text-center text-[10.5px] font-extrabold tracking-[0.02em] ${ink} ${
               g === gw ? 'outline outline-[1.5px] -outline-offset-1 outline-white/60' : ''
             } ${cell.blank ? 'opacity-40' : ''}`}
             style={{ boxShadow: shadow }}
