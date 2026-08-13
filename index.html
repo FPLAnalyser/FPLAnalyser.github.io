@@ -69,6 +69,62 @@
     });
   })();
 
+  // 1b) A blank page must never be silent. If the app has not mounted a few
+  //     seconds after load, put the collected errors ON SCREEN — the reader's
+  //     screen, which is the only place the failure is visible. A phone that
+  //     renders nothing gives its owner no way to tell anyone WHY, and a bug
+  //     nobody can describe is a bug nobody can fix.
+  //
+  //     Deliberately ES5 with no template literals, arrow functions or
+  //     optional chaining: this is the code that has to survive an engine too
+  //     old to parse the bundle, which is one of the things it exists to
+  //     report.
+  (function () {
+    var shown = false;
+    function report() {
+      if (shown) return;
+      var root = document.getElementById('root');
+      if (!root || root.childElementCount > 0) return;   // it mounted; nothing to say
+      shown = true;
+      var errs = (window.__errlog || []);
+      var html = '<div style="max-width:38rem;margin:0 auto;padding:24px 18px;'
+        + 'font:15px/1.6 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;color:#eef0f4">'
+        + '<h1 style="font-size:19px;margin:0 0 8px">This page did not start</h1>'
+        + '<p style="color:#a8acb3;margin:0 0 16px">The site loaded but the app failed to run on this device. '
+        + 'The detail below is what went wrong \u2014 a screenshot of it is enough to fix the cause.</p>';
+      if (errs.length) {
+        html += '<pre style="white-space:pre-wrap;word-break:break-word;background:#131519;border:1px solid #2a2d33;'
+          + 'border-radius:10px;padding:12px;font-size:12px;color:#e8907f;margin:0 0 16px">'
+          + errs.join('\n').replace(/[<>&]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]; })
+          + '</pre>';
+      } else {
+        html += '<p style="color:#a8acb3;margin:0 0 16px">No script error was recorded, which usually means the '
+          + 'browser could not parse the app at all.</p>';
+      }
+      html += '<pre style="white-space:pre-wrap;word-break:break-word;background:#131519;border:1px solid #2a2d33;'
+        + 'border-radius:10px;padding:12px;font-size:11px;color:#7e838b;margin:0 0 16px">'
+        + navigator.userAgent + '\n' + location.href + '</pre>'
+        + '<button id="__wipe" style="min-height:44px;padding:0 16px;border-radius:999px;border:1px solid #c9a227;'
+        + 'background:transparent;color:#ead188;font:600 15px system-ui">Clear this site and reload</button></div>';
+      root.innerHTML = html;
+      var b = document.getElementById('__wipe');
+      if (b) b.onclick = function () {
+        try {
+          if (window.caches && caches.keys) caches.keys().then(function (k) { k.forEach(function (n) { caches.delete(n); }); });
+          if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function (r) {
+            r.forEach(function (x) { x.unregister(); });
+            setTimeout(function () { location.reload(); }, 300);
+          }); else location.reload();
+        } catch (e) { location.reload(); }
+      };
+    }
+    if (window.addEventListener) {
+      window.addEventListener('load', function () { setTimeout(report, 6000); });
+      // Belt and braces: `load` never fires if a resource hangs.
+      setTimeout(report, 12000);
+    }
+  })();
+
   // 2) Start the core data downloads NOW, during HTML parse — the app's data
   //    layer picks these promises up, cutting the JS-download-then-fetch chain
   //    out of the critical path (worth seconds on a phone connection).
