@@ -209,9 +209,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 /* A one-week stint leaves the week he arrived in — both edges at once. */
 .cell.seam.out{box-shadow:inset 2.5px 0 0 var(--live), inset -2.5px 0 0 var(--alarm), inset 0 0 0 1px rgba(201,162,39,.28)}
 .band{grid-column:2/-1;position:relative;height:11px;margin:1px 0 0}
-.band span{position:absolute;top:0;font:700 8.5px/1.2 ui-sans-serif;color:var(--ink-3);white-space:nowrap}
+/* The band holds PAIRS now: the leaver in red, right-anchored over his last
+   fixture; the arrival in green, left-anchored over his first. They meet at
+   the seam the same way the cell edges do, so the handover reads name-to-name
+   as well as edge-to-edge. The old grey start-label went — the red one names
+   the early stretch better, from the end you are actually looking at. */
+.band span{position:absolute;top:0;font:700 8.5px/1.2 ui-sans-serif;white-space:nowrap}
 .band span.nw{color:var(--live)}
 .band span.nw::before{content:'\25B8 '}
+.band span.lv{color:var(--alarm)}
+.band span.lv::after{content:' \25C2'}
 
 /* xP heat: five steps of the accent, never the difficulty ramp — points and
    difficulty are different questions and must not share a colour language. */
@@ -337,8 +344,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   <p class="footnote"><b>Why the table never grows.</b> The rows are your fifteen
   <b>squad slots</b>, not players. A transfer is one row changing hands: a green edge marks the
   week, and the names ride in a thin band above the row, each sitting over the stretch it owns
-  &mdash; so Garner &rarr; Rice &rarr; Bruno &rarr; Saka is four labels on one band, and every
-  fixture stays visible. A wildcard is many handovers in one column &mdash; the one above makes
+  &mdash; so any chain is pairs of labels on one band &mdash; the leaver in <b>red over his last
+  fixture</b>, the arrival in <b>green over his first</b>, meeting at the seam like the cell
+  edges do &mdash; and every fixture stays visible. A wildcard is many handovers in one column &mdash; the one above makes
   <b>eight changes at GW9</b>, so you can judge the size honestly: eight name bands cost about
   90px, and the <b>Names</b> toggle folds them away when you want the grid back. Fifteen rows
   in August, fifteen in May.</p>
@@ -457,9 +465,20 @@ function drawRows() {
        Any chain length is just more labels on the same 11px band. */
     if (slot.seq.length > 1) {
       html += '<div class="stub"></div><div class="band">' + slot.seq.map((m, k) => {
-        const startIdx = Math.max(0, GWS.indexOf(Math.max(m.from, GWS[0])));
-        return '<span class="' + (k ? 'nw' : '') + '" style="left:' + (startIdx / GWS.length * 100).toFixed(1) + '%"' +
-          (k ? ' title="' + m.n + ' arrives in GW' + m.from + '"' : '') + '>' + m.n + '</span>';
+        let out = '';
+        if (k > 0) {
+          const startIdx = Math.max(0, GWS.indexOf(Math.max(m.from, GWS[0])));
+          out += '<span class="nw" style="left:' + (startIdx / GWS.length * 100).toFixed(1) + '%"' +
+            ' title="' + m.n + ' arrives in GW' + m.from + '">' + m.n + '</span>';
+        }
+        if (k < slot.seq.length - 1) {
+          const endIdx = GWS.indexOf(slot.seq[k + 1].from) - 1;
+          if (endIdx >= 0) {
+            out += '<span class="lv" style="right:' + ((GWS.length - endIdx - 1) / GWS.length * 100).toFixed(1) + '%"' +
+              ' title="' + m.n + '\u2019s last game is GW' + GWS[endIdx] + ' — sold in GW' + slot.seq[k + 1].from + '">' + m.n + '</span>';
+          }
+        }
+        return out;
       }).join('') + '</div>';
     }
     html += '<div class="stub"><span class="pos">' + slot.p + '</span><span class="nm2"><span>' + now.n + '</span></span></div>';
