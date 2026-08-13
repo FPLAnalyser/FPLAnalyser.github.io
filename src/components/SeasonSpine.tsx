@@ -52,6 +52,15 @@ const readCrests = (): boolean => {
   try { return localStorage.getItem(CRESTS_KEY) !== '0' } catch { return true }
 }
 
+/* THE LEFT COLUMN IS A WALL. Every cell of it — the Points label, the name
+   buttons, the blank cell on a transfer band — pins with `left-0` and paints
+   the card's own background over whatever has scrolled beneath it. That only
+   works if the paint has no holes in it, and it had two: a rounded left edge,
+   whose corner notches let the gold ring of the cell underneath show through,
+   and the 3px grid gap above and below each stub, which nothing was painting
+   at all. The negative margin spans the gap; the box is a wall, not a tile. */
+const STUB = 'sticky left-0 -my-[3px] bg-bg-0'
+
 /** Difficulty as ink. d3 is lifted off the mid-grey it shares with the
  *  chrome, or a run of average fixtures reads as a run of empty cells. */
 const FDR_INK: Record<number, string> = {
@@ -203,7 +212,7 @@ export function SeasonSpine({
 
       <div className="overflow-x-auto pt-2 pb-1.5">
         <div className="grid min-w-max gap-[3px] pr-3" style={{ gridTemplateColumns: cols }}>
-          <span className="sticky left-0 z-[3] flex items-center bg-bg-0 pr-2 pl-3 text-[9px] font-extrabold tracking-[0.11em] text-ink-3 uppercase">
+          <span className={`${STUB} z-[3] flex items-center pr-2 pl-3 text-[9px] font-extrabold tracking-[0.11em] text-ink-3 uppercase`}>
             Points
           </span>
           {gws.map((g) => {
@@ -418,7 +427,7 @@ function SlotRow({
               sticky and opaque; this row had nothing there to be opaque WITH,
               so the transfer names showed through the one column that must
               stay solid. */}
-          <span className="sticky left-0 z-[4] bg-bg-0" />
+          <span className={`${STUB} z-[4]`} />
           <span className="relative col-start-2 -col-end-1 h-[14px] overflow-hidden">
             {here.map((m) => {
               const at = gws.indexOf(m.gw)
@@ -448,7 +457,7 @@ function SlotRow({
         onClick={() => onFocus(index)}
         aria-pressed={focused}
         title={focused ? 'Show the rest of the squad again' : 'Show only this player'}
-        className={`sticky left-0 z-[3] flex min-w-0 items-center gap-1.5 rounded-l-md bg-bg-0 py-px pr-2 pl-3 text-left text-[12.5px] whitespace-nowrap transition ${
+        className={`${STUB} z-[3] flex min-w-0 items-center gap-1.5 py-px pr-2 pl-3 text-left text-[12.5px] whitespace-nowrap transition ${
           focused ? 'text-accent-2' : 'text-ink-2 hover:text-ink'
         }`}
       >
