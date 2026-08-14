@@ -99,4 +99,9 @@ bundle in Playwright) before theorising about why.
 - `docs/BACKLOG.md` — what is deliberately not blocking launch, and why
 - `docs/ROLLOUT_BRIEF.md` — the marketing/commercial brief
 - `docs/DOMAIN_CATEGORISATION.md` — corporate filters, and the Gambling risk
+- `docs/VIDEO.md` — what to upload where, with the copy
+- `tools/video/README.md` — films the built site and encodes it; the shot list
+  is `tools/video/shots.mjs`. Note it keeps the words "odds" and "bookmaker"
+  out of frame on purpose — see DOMAIN_CATEGORISATION above before reframing
+  a shot
 - `NEXT_PHASE_PLAN.md` — predates the React rebuild; history, not a plan
