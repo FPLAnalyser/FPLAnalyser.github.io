@@ -345,14 +345,16 @@ This used to say "I cannot record or encode video". That is no longer true:
 Playwright's Chromium and its bundled ffmpeg are both present, so
 `tools/video/render.mjs` produces finished, captioned video files.
 
+Output is H.264/AAC in an MP4, which plays and uploads everywhere including
+from a phone. The first version emitted VP8/WebM on the reasoning that YouTube
+accepts it — true from a desktop browser, useless from an iPhone, which will
+not play VP8 and will not even list the file in the YouTube app's picker.
+
 What still does not work here:
 
-- **No MP4.** The bundled ffmpeg has no H.264 encoder, so output is VP8/WebM.
-  YouTube takes WebM directly for normal uploads and Shorts. Instagram and
-  TikTok want MP4 — convert those two on your own machine.
-- **No audio.** No audio encoders are compiled in, so the cuts are silent by
-  design and carry burned-in captions. A voiceover has to be muxed elsewhere;
-  the render writes a `.json` manifest with per-shot timings for that.
+- **No voiceover.** The cuts are silent by design and carry burned-in captions
+  plus a silent audio track. A voiceover has to be muxed on afterwards; the
+  render writes a `.json` manifest with per-shot timings for that.
 - **Shot 8 (My Team) cannot be filmed yet.** Not a tooling limit — the page is
   gated behind "Available after Gameweek 1" because it reads a live FPL squad.
   Scouting stands in until GW1 is played.

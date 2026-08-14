@@ -7,16 +7,20 @@ What to upload, where, and with what copy. The files themselves come from
 
 | File | Goes to | Length |
 |------|---------|--------|
-| `fpl-full-wide.webm` | YouTube, as a normal video | 71s · 1920×1080 |
-| `fpl-a-vertical.webm` | YouTube Shorts, Reels, TikTok | 15s · 1080×1920 |
-| `fpl-b-vertical.webm` | Shorts, Reels, TikTok | 14s · 1080×1920 |
-| `fpl-c-vertical.webm` | Shorts, Reels, TikTok | 15s · 1080×1920 |
+| `fpl-full-wide.mp4` | YouTube, as a normal video | 71s · 1920×1080 |
+| `fpl-a-vertical.mp4` | YouTube Shorts, Reels, TikTok | 15s · 1080×1920 |
+| `fpl-b-vertical.mp4` | Shorts, Reels, TikTok | 14s · 1080×1920 |
+| `fpl-c-vertical.mp4` | Shorts, Reels, TikTok | 15s · 1080×1920 |
 
-All four are silent with captions burned in, which is how they are meant to
-run: most Shorts are watched muted. YouTube accepts WebM directly for both
-normal uploads and Shorts, so nothing needs re-encoding for YouTube. Instagram
-and TikTok both want MP4 — convert those two on your own machine, the render
-box has no H.264 encoder.
+All four are H.264/AAC in an MP4 — silent, with captions burned in, which is
+how they are meant to run: most Shorts are watched muted. Nothing needs
+re-encoding for YouTube, Instagram or TikTok, and they play on a phone.
+
+**Do not publish these as WebM.** The renderer can still emit VP8/WebM with
+`--codec vp8`, and YouTube does accept it *from a desktop browser* — but an
+iPhone will not play VP8 in Photos or Files, and the YouTube iOS app only lists
+files the OS can decode, so from a phone the video never appears in the picker
+at all. If you ever upload from the phone, and you will, it has to be MP4.
 
 A 16:9 video is never treated as a Short regardless of length, so the wide cut
 uploads as a normal video and the three verticals become Shorts automatically.

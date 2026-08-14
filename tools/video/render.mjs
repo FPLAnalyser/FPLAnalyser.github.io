@@ -10,9 +10,11 @@
 // prefers-reduced-motion, which is the site's own supported static-render path —
 // counters show final values and reveal animations sit at their end state.
 //
-// Output is VP8/WebM, silent, with captions burned in. YouTube accepts WebM
-// directly. The bundled ffmpeg has no H.264 and no audio encoders, so MP4 and
-// any voiceover have to be added off this machine.
+// Output is H.264/AAC in an MP4, silent, with captions burned in — the only
+// combination that both plays on a phone and uploads from one. --codec vp8
+// still emits VP8/WebM, which YouTube accepts from a desktop browser but an
+// iPhone will neither play nor offer to upload. A voiceover has to be muxed on
+// afterwards; the .json manifest carries per-shot timings for that.
 
 import { chromium } from 'playwright'
 import { spawn } from 'node:child_process'
@@ -25,8 +27,15 @@ import { FORMATS, CUTS, SHOTS, secondsFor } from './shots.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const DIST = path.join(ROOT, 'dist')
-const FFMPEG = '/opt/pw-browsers/ffmpeg-1011/ffmpeg-linux'
 const CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'
+
+// Playwright ships a stripped ffmpeg: VP8/WebM only, no libx264, no audio
+// encoders. That is not enough — an iPhone will not play VP8 in Photos or
+// Files, and the YouTube iOS app only lists files the OS can decode, so a WebM
+// never even appears in the picker. ffmpeg-static carries libx264 and AAC.
+const PW_FFMPEG = '/opt/pw-browsers/ffmpeg-1011/ffmpeg-linux'
+let ffmpegStatic = null
+try { ffmpegStatic = (await import('ffmpeg-static')).default } catch { /* optional */ }
 
 // ---------------------------------------------------------------- args
 
@@ -46,10 +55,19 @@ const stills = flag('stills')
 // several times a day and moves the layout, so this is the cheap way to check
 // the shot list still lines up before spending minutes on a render.
 const dry = flag('dry')
+// MP4/H.264 by default: it is the only thing that plays on an iPhone and
+// uploads from one. --codec vp8 keeps the old WebM path.
+const codec = String(arg('codec', 'h264')).toLowerCase()
 
 if (!CUTS[cutName]) throw new Error(`unknown cut "${cutName}" (have: ${Object.keys(CUTS).join(', ')})`)
 if (!FORMATS[formatName]) throw new Error(`unknown format "${formatName}"`)
+if (!['h264', 'vp8'].includes(codec)) throw new Error(`unknown codec "${codec}" (have: h264, vp8)`)
 if (!existsSync(DIST)) throw new Error('dist/ missing — run `npm run build` first')
+
+const FFMPEG = codec === 'vp8' ? (ffmpegStatic || PW_FFMPEG) : ffmpegStatic
+if (!FFMPEG) {
+  throw new Error('MP4 needs a full ffmpeg: run `npm install` (ffmpeg-static is a devDependency), or pass --codec vp8')
+}
 
 const format = FORMATS[formatName]
 const shotIds = CUTS[cutName]
@@ -265,23 +283,43 @@ const BASE = `http://127.0.0.1:${port}`
 await mkdir(outDir, { recursive: true })
 if (stills) await mkdir(path.join(outDir, 'stills'), { recursive: true })
 
-const outFile = path.join(outDir, `fpl-${cutName}-${formatName}.webm`)
+const outFile = path.join(outDir, `fpl-${cutName}-${formatName}.${codec === 'vp8' ? 'webm' : 'mp4'}`)
 const width = Math.round(format.css.width * format.scale)
 const height = Math.round(format.css.height * format.scale)
 
-console.log(`cut=${cutName} format=${formatName} ${width}x${height} @${fps}fps`)
+console.log(`cut=${cutName} format=${formatName} ${width}x${height} @${fps}fps codec=${codec}`)
 console.log(`shots: ${shotIds.join(', ')}`)
 
-const ffmpeg = dry ? null : spawn(FFMPEG, [
-  '-y',
-  // "pipe:0", not "-": this ffmpeg is built with only the pipe and file
-  // protocols, and the "-" shorthand does not resolve against them.
-  '-f', 'image2pipe', '-c:v', 'mjpeg', '-framerate', String(fps), '-i', 'pipe:0',
+// "pipe:0", not "-": the Playwright-bundled ffmpeg is built with only the pipe
+// and file protocols, and the "-" shorthand does not resolve against them.
+const INPUT = ['-f', 'image2pipe', '-c:v', 'mjpeg', '-framerate', String(fps), '-i', 'pipe:0']
+
+const H264 = [
+  ...INPUT,
+  // A silent AAC track, not -an. iOS Photos and the social uploaders all handle
+  // video-only MP4s unreliably, and a 2 kb/s track costs nothing.
+  '-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
+  '-map', '0:v', '-map', '1:a',
+  // High profile at yuv420p is what iOS will actually decode; level 4.2 covers
+  // 1080p30 either way up. faststart puts the moov atom first so the file plays
+  // before it has finished downloading.
+  '-c:v', 'libx264', '-preset', 'slow', '-crf', '20',
+  '-profile:v', 'high', '-level', '4.2', '-pix_fmt', 'yuv420p',
+  '-c:a', 'aac', '-b:a', '128k', '-shortest',
+  '-movflags', '+faststart', '-r', String(fps),
+  outFile,
+]
+
+const VP8 = [
+  ...INPUT,
   '-c:v', 'libvpx', '-b:v', '8M', '-crf', '10',
   '-deadline', 'good', '-cpu-used', '2',
   '-pix_fmt', 'yuv420p', '-r', String(fps), '-an',
   outFile,
-], { stdio: ['pipe', 'ignore', 'pipe'] })
+]
+
+const ffmpeg = dry ? null : spawn(FFMPEG, ['-y', ...(codec === 'vp8' ? VP8 : H264)],
+  { stdio: ['pipe', 'ignore', 'pipe'] })
 
 let ffErr = ''
 ffmpeg?.stderr.on('data', (d) => { ffErr += d.toString() })

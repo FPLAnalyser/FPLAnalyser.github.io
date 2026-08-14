@@ -8,7 +8,7 @@ npm run build                                   # required: it films dist/
 node tools/video/render.mjs --cut full --format wide
 ```
 
-Output lands in `build/video/` (git-ignored) as `fpl-<cut>-<format>.webm`
+Output lands in `build/video/` (git-ignored) as `fpl-<cut>-<format>.mp4`
 alongside a `.json` manifest of what was filmed.
 
 ## The cuts
@@ -32,6 +32,7 @@ readable at phone size.
 | `--cut` | `full` | `full`, `a`, `b`, `c` |
 | `--format` | `wide` | `wide`, `vertical` |
 | `--fps` | `30` | |
+| `--codec` | `h264` | `h264` (MP4) or `vp8` (WebM) |
 | `--dry` | off | Resolve anchors and report; encode nothing |
 | `--stills` | off | Also write first/middle/last frame of each shot as PNG |
 | `--out` | `build/video` | |
@@ -86,12 +87,22 @@ Two things differ in the vertical cuts, and both matter more than they sound:
 
 ## Limits
 
-- **WebM/VP8 only.** No H.264, so no MP4. YouTube accepts WebM directly, for
-  both the main upload and Shorts. If you need MP4 for somewhere that does not,
-  re-encode off this machine.
-- **Silent.** No audio encoders are compiled in. The cuts are designed to work
-  muted, which is how Shorts are watched anyway. To add a voiceover, mux it on
-  your own machine — the `.json` manifest carries per-shot timings.
+- **Encoding needs `ffmpeg-static`.** It is a devDependency, so `npm install`
+  covers it. Playwright's bundled ffmpeg is a stripped VP8-only build with no
+  libx264 and no audio encoders; it can still produce the WebM path via
+  `--codec vp8` if `ffmpeg-static` is missing, but nothing else.
+
+  This mattered more than it sounds. WebM was the original output, on the
+  reasoning that YouTube accepts it — which it does, *from a desktop browser*.
+  An iPhone will not play VP8 in Photos or Files, and the YouTube iOS app only
+  lists files the OS can decode, so the upload never gets as far as being
+  rejected: the video simply is not in the picker. H.264 in an MP4 is the only
+  thing that works everywhere, and it is now the default.
+- **Silent by design**, but not silent *by omission*. The cuts carry a real
+  (silent) AAC track, because iOS Photos and the social uploaders all handle
+  video-only MP4s unreliably. Captions do the work, which is how Shorts are
+  watched anyway. To add a voiceover, mux it over the top — the `.json`
+  manifest carries per-shot timings.
 - **My Team cannot be filmed pre-season.** `docs/LAUNCH.md` shot 8 wants it, but
   the page is gated behind *"Available after Gameweek 1"* because it reads a
   live FPL squad. Scouting stands in until GW1 is played; add the shot back
