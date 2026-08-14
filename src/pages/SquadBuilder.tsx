@@ -1024,7 +1024,7 @@ export default function SquadBuilder() {
           <div className="@container mb-3 rounded-xl border border-line bg-surface-1/50 p-2.5">
             <div className="mb-1.5 flex items-center gap-2">
               <span className="text-[10px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Club</span>
-              <span className="text-[11px] text-ink-3">{club ? teamLabel(club) : 'every club'}</span>
+              {club && <span className="text-[11px] text-ink-3">{teamLabel(club)}</span>}
               {club && (
                 <button onClick={() => setClub(null)} className="ml-auto text-[11px] font-semibold text-accent hover:underline">
                   Clear
@@ -1100,12 +1100,12 @@ export default function SquadBuilder() {
                   the column it names. */}
               <span className="size-7 shrink-0" />
               <SortHead label="Player" k="name" sort={sort} dir={sortDir} onSort={sortBy} className="min-w-0 flex-1 text-left" />
-              <span className="hidden shrink-0 text-[9px] font-extrabold tracking-[0.1em] text-ink-3 @[430px]:inline-block @[600px]:hidden" style={{ width: 3 * 30 + 2 * 2 }}>NEXT 3</span>
-              <span className="hidden shrink-0 text-[9px] font-extrabold tracking-[0.1em] text-ink-3 @[600px]:inline-block" style={{ width: 4 * 30 + 3 * 2 }}>NEXT 4</span>
+              <span className="hidden shrink-0 text-[9px] font-extrabold tracking-[0.1em] text-ink-3 @[430px]:inline-block @[600px]:hidden" style={{ width: 3 * 34 + 2 * 2 }}>NEXT 3</span>
+              <span className="hidden shrink-0 text-[9px] font-extrabold tracking-[0.1em] text-ink-3 @[600px]:inline-block" style={{ width: 4 * 34 + 3 * 2 }}>NEXT 4</span>
               <SortHead label="Price" k="price" sort={sort} dir={sortDir} onSort={sortBy} className="w-12 shrink-0 text-right" />
               <SortHead label="xP" k="xp" sort={sort} dir={sortDir} onSort={sortBy} className="w-11 shrink-0 text-right" />
               <SortHead label="Rtg" k="rating" sort={sort} dir={sortDir} onSort={sortBy} className="w-9 shrink-0 text-right" />
-              <SortHead label="Own %" k="owned" sort={sort} dir={sortDir} onSort={sortBy} className="w-11 shrink-0 text-right" />
+              <SortHead label="Own" k="owned" sort={sort} dir={sortDir} onSort={sortBy} className="w-11 shrink-0 text-right" />
               <span className="size-8 shrink-0" />
             </div>
             {list.map((r) => {
@@ -1197,7 +1197,9 @@ export default function SquadBuilder() {
                   <span className="font-num w-12 shrink-0 text-right text-[13px] font-bold tabular-nums text-ink">£{priceOf(r).toFixed(1)}m</span>
                   <span className="font-num w-11 shrink-0 text-right text-sm font-extrabold tabular-nums text-accent-2">{xpOf(r)?.toFixed(1) ?? '—'}</span>
                   <span className="font-num w-9 shrink-0 text-right text-sm font-semibold tabular-nums text-ink-2">{o ?? '—'}</span>
-                  <span className="font-num w-11 shrink-0 text-right text-sm font-semibold tabular-nums text-ink-2">{Math.round(num(r, 'selected_by_percent') ?? 0)}</span>
+                  <span className="font-num w-11 shrink-0 text-right text-sm font-semibold tabular-nums text-ink-2">
+                    {Math.round(num(r, 'selected_by_percent') ?? 0)}<span className="text-[11px] text-ink-3">%</span>
+                  </span>
                   {/* Once he's on the market the sign-him button is dead, and a
                       greyed-out tick just looks broken. The one thing you can
                       actually do with him is take him back. */}
@@ -1235,7 +1237,11 @@ export default function SquadBuilder() {
                         why ? 'cursor-not-allowed border-line text-ink-3 opacity-50' : 'border-accent/50 text-accent hover:bg-accent-soft'
                       }`}
                     >
-                      <Icon name={complete && !filling ? 'arrow-right' : 'check'} size={15} />
+                      {/* A plus, whether you are filling the fifteen or
+                          transferring into it. The arrow said "goes that way"
+                          and the tick said "done", and neither is what the
+                          button does: it adds a player. */}
+                      <Icon name="plus" size={16} />
                     </button>
                   )}
                 </div>
