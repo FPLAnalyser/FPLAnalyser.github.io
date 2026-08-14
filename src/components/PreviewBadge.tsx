@@ -12,6 +12,24 @@
  *  reading the page, which is a corner, not a header. */
 const BRANCH = (import.meta.env.VITE_PREVIEW as string | undefined)?.trim()
 
+/* Vite's define, so it is the moment THIS bundle was built. */
+declare const __BUILD_TIME__: string
+
+/* WHICH BUILD AM I LOOKING AT. Twice now a fix has been reported as missing
+   when the server was serving it and the browser was serving something older
+   — a service worker on a phone, an HTTP cache on a locked-down laptop — and
+   there was no way to tell those two apart from the screen. The badge already
+   names the branch; the time it was built costs eleven characters beside it
+   and settles the question without opening /debug. */
+const BUILT = (() => {
+  try {
+    const d = new Date(__BUILD_TIME__)
+    return `${String(d.getUTCDate()).padStart(2, '0')} ${
+      ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getUTCMonth()]
+    } ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
+  } catch { return null }
+})()
+
 export function PreviewBadge() {
   if (!BRANCH) return null
   return (
@@ -20,9 +38,10 @@ export function PreviewBadge() {
                  rounded-full border border-accent bg-accent-soft px-2.5 py-1
                  text-[10px] font-semibold tracking-[.09em] text-accent uppercase
                  backdrop-blur-sm md:bottom-3"
-      title={`Preview build of ${BRANCH} — not the live site, and not counted in analytics`}
+      title={`Preview build of ${BRANCH}${BUILT ? `, built ${BUILT} UTC` : ''} — not the live site, and not counted in analytics`}
     >
       Preview · {BRANCH}
+      {BUILT && <span className="ml-1.5 font-normal opacity-75">{BUILT}</span>}
     </div>
   )
 }
