@@ -12,10 +12,13 @@ import type { FixtureEaseRow, RatingRow } from '../lib/types'
 /* ════════════════════════════════════════════════════════════════════════
    Comparing plans.
 
-   The verdict at the top could be assembled by anyone with two projections
-   side by side. The head-to-head could not, and it is the reason the tab
-   exists: "Plan A projects 11 more" sounds decisive, "Plan A wins 63% of
-   the time" is the same fact and does not — and the second is the true one.
+   THE SQUADS FIRST, THEN THE CALL. The page used to open on a verdict, a
+   radar and a chart, and you scrolled past all three before seeing the two
+   things being compared. Nobody reads a judgement about two squads before
+   they have looked at the squads. So: both fifteens side by side with what
+   each projects, then the verdict, then the swap that separates them, then
+   the working — week by week, the two halves of the window, what each is
+   built on, club risk, armbands.
 
    Each plan is compared AS A FIFTEEN with the best legal eleven picked each
    week, not as a transfer path. That is the honest scope: a stored plan's
@@ -27,7 +30,6 @@ import type { FixtureEaseRow, RatingRow } from '../lib/types'
 const COLOURS = ['var(--accent)', 'var(--info)', 'var(--good)', 'var(--hot)']
 const DIM_KEYS = ['attack', 'defence', 'defcon', 'fixtures'] as const
 const DIM_LABELS = ['Attack', 'Defence', 'Def Con', 'Fixtures']
-const pct = (v: number) => `${Math.round(v * 100)}%`
 
 export interface ComparePlan {
   plan: StoredPlan
@@ -94,19 +96,23 @@ export function SquadCompare({ plans, gws, engine, draws = 4000 }: {
   })
 
   return (
+    /* THE SQUADS FIRST. The page opened on a verdict, then a radar, then a
+       chart, and you had to scroll past all three before seeing the two
+       things being compared. Nobody reads a judgement about two squads
+       before they have looked at the squads. Boards at the top with what
+       each is projected to score, then the call, then the working. */
     <div className="grid gap-4">
-      <Verdict rows={rows} />
-      <Dimensions rows={rows} />
-      <WeekByWeek rows={rows} gws={gws} />
-      <Horizon rows={rows} gws={gws} fixtureEase={fixtureEase} />
-      <HeadToHead rows={rows} cmp={cmp} />
       {rows.length === 2
         ? <Lineups rows={rows} gw={gws[0]} />
         : <SharedAndDifferent rows={rows} />}
+      <Verdict rows={rows} />
       {/* Pairing two lists of players only means something when there are two
           lists. With three or four plans the shared/unique panel above is the
           honest view and this is left off rather than fudged. */}
       {rows.length === 2 && <Ledger rows={rows} />}
+      <WeekByWeek rows={rows} gws={gws} />
+      <Horizon rows={rows} gws={gws} fixtureEase={fixtureEase} />
+      <Dimensions rows={rows} />
       <ClubRisk rows={rows} />
       <Armbands rows={rows} gws={gws} />
     </div>
@@ -179,10 +185,10 @@ function Verdict({ rows }: { rows: Row[] }) {
                 returns over these weeks once fixtures, minutes and the armband are applied. A squad can
                 be the stronger set of players and still the weaker plan for the window in front of you. </>
             : null}
-          The range is the 10th to 90th percentile of the simulated runs — the same runs the head-to-head
-          below is drawn from. Read it against the gap: the difference you are choosing is a fraction of
-          the noise you are choosing it inside, which does not make the choice pointless, it makes it the
-          part you control.
+          The range is the 10th to 90th percentile of the same window played out {' '}
+          thousands of times with the luck randomised. Read it against the gap: the difference you are
+          choosing is a fraction of the noise you are choosing it inside, which does not make the choice
+          pointless, it makes it the part you control.
         </>
       }
     >
@@ -366,112 +372,13 @@ function TrendChart({ rows, gws, lo, hi }: { rows: Row[]; gws: number[]; lo: num
 
 // ── the answer ──────────────────────────────────────────────────────────────
 
-function HeadToHead({ rows, cmp }: { rows: Row[]; cmp: ReturnType<typeof comparePlans> }) {
-  if (!cmp.h2h.length) return null
-  const decided = cmp.h2h.filter((h) => h.tieRate < 0.99)
-  const closest = (decided.length ? decided : cmp.h2h)
-    .slice().sort((a, b) => Math.abs(a.winRate - 0.5) - Math.abs(b.winRate - 0.5))[0]
-
-  return (
-    <Panel
-      title="If you played this window over and over"
-      kicker={`A projection is an average, and nobody scores the average. So each pair is played out ${cmp.draws.toLocaleString()} times with the luck randomised — goals, hauls, blanks — and the bar below counts how often each plan finishes ahead.`}
-      note={
-        decided.length === 0
-          ? <>Every pairing here is a dead tie in every run, which means the squads are the same
-              fifteen. Change something in one of them and this panel starts having an opinion.</>
-          : <>
-              <b>Why this matters more than the points total.</b> The verdict at the top might say one
-              plan is {Math.abs(closest.meanGap).toFixed(1)} points better. That sounds decisive. What it
-              actually means is that {rows[closest.a].name} finishes ahead of {rows[closest.b].name} in{' '}
-              <b>{pct(closest.winRate)}</b> of those runs, and behind in{' '}
-              <b>{pct(1 - closest.winRate - closest.tieRate)}</b>
-              {closest.tieRate > 0.005 ? `, level in ${pct(closest.tieRate)}` : ''}.
-              {' '}<b>Roughly {closest.winRate >= 0.55 || closest.winRate <= 0.45 ? 'a strong lean' : 'a coin toss'}.</b>
-              {' '}Across those runs the margin swings from {closest.p10.toFixed(0)} to{' '}
-              {closest.p90.toFixed(0)} points, so the plan that loses on paper still wins plenty of the
-              time — whenever its differentials do what they were bought to do.
-              <br /><br />
-              Every player is dealt the same luck in both plans, so the ones both squads own cancel out
-              exactly and only your actual decision is being measured. Without that, the shared twelve
-              would add noise that has nothing to do with the choice and drag every comparison towards
-              50/50.
-            </>
-      }
-    >
-      <div className="grid gap-3 sm:grid-cols-2">
-        {cmp.h2h.map((h) => {
-          const A = rows[h.a], B = rows[h.b]
-          const lossRate = Math.max(0, 1 - h.winRate - h.tieRate)
-          const same = h.tieRate > 0.99
-          const span = Math.max(Math.abs(h.p10), Math.abs(h.p90), 1)
-          const pos = (v: number) => 50 + (v / (span * 2)) * 100
-          return (
-            <div key={`${h.a}-${h.b}`} className="rounded-xl border border-line bg-surface-2/40 p-3">
-              <div className="mb-0.5 text-[12.5px] font-semibold text-ink">
-                {A.name} <span className="font-normal text-ink-3">vs</span> {B.name}
-              </div>
-              <div className="font-num mb-2 text-[11px] text-ink-3 tabular-nums">
-                {same ? 'the same fifteen — level in every run'
-                  : `mean gap ${h.meanGap >= 0 ? '+' : ''}${h.meanGap.toFixed(1)} points`}
-              </div>
-              {/* Three segments, because a tie is not a loss. Two squads sharing
-                  every player tie in 100% of paired runs, and a two-segment bar
-                  had no way to say that except by handing the win to one of
-                  them. */}
-              <div className="flex h-6 overflow-hidden rounded-md text-[11px] font-bold">
-                <span
-                  className="flex items-center justify-center"
-                  style={{ width: `${h.winRate * 100}%`, background: A.colour, color: 'var(--accent-contrast)' }}
-                >
-                  {h.winRate > 0.14 ? pct(h.winRate) : ''}
-                </span>
-                {h.tieRate > 0.001 && (
-                  <span
-                    className="flex items-center justify-center bg-surface-3 text-ink-2"
-                    style={{ width: `${h.tieRate * 100}%` }}
-                  >
-                    {h.tieRate > 0.14 ? (same ? 'level' : `${pct(h.tieRate)} level`) : ''}
-                  </span>
-                )}
-                <span
-                  className="flex items-center justify-center"
-                  style={{ width: `${lossRate * 100}%`, background: B.colour, color: 'var(--accent-contrast)' }}
-                >
-                  {lossRate > 0.14 ? pct(lossRate) : ''}
-                </span>
-              </div>
-              {/* The distribution of the GAP, zero in the middle. Left of the
-                  line is where the first plan loses. */}
-              <div className="relative mt-3 h-9">
-                <div className="absolute inset-y-0 left-1/2 w-px bg-line-strong" />
-                <div
-                  className="absolute top-2 h-2.5 rounded-full"
-                  style={{
-                    left: `${Math.max(0, pos(h.p10))}%`,
-                    width: `${Math.min(100, pos(h.p90)) - Math.max(0, pos(h.p10))}%`,
-                    background: `linear-gradient(90deg, ${B.colour}, var(--surface-3), ${A.colour})`,
-                  }}
-                />
-                <div className="absolute top-1 h-4 w-0.5 rounded bg-ink" style={{ left: `${pos(h.meanGap)}%` }} />
-                <span className="font-num absolute bottom-0 left-0 text-[10px] text-ink-3 tabular-nums">{h.p10.toFixed(0)}</span>
-                <span className="font-num absolute bottom-0 left-1/2 -translate-x-1/2 text-[10px] text-ink-3 tabular-nums">0</span>
-                <span className="font-num absolute right-0 bottom-0 text-[10px] text-ink-3 tabular-nums">+{h.p90.toFixed(0)}</span>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-      <p className="mt-3 max-w-[80ch] text-[11.5px] leading-snug text-ink-3">
-        The mean gap here and the projection gap in the verdict are the same quantity measured two
-        ways — one summed, one drawn — so they land within a few tenths of each other rather than
-        exactly on it. If they ever diverged by more than that, one of them would be wrong.
-      </p>
-    </Panel>
-  )
-}
-
-// ── shared and different ────────────────────────────────────────────────────
+/* The "if you played this window over and over" panel lived here: a
+   Monte-Carlo of the pairing, with a win rate, a tie rate and a 10th-to-90th
+   margin. It was the most technical panel on the page and the least acted on
+   — it took four hundred words to say "closer than the totals make it look",
+   which the spread on the verdict already says without asking anyone to hold
+   a distribution in their head. Removed rather than shrunk: the honest
+   version of it is that sentence.  */
 
 function SharedAndDifferent({ rows }: { rows: Row[] }) {
   const sets = rows.map((r) => new Set(r.series.map((p) => p.element)))
@@ -1101,13 +1008,27 @@ function Board({ row, roles, captain, verdict }: {
 
   return (
     <div className="rounded-xl border border-line bg-surface-1/60 p-3">
-      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <span className="flex items-center gap-2 text-[13px] font-semibold text-ink">
-          <span className="size-2.5 rounded-[3px]" style={{ background: row.colour }} />
-          {row.name}
+      {/* The total, at the size of the thing it is. This was one line of grey
+          micro-type ending in "42.1 xP", and it was the week's figure rather
+          than the window's — the number the whole page is about, printed
+          smaller than the legend underneath it. */}
+      <div className="mb-2 flex items-end justify-between gap-3">
+        <span className="min-w-0">
+          <span className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+            <span className="size-2.5 shrink-0 rounded-[3px]" style={{ background: row.colour }} />
+            <span className="truncate">{row.name}</span>
+          </span>
+          <span className="font-num mt-0.5 block text-[10.5px] tabular-nums text-ink-3">
+            {only} unique · {moved} moved · £{row.spend.toFixed(1)}m
+          </span>
         </span>
-        <span className="font-num text-[10.5px] tabular-nums text-ink-3">
-          {only} unique · {moved} moved · {row.weeks[0]?.xp.toFixed(1) ?? '—'} xP
+        <span className="shrink-0 text-right leading-none">
+          <span className="font-display block text-[26px] tabular-nums" style={{ color: row.colour }}>
+            {row.projection.toFixed(1)}
+          </span>
+          <span className="mt-0.5 block text-[9px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">
+            projected
+          </span>
         </span>
       </div>
 
