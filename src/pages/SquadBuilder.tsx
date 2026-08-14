@@ -13,6 +13,8 @@ import { SeasonSpine } from '../components/SeasonSpine'
 import { SquadLab } from '../components/SquadLab'
 import { SquadAnalysis } from '../components/SquadAnalysis'
 import { SquadFixtures } from '../components/SquadFixtures'
+import { SquadRiskMonitor } from '../components/SquadWatch'
+import { buildSeries } from '../lib/squadInsights'
 import { SquadCompare } from '../components/SquadCompare'
 import { PlanBar } from '../components/PlanBar'
 import { Icon } from '../components/Icon'
@@ -50,7 +52,7 @@ const POS_LABEL: Record<Pos, string> = { GKP: 'Goalkeepers', DEF: 'Defenders', M
 type View = 'build' | 'insights' | 'compare'
 /** The right-hand column: the list you sign from, the read on the squad, and
  *  the run it is walking into. */
-type Panel = 'market' | 'read' | 'fixtures'
+type Panel = 'market' | 'read' | 'fixtures' | 'risk'
 
 /** Moves a stored plan spends after its opening week. Reads the plan's own
  *  week store; a plan that has never been stepped forward has none. */
@@ -460,6 +462,17 @@ export default function SquadBuilder() {
   const liveScore = liveRated.length ? Math.round(liveRated.reduce((a, b) => a + b, 0) / liveRated.length) : null
   const liveBestXI = useMemo(() => bestElevenScore(liveChosen), [liveChosen])
   const liveGw = complete ? planner.gw : buildGw
+
+  /* The per-player projection series the risk monitor reads. Built here only
+     when its tab is open — it walks fifteen players across six weeks and the
+     board has no use for it otherwise. */
+  const riskGws = useMemo(() => planner.gws.filter((g) => g >= liveGw).slice(0, 6), [planner.gws, liveGw])
+  const riskSeries = useMemo(
+    () => (panel === 'risk' && complete
+      ? buildSeries(liveChosen, riskGws, { fixtureEase, avail, model: listXpModel, market: listMarket, profiles: listProfiles })
+      : []),
+    [panel, complete, liveChosen, riskGws, fixtureEase, avail, listXpModel, listMarket, listProfiles],
+  )
 
   /* ── the season spine's three inputs ──────────────────────────────────
      Twelve weeks: the half-season the fixtures page settled on as a planning
@@ -930,11 +943,12 @@ export default function SquadBuilder() {
               was the part at the bottom.
 
               Each tab answers a different question. Market: who could I sign.
-              Read: what have I got. Fixtures: what is coming. Market leads
+              Analysis: what have I got. Fixtures: what is coming. Risk: what
+              could go wrong with it. Market leads
               because it is the only one you do anything in; the other two are
               reading, and reading can wait for you to ask for it.
 
-              Read and Fixtures need a fifteen to be about, so before there is
+              All but Players need a fifteen to be about, so before there is
               one there are no tabs at all — just the list. */}
           {complete && (
             <div className="mb-3">
@@ -946,8 +960,9 @@ export default function SquadBuilder() {
                      row above already has a tab called Squad and two of them
                      on one screen meaning different things is a puzzle. */
                   { id: 'market', label: 'Players' },
-                  { id: 'read', label: 'Read' },
+                  { id: 'read', label: 'Analysis' },
                   { id: 'fixtures', label: 'Fixtures' },
+                  { id: 'risk', label: 'Risk' },
                 ]}
                 active={panel}
                 onChange={(id) => setPanel(id as Panel)}
@@ -968,6 +983,21 @@ export default function SquadBuilder() {
                 unlimitedTransfers={planner.ft === Infinity}
                 chipSpentAt={planner.chipSpent}
                 onApplyMove={(outEl, inEl) => { planner.doTransfer(outEl, inEl); setPendingIn(null) }}
+              />
+            </div>
+          )}
+
+          {/* The risk monitor was buried in an Insights sub-tab called Watch,
+              two clicks from the board it is about. It belongs beside the
+              fixtures: both answer "what is coming", one in games and one in
+              prices and fitness. */}
+          {complete && panel === 'risk' && (
+            <div className="mb-4">
+              <SquadRiskMonitor
+                squad={riskSeries}
+                gws={riskGws}
+                fixtureEase={fixtureEase}
+                avail={avail}
               />
             </div>
           )}
@@ -1004,16 +1034,21 @@ export default function SquadBuilder() {
             </div>
           )}
 
-          <div className="mb-3"><Tabs tabs={PICK_TABS} active={pickPos} onChange={(id) => setPickPos(id as Pos)} layoutId="squad-pos" /></div>
-          <div className="mb-3 flex items-center gap-2 rounded-lg border border-line-mid bg-surface-1 px-3">
-            <Icon name="search" size={16} />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search players…"
-              className="min-h-11 w-full bg-transparent text-base text-ink outline-none placeholder:text-ink-3 md:text-sm"
-            />
-            {query && <button aria-label="Clear" onClick={() => setQuery('')} className="text-ink-3 hover:text-ink"><Icon name="x" size={15} /></button>}
+          {/* Position and search on one line. They are the same decision made
+              two ways — which players am I looking at — and stacking them cost
+              a whole row of the panel for a control four chips wide. */}
+          <div className="mb-3 flex items-center gap-2">
+            <div className="shrink-0"><Tabs tabs={PICK_TABS} active={pickPos} onChange={(id) => setPickPos(id as Pos)} layoutId="squad-pos" /></div>
+            <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg border border-line-mid bg-surface-1 px-2.5">
+              <Icon name="search" size={15} className="shrink-0" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search…"
+                className="min-h-10 w-full min-w-0 bg-transparent text-base text-ink outline-none placeholder:text-ink-3 md:text-sm"
+              />
+              {query && <button aria-label="Clear" onClick={() => setQuery('')} className="shrink-0 text-ink-3 hover:text-ink"><Icon name="x" size={15} /></button>}
+            </div>
           </div>
           {/* THE CLUB FILTER, IN THE OPEN. It was behind a Filters button with
               the price and rating sliders, which is the wrong place for it:
@@ -1071,15 +1106,23 @@ export default function SquadBuilder() {
           </div>
           <DutyLegend className="mb-3" />
 
+          {/* FIVE SLIDERS ACROSS, NOT DOWN. Stacked, the open panel ran to
+              three hundred pixels and pushed the players — the thing you
+              opened the panel to filter — off the bottom of the column. They
+              lie across the line now, as many to a row as the column can
+              hold, so opening the filters costs one band rather than the
+              list. */}
           {showFilters && (
-            <div className="mb-3 flex flex-col gap-3 rounded-xl border border-line bg-surface-1/50 p-3.5">
-              <RangeRow label="Max price" kind="max" value={maxPrice} min={PRICE_MIN} max={PRICE_MAX} step={0.5} display={`£${maxPrice.toFixed(1)}m`} onChange={setMaxPrice} />
-              <RangeRow label="Min rating" kind="min" value={minRating} min={0} max={100} step={5} display={String(minRating)} onChange={setMinRating} />
-              {dims.map((d) => (
-                <RangeRow key={d.key} label={`Min ${d.label}`} kind="min" value={minDim[d.key] ?? 0} min={0} max={100} step={5} display={String(minDim[d.key] ?? 0)} onChange={(v) => setMinDim((m) => ({ ...m, [d.key]: v }))} />
-              ))}
+            <div className="@container mb-3 rounded-xl border border-line bg-surface-1/50 p-3">
+              <div className="grid gap-x-4 gap-y-2.5 @[380px]:grid-cols-2 @[620px]:grid-cols-3 @[900px]:grid-cols-5">
+                <RangeRow label="Max price" kind="max" value={maxPrice} min={PRICE_MIN} max={PRICE_MAX} step={0.5} display={`£${maxPrice.toFixed(1)}m`} onChange={setMaxPrice} />
+                <RangeRow label="Min rating" kind="min" value={minRating} min={0} max={100} step={5} display={String(minRating)} onChange={setMinRating} />
+                {dims.map((d) => (
+                  <RangeRow key={d.key} label={`Min ${d.label}`} kind="min" value={minDim[d.key] ?? 0} min={0} max={100} step={5} display={String(minDim[d.key] ?? 0)} onChange={(v) => setMinDim((m) => ({ ...m, [d.key]: v }))} />
+                ))}
+              </div>
               {activeFilters > 0 && (
-                <button onClick={resetFilters} className="self-start text-xs font-semibold text-accent hover:underline">Reset filters</button>
+                <button onClick={resetFilters} className="mt-2 text-xs font-semibold text-accent hover:underline">Reset filters</button>
               )}
             </div>
           )}

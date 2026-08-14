@@ -1,6 +1,9 @@
+import { useMemo } from 'react'
 import { PlayerPhoto } from './PlayerPhoto'
 import { TeamBadge } from './badges'
 import { FixtureChips } from './FixtureChips'
+import { xpForGw, useXpModel, useMarketOdds, useShotProfiles } from '../lib/xp'
+import { useAvailability } from '../lib/availability'
 import { Icon } from './Icon'
 import { num } from '../lib/rows'
 import { teamLabel } from '../lib/util'
@@ -152,6 +155,27 @@ export function RatingCard({
       : { label: 'Form', value: overallOf(r, 'gw4') }
   const stats = [...core.map((s) => ({ label: s.label, value: field100(r, prefix, s) })), contrast]
   const fix = fixtureSummary(fixtureEase, String(r.team))
+
+  /* WHAT THE RUN IS WORTH. The card showed the next four opponents and a
+     number saying how kind they are, which is a fixture reading, not a player
+     one — the same four games are worth six points to one man and twenty-four
+     to another. So each chip carries its own projection and the left column
+     carries the average, beside the rating it belongs with. */
+  const xpModel = useXpModel()
+  const market = useMarketOdds()
+  const profiles = useShotProfiles()
+  const avail = useAvailability()
+  const runGws = useMemo(
+    () => (fixtureEase || []).filter((f) => f.team === r.team).map((f) => f.gw).sort((a, b) => a - b).filter((g, i, xs) => xs.indexOf(g) === i).slice(0, 4),
+    [fixtureEase, r.team],
+  )
+  const xpRun = useMemo(
+    () => runGws.map((g) => xpForGw(r, g, fixtureEase ?? [], avail, xpModel, market, profiles)),
+    [runGws, r, fixtureEase, avail, xpModel, market, profiles],
+  )
+  const xpTotal = xpRun.reduce((a: number, v) => a + (v ?? 0), 0)
+  const xpGame = xpRun.some((v) => v != null) ? xpTotal / xpRun.length : null
+
   const mins = num(r, 'total_mins')
   const thinSample = mins != null && mins < 1200
   const Tag = onClick ? 'button' : 'div'
@@ -190,6 +214,15 @@ export function RatingCard({
           <div className={`metallic-num font-display tabular-nums leading-[0.9] ${compact ? 'text-[40px]' : 'text-[58px]'}`}>{ov ?? '—'}</div>
           <div className={`font-display leading-none tracking-[0.06em] text-accent-2 ${compact ? 'text-[14px]' : 'text-[19px]'}`}>{POS_SHORT[String(r.position)] ?? r.position}</div>
           <div className={`mt-1 font-semibold tracking-[0.2em] text-ink-3 text-[10px] uppercase`}>{window === 'gw4' ? 'Last 4' : 'Overall'}</div>
+          {xpGame != null && (
+            <div
+              title="Projected points per game over the next four"
+              className={`mt-1.5 rounded-md border border-accent/40 px-1.5 py-0.5 text-center leading-none ${compact ? 'text-[11px]' : 'text-[13px]'}`}
+            >
+              <span className="font-num font-extrabold tabular-nums text-accent-2">{xpGame.toFixed(1)}</span>
+              <span className="ml-0.5 text-[9px] font-extrabold tracking-[0.06em] text-ink-3">xP/G</span>
+            </div>
+          )}
           {carried && (
             <span className="mt-1 rounded bg-white/10 px-1 py-0.5 text-[10px] font-bold tracking-wide text-ink-2 tabular-nums" title={`Rating carried over from ${shortSeason(info!.ratings_season)}`}>{shortSeason(info!.ratings_season)}</span>
           )}
@@ -244,9 +277,16 @@ export function RatingCard({
           <div className="relative flex items-center justify-between gap-2">
             <span className={`shrink-0 font-semibold tracking-[0.08em] text-ink-3 text-[10px] uppercase`}>Next 4</span>
             <span className="min-w-0">
-              <FixtureChips fixtureEase={fixtureEase!} team={String(r.team)} n={4} />
+              <FixtureChips fixtureEase={fixtureEase!} team={String(r.team)} n={4} values={xpRun.length ? xpRun : undefined} />
             </span>
-            <span className={`shrink-0 font-display text-accent tabular-nums ${compact ? 'text-[14px]' : 'text-[17px]'}`} title="Fixture ease over the next 4 (100 = easiest)">{fix.rating}</span>
+            <span className="shrink-0 text-right">
+              <span className={`block font-display text-accent tabular-nums ${compact ? 'text-[14px]' : 'text-[17px]'}`} title="Fixture ease over the next 4 (100 = easiest)">{fix.rating}</span>
+              {xpGame != null && (
+                <span className="font-num block text-[10px] leading-tight font-bold tabular-nums text-ink-3" title="Projected points across the next four">
+                  {xpTotal.toFixed(1)} xP
+                </span>
+              )}
+            </span>
           </div>
         </>
       )}

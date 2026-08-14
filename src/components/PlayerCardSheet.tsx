@@ -11,6 +11,7 @@ import {
   SEV_COLOUR, STATUS_WORD,
 } from '../lib/availability'
 import { FDR_COLORS } from '../lib/util'
+import { xpForGw, useXpModel, useMarketOdds, useShotProfiles } from '../lib/xp'
 import { playerHref, teamLabel } from '../lib/util'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
@@ -106,7 +107,6 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap, ac
       </button>
     </>
   )
-  const [show, setShow] = useState<'rating' | 'xpts'>('rating')
   const [rivalId, setRivalId] = useState<number | null>(null)
 
   useEffect(() => {
@@ -139,6 +139,18 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap, ac
     () => (fixtureEase ?? []).filter((f) => f.team === player.team).sort((a, b) => a.gw - b.gw).slice(0, 4),
     [fixtureEase, player.team],
   )
+  /* WHAT THE RUN IS WORTH TO HIM. The card showed four opponents coloured by
+     how kind they are, which is a fact about the club rather than about the
+     player — the same four games are worth six points to one man and
+     twenty-four to another. Each fixture now carries its own projection. */
+  const xpModel = useXpModel()
+  const market = useMarketOdds()
+  const profiles = useShotProfiles()
+  const xpNext = useMemo(
+    () => next.map((f) => xpForGw(player, f.gw, fixtureEase ?? [], avail, xpModel, market, profiles)),
+    [next, player, fixtureEase, avail, xpModel, market, profiles],
+  )
+  const xpRunTotal = xpNext.reduce((a: number, v) => a + (v ?? 0), 0)
 
   const dims = dimsFor(pos)
   // Exact, not star-quantised: the norm column has the value to the number.
@@ -165,17 +177,21 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap, ac
             <div className="truncate text-[18px] font-extrabold tracking-[-0.01em] text-ink">{String(player.web_name)}</div>
             <div className="text-[12.5px] text-ink-2">{pos} · {teamLabel(String(player.team))} · £{price}m{player.selected_by_percent != null ? ` · ${player.selected_by_percent}% owned` : ''}</div>
           </div>
-          <div className="shrink-0 text-right">
-            <div className="metallic-num font-display text-[34px] leading-none">
-              {show === 'xpts' ? (adjusted != null ? adjusted.toFixed(1) : '—') : (rating ?? '—')}
+          {/* BOTH NUMBERS, NOT ONE OR THE OTHER. These were a single figure
+              behind a toggle, so reading the rating meant losing sight of the
+              points and the reader had to remember one while looking at the
+              other. They answer different questions — how good is he, and
+              what is he worth a week — and the comparison between them is
+              most of the point. */}
+          <div className="flex shrink-0 items-start gap-3 text-right">
+            <div>
+              <div className="metallic-num font-display text-[34px] leading-none">{rating ?? '—'}</div>
+              <div className="mt-0.5 text-[10px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Rating</div>
             </div>
-            <button
-              onClick={() => setShow((v) => (v === 'rating' ? 'xpts' : 'rating'))}
-              className="mt-0.5 text-[10px] font-extrabold tracking-[0.12em] text-ink-3 uppercase transition-colors hover:text-accent"
-              title="Switch between the FPL Analyser rating and expected points a game"
-            >
-              {show === 'xpts' ? 'xPts / game ⇄' : 'Rating ⇄'}
-            </button>
+            <div>
+              <div className="font-display text-[34px] leading-none text-accent-2 tabular-nums">{adjusted != null ? adjusted.toFixed(1) : '—'}</div>
+              <div className="mt-0.5 text-[10px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">xP / game</div>
+            </div>
           </div>
           <button onClick={onClose} aria-label="Close" className="shrink-0 rounded-lg p-1.5 text-ink-3 transition-colors hover:text-ink"><Icon name="x" size={18} /></button>
         </div>
@@ -241,6 +257,15 @@ export function PlayerCardSheet({ player, pool, fixtureEase, onClose, onSwap, ac
                           </span>
                         )
                       })}
+                      {xpNext.map((v, i) => (
+                        <span key={next[i].gw} className="font-num text-center text-[12px] font-extrabold tabular-nums text-accent-2">
+                          {v == null ? '—' : v.toFixed(1)}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="mt-1.5 flex items-baseline justify-between border-t border-line pt-1.5 text-[11px]">
+                      <span className="text-ink-3">projected points, week by week</span>
+                      <span className="font-num font-extrabold tabular-nums text-ink">{xpRunTotal.toFixed(1)} over {next.length}</span>
                     </div>
                   </div>
                 )}

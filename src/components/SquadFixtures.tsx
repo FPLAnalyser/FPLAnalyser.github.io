@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { FDR_COLORS } from '../lib/util'
+import { FDR_COLORS, teamLabel } from '../lib/util'
+import { TeamBadge } from './badges'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -35,7 +36,7 @@ export function SquadFixtures({ squad, xi, byEl, fixtureEase, gw, weeks = 6, onP
   weeks?: number
   onPickGw?: (gw: number) => void
 }) {
-  const { gws, rows, worst } = useMemo(() => {
+  const { gws, rows, worst, league } = useMemo(() => {
     const gws = [...new Set(fixtureEase.map((f) => f.gw))].filter((g) => g >= gw).sort((a, b) => a - b).slice(0, weeks)
     /* One pass over the fixture list, not one filter per player per week —
        fifteen players by six weeks over a season of fixtures is 90 scans of
@@ -75,7 +76,20 @@ export function SquadFixtures({ squad, xi, byEl, fixtureEase, gw, weeks = 6, onP
       }).length
       if (n > worst.n) worst = { gw: g, n }
     })
-    return { gws, rows, worst }
+    /* AND THE OTHER SEVENTEEN CLUBS. Your fifteen tell you who to bench;
+       the league tells you who to buy, and the reader was being sent to a
+       different page to find out which clubs the run turns for. Kindest run
+       first, because that is the order the question is asked in. */
+    const teams = [...new Set(fixtureEase.map((f) => f.team))].sort()
+    const mine = new Set(squad.map((el) => String(byEl.get(el)?.team ?? '')))
+    const league = teams.map((t) => {
+      const cells = gws.map((g) => by.get(`${t}|${g}`) ?? [])
+      const load = cells.reduce((sum, fs) => sum + (fs.length ? Math.min(...fs.map((f) => f.fdr)) : 5), 0)
+      return { team: t, owned: mine.has(t), cells, load }
+    })
+    league.sort((a, b) => a.load - b.load || a.team.localeCompare(b.team))
+
+    return { gws, rows, worst, league }
   }, [squad, xi, byEl, fixtureEase, gw, weeks])
 
   if (!gws.length || !rows.length) return null
@@ -146,6 +160,59 @@ export function SquadFixtures({ squad, xi, byEl, fixtureEase, gw, weeks = 6, onP
       <p className="mt-1.5 text-[10.5px] leading-snug text-ink-3">
         Hardest run first, on the site's own difficulty scale. Grey names are on your bench.
         A double shows its easier game with a +; a blank gameweek counts as a 5.
+      </p>
+
+      <div className="mt-4 mb-2 flex items-baseline gap-2">
+        <h4 className="text-[11px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Every club</h4>
+        <span className="text-[11px] text-ink-3">kindest run first</span>
+      </div>
+      <div className="min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="min-w-[300px]">
+          <div className="mb-1 grid gap-1" style={{ gridTemplateColumns: `72px repeat(${gws.length}, minmax(0,1fr))` }}>
+            <span />
+            {gws.map((g) => (
+              <span key={g} className={`text-center text-[9.5px] font-bold tracking-[0.06em] uppercase ${g === gw ? 'text-accent' : 'text-ink-3'}`}>
+                GW{g}
+              </span>
+            ))}
+          </div>
+          {league.map((t) => (
+            <div
+              key={t.team}
+              className="mb-1 grid items-center gap-1"
+              style={{ gridTemplateColumns: `72px repeat(${gws.length}, minmax(0,1fr))` }}
+            >
+              <span className="flex min-w-0 items-center gap-1.5" title={`${teamLabel(t.team)}${t.owned ? ' — you own a player here' : ''}`}>
+                <TeamBadge team={t.team} size={14} />
+                <span className={`truncate text-[11px] font-semibold ${t.owned ? 'text-accent-2' : 'text-ink-3'}`}>{t.team}</span>
+              </span>
+              {t.cells.map((fs, i) => {
+                if (!fs.length) {
+                  return (
+                    <span key={gws[i]} className="rounded border border-dashed border-line-strong py-[3px] text-center text-[8.5px] font-bold text-ink-3">
+                      BLANK
+                    </span>
+                  )
+                }
+                const f = fs.reduce((a, b) => (a.fdr <= b.fdr ? a : b))
+                const [bg, fg] = FDR_COLORS[f.fdr] ?? FDR_COLORS[3]
+                return (
+                  <span
+                    key={gws[i]}
+                    title={`GW${gws[i]} — ${f.opponent} ${f.venue === 'H' ? 'at home' : 'away'}, difficulty ${f.fdr}${fs.length > 1 ? ` (double: ${fs.map((x) => x.opponent).join(', ')})` : ''}`}
+                    className="rounded py-[3px] text-center text-[9px] font-bold"
+                    style={{ background: bg, color: fg }}
+                  >
+                    {f.opponent}{fs.length > 1 ? '+' : ''}
+                  </span>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+      <p className="mt-1.5 text-[10.5px] leading-snug text-ink-3">
+        Every club in the game over the same weeks. Gold codes are clubs you already hold.
       </p>
     </div>
   )

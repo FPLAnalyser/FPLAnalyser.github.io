@@ -12,6 +12,7 @@ export function FixtureChips({
   compact = false,
   dense = false,
   fromGw,
+  values,
 }: {
   fixtureEase: FixtureEaseRow[]
   team: string
@@ -28,6 +29,10 @@ export function FixtureChips({
    *  planner steps through the season, and a list still showing GW1 while
    *  the board is on GW5 is worse than showing nothing. */
   fromGw?: number
+  /** A number to print under each opponent, inside the chip — the projection
+   *  for that week. Aligned by being part of the same element: a separate row
+   *  underneath cannot line up with chips that size to their own text. */
+  values?: (number | null)[]
 }) {
   const upcoming = (fixtureEase || [])
     .filter((f) => f.team === team && (fromGw == null || f.gw >= fromGw))
@@ -65,6 +70,11 @@ export function FixtureChips({
             title={`GW${f.gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamFullNames[f.opponent] || f.opponent} (FDR ${f.fdr})`}
           >
             {dense ? `${f.opponent}·${f.venue}` : `${f.opponent} (${f.venue})`}
+            {values && (
+              <span className="mt-px block text-center text-[10px] leading-[12px] font-extrabold tabular-nums opacity-80">
+                {values[i] == null ? '—' : (values[i] as number).toFixed(1)}
+              </span>
+            )}
           </span>
         )
       })}
@@ -136,6 +146,10 @@ export function FixtureRun({ fixtureEase, team, n = 4, fromGw }: {
   team: string
   n?: number
   fromGw?: number
+  /** A number to print under each opponent, inside the chip — the projection
+   *  for that week. Aligned by being part of the same element: a separate row
+   *  underneath cannot line up with chips that size to their own text. */
+  values?: (number | null)[]
 }) {
   const upcoming = (fixtureEase || [])
     .filter((f) => f.team === team && (fromGw == null || f.gw >= fromGw))
