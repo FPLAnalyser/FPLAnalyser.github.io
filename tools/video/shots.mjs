@@ -105,13 +105,57 @@ export const SHOTS = {
     cursor: [[0, 0.6, 0.35], [1, 0.5, 0.6]],
   },
 
-  squad_builder: {
+  // The builder opens empty — an empty pitch is the same dead shot the Scouting
+  // page had. So this presses Auto pick on camera and lets the fifteen land.
+  // The scroll is deliberately fixed: the squad filling in *is* the motion, and
+  // panning at the same time would fight it. It also keeps the button still, so
+  // the pointer can sit on it while it is pressed.
+  squad_autopick: {
     route: '/#/squad',
-    seconds: { wide: 10, vertical: 8 },
-    from: { y: 0 },
-    to: { y: 600 },
-    caption: 'Build an XI and plan the season week by week.',
-    cursor: [[0, 0.3, 0.4], [0.5, 0.6, 0.55], [1, 0.45, 0.7]],
+    seconds: { wide: 7, vertical: 6 },
+    from: { y: 60 },
+    to: { y: 60 },
+    caption: 'Build an XI — or let it pick one for you.',
+    // Moves off the button as soon as it is pressed, and means it. Filling the
+    // squad swaps the right-hand Add Players panel for the verdict and Squad
+    // Lab, which re-centres the whole toolbar — so the position resolved before
+    // the click is stale the instant it lands, and a pointer left parked there
+    // sits on Share, appearing to press one control and rest on another.
+    cursor: [
+      [0, 0.66, 0.62],
+      [0.28, { text: 'Auto pick' }],
+      [0.30, { text: 'Auto pick' }],
+      [0.50, 0.30, 0.70],
+      [1, 0.26, 0.82],
+    ],
+    action: {
+      at: 0.3,
+      run: async (page) => {
+        await page.getByRole('button', { name: 'Auto pick', exact: true }).click()
+        await page.waitForTimeout(400)
+      },
+    },
+  },
+
+  squad_insights: {
+    route: '/#/squad',
+    seconds: { wide: 8, vertical: 8 },
+    // Filled before filming this time — the click already happened in the shot
+    // before, and repeating it would read as a stutter across the cut.
+    setup: async (page) => {
+      await page.getByRole('button', { name: 'Auto pick', exact: true }).click()
+      await page.waitForTimeout(2500)
+    },
+    from: { y: 60 },
+    // Stops just above Squad Lab's explainer, which ends "…and what the
+    // bookmakers make of each fixture". Same reason the Fixtures shot starts
+    // low: docs/DOMAIN_CATEGORISATION.md wants that word out of anything
+    // indexable, and a burned-in caption cannot be edited after upload. The
+    // offset is large but stays pinned to the heading, so a data refresh moving
+    // the panel moves the stop with it.
+    to: { text: 'Squad Lab', align: 'top', offset: -320 },
+    caption: 'Then it tells you what is wrong with it.',
+    cursor: [[0, 0.5, 0.35], [1, 0.74, 0.55]],
   },
 
   // Stands in for LAUNCH.md's shot 8 (My Team). That page is gated behind
@@ -140,7 +184,7 @@ export const SHOTS = {
 
   home_close: {
     route: '/#/',
-    seconds: 6,
+    seconds: 5,
     from: { y: 0 },
     to: { y: 0 },
     caption: 'fplanalyser.co.uk',
@@ -153,14 +197,15 @@ export const SHOTS = {
 export const CUTS = {
   full: [
     'home_open', 'preview_deadline', 'preview_match', 'preview_steps_up',
-    'player_brief', 'fixtures_runs', 'squad_builder', 'scouting', 'home_close',
+    'player_brief', 'fixtures_runs', 'squad_autopick', 'squad_insights',
+    'scouting', 'home_close',
   ],
   // "the deadline" — strongest hook, post this one first
   a: ['preview_deadline', 'preview_match', 'preview_steps_up'],
   // "the player read" — one long slow scroll
   b: ['player_brief'],
-  // "the planner"
-  c: ['fixtures_runs', 'squad_builder'],
+  // "the planner" — fixtures, then the fifteen built on camera
+  c: ['fixtures_runs', 'squad_autopick'],
 }
 
 export function secondsFor(shot, format) {

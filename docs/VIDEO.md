@@ -7,10 +7,10 @@ What to upload, where, and with what copy. The files themselves come from
 
 | File | Goes to | Length |
 |------|---------|--------|
-| `fpl-full-wide.mp4` | YouTube, as a normal video | 71s · 1920×1080 |
+| `fpl-full-wide.mp4` | YouTube, as a normal video | 75s · 1920×1080 |
 | `fpl-a-vertical.mp4` | YouTube Shorts, Reels, TikTok | 15s · 1080×1920 |
 | `fpl-b-vertical.mp4` | Shorts, Reels, TikTok | 14s · 1080×1920 |
-| `fpl-c-vertical.mp4` | Shorts, Reels, TikTok | 15s · 1080×1920 |
+| `fpl-c-vertical.mp4` | Shorts, Reels, TikTok | 13s · 1080×1920 |
 
 All four are H.264/AAC in an MP4 — silent, with captions burned in, which is
 how they are meant to run: most Shorts are watched muted. Nothing needs
@@ -72,8 +72,8 @@ https://fplanalyser.co.uk
 0:00 Every player, rated
 0:12 The gameweek, before the deadline
 0:28 The player brief
-0:38 Fixtures and squad planning
-0:56 Head-to-head scouting
+0:38 Fixtures, and building a squad
+1:01 Head-to-head scouting
 
 FPL Analyser is independent and not affiliated with the Premier League or
 Fantasy Premier League.
@@ -83,9 +83,9 @@ Fantasy Premier League.
 
 Those five timestamps are deliberate. YouTube only turns timestamps into real
 chapters when there are at least three, the first is `0:00`, and **every
-chapter runs 10 seconds or longer** — so the nine shots are merged into five.
+chapter runs 10 seconds or longer** — so the ten shots are merged into five.
 Splitting them back out to one per shot silently disables chapters, because
-several shots are 8 or 9 seconds.
+several shots are 7 to 9 seconds.
 
 **Tags:** `fpl`, `fantasy premier league`, `fpl tips`, `fpl gameweek`,
 `fpl transfers`, `fantasy football`, `premier league`
@@ -134,8 +134,12 @@ captain who has since been injured is worse than no thumbnail.
   last week's deadline is worse than no video.
 - **Dry-run first.** `node tools/video/render.mjs --cut full --format wide --dry`
   fails loudly if a data refresh moved an anchor out from under a shot.
-- **Watch all 71 seconds.** Check the deadline strip shows a *future* deadline
+- **Watch all 75 seconds.** Check the deadline strip shows a *future* deadline
   and the captain podium names someone currently fit.
+- **Watch the Squad Builder click land.** `squad_autopick` presses Auto pick on
+  camera, and pressing it re-centres the toolbar underneath the pointer. If a
+  layout change ever leaves the pointer pressing thin air, it will look like a
+  fake recording — which is the one thing a product demo cannot look like.
 - **Check the club badges.** They appear inside the product UI, which is fine —
   they are the app, not branding. Do not lift one out for a thumbnail or a
   channel avatar; `CLAUDE.md` rules out Premier League and club marks as brand

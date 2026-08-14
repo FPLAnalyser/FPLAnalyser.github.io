@@ -59,7 +59,11 @@ const dry = flag('dry')
 // uploads from one. --codec vp8 keeps the old WebM path.
 const codec = String(arg('codec', 'h264')).toLowerCase()
 
-if (!CUTS[cutName]) throw new Error(`unknown cut "${cutName}" (have: ${Object.keys(CUTS).join(', ')})`)
+// --shots overrides the cut with an explicit list, for iterating on one shot
+// without re-rendering the whole film.
+const shotsOverride = arg('shots', null)
+
+if (!shotsOverride && !CUTS[cutName]) throw new Error(`unknown cut "${cutName}" (have: ${Object.keys(CUTS).join(', ')})`)
 if (!FORMATS[formatName]) throw new Error(`unknown format "${formatName}"`)
 if (!['h264', 'vp8'].includes(codec)) throw new Error(`unknown codec "${codec}" (have: h264, vp8)`)
 if (!existsSync(DIST)) throw new Error('dist/ missing — run `npm run build` first')
@@ -70,7 +74,7 @@ if (!FFMPEG) {
 }
 
 const format = FORMATS[formatName]
-const shotIds = CUTS[cutName]
+const shotIds = shotsOverride ? shotsOverride.split(',').map((s) => s.trim()) : CUTS[cutName]
 
 // Caption sizing differs per format: the vertical cut renders at 432 CSS px, so
 // a size tuned for the 1280px desktop layout would come out unreadably small.
@@ -223,6 +227,36 @@ function pathAt(points, t) {
   return null
 }
 
+// A cursor point may be [t, {text: 'Auto pick'}] instead of [t, fx, fy], which
+// resolves to wherever that control actually sits. Hardcoded fractions would
+// have to be re-measured for every format — the mobile layout puts the same
+// toolbar somewhere else entirely — and would drift silently on any layout
+// change, landing the pointer next to the button it appears to press.
+async function resolveCursorPath(page, points, scrollY, css) {
+  if (!points) return null
+  const out = []
+  for (const pt of points) {
+    if (pt.length !== 2 || typeof pt[1] !== 'object') { out.push(pt); continue }
+    const box = await page.evaluate(({ text, sy }) => {
+      window.scrollTo(0, sy)
+      const want = text.trim().toLowerCase()
+      let best = null
+      for (const el of document.querySelectorAll('button,[role=button],a,summary')) {
+        const t = (el.textContent || '').trim().toLowerCase()
+        if (t !== want) continue
+        const r = el.getBoundingClientRect()
+        if (r.width > 0 && r.height > 0 && (!best || t.length < best.len)) {
+          best = { x: r.left + r.width / 2, y: r.top + r.height / 2, len: t.length }
+        }
+      }
+      return best
+    }, { text: pt[1].text, sy: scrollY })
+    if (!box) throw new Error(`cursor target not found: "${pt[1].text}"`)
+    out.push([pt[0], box.x / css.width, box.y / css.height])
+  }
+  return out
+}
+
 // Resolve a scroll anchor to an absolute Y. Anchors are heading text so they
 // survive a data refresh moving the layout; a missing one is a hard error.
 async function resolveAnchor(page, spec, label) {
@@ -372,6 +406,10 @@ for (const id of shotIds) {
   const maxY = await page.evaluate(() => Math.max(0, document.documentElement.scrollHeight - window.innerHeight))
   const clamp = (v) => Math.min(Math.max(v, 0), maxY)
 
+  const cursorPath = SHOW_CURSOR
+    ? await resolveCursorPath(page, shot.cursor, clamp(yFrom), format.css)
+    : null
+  const clickPt = shot.action ? pathAt(cursorPath, shot.action.at) : null
   const isEnd = shot.captionStyle === 'endcard'
   const vw = format.css.width
   const vh = format.css.height
@@ -402,15 +440,20 @@ for (const id of shotIds) {
     if (tSec < FADE) capOpacity = tSec / FADE
     else if (tSec > seconds - FADE) capOpacity = Math.max(0, (seconds - tSec) / FADE)
 
-    const p = SHOW_CURSOR ? pathAt(shot.cursor, t) : null
+    const p = pathAt(cursorPath, t)
     const cursor = p ? { x: Math.round(p.fx * vw), y: Math.round(p.fy * vh) } : null
 
+    // The ripple is pinned to where the click landed, not to the live pointer.
+    // A click mark that slides along behind the cursor does not read as a click.
     let ring = null
-    if (shot.action && cursor) {
+    if (clickPt) {
       const dt = t - shot.action.at
       if (dt >= 0 && dt < 0.14) {
         const k = dt / 0.14
-        ring = { x: cursor.x, y: cursor.y, scale: 1 + k * 2.6, opacity: 1 - k }
+        ring = {
+          x: Math.round(clickPt.fx * vw), y: Math.round(clickPt.fy * vh),
+          scale: 1 + k * 2.6, opacity: 1 - k,
+        }
       }
     }
 

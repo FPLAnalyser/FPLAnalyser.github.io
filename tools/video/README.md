@@ -33,6 +33,7 @@ readable at phone size.
 | `--format` | `wide` | `wide`, `vertical` |
 | `--fps` | `30` | |
 | `--codec` | `h264` | `h264` (MP4) or `vp8` (WebM) |
+| `--shots` | — | Explicit shot list, overrides `--cut`, e.g. `squad_autopick` |
 | `--dry` | off | Resolve anchors and report; encode nothing |
 | `--stills` | off | Also write first/middle/last frame of each shot as PNG |
 | `--out` | `build/video` | |
@@ -112,6 +113,38 @@ Two things differ in the vertical cuts, and both matter more than they sound:
 
 `shots.mjs` is the whole edit — routes, durations, captions, scroll anchors and
 the pointer path, as data. Durations can differ per format (`{wide, vertical}`)
-so a shot can breathe in the long cut and snap in a vertical. A shot may declare
-a `setup(page)` that runs before filming; Scouting uses one to fill its
-head-to-head, since the page opens on an empty state.
+so a shot can breathe in the long cut and snap in a vertical.
+
+Iterate on one shot without re-rendering the film:
+
+```bash
+node tools/video/render.mjs --shots squad_autopick --format wide --stills
+```
+
+### Clicking things
+
+Two hooks, and the difference between them matters:
+
+- **`setup(page)`** runs *before* filming. Use it when the interaction is not
+  the point and you just need the page populated — Scouting and
+  `squad_insights` both use one, because they open on empty states.
+- **`action: {at, run}`** runs *during* filming, at that fraction of the shot,
+  and draws a click ripple. Use it when pressing the thing **is** the shot, as
+  in `squad_autopick`.
+
+A pointer path point may be `[t, {text: 'Auto pick'}]` instead of
+`[t, fx, fy]`, and resolves to wherever that control actually sits — necessary
+because the mobile layout puts the same toolbar somewhere else entirely, and
+hardcoded fractions drift silently into pressing thin air next to the button.
+
+The catch is that the position is resolved *before* the click, and a click
+often moves things. Pressing Auto pick swaps the right-hand Add Players panel
+for the verdict and Squad Lab, which re-centres the toolbar: a pointer parked
+on the resolved spot ends up hovering Share, appearing to press one control and
+rest on another. So move the pointer off promptly after any action, and check
+the result — `--stills` gives first/middle/last, but for a click you want the
+frames either side of `action.at`:
+
+```bash
+node_modules/ffmpeg-static/ffmpeg -ss 2.1 -i build/video/fpl-full-wide.mp4 -frames:v 1 click.png
+```
