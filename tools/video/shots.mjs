@@ -91,8 +91,16 @@ export const SHOTS = {
   fixtures_runs: {
     route: '/#/fixtures',
     seconds: { wide: 8, vertical: 7 },
-    from: { y: 0 },
-    to: { y: 700 },
+    // Starts below the page's methodology note, which reads "…live bookmaker
+    // odds … until the books price them". docs/DOMAIN_CATEGORISATION.md wants
+    // those words kept out of anything indexable, and burning them into an
+    // upload is worse than a page — a video cannot be edited after publishing.
+    // Opening straight on the ticker is the stronger shot regardless.
+    // Fixed offsets are safe here: everything above the ticker is static page
+    // chrome, so a data refresh does not move it. They differ per format
+    // because the mobile layout stacks the same controls much taller.
+    from: { wide: { y: 560 }, vertical: { y: 1150 } },
+    to: { wide: { y: 1260 }, vertical: { y: 1850 } },
     caption: 'Find the best run of fixtures for every club — and when to jump.',
     cursor: [[0, 0.6, 0.35], [1, 0.5, 0.6]],
   },

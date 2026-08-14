@@ -70,7 +70,8 @@ await page.waitForTimeout(2500)
 const y = await page.evaluate(() => {
   for (const el of document.querySelectorAll('h2')) {
     if ((el.textContent || '').trim().toLowerCase() === 'captain') {
-      return Math.max(0, Math.round(el.getBoundingClientRect().top + window.scrollY) - 210)
+      // Leaves the top third clear for the headline block.
+      return Math.max(0, Math.round(el.getBoundingClientRect().top + window.scrollY) - 300)
     }
   }
   return null
@@ -83,17 +84,27 @@ await page.evaluate((text) => {
   const wrap = document.createElement('div')
   wrap.style.cssText = `position:fixed;inset:0;z-index:2147483647;pointer-events:none;
     background:linear-gradient(180deg, rgba(6,5,4,0.94) 0%, rgba(6,5,4,0.82) 32%, rgba(6,5,4,0) 52%);`
+  // Stacked in normal flow rather than absolutely positioned, so the kicker
+  // cannot drift onto the podium when the headline wraps to a different number
+  // of lines.
+  const block = document.createElement('div')
+  block.style.cssText = `position:absolute;left:56px;top:40px;right:56px;`
+
   const h = document.createElement('div')
-  h.style.cssText = `position:absolute;left:56px;top:44px;right:56px;
-    font-family:'Archivo Black',system-ui,sans-serif;font-size:92px;line-height:0.94;
-    letter-spacing:-0.025em;color:#fff;text-shadow:0 6px 30px rgba(0,0,0,0.85);white-space:pre-line;`
+  h.style.cssText = `font-family:'Archivo Black',system-ui,sans-serif;font-size:92px;
+    line-height:0.94;letter-spacing:-0.025em;color:#fff;
+    text-shadow:0 6px 30px rgba(0,0,0,0.85);white-space:pre-line;`
   h.textContent = text
+
   const kicker = document.createElement('div')
-  kicker.style.cssText = `position:absolute;left:60px;top:${44 + 92 * (text.split('\n').length) * 0.94 + 18}px;
+  kicker.style.cssText = `margin-top:16px;
     font-family:'Manrope',system-ui,sans-serif;font-size:26px;font-weight:800;
-    letter-spacing:0.3em;text-transform:uppercase;color:#c9a227;`
+    letter-spacing:0.3em;text-transform:uppercase;color:#c9a227;
+    text-shadow:0 2px 14px rgba(0,0,0,0.9);`
   kicker.textContent = 'FPL Analyser'
-  wrap.append(h, kicker)
+
+  block.append(h, kicker)
+  wrap.append(block)
   document.documentElement.appendChild(wrap)
 }, headline)
 

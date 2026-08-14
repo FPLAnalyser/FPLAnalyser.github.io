@@ -207,7 +207,10 @@ function pathAt(points, t) {
 
 // Resolve a scroll anchor to an absolute Y. Anchors are heading text so they
 // survive a data refresh moving the layout; a missing one is a hard error.
-async function resolveAnchor(page, anchor, label) {
+async function resolveAnchor(page, spec, label) {
+  // An anchor may be given per format ({wide: …, vertical: …}) when the desktop
+  // and mobile layouts need genuinely different framing.
+  const anchor = spec[formatName] ?? spec
   if (anchor.y !== undefined) return anchor.y
   const y = await page.evaluate(({ text, offset }) => {
     const want = text.trim().toLowerCase()
@@ -340,7 +343,10 @@ for (const id of shotIds) {
 
   if (dry) {
     const travel = Math.abs(clamp(yTo) - clamp(yFrom))
-    const warn = travel < 40 && shot.from.y !== shot.to.y ? '  ** barely moves **' : ''
+    const fromSpec = shot.from[formatName] ?? shot.from
+    const toSpec = shot.to[formatName] ?? shot.to
+    // A deliberately static shot (home_close) is not a warning.
+    const warn = travel < 40 && fromSpec.y !== toSpec.y ? '  ** barely moves **' : ''
     console.log(`ok · page ${maxY + vh}px · travel ${travel}px${warn}`)
     manifest.push({ id, route: shot.route, seconds, frames, caption: shot.caption })
     totalFrames += frames
