@@ -416,7 +416,7 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
         label="xP / Rating"
         sub={week ? undefined : `${picked}/15 picked`}
         left={{ value: teamXp == null ? '—' : teamXp.toFixed(1), tone: 'accent', delta: xpDelta, dp: 1, onClick: teamXp == null || !week ? undefined : () => setDetail('xp') }}
-        right={{ value: rating == null ? '—' : String(rating), tone: ratingTone(rating), word: rating == null ? '' : ratingWord(rating), onClick: rating == null ? undefined : () => setDetail('rating') }}
+        right={{ value: rating == null ? '—' : String(rating), tone: ratingTone(rating), onClick: rating == null ? undefined : () => setDetail('rating') }}
       />
       <Stat label="Squad rating" value={squadScore == null ? '—' : String(squadScore)} tone="accent" delta={scoreDelta} dp={0} onClick={squadScore == null ? undefined : onOpenSquadRating} />
       <Stat label="In the bank" value={`£${(BUDGET - spend).toFixed(1)}m`} tone={spend > BUDGET ? 'bad' : 'ink'} />
@@ -692,11 +692,10 @@ function EmptySlot({ pos, onClick }: { pos: Pos4; onClick: () => void }) {
   )
 }
 
-const ratingWord = (r: number) => (r >= 85 ? 'elite week' : r >= 70 ? 'strong' : r >= 50 ? 'about par' : r >= 30 ? 'below par' : 'poor week')
-
-/** The rating reads as a colour before it reads as a number, on the same
- *  bands as the word beneath it — gold for an elite week, green for strong,
- *  neutral at par, then amber and red as it falls away. */
+/** The rating reads as a colour before it reads as a number — gold for an
+ *  elite week, green for strong, neutral at par, then amber and red as it
+ *  falls away. The word that used to sit under the number said the same
+ *  thing the colour does. */
 const ratingTone = (r: number | null): 'accent' | 'good' | 'ink' | 'warn' | 'bad' =>
   r == null ? 'ink' : r >= 85 ? 'accent' : r >= 70 ? 'good' : r >= 50 ? 'ink' : r >= 30 ? 'warn' : 'bad'
 
@@ -725,7 +724,7 @@ function Pair({ label, sub, left, right }: {
   label: string
   sub?: string
   left: { value: string; tone: string; delta?: number | null; dp?: number; onClick?: () => void }
-  right: { value: string; tone: string; word: string; onClick?: () => void }
+  right: { value: string; tone: string; onClick?: () => void }
 }) {
   const half = (h: { value: string; tone: string; onClick?: () => void }, foot: React.ReactNode) => {
     const inner = (
@@ -743,11 +742,16 @@ function Pair({ label, sub, left, right }: {
   return (
     <div className="w-full rounded-xl border border-line bg-surface-1/60 p-1.5 text-center">
       <div className="flex items-start justify-center gap-1">
+        {/* Under the left number, movement or nothing. It used to read
+            "xP" and the right-hand one read the rating's WORD — Strong,
+            Fair — which restated the tile's own heading on one side and
+            said the same thing as the number on the other. The one caption
+            worth its line is what the rating is OF. */}
         {half(left, d != null && Math.abs(d) >= (dp === 0 ? 1 : 0.05)
           ? <span className={`font-num font-bold ${d > 0 ? 'text-good' : 'text-bad'}`}>{d > 0 ? '+' : '−'}{Math.abs(d).toFixed(dp)}</span>
-          : 'xP')}
+          : '')}
         <span aria-hidden className="mt-1 text-sm text-line-strong">/</span>
-        {half(right, right.word || 'rating')}
+        {half(right, 'weekly rating')}
       </div>
       <div className="mt-0.5 text-[10px] font-semibold tracking-[0.1em] text-ink-2 uppercase">{label}</div>
       {sub && <div className="mt-0.5 text-[10px] leading-tight text-ink-3">{sub}</div>}

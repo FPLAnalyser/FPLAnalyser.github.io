@@ -1021,7 +1021,7 @@ export default function SquadBuilder() {
               — far more often than you shop by a minimum Def Con score, and a
               filter you cannot see is a filter nobody uses. Crests rather than
               a dropdown, because the crest IS how you think of the club. */}
-          <div className="mb-3 rounded-xl border border-line bg-surface-1/50 p-2.5">
+          <div className="@container mb-3 rounded-xl border border-line bg-surface-1/50 p-2.5">
             <div className="mb-1.5 flex items-center gap-2">
               <span className="text-[10px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Club</span>
               <span className="text-[11px] text-ink-3">{club ? teamLabel(club) : 'every club'}</span>
@@ -1031,7 +1031,12 @@ export default function SquadBuilder() {
                 </button>
               )}
             </div>
-            <div className="flex flex-wrap gap-1">
+            {/* A GRID, NOT A WRAP. Wrapping fitted nineteen crests and put the
+                twentieth alone on a line of its own, which reads as a bug. Ten
+                to a row narrow, all twenty on one row once there is room for a
+                28px cell each — the count is fixed either way, so the shelf is
+                always full. */}
+            <div className="grid grid-cols-10 gap-1 @[600px]:grid-cols-20">
               {clubs.map((t) => {
                 const on = club === t
                 return (
@@ -1040,7 +1045,7 @@ export default function SquadBuilder() {
                     onClick={() => setClub(on ? null : t)}
                     title={teamLabel(t)}
                     aria-pressed={on}
-                    className={`grid size-[30px] place-items-center rounded-lg border transition ${
+                    className={`grid aspect-square w-full max-w-[38px] cursor-pointer place-items-center justify-self-center rounded-lg border transition ${
                       on ? 'border-accent bg-accent-selected' : 'border-transparent hover:border-line-strong'
                     } ${club && !on ? 'opacity-45' : ''}`}
                   >
@@ -1091,10 +1096,10 @@ export default function SquadBuilder() {
                 words PRICE, XP and RTG now appear. Sticky, because a list this
                 long scrolls its own headings away otherwise. */}
             <div className="sticky top-0 z-[2] flex items-center gap-2 border-b border-line-mid bg-surface-1 px-2.5 py-1.5 @[430px]:gap-2.5 @[430px]:px-3">
-              <SortHead label="Player" k="name" sort={sort} dir={sortDir} onSort={sortBy} className="min-w-0 flex-1 text-left" />
-              {/* Sits over the info buttons, so every heading below lines up
-                  with the column it names. */}
+              {/* Sits over the info buttons, so every heading lines up with
+                  the column it names. */}
               <span className="size-7 shrink-0" />
+              <SortHead label="Player" k="name" sort={sort} dir={sortDir} onSort={sortBy} className="min-w-0 flex-1 text-left" />
               <span className="hidden shrink-0 text-[9px] font-extrabold tracking-[0.1em] text-ink-3 @[430px]:inline-block @[600px]:hidden" style={{ width: 3 * 30 + 2 * 2 }}>NEXT 3</span>
               <span className="hidden shrink-0 text-[9px] font-extrabold tracking-[0.1em] text-ink-3 @[600px]:inline-block" style={{ width: 4 * 30 + 3 * 2 }}>NEXT 4</span>
               <SortHead label="Price" k="price" sort={sort} dir={sortDir} onSort={sortBy} className="w-12 shrink-0 text-right" />
@@ -1118,6 +1123,21 @@ export default function SquadBuilder() {
               const o = ovOf(r)
               return (
                 <div key={r.element} className={`flex items-center gap-2 border-b border-line px-2.5 py-2 last:border-0 @[430px]:gap-2.5 @[430px]:px-3 ${inSquad ? 'bg-surface-2/40' : ''}`}>
+                  {/* The same card the pitch opens, from the market. Reading a
+                      player you are thinking of signing and reading one you
+                      already own is the same act, and it wanted the same card
+                      — the name still goes to his full page. First in the row
+                      because it is the only cell you reach for BEFORE you have
+                      read anything; everything to its right is what you are
+                      reading. */}
+                  <button
+                    onClick={() => setSheetFor(r)}
+                    title={`${String(r.web_name)} — rating, form and fixtures`}
+                    aria-label={`About ${String(r.web_name)}`}
+                    className="grid size-7 shrink-0 place-items-center rounded-full border border-line-mid text-ink-3 transition-colors hover:border-accent hover:text-accent"
+                  >
+                    <Icon name="info" size={13} />
+                  </button>
                   <TeamBadge team={String(r.team)} size={16} />
                   <div className="min-w-0 flex-1">
                     <button className="block w-full text-left" onClick={() => navigate(playerHref(String(r.web_name), num(r, 'code')))}>
@@ -1157,18 +1177,6 @@ export default function SquadBuilder() {
                       <div className="truncate text-[11px] text-ink-3">{teamLabel(String(r.team))}</div>
                     </button>
                   </div>
-                  {/* The same card the pitch opens, from the market. Reading a
-                      player you are thinking of signing and reading one you
-                      already own is the same act, and it wanted the same
-                      card — the name still goes to his full page. */}
-                  <button
-                    onClick={() => setSheetFor(r)}
-                    title={`${String(r.web_name)} — rating, form and fixtures`}
-                    aria-label={`About ${String(r.web_name)}`}
-                    className="grid size-7 shrink-0 place-items-center rounded-full border border-line-mid text-ink-3 transition-colors hover:border-accent hover:text-accent"
-                  >
-                    <Icon name="info" size={13} />
-                  </button>
                   {/* THE NEXT FOUR, ON THE SAME LINE. They used to sit under
                       the name, which made every row two-and-a-bit lines tall
                       and put the run — the thing you are comparing signings on
