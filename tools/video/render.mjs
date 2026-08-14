@@ -190,8 +190,23 @@ function installDirector({ caption, text }) {
 }
 
 // Applied per frame. Kept as one evaluate call to hold the round-trips down.
-function applyFrame({ y, capOpacity, cursor, ring, endcard }) {
+function applyFrame({ y, capOpacity, cursor, ring, endcard, zoom }) {
   window.scrollTo(0, y)
+  // Zoom scales <body>, not the document element, so the director layer sits
+  // outside the transform and captions do not zoom with the page. transform is
+  // a paint-time effect, so layout and scrollHeight are untouched and the
+  // scroll logic above still addresses the unzoomed page. The origin is given
+  // in page coordinates, which makes it a fixed point: the focal element stays
+  // put while everything magnifies around it, whatever the scroll is doing.
+  //
+  // The browser re-rasterises at the scaled size, so text stays sharp. Doing
+  // this in ffmpeg with zoompan would magnify finished pixels and go soft.
+  if (zoom) {
+    document.body.style.transformOrigin = `${zoom.ox}px ${zoom.oy}px`
+    document.body.style.transform = `scale(${zoom.k})`
+  } else if (document.body.style.transform) {
+    document.body.style.transform = ''
+  }
   const cap = document.getElementById('__director_caption')
   const end = document.getElementById('__director_endcard')
   const cur = document.getElementById('__director_cursor')
@@ -255,6 +270,30 @@ async function resolveCursorPath(page, points, scrollY, css) {
     out.push([pt[0], box.x / css.width, box.y / css.height])
   }
   return out
+}
+
+// The point a zoom magnifies around, in page coordinates.
+async function resolveZoomOrigin(page, at) {
+  if (at.x !== undefined) return { ox: at.x, oy: at.y }
+  const box = await page.evaluate(({ text }) => {
+    const want = text.trim().toLowerCase()
+    let best = null
+    for (const el of document.querySelectorAll('h1,h2,h3,h4,div,span,section,button,a')) {
+      const t = (el.textContent || '').trim().toLowerCase()
+      if (t !== want) continue
+      const r = el.getBoundingClientRect()
+      if (r.width > 0 && r.height > 0 && (!best || t.length < best.len)) {
+        best = {
+          ox: Math.round(r.left + r.width / 2 + window.scrollX),
+          oy: Math.round(r.top + r.height / 2 + window.scrollY),
+          len: t.length,
+        }
+      }
+    }
+    return best
+  }, { text: at.text })
+  if (!box) throw new Error(`zoom target not found: "${at.text}"`)
+  return box
 }
 
 // Resolve a scroll anchor to an absolute Y. Anchors are heading text so they
@@ -409,6 +448,12 @@ for (const id of shotIds) {
   const cursorPath = SHOW_CURSOR
     ? await resolveCursorPath(page, shot.cursor, clamp(yFrom), format.css)
     : null
+  // Only magnification. Scaling below 1 would pull the page edges inward and
+  // expose bare background around them.
+  if (shot.zoom && (shot.zoom.from < 1 || shot.zoom.to < 1)) {
+    throw new Error(`${id}: zoom below 1 exposes the page edges — keep from/to >= 1`)
+  }
+  const zoomOrigin = shot.zoom ? await resolveZoomOrigin(page, shot.zoom.at) : null
   const clickPt = shot.action ? pathAt(cursorPath, shot.action.at) : null
   const isEnd = shot.captionStyle === 'endcard'
   const vw = format.css.width
@@ -457,7 +502,11 @@ for (const id of shotIds) {
       }
     }
 
-    await page.evaluate(applyFrame, { y, capOpacity, cursor, ring, endcard: isEnd })
+    const zoom = zoomOrigin
+      ? { ...zoomOrigin, k: shot.zoom.from + (shot.zoom.to - shot.zoom.from) * smootherstep(t) }
+      : null
+
+    await page.evaluate(applyFrame, { y, capOpacity, cursor, ring, endcard: isEnd, zoom })
 
     if (shot.action && !actionDone && t >= shot.action.at) {
       actionDone = true

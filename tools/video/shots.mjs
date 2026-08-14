@@ -182,6 +182,18 @@ export const SHOTS = {
     cursor: [[0, 0.5, 0.4], [1, 0.45, 0.65]],
   },
 
+  // Not in any cut — a worked example of a slow push onto the captain podium.
+  //   node tools/video/render.mjs --shots preview_captain_zoom --format wide
+  preview_captain_zoom: {
+    route: '/#/preview',
+    seconds: 6,
+    from: { text: 'Captain', align: 'top', offset: -120 },
+    to: { text: 'Captain', align: 'top', offset: -120 },
+    zoom: { from: 1, to: 1.5, at: { text: 'The pick' } },
+    caption: 'The captain pick, by expected points.',
+    cursor: null,
+  },
+
   home_close: {
     route: '/#/',
     seconds: 5,
