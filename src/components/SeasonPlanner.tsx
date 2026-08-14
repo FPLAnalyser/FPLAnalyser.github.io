@@ -414,12 +414,12 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
     <>
       <Pair
         label="xP / Rating"
-        sub={week ? 'what this XI should score, and how good that is' : `${picked}/15 picked`}
+        sub={week ? undefined : `${picked}/15 picked`}
         left={{ value: teamXp == null ? '—' : teamXp.toFixed(1), tone: 'accent', delta: xpDelta, dp: 1, onClick: teamXp == null || !week ? undefined : () => setDetail('xp') }}
         right={{ value: rating == null ? '—' : String(rating), tone: ratingTone(rating), word: rating == null ? '' : ratingWord(rating), onClick: rating == null ? undefined : () => setDetail('rating') }}
       />
-      <Stat label="Squad rating" value={squadScore == null ? '—' : String(squadScore)} tone="accent" sub="what you've built" delta={scoreDelta} dp={0} onClick={squadScore == null ? undefined : onOpenSquadRating} />
-      <Stat label="In the bank" value={`£${(BUDGET - spend).toFixed(1)}m`} tone={spend > BUDGET ? 'bad' : 'ink'} sub={`£${spend.toFixed(1)}m squad`} />
+      <Stat label="Squad rating" value={squadScore == null ? '—' : String(squadScore)} tone="accent" delta={scoreDelta} dp={0} onClick={squadScore == null ? undefined : onOpenSquadRating} />
+      <Stat label="In the bank" value={`£${(BUDGET - spend).toFixed(1)}m`} tone={spend > BUDGET ? 'bad' : 'ink'} />
     </>
   )
 

@@ -110,3 +110,52 @@ export function FixtureNames({ fixtureEase, team, n = 3, fromGw }: { fixtureEase
     </span>
   )
 }
+
+/** Difficulty as ink rather than as a filled block — the same reading the
+ *  season spine uses, so a green opponent means the same thing in the market
+ *  list as it does on the plan. */
+const FDR_INK: Record<number, string> = {
+  1: 'text-[#2fbf6e]', 2: 'text-[#7fd39b]', 3: 'text-[#9aa6b5]',
+  4: 'text-[#e8907f]', 5: 'text-[#e05b52]',
+}
+
+/**
+ * The next n fixtures as a fixed grid of equal cells: opponent in upper case
+ * at home, lower case away, coloured by difficulty.
+ *
+ * The market list used to render these as solid FDR-coloured pills of varying
+ * width. Four of them on every row put twenty-odd saturated blocks on screen
+ * at once — the loudest thing in a list whose subject is the numbers beside
+ * them — and because each pill sized to its own text the runs never lined up
+ * from row to row, which is the one thing a column of fixtures is for. Equal
+ * cells make the weeks a grid you can read down; ink instead of fill lets the
+ * difficulty read without shouting.
+ */
+export function FixtureRun({ fixtureEase, team, n = 4, fromGw }: {
+  fixtureEase: FixtureEaseRow[]
+  team: string
+  n?: number
+  fromGw?: number
+}) {
+  const upcoming = (fixtureEase || [])
+    .filter((f) => f.team === team && (fromGw == null || f.gw >= fromGw))
+    .sort((a, b) => a.gw - b.gw)
+    .slice(0, n)
+  return (
+    <span className="inline-grid gap-[2px]" style={{ gridTemplateColumns: `repeat(${n}, 1fr)` }}>
+      {Array.from({ length: n }, (_, i) => {
+        const f = upcoming[i]
+        if (!f) return <span key={i} className="h-[19px] rounded-[3px] bg-surface-2/40" />
+        return (
+          <span
+            key={i}
+            title={`GW${f.gw} ${f.venue === 'H' ? 'vs' : 'at'} ${teamFullNames[f.opponent] || f.opponent} (FDR ${f.fdr})`}
+            className={`grid h-[19px] w-[30px] place-items-center rounded-[3px] bg-surface-2/70 text-[10px] leading-none font-extrabold tracking-[.02em] tabular-nums ${FDR_INK[f.fdr] ?? 'text-ink-2'}`}
+          >
+            {f.venue === 'H' ? f.opponent.toUpperCase() : f.opponent.toLowerCase()}
+          </span>
+        )
+      })}
+    </span>
+  )
+}

@@ -6,7 +6,7 @@ import { SectionBanner } from '../components/SectionBanner'
 import { PageSkeleton } from '../components/Skeleton'
 import { Tabs, type TabDef } from '../components/Tabs'
 import { TeamBadge } from '../components/badges'
-import { FixtureChips, FixtureNames } from '../components/FixtureChips'
+import { FixtureNames, FixtureRun } from '../components/FixtureChips'
 import { ShareFooter } from '../components/ShareFooter'
 import { SeasonPlanner } from '../components/SeasonPlanner'
 import { SeasonSpine } from '../components/SeasonSpine'
@@ -137,13 +137,42 @@ function MetricChips({ metric, onChange }: { metric: Metric; onChange: (m: Metri
   )
 }
 
-type SortKey = 'xp' | 'rating' | 'price' | 'owned'
-const SORT_TABS: TabDef[] = [
-  { id: 'xp', label: 'xP' },
-  { id: 'rating', label: 'Rating' },
-  { id: 'price', label: 'Price' },
-  { id: 'owned', label: 'Owned' },
-]
+/** A column heading that is also the control that sorts the column. */
+function SortHead({ label, k, sort, dir, onSort, className = '' }: {
+  label: string; k: SortKey; sort: SortKey; dir: SortDir
+  onSort: (k: SortKey) => void; className?: string
+}) {
+  const on = sort === k
+  return (
+    <button
+      onClick={() => onSort(k)}
+      title={`Sort by ${label.toLowerCase()}`}
+      aria-sort={on ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+      className={`text-[9px] font-extrabold tracking-[0.1em] whitespace-nowrap uppercase transition-colors ${
+        on ? 'text-accent' : 'text-ink-3 hover:text-ink-2'
+      } ${className}`}
+    >
+      {/* The marker goes BEFORE the label, so the label's right edge stays
+          flush with the numbers underneath it whether the column is sorted or
+          not. Reserving space for it on the right pushed every heading a
+          glyph clear of its own column. */}
+      {on && <span className="mr-0.5 align-[1px] text-[8px]">{dir === 'asc' ? '▲' : '▼'}</span>}
+      {label}
+    </button>
+  )
+}
+
+/* THE LIST SORTS FROM ITS OWN HEADINGS. There was a row of sort tabs above
+   the list and a repeated PRICE / XP / RTG caption under every single number
+   in it — the same four words restated sixty times, and still no column
+   headings. One heading row does both jobs: it names the column once and it
+   is the control that sorts it. */
+type SortKey = 'name' | 'xp' | 'rating' | 'price' | 'owned'
+type SortDir = 'asc' | 'desc'
+/** Names read A–Z; every number reads best-first. */
+const DEFAULT_DIR: Record<SortKey, SortDir> = {
+  name: 'asc', xp: 'desc', rating: 'desc', price: 'desc', owned: 'desc',
+}
 
 // Position-relevant rating dimensions to filter by (the pipeline stores these
 // on a 0–5 scale; the sliders work in 0–100 like every rating on the site).
@@ -213,6 +242,16 @@ export default function SquadBuilder() {
   const [metric, setMetric] = useState<Metric>('rating')
   const [sheetFor, setSheetFor] = useState<RatingRow | null>(null)
   const [sort, setSort] = useState<SortKey>('xp')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
+  /** Click a heading to sort by it; click it again to turn it round. */
+  const sortBy = (k: SortKey) => {
+    if (k === sort) { setSortDir((d) => (d === 'asc' ? 'desc' : 'asc')); return }
+    setSort(k); setSortDir(DEFAULT_DIR[k])
+  }
+  /** One club, or all of them. The club you are shopping in is the filter
+   *  people reach for first — a fixture swing is a club-wide event — so it
+   *  sits in the open rather than behind the Filters button. */
+  const [club, setClub] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [note, setNote] = useState<string | null>(null)
 
@@ -601,6 +640,7 @@ export default function SquadBuilder() {
       } else if (r.position !== pickPos) {
         return false
       }
+      if (club && String(r.team) !== club) return false
       if (priceOf(r) > maxPrice + 1e-9) return false
       if (minRating > 0 && (ovOf(r) ?? 0) < minRating) return false
       if (!q) {
@@ -617,7 +657,10 @@ export default function SquadBuilder() {
       if (sort === 'xp') return xpOf(r) ?? -1
       return ovOf(r) ?? -1
     }
-    const sorted = [...rows].sort((a, b) => key(b) - key(a))
+    const cmp = sort === 'name'
+      ? (a: RatingRow, b: RatingRow) => String(a.web_name).localeCompare(String(b.web_name))
+      : (a: RatingRow, b: RatingRow) => key(a) - key(b)
+    const sorted = [...rows].sort((a, b) => (sortDir === 'asc' ? cmp(a, b) : -cmp(a, b)))
     // With a player armed, anyone you can't actually sign is noise — keep them
     // in the list (so the reason stays visible) but let the affordable ones
     // rise to the top rather than sitting 40 rows down.
@@ -633,10 +676,16 @@ export default function SquadBuilder() {
     }
     return sorted.slice(0, 60)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pool, pickPos, query, sort, maxPrice, minRating, minDim, dims, openPlaces, planner.pendingOut, plannerSquad])
+  }, [pool, pickPos, query, sort, sortDir, club, maxPrice, minRating, minDim, dims, openPlaces, planner.pendingOut, plannerSquad])
 
   const activeFilters = (maxPrice < PRICE_MAX ? 1 : 0) + (minRating > 0 ? 1 : 0) + dims.filter((d) => (minDim[d.key] ?? 0) > 0).length
   const resetFilters = () => { setMaxPrice(PRICE_MAX); setMinRating(0); setMinDim({}) }
+  /** Every club with a rated player, so a promoted side appears without a
+   *  code being typed in anywhere. */
+  const clubs = useMemo(
+    () => [...new Set(pool.map((r) => String(r.team)))].sort((a, b) => teamLabel(a).localeCompare(teamLabel(b))),
+    [pool],
+  )
 
   const planBar = (
     <PlanBar
@@ -966,17 +1015,54 @@ export default function SquadBuilder() {
             />
             {query && <button aria-label="Clear" onClick={() => setQuery('')} className="text-ink-3 hover:text-ink"><Icon name="x" size={15} /></button>}
           </div>
+          {/* THE CLUB FILTER, IN THE OPEN. It was behind a Filters button with
+              the price and rating sliders, which is the wrong place for it:
+              you shop by club — a fixture swing, a new manager, a price rise
+              — far more often than you shop by a minimum Def Con score, and a
+              filter you cannot see is a filter nobody uses. Crests rather than
+              a dropdown, because the crest IS how you think of the club. */}
+          <div className="mb-3 rounded-xl border border-line bg-surface-1/50 p-2.5">
+            <div className="mb-1.5 flex items-center gap-2">
+              <span className="text-[10px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Club</span>
+              <span className="text-[11px] text-ink-3">{club ? teamLabel(club) : 'every club'}</span>
+              {club && (
+                <button onClick={() => setClub(null)} className="ml-auto text-[11px] font-semibold text-accent hover:underline">
+                  Clear
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {clubs.map((t) => {
+                const on = club === t
+                return (
+                  <button
+                    key={t}
+                    onClick={() => setClub(on ? null : t)}
+                    title={teamLabel(t)}
+                    aria-pressed={on}
+                    className={`grid size-[30px] place-items-center rounded-lg border transition ${
+                      on ? 'border-accent bg-accent-selected' : 'border-transparent hover:border-line-strong'
+                    } ${club && !on ? 'opacity-45' : ''}`}
+                  >
+                    <TeamBadge team={t} size={20} />
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-semibold tracking-[0.1em] text-ink-3 uppercase">Sort</span>
-            <Tabs tabs={SORT_TABS} active={sort} onChange={(id) => setSort(id as SortKey)} layoutId="squad-sort" />
             <button
               onClick={() => setShowFilters((f) => !f)}
-              className={`ml-auto inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-colors ${
+              className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-colors ${
                 activeFilters > 0 ? 'border-accent bg-accent-selected text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
               }`}
             >
-              <Icon name="target" size={13} /> Filters{activeFilters > 0 ? ` (${activeFilters})` : ''} <span className="text-[10px]">{showFilters ? '▴' : '▾'}</span>
+              <Icon name="target" size={13} /> Price &amp; rating{activeFilters > 0 ? ` (${activeFilters})` : ''} <span className="text-[10px]">{showFilters ? '▴' : '▾'}</span>
             </button>
+            <span className="ml-auto text-[11px] text-ink-3">
+              {list.length}{list.length === 60 ? '+' : ''} shown · tap a heading to sort
+            </span>
           </div>
           <DutyLegend className="mb-3" />
 
@@ -1001,6 +1087,22 @@ export default function SquadBuilder() {
               three hundred, which pushed the bottom of the list off the screen
               with nothing you could scroll to reach it. */}
           <div className="@container overflow-hidden rounded-xl border border-line lg:min-h-48 lg:flex-1 lg:overflow-y-auto">
+            {/* The heading row, and the sort control, and the only place the
+                words PRICE, XP and RTG now appear. Sticky, because a list this
+                long scrolls its own headings away otherwise. */}
+            <div className="sticky top-0 z-[2] flex items-center gap-2 border-b border-line-mid bg-surface-1 px-2.5 py-1.5 @[430px]:gap-2.5 @[430px]:px-3">
+              <SortHead label="Player" k="name" sort={sort} dir={sortDir} onSort={sortBy} className="min-w-0 flex-1 text-left" />
+              {/* Sits over the info buttons, so every heading below lines up
+                  with the column it names. */}
+              <span className="size-7 shrink-0" />
+              <span className="hidden shrink-0 text-[9px] font-extrabold tracking-[0.1em] text-ink-3 @[430px]:inline-block @[600px]:hidden" style={{ width: 3 * 30 + 2 * 2 }}>NEXT 3</span>
+              <span className="hidden shrink-0 text-[9px] font-extrabold tracking-[0.1em] text-ink-3 @[600px]:inline-block" style={{ width: 4 * 30 + 3 * 2 }}>NEXT 4</span>
+              <SortHead label="Price" k="price" sort={sort} dir={sortDir} onSort={sortBy} className="w-12 shrink-0 text-right" />
+              <SortHead label="xP" k="xp" sort={sort} dir={sortDir} onSort={sortBy} className="w-11 shrink-0 text-right" />
+              <SortHead label="Rtg" k="rating" sort={sort} dir={sortDir} onSort={sortBy} className="w-9 shrink-0 text-right" />
+              <SortHead label="Own %" k="owned" sort={sort} dir={sortDir} onSort={sortBy} className="w-11 shrink-0 text-right" />
+              <span className="size-8 shrink-0" />
+            </div>
             {list.map((r) => {
               // A player on the market is still yours until someone replaces
               // him, so the list has to say so rather than showing him as a
@@ -1049,9 +1151,24 @@ export default function SquadBuilder() {
                           ) : null
                         })()}
                       </div>
-                      <div className="text-[11px] text-ink-3">{teamLabel(String(r.team))} · {Math.round(num(r, 'selected_by_percent') ?? 0)}% owned</div>
+                      {/* Ownership used to live here, in prose, which meant it
+                          could not be compared down the list or sorted on. It
+                          is a number and it now has a column. */}
+                      <div className="truncate text-[11px] text-ink-3">{teamLabel(String(r.team))}</div>
                     </button>
                   </div>
+                  {/* The same card the pitch opens, from the market. Reading a
+                      player you are thinking of signing and reading one you
+                      already own is the same act, and it wanted the same
+                      card — the name still goes to his full page. */}
+                  <button
+                    onClick={() => setSheetFor(r)}
+                    title={`${String(r.web_name)} — rating, form and fixtures`}
+                    aria-label={`About ${String(r.web_name)}`}
+                    className="grid size-7 shrink-0 place-items-center rounded-full border border-line-mid text-ink-3 transition-colors hover:border-accent hover:text-accent"
+                  >
+                    <Icon name="info" size={13} />
+                  </button>
                   {/* THE NEXT FOUR, ON THE SAME LINE. They used to sit under
                       the name, which made every row two-and-a-bit lines tall
                       and put the run — the thing you are comparing signings on
@@ -1064,23 +1181,15 @@ export default function SquadBuilder() {
                       drop out; the fixtures are on the player's card and on
                       the Fixtures tab either way. */}
                   <span className="hidden shrink-0 @[430px]:inline-flex @[600px]:hidden">
-                    <FixtureChips fixtureEase={fixtureEase} team={String(r.team)} n={3} fromGw={liveGw} dense />
+                    <FixtureRun fixtureEase={fixtureEase} team={String(r.team)} n={3} fromGw={liveGw} />
                   </span>
                   <span className="hidden shrink-0 @[600px]:inline-flex">
-                    <FixtureChips fixtureEase={fixtureEase} team={String(r.team)} n={4} fromGw={liveGw} dense />
+                    <FixtureRun fixtureEase={fixtureEase} team={String(r.team)} n={4} fromGw={liveGw} />
                   </span>
-                  <span className="w-12 shrink-0 text-right">
-                    <span className="font-num block text-[13px] font-bold tabular-nums text-ink">£{priceOf(r).toFixed(1)}m</span>
-                    <span className="block text-[9px] font-extrabold tracking-[0.1em] text-ink-3">PRICE</span>
-                  </span>
-                  <span className="w-11 shrink-0 text-right">
-                    <span className="font-num block text-sm font-extrabold tabular-nums text-accent-2">{xpOf(r)?.toFixed(1) ?? '—'}</span>
-                    <span className="block text-[9px] font-extrabold tracking-[0.1em] text-ink-3">XP</span>
-                  </span>
-                  <span className="w-9 shrink-0 text-right">
-                    <span className="font-num block text-sm font-semibold tabular-nums text-ink-2">{o ?? '—'}</span>
-                    <span className="block text-[9px] font-extrabold tracking-[0.1em] text-ink-3">RTG</span>
-                  </span>
+                  <span className="font-num w-12 shrink-0 text-right text-[13px] font-bold tabular-nums text-ink">£{priceOf(r).toFixed(1)}m</span>
+                  <span className="font-num w-11 shrink-0 text-right text-sm font-extrabold tabular-nums text-accent-2">{xpOf(r)?.toFixed(1) ?? '—'}</span>
+                  <span className="font-num w-9 shrink-0 text-right text-sm font-semibold tabular-nums text-ink-2">{o ?? '—'}</span>
+                  <span className="font-num w-11 shrink-0 text-right text-sm font-semibold tabular-nums text-ink-2">{Math.round(num(r, 'selected_by_percent') ?? 0)}</span>
                   {/* Once he's on the market the sign-him button is dead, and a
                       greyed-out tick just looks broken. The one thing you can
                       actually do with him is take him back. */}
