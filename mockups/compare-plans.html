@@ -1,0 +1,392 @@
+<title>Compare plans — a rethink</title>
+<style>
+:root{--bg:#0a0908;--s1:#131110;--s2:#1b1917;--s3:#242120;--line:#2a2724;--line2:#3a3632;--ink:#f4efe3;--ink2:#a9a294;--ink3:#777064;--acc:#c9a227;--acc2:#e8c85a;--good:#5ec98a;--bad:#e08b80;--warn:#e8b04a;--p1:#c9a227;--p2:#6ea8ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 ui-sans-serif,system-ui,-apple-system,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:26px 18px 90px}
+h1{font-size:26px;margin:0 0 6px;letter-spacing:-.02em}
+h2{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin:44px 0 4px;font-weight:800}
+h3{font-size:19px;margin:2px 0 4px;letter-spacing:-.01em}
+.sub{color:var(--ink2);font-size:14px;margin:0 0 14px;max-width:92ch}
+.why{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:12px 15px;margin:10px 0 18px;font-size:13.5px;color:var(--ink2);max-width:100ch}
+.why b{color:var(--ink)}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin:0 0 8px}
+.tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid var(--line2);color:var(--ink3);vertical-align:3px;margin-left:8px}
+.tag.new{border-color:var(--acc);color:var(--acc)}
+.tag.far{border-color:#8f6fd0;color:#b79ae8}
+.num{font-variant-numeric:tabular-nums}
+.p1{color:var(--p1)} .p2{color:var(--p2)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:3px;vertical-align:1px;margin-right:6px}
+.muted{color:var(--ink3)}
+table{border-collapse:collapse;width:100%}
+td,th{padding:7px 8px;text-align:left;font-size:13px}
+th{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);font-weight:800;border-bottom:1px solid var(--line)}
+tr+tr td{border-top:1px solid var(--line)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:11px;font-weight:700;padding:3px 8px;border-radius:8px;border:1px solid var(--line2);color:var(--ink2)}
+.chip.on{border-color:var(--acc);background:rgba(201,162,39,.14);color:var(--acc2)}
+.chip.hit{border-color:var(--bad);color:var(--bad)}
+.chip.cap{border-color:var(--acc);color:var(--acc2)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+
+<h1>Compare plans — a rethink</h1>
+<p class="sub">
+The page compares two <em>fifteens at gameweek one</em>. But a plan is not a fifteen, it is a route:
+transfers, captains and chips across a run of weeks. Two plans can hold the same fifteen in GW1 and be
+completely different bets by GW6 — and the current page shows that difference as a chart underneath two
+team sheets, which is the wrong way round. Below: the frame, four concepts that would replace the body of
+the page, and three that are further out. Numbers are illustrative but internally consistent, so the
+concepts can be read against each other.
+</p>
+
+<div class="why">
+<b>The decision this page exists to serve.</b> Not "which fifteen is better" — <b>"which route should I
+take, and when do I find out I was wrong"</b>. That reframes everything: the unit is the gameweek, not the
+squad; the interesting weeks are the ones where the plans disagree; and the answer changes with how far
+ahead you look, which is why the horizon has to be a control rather than a fixed six.
+</div>
+
+
+<h2>The frame</h2>
+<h3>1 · Horizon is a control, and the winner can flip <span class="tag new">core</span></h3>
+<p class="sub">Every number on the page reads off it. The flip itself is the insight.</p>
+
+<div class="card">
+  <div class="chips" style="margin-bottom:14px">
+    <span class="chip">4 GWs</span>
+    <span class="chip on">6 GWs</span>
+    <span class="chip">8 GWs</span>
+    <span class="chip">10 GWs</span>
+    <span class="chip">To the wildcard (GW14)</span>
+    <span class="chip">Rest of season</span>
+  </div>
+  <div style="display:flex;align-items:flex-end;gap:28px;flex-wrap:wrap">
+    <div>
+      <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);font-weight:800">Plan 1 · Haaland route</div>
+      <div class="num p1" style="font:800 40px/1 ui-sans-serif;margin-top:4px">326.0</div>
+    </div>
+    <div style="font-size:22px;color:var(--ink3);padding-bottom:6px">vs</div>
+    <div>
+      <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);font-weight:800">Plan 2 · Gyökeres route</div>
+      <div class="num p2" style="font:800 40px/1 ui-sans-serif;margin-top:4px">331.4</div>
+    </div>
+    <div style="flex:1;min-width:260px;padding-bottom:4px">
+      <div style="font-size:13.5px;color:var(--ink2)">
+        <b class="p2">Plan 2 by 5.4</b> over six — <b>after paying a −4 hit in GW2</b>.
+        Over four it is level (0.6). Over two, Plan 1 leads by 3.4.
+      </div>
+      <div style="font-size:12px;color:var(--ink3);margin-top:4px">The hit is priced in. The horizon is the argument.</div>
+    </div>
+  </div>
+</div>
+
+<div class="why">
+<b>Why this is not a filter.</b> A six-week window is a house assumption and it decides the answer. Showing
+the same two plans at 4, 6, 8 and 10 turns "Plan 2 is better" into "Plan 2 is better <em>if you hold it past
+GW4</em>", which is the actual claim and the one you can act on. A plan that only wins at ten weeks is a
+plan you must not wildcard away at six.
+</div>
+
+
+<h2>Replace the body</h2>
+<h3>2 · The crossover — one line, not two <span class="tag new">core</span></h3>
+<p class="sub">Cumulative <em>difference</em>, week by week. Above the line, Plan 2 leads. The moment the lead changes hands is the whole story.</p>
+
+<div class="card">
+<svg viewBox="0 0 900 260" style="width:100%;height:auto" aria-label="Cumulative points difference by gameweek">
+  <defs>
+    <linearGradient id="up" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6ea8ff" stop-opacity=".34"/><stop offset="100%" stop-color="#6ea8ff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="dn" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#c9a227" stop-opacity=".34"/><stop offset="100%" stop-color="#c9a227" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <!-- zero line -->
+  <line x1="60" y1="140" x2="870" y2="140" stroke="#3a3632" stroke-width="1.5"/>
+  <text x="52" y="144" text-anchor="end" font-size="11" fill="#777064">0</text>
+  <text x="52" y="60"  text-anchor="end" font-size="11" fill="#777064">+6</text>
+  <text x="52" y="222" text-anchor="end" font-size="11" fill="#777064">−6</text>
+  <!-- area below zero (plan 1 ahead) -->
+  <path d="M60,140 L195,185 L330,144 L465,132 L600,112 L735,68 L735,140 Z" fill="url(#up)"/>
+  <path d="M60,140 L195,185 L330,144 L330,140 Z" fill="url(#dn)"/>
+  <!-- the line -->
+  <polyline points="60,140 195,185 330,144 465,132 600,112 735,68"
+            fill="none" stroke="#e8e2d4" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- points -->
+  <g fill="#e8e2d4">
+    <circle cx="60" cy="140" r="4"/><circle cx="195" cy="185" r="4"/><circle cx="330" cy="144" r="4"/>
+    <circle cx="465" cy="132" r="4"/><circle cx="600" cy="112" r="4"/><circle cx="735" cy="68" r="4"/>
+  </g>
+  <!-- the hit -->
+  <line x1="195" y1="185" x2="195" y2="140" stroke="#e08b80" stroke-width="1.5" stroke-dasharray="3 3"/>
+  <text x="205" y="204" font-size="12" fill="#e08b80" font-weight="700">−4 hit</text>
+  <!-- crossover marker -->
+  <line x1="392" y1="40" x2="392" y2="230" stroke="#5ec98a" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <text x="402" y="52" font-size="12.5" fill="#5ec98a" font-weight="800">Plan 2 goes ahead here</text>
+  <text x="402" y="70" font-size="11.5" fill="#a9a294">GW3 → GW4, and never trails again</text>
+  <!-- gw labels -->
+  <g font-size="12" fill="#a9a294" text-anchor="middle">
+    <text x="60" y="248">GW1</text><text x="195" y="248">GW2</text><text x="330" y="248">GW3</text>
+    <text x="465" y="248">GW4</text><text x="600" y="248">GW5</text><text x="735" y="248">GW6</text>
+  </g>
+  <text x="800" y="64" font-size="13" fill="#6ea8ff" font-weight="800">+5.4</text>
+</svg>
+<div style="font-size:12.5px;color:var(--ink2);margin-top:6px">
+  Plan 2 pays four points in GW2 and is 3.4 behind. It has that back within a week and is clear from GW4.
+  If your wildcard is GW5, <b>this is not a decision you get to keep</b> — the payoff lands after you would have torn it up.
+</div>
+</div>
+
+<div class="why">
+<b>Why one line beats two.</b> Two cumulative lines both climb from 0 to ~330 and sit on top of each other;
+a 5-point gap on a 330-point axis is invisible. Plotting the <em>difference</em> spends the whole vertical
+axis on the only quantity anyone is choosing between, and the zero crossing becomes a real event on the page
+instead of something you work out by subtracting two labels.
+</div>
+
+
+<h3>3 · The divergence log — only the weeks that differ <span class="tag new">core</span></h3>
+<p class="sub">Most weeks the two plans are identical. Printing those is noise. This lists what actually separates them, in order.</p>
+
+<div class="card" style="padding:6px 10px 10px">
+<table>
+  <tr><th style="width:64px">GW</th><th>What differs</th><th style="width:130px">Cost now</th><th style="width:120px;text-align:right">Running gap</th></tr>
+  <tr>
+    <td class="num" style="font-weight:800">1</td>
+    <td>
+      <b>Same fifteen. Different armband.</b>
+      <div class="chips" style="margin-top:5px">
+        <span class="chip cap"><span class="dot" style="background:var(--p1)"></span>C · Haaland</span>
+        <span class="chip cap"><span class="dot" style="background:var(--p2)"></span>C · Salah</span>
+      </div>
+    </td>
+    <td class="muted">—</td>
+    <td class="num" style="text-align:right">0.0</td>
+  </tr>
+  <tr>
+    <td class="num" style="font-weight:800">2</td>
+    <td>
+      <b>Plan 2 moves early.</b> Watkins → Gyökeres, one week before the free transfer.
+      <div class="chips" style="margin-top:5px"><span class="chip hit">−4 hit</span><span class="chip"><span class="dot" style="background:var(--p2)"></span>1 transfer</span></div>
+    </td>
+    <td class="p2">−4 to Plan 2</td>
+    <td class="num p1" style="text-align:right">−3.4</td>
+  </tr>
+  <tr>
+    <td class="num" style="font-weight:800">3</td>
+    <td><b>Gyökeres' first easy fixture.</b> Same squads otherwise, same captain.</td>
+    <td class="muted">—</td>
+    <td class="num p1" style="text-align:right">−0.3</td>
+  </tr>
+  <tr>
+    <td class="num" style="font-weight:800">4</td>
+    <td>
+      <b>Plan 1 catches up on the transfer</b> — Watkins → Gyökeres, free. From here the squads are identical again.
+      <div class="chips" style="margin-top:5px"><span class="chip"><span class="dot" style="background:var(--p1)"></span>1 transfer, free</span></div>
+    </td>
+    <td class="muted">—</td>
+    <td class="num p2" style="text-align:right">+0.6</td>
+  </tr>
+  <tr>
+    <td class="num muted" style="font-weight:800">5–6</td>
+    <td class="muted">Identical squads, identical armbands. The gap is banked, not growing.</td>
+    <td class="muted">—</td>
+    <td class="num p2" style="text-align:right">+5.4</td>
+  </tr>
+</table>
+</div>
+
+<div class="why">
+<b>This is the panel I would build first.</b> It reads like a diff, which is what it is, and it makes the
+shape of the decision obvious in four lines: <em>the two plans do the same thing four weeks out of six, and
+the entire argument is whether Gyökeres' first two fixtures are worth four points.</em> No chart says that
+sentence. Note also what it exposes — that by GW4 the squads have converged, which means <b>this is a timing
+question, not a squad question</b>, and the current page cannot tell you that at all.
+</div>
+
+
+<h3>4 · Two plans as two timelines <span class="tag new">core</span></h3>
+<p class="sub">Your idea — the plan view, side by side. Not a duplicate of the Squad Builder: there the rows are players, here the rows are plans.</p>
+
+<div class="card">
+  <div style="overflow-x:auto">
+  <table style="min-width:660px">
+    <tr>
+      <th style="width:150px">Plan</th>
+      <th style="text-align:center">GW1</th><th style="text-align:center">GW2</th><th style="text-align:center">GW3</th>
+      <th style="text-align:center">GW4</th><th style="text-align:center">GW5</th><th style="text-align:center">GW6</th>
+      <th style="text-align:right;width:76px">Total</th>
+    </tr>
+    <tr>
+      <td><span class="dot" style="background:var(--p1)"></span><b>Plan 1</b><div style="font-size:11px;color:var(--ink3);margin-left:15px">2 transfers · 0 hits</div></td>
+      <td style="text-align:center"><div class="num" style="font-weight:800">53.9</div><div style="font-size:10px;color:var(--acc2);font-weight:800">C HAA</div></td>
+      <td style="text-align:center"><div class="num" style="font-weight:800">56.0</div><div style="font-size:10px;color:var(--acc2);font-weight:800">C HAA</div></td>
+      <td style="text-align:center"><div class="num" style="font-weight:800">52.8</div><div style="font-size:10px;color:var(--acc2);font-weight:800">C SAL</div></td>
+      <td style="text-align:center"><div class="num" style="font-weight:800">56.5</div><div style="font-size:10px;color:var(--good);font-weight:800">1 IN</div></td>
+      <td style="text-align:center"><div class="num" style="font-weight:800">54.5</div><div style="font-size:10px;color:var(--acc2);font-weight:800">C GYÖ</div></td>
+      <td style="text-align:center"><div class="num" style="font-weight:800">52.3</div></td>
+      <td class="num p1" style="text-align:right;font-weight:800;font-size:16px">326.0</td>
+    </tr>
+    <tr>
+      <td><span class="dot" style="background:var(--p2)"></span><b>Plan 2</b><div style="font-size:11px;color:var(--ink3);margin-left:15px">2 transfers · 1 hit</div></td>
+      <td style="text-align:center"><div class="num" style="font-weight:800">53.9</div><div style="font-size:10px;color:var(--acc2);font-weight:800">C SAL</div></td>
+      <td style="text-align:center"><div class="num" style="font-weight:800">52.6</div><div style="font-size:10px;color:var(--bad);font-weight:800">1 IN · −4</div></td>
+      <td style="text-align:center"><div class="num" style="font-weight:800">55.9</div><div style="font-size:10px;color:var(--acc2);font-weight:800">C SAL</div></td>
+      <td style="text-align:center"><div class="num" style="font-weight:800">57.4</div></td>
+      <td style="text-align:center"><div class="num" style="font-weight:800">56.0</div><div style="font-size:10px;color:var(--acc2);font-weight:800">C GYÖ</div></td>
+      <td style="text-align:center"><div class="num" style="font-weight:800">55.6</div></td>
+      <td class="num p2" style="text-align:right;font-weight:800;font-size:16px">331.4</td>
+    </tr>
+    <tr>
+      <td class="muted" style="font-size:12px">Difference</td>
+      <td style="text-align:center" class="num muted">0.0</td>
+      <td style="text-align:center" class="num p1">−3.4</td>
+      <td style="text-align:center" class="num p2">+3.1</td>
+      <td style="text-align:center" class="num p2">+0.9</td>
+      <td style="text-align:center" class="num p2">+1.5</td>
+      <td style="text-align:center" class="num p2">+3.3</td>
+      <td class="num p2" style="text-align:right;font-weight:800">+5.4</td>
+    </tr>
+  </table>
+  </div>
+</div>
+
+<div class="why">
+<b>Is it duplication? No — the axis is different.</b> The Squad Builder's spine is <em>one plan × fifteen
+players</em>; this is <em>N plans × weeks</em>. The player rows are what you cannot show here without
+drowning: two fifteens over ten weeks is 300 cells and nobody reads it. What survives the compression is
+the week's total, the armband and the moves — which is exactly the plan, and exactly what the current page
+throws away. A row per plan also scales to three and four plans, which two pitches never will.
+</div>
+
+
+<h3>5 · The squads, collapsed to the difference <span class="tag new">core</span></h3>
+<p class="sub">Two full pitches to show that thirteen of fifteen are the same man is a poor trade for the space. Show the argument, keep the squads behind a click.</p>
+
+<div class="card">
+<div class="grid2">
+  <div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px">
+    <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);font-weight:800;margin-bottom:8px">
+      <span class="dot" style="background:var(--p1)"></span>Only in Plan 1
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:14px;padding:6px 0;border-bottom:1px solid var(--line)">
+      <span><b>Watkins</b> <span class="muted">FWD · AVL · £9.0m</span></span><span class="num" style="font-weight:800">31.2 xP</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:14px;padding:6px 0">
+      <span><b>Gordon</b> <span class="muted">MID · NEW · £7.5m</span></span><span class="num" style="font-weight:800">27.4 xP</span>
+    </div>
+  </div>
+  <div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px">
+    <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);font-weight:800;margin-bottom:8px">
+      <span class="dot" style="background:var(--p2)"></span>Only in Plan 2
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:14px;padding:6px 0;border-bottom:1px solid var(--line)">
+      <span><b>Gyökeres</b> <span class="muted">FWD · ARS · £9.0m</span></span><span class="num" style="font-weight:800">38.0 xP</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:14px;padding:6px 0">
+      <span><b>Semenyo</b> <span class="muted">MID · BOU · £7.5m</span></span><span class="num" style="font-weight:800">28.0 xP</span>
+    </div>
+  </div>
+</div>
+<div style="margin-top:10px;font-size:13px;color:var(--ink2)">
+  <b>Thirteen men are in both squads</b>, in the same roles, worth 267 xP to each plan — they cannot decide anything.
+  <span class="chip" style="margin-left:6px">Show both fifteens ▾</span>
+</div>
+</div>
+
+
+<h2>Further out</h2>
+
+<h3>6 · The bet, in one sentence <span class="tag far">out there</span></h3>
+<p class="sub">Reduce the comparison to the marginal decision and state its break-even.</p>
+<div class="card" style="font-size:15px;line-height:1.65">
+  You are paying <b class="p2">4 points now</b> to hold <b>Gyökeres</b> two weeks earlier than Plan 1 does.
+  <br>He has to out-score <b>Watkins</b> by <b>4.0</b> across GW2–GW3 to break even.
+  <br>The model has him beating Watkins by <b class="good" style="color:var(--good)">6.8</b> over those two weeks.
+  <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:13px;color:var(--ink2)">
+    Break-even needs him to hit <b>59%</b> of his projection. He has cleared that in <b>4 of his last 6</b>.
+  </div>
+</div>
+<div class="why">
+<b>Why this might be the whole page.</b> Every comparison of two plans that differ by one move reduces to a
+break-even, and a break-even is a sentence, not a chart. It also fails loudly and usefully: when two plans
+differ by six players there is no single sentence, and the page should say so and fall back to the log.
+</div>
+
+<h3>7 · What has to happen for you to be wrong <span class="tag far">out there</span></h3>
+<p class="sub">Invert the projection. Instead of a point estimate, the conditions under which the other plan wins.</p>
+<div class="card">
+  <div style="font-size:13px;color:var(--ink2);margin-bottom:10px">Plan 1 wins the six weeks if <b>any one</b> of these happens:</div>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex;justify-content:space-between;gap:12px;font-size:14px;border:1px solid var(--line);border-radius:10px;padding:9px 12px">
+      <span>Gyökeres blanks in <b>both</b> of GW2 and GW3</span><span class="num muted">31% likely</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:12px;font-size:14px;border:1px solid var(--line);border-radius:10px;padding:9px 12px">
+      <span>Watkins returns in <b>3 of 6</b> (he is projected 2)</span><span class="num muted">28% likely</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:12px;font-size:14px;border:1px solid var(--line);border-radius:10px;padding:9px 12px">
+      <span>Arsenal's GW4 fixture moves to a blank</span><span class="num muted">low, but it is a cup week</span>
+    </div>
+  </div>
+  <div style="margin-top:10px;font-size:13px;color:var(--ink2)">Taken together: <b>Plan 1 wins about a third of the time.</b> A 5.4-point projected gap is a lean, not a certainty — but you are choosing the lean.</div>
+</div>
+
+<h3>8 · The ribbon — the whole season as one strip <span class="tag far">out there</span></h3>
+<p class="sub">Who leads, week by week, at a glance. Fits above the fold for 38 weeks, not 6.</p>
+<div class="card">
+  <div style="display:flex;height:34px;border-radius:9px;overflow:hidden;border:1px solid var(--line)">
+    <div style="flex:1;background:rgba(201,162,39,.20);border-right:1px solid var(--line)"></div>
+    <div style="flex:1;background:rgba(201,162,39,.55);border-right:1px solid var(--line)"></div>
+    <div style="flex:1;background:rgba(201,162,39,.22);border-right:1px solid var(--line)"></div>
+    <div style="flex:1;background:rgba(110,168,255,.28);border-right:1px solid var(--line)"></div>
+    <div style="flex:1;background:rgba(110,168,255,.44);border-right:1px solid var(--line)"></div>
+    <div style="flex:1;background:rgba(110,168,255,.70)"></div>
+  </div>
+  <div style="display:flex;margin-top:5px;font-size:11px;color:var(--ink3)">
+    <div style="flex:1;text-align:center">GW1</div><div style="flex:1;text-align:center">GW2</div>
+    <div style="flex:1;text-align:center">GW3</div><div style="flex:1;text-align:center">GW4</div>
+    <div style="flex:1;text-align:center">GW5</div><div style="flex:1;text-align:center">GW6</div>
+  </div>
+  <div style="margin-top:9px;font-size:13px;color:var(--ink2)">
+    Colour = who is ahead cumulatively; depth = by how much. Gold at GW2 is the hit; the strip turns blue at GW4 and deepens.
+    At 38 weeks this is the only view that fits.
+  </div>
+</div>
+
+<h3>9 · Same route, different order <span class="tag far">out there</span></h3>
+<p class="sub">A question the current page cannot ask: what if the two plans make the <em>same</em> moves in a different order?</p>
+<div class="card" style="font-size:14px;line-height:1.6">
+  Both plans sign Gyökeres and Semenyo and sell Watkins and Gordon. Plan 2 does it in GW2 and GW5; Plan 1
+  in GW4 and GW3. <b>The squads are identical by GW6 and the fifteens are indistinguishable at the end of the
+  window.</b>
+  <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);color:var(--ink2);font-size:13px">
+    So the page should say <b>"this is the same plan, ordered differently"</b> and compare only the ordering —
+    two hits versus one, and which fixtures each man is owned for. Detecting that case is cheap (compare the
+    end-state fifteens) and it changes the entire framing of the answer.
+  </div>
+</div>
+
+
+<h2>What I would build</h2>
+<div class="card" style="font-size:14px;line-height:1.7">
+  <b>1.</b> Horizon control + the headline gap, with the flip called out — <span class="muted">the frame (#1)</span><br>
+  <b>2.</b> The crossover chart — <span class="muted">where the lead changes hands (#2)</span><br>
+  <b>3.</b> The divergence log — <span class="muted">what actually differs, week by week (#3)</span><br>
+  <b>4.</b> The two timelines — <span class="muted">the plans as routes, scaling to 3 and 4 plans (#4)</span><br>
+  <b>5.</b> The squad difference, with both fifteens behind a click — <span class="muted">(#5)</span><br>
+  <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line);color:var(--ink2);font-size:13.5px">
+    Then <b>#6 (the bet)</b> as the headline sentence whenever the plans differ by a single move, which is most
+    of the time, and <b>#9</b> as a guard that catches "same plan, different order" before the page draws
+    anything. #7 and #8 are worth a try but neither is load-bearing.
+    <br><br>
+    Dropped from the current page: the two full pitches, the radar, and the per-week table that repeats the
+    chart above it.
+  </div>
+</div>
+
+</div>
