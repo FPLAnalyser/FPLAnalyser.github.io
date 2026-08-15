@@ -115,7 +115,7 @@ export function SquadCompare({ plans, gws, engine, draws = 4000, onEdit }: {
   const complete = plans.filter((p) => p.squad.length === 15)
   if (complete.length < 2) {
     return (
-      <Panel title="Compare plans" kicker="Two plans of fifteen are needed before there is anything to compare.">
+      <Panel title="Compare Plans" kicker="Two plans of fifteen are needed before there is anything to compare.">
         <div className="text-[13px] text-ink-2">
           {plans.length < 2
             ? 'Tick at least two plans in the strip above the pitch.'

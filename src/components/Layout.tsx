@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { PREVIEW } from '../lib/flags'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Icon } from './Icon'
 import { PreviewBadge } from './PreviewBadge'
@@ -22,11 +23,13 @@ import type { RatingRow } from '../lib/types'
 // Short labels: the nav is a single non-wrapping row with a hidden scrollbar,
 // so anything past the edge is effectively invisible. The pages keep their
 // full titles ("GW Preview", "GW Review", "Squad Builder").
+/* Captaincy is unfinished and has no link in production. It is spliced back
+   in for preview builds so the work stays reachable while it is being done. */
 const LINKS: { to: string; label: string }[] = [
   { to: '/', label: 'Home' },
   { to: '/preview', label: 'Preview' },
   { to: '/squad', label: 'Squad' },
-  { to: '/captaincy', label: 'Captaincy' },
+  ...(PREVIEW ? [{ to: '/captaincy', label: 'Captaincy' }] : []),
   { to: '/fixtures', label: 'Fixtures' },
   { to: '/players', label: 'Players' },
   { to: '/scout', label: 'Scouting' },

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { PREVIEW } from '../lib/flags'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
@@ -753,12 +754,13 @@ export default function SquadBuilder() {
           <Tabs
             tabs={[
               { id: 'build', label: 'Squad' },
-              ...(complete ? [{ id: 'insights', label: 'Insights' }] : []),
+              /* Insights is unfinished — preview only, see lib/flags. */
+              ...(complete && PREVIEW ? [{ id: 'insights', label: 'Insights' }] : []),
               /* Comparing plans is its own job, not a reading of one squad, so
                  it sits beside Insights rather than inside it. No count in the
                  label — the strip beside it already says how many are ticked,
                  and a number in a tab reads as a badge for something unread. */
-              ...(plans.compare.length >= 2 ? [{ id: 'compare', label: 'Compare plans' }] : []),
+              ...(plans.compare.length >= 2 ? [{ id: 'compare', label: 'Compare Plans' }] : []),
             ]}
             active={view}
             onChange={(id) => setView(id as View)}

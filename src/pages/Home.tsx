@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import { PREVIEW } from '../lib/flags'
 import { flushSync } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../components/Icon'
@@ -56,11 +57,15 @@ interface HomeWin {
 // Order is the layout. At lg the grid is four columns, so this array reads as
 // two rows of four: the pre-deadline jobs across the top, the browse-and-track
 // pages underneath, closing on the page that looks back.
+const CAPTAINCY_WIN: HomeWin = { key: 'captaincy', photoKey: 'squad', to: '/captaincy', kicker: 'Decide', title: 'Captaincy', desc: 'Who to captain, what the bet looks like, and when the Triple Captain is worth spending.', stat: 'Priced against what the field is doing' }
+
+/* The Captaincy tile only exists where the page it opens does — a preview
+   build. See lib/flags. */
 const WINDOWS: HomeWin[] = [
   // Top row
   { key: 'preview', to: '/preview', kicker: 'This week', title: 'GW Preview', desc: 'The whole gameweek before the deadline — captain, chips, every fixture and who is missing.', stat: 'Getting you ready for the deadline' },
   { key: 'squad', to: '/squad', kicker: 'Build', title: 'Squad Builder', desc: 'Draft an XI and plan the season week by week.', stat: 'Import your side, get immediate analysis' },
-  { key: 'captaincy', photoKey: 'squad', to: '/captaincy', kicker: 'Decide', title: 'Captaincy', desc: 'Who to captain, what the bet looks like, and when the Triple Captain is worth spending.', stat: 'Priced against what the field is doing' },
+  ...(PREVIEW ? [CAPTAINCY_WIN] : []),
   { key: 'fixtures', to: '/fixtures', kicker: 'Plan', title: 'Fixtures', desc: 'Our own fixture rating and rotation planner.', stat: 'Rotations, Projected xG and Clean Sheets' },
   { key: 'players', to: '/players', kicker: 'Explore', title: 'Players', desc: 'Every player rated 0–100 — form, value, fixtures and the editorial player hero.', stat: 'Work out who is worth the money' },
   // Bottom row

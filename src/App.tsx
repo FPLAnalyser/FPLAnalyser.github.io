@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react'
+import { PREVIEW } from './lib/flags'
 import { createHashRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { IntroSplash } from './components/IntroSplash'
@@ -79,7 +80,8 @@ const router = createHashRouter([
       { path: 'compare', element: page(<Compare />) },
       { path: 'fixtures', element: page(<Fixtures />) },
       { path: 'squad', element: page(<SquadBuilder />) },
-      { path: 'captaincy', element: page(<Captaincy />) },
+      // Captaincy is still being built — preview only, see lib/flags.
+      ...(PREVIEW ? [{ path: 'captaincy', element: page(<Captaincy />) }] : []),
       { path: 'loadteam', element: page(<MyTeam />) },
       { path: 'preview', element: page(<Preview />) },
       { path: 'review', element: page(<Review />) },
