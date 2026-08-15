@@ -182,6 +182,87 @@ export const SHOTS = {
     cursor: [[0, 0.5, 0.4], [1, 0.45, 0.65]],
   },
 
+  // ---------------------------------------------------------------- effects
+  // Short worked examples, one per effect, collected in the `fx` cut. They are
+  // a sampler to look at, not part of the film:
+  //   node tools/video/render.mjs --cut fx --format wide
+
+  fx_dip: {
+    route: '/#/preview',
+    seconds: 3.5,
+    from: { text: 'Captain', align: 'top', offset: -120 },
+    to: { text: 'Captain', align: 'top', offset: -120 },
+    dip: { in: true, out: true, seconds: 0.5 },
+    caption: 'Dip to black — in and out',
+    cursor: null,
+  },
+
+  fx_spotlight: {
+    route: '/#/preview',
+    seconds: 3.5,
+    from: { text: 'Captain', align: 'top', offset: -120 },
+    to: { text: 'Captain', align: 'top', offset: -120 },
+    // up: 2 because the tightest match for "The pick" is its little label; the
+    // card worth lighting up is two levels out.
+    overlays: [{ type: 'spotlight', at: { text: 'The pick', up: 2 }, dim: 0.78, pad: 10 }],
+    caption: 'Spotlight — dim everything else',
+    cursor: null,
+  },
+
+  fx_callout: {
+    route: '/#/preview',
+    seconds: 3.5,
+    from: { text: 'Captain', align: 'top', offset: -120 },
+    to: { text: 'Captain', align: 'top', offset: -120 },
+    overlays: [{ type: 'box', at: { text: 'The challenger', up: 2 }, label: 'Second best xP', pad: 6 }],
+    caption: 'Callout box with a label',
+    cursor: null,
+  },
+
+  fx_blur: {
+    route: '/#/preview',
+    seconds: 3.5,
+    from: { text: 'The round at a glance', align: 'top', offset: -120 },
+    to: { text: 'The round at a glance', align: 'top', offset: -120 },
+    overlays: [{ type: 'blur', at: { text: 'Best differential', up: 2 }, px: 12, pad: 4 }],
+    caption: 'Blur a region — hide a spoiler',
+    cursor: null,
+  },
+
+  fx_hold: {
+    route: '/#/preview',
+    seconds: 5,
+    from: { text: 'GW1 deadline', align: 'top', offset: -140 },
+    to: { text: 'Every fixture', align: 'top', offset: -120 },
+    // Scroll stops dead halfway for 1.4s, then carries on.
+    hold: { at: 0.5, seconds: 1.4 },
+    caption: 'Hold — stop dead, then carry on',
+    cursor: null,
+  },
+
+  fx_progress: {
+    route: '/#/preview',
+    seconds: 3.5,
+    from: { text: 'GW1 deadline', align: 'top', offset: -140 },
+    to: { text: 'Every fixture', align: 'top', offset: -120 },
+    overlays: [{ type: 'progress' }],
+    caption: 'Progress bar',
+    cursor: null,
+  },
+
+  // Horizontal pan. Only meaningful in the vertical cut: at 1280px the fixture
+  // tables fit, so nothing overflows sideways to pan across. In the mobile
+  // layout the gameweek strip runs 629px wide inside a 412px frame.
+  fx_pan: {
+    route: '/#/fixtures',
+    seconds: 4,
+    from: { y: 300 },
+    to: { y: 300 },
+    panX: { from: 0, to: 217 },
+    caption: 'Horizontal pan',
+    cursor: null,
+  },
+
   // Not in any cut — a worked example of a slow push onto the captain podium.
   //   node tools/video/render.mjs --shots preview_captain_zoom --format wide
   preview_captain_zoom: {
@@ -218,6 +299,8 @@ export const CUTS = {
   b: ['player_brief'],
   // "the planner" — fixtures, then the fifteen built on camera
   c: ['fixtures_runs', 'squad_autopick'],
+  // A sampler of the effects, not part of the film. See the fx_* shots.
+  fx: ['fx_dip', 'fx_spotlight', 'fx_callout', 'fx_blur', 'fx_hold', 'fx_progress'],
 }
 
 export function secondsFor(shot, format) {

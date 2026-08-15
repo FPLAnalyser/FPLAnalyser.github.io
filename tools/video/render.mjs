@@ -58,6 +58,9 @@ const dry = flag('dry')
 // MP4/H.264 by default: it is the only thing that plays on an iPhone and
 // uploads from one. --codec vp8 keeps the old WebM path.
 const codec = String(arg('codec', 'h264')).toLowerCase()
+// Dark is the default because LAUNCH.md is right that the gold reads better on
+// video and compresses cleaner than the light theme's large white areas.
+const theme = String(arg('theme', 'dark')).toLowerCase()
 
 // --shots overrides the cut with an explicit list, for iterating on one shot
 // without re-rendering the whole film.
@@ -186,12 +189,103 @@ function installDirector({ caption, text }) {
     border-radius:50%;border:2.5px solid #c9a227;opacity:0;will-change:transform;`
   wrap.appendChild(ring)
 
+  // Full-frame black for dip transitions. Above everything else in the layer.
+  const dip = document.createElement('div')
+  dip.id = '__director_dip'
+  dip.style.cssText = 'position:absolute;inset:0;background:#000;opacity:0;'
+  wrap.appendChild(dip)
+
   document.documentElement.appendChild(wrap)
 }
 
+// Overlays that track a live element: spotlight, box, arrow, blur, progress.
+// Elements are resolved once here and the node positions refreshed per frame,
+// because scrolling and zooming both move the target under the overlay.
+function installOverlays(specs) {
+  const director = document.getElementById('__director')
+  document.getElementById('__fx_layer')?.remove()
+  window.__fx = []
+
+  // Prepended, so overlays paint *under* the caption, pointer and dip. A
+  // spotlight's dim is a 9999px shadow spread: as a later sibling it covers the
+  // whole frame including the caption, which then reads as greyed-out text.
+  const host = document.createElement('div')
+  host.id = '__fx_layer'
+  host.style.cssText = 'position:absolute;inset:0;pointer-events:none;'
+  director.prepend(host)
+
+  // Matching prefers the tightest element carrying the text, which is usually a
+  // label rather than the thing worth highlighting. `up` walks back out to the
+  // card that label sits in.
+  const find = (at) => {
+    const want = String(at.text).trim().toLowerCase()
+    let best = null
+    for (const el of document.querySelectorAll('h1,h2,h3,h4,div,span,section,button,a,td,th')) {
+      const t = (el.textContent || '').trim().toLowerCase()
+      if (t !== want && !t.startsWith(want)) continue
+      const r = el.getBoundingClientRect()
+      if (r.width > 0 && r.height > 0 && (!best || t.length < best.len)) best = { el, len: t.length }
+    }
+    let el = best && best.el
+    for (let i = 0; el && i < (at.up || 0); i++) el = el.parentElement
+    return el
+  }
+
+  for (const spec of specs) {
+    const node = document.createElement('div')
+    node.className = '__fx'
+    node.style.cssText = 'position:absolute;pointer-events:none;opacity:0;'
+    let el = null
+
+    if (spec.type === 'spotlight') {
+      el = find(spec.at)
+      // One box with an enormous shadow spread dims everything outside it —
+      // no second element, no clip-path, and it follows the target exactly.
+      node.style.cssText += `box-shadow:0 0 0 9999px rgba(4,3,2,${spec.dim ?? 0.74});
+        border-radius:${spec.radius ?? 16}px;border:1.5px solid rgba(201,162,39,0.55);`
+    } else if (spec.type === 'box') {
+      el = find(spec.at)
+      node.style.cssText += `border:3px solid ${spec.color || '#c9a227'};border-radius:12px;
+        box-shadow:0 0 0 4px rgba(201,162,39,0.18), 0 8px 30px rgba(0,0,0,0.5);`
+      if (spec.label) {
+        const tag = document.createElement('div')
+        tag.style.cssText = `position:absolute;left:-3px;top:-34px;padding:4px 12px;
+          background:${spec.color || '#c9a227'};color:#14100a;border-radius:7px;
+          font-family:'Manrope',system-ui,sans-serif;font-weight:800;font-size:17px;
+          letter-spacing:0.02em;white-space:nowrap;`
+        tag.textContent = spec.label
+        node.appendChild(tag)
+      }
+    } else if (spec.type === 'blur') {
+      el = find(spec.at)
+      node.style.cssText += `backdrop-filter:blur(${spec.px ?? 14}px);
+        background:rgba(6,5,4,0.25);border-radius:10px;`
+    } else if (spec.type === 'progress') {
+      node.style.cssText += `left:0;top:0;height:6px;width:0;background:#c9a227;
+        box-shadow:0 0 18px rgba(201,162,39,0.8);border-radius:0 3px 3px 0;`
+    }
+
+    host.appendChild(node)
+    window.__fx.push({ node, el, spec })
+  }
+}
+
 // Applied per frame. Kept as one evaluate call to hold the round-trips down.
-function applyFrame({ y, capOpacity, cursor, ring, endcard, zoom }) {
+function applyFrame({ y, capOpacity, cursor, ring, endcard, zoom, t, fxOpacity, dip, panX }) {
   window.scrollTo(0, y)
+
+  if (panX !== null && panX !== undefined) {
+    if (!window.__fxPanEl) {
+      // The widest horizontal scroller on the page — the fixture ticker here.
+      let best = null
+      for (const el of document.querySelectorAll('div,section,table')) {
+        const over = el.scrollWidth - el.clientWidth
+        if (over > 60 && el.clientWidth > 200 && (!best || over > best.over)) best = { el, over }
+      }
+      window.__fxPanEl = best ? best.el : null
+    }
+    if (window.__fxPanEl) window.__fxPanEl.scrollLeft = panX
+  }
   // Zoom scales <body>, not the document element, so the director layer sits
   // outside the transform and captions do not zoom with the page. transform is
   // a paint-time effect, so layout and scrollHeight are untouched and the
@@ -221,11 +315,46 @@ function applyFrame({ y, capOpacity, cursor, ring, endcard, zoom }) {
     rng.style.opacity = ring ? String(ring.opacity) : '0'
     if (ring) rng.style.transform = `translate(${ring.x}px, ${ring.y}px) scale(${ring.scale})`
   }
+
+  const dipNode = document.getElementById('__director_dip')
+  if (dipNode) dipNode.style.opacity = String(dip || 0)
+
+  for (const fx of window.__fx || []) {
+    const { node, el, spec } = fx
+    if (spec.type === 'progress') {
+      node.style.opacity = String(fxOpacity)
+      node.style.width = `${Math.round(t * window.innerWidth)}px`
+      continue
+    }
+    if (!el) { node.style.opacity = '0'; continue }
+    // Read the rect every frame: scroll and zoom both move the target, and a
+    // highlight that lags one frame behind reads as a mistake rather than an
+    // effect.
+    const r = el.getBoundingClientRect()
+    const pad = spec.pad ?? 8
+    node.style.opacity = String(fxOpacity)
+    node.style.left = `${Math.round(r.left - pad)}px`
+    node.style.top = `${Math.round(r.top - pad)}px`
+    node.style.width = `${Math.round(r.width + pad * 2)}px`
+    node.style.height = `${Math.round(r.height + pad * 2)}px`
+  }
 }
 
 // ---------------------------------------------------------------- helpers
 
 const smootherstep = (t) => t * t * t * (t * (t * 6 - 15) + 10)
+
+// Remaps clock time to scroll progress so a shot can stop dead on something and
+// then carry on — the video equivalent of a presenter pausing. `at` is the
+// progress to freeze on, `seconds` how long to sit there.
+function progressAt(shot, tRaw, seconds) {
+  if (!shot.hold) return tRaw
+  const h = Math.min(shot.hold.seconds / seconds, 0.9)
+  const a = shot.hold.at * (1 - h)
+  if (tRaw < a) return a === 0 ? shot.hold.at : (tRaw / a) * shot.hold.at
+  if (tRaw < a + h) return shot.hold.at
+  return shot.hold.at + ((tRaw - a - h) / (1 - a - h)) * (1 - shot.hold.at)
+}
 
 function pathAt(points, t) {
   if (!points || !points.length) return null
@@ -356,7 +485,8 @@ const BASE = `http://127.0.0.1:${port}`
 await mkdir(outDir, { recursive: true })
 if (stills) await mkdir(path.join(outDir, 'stills'), { recursive: true })
 
-const outFile = path.join(outDir, `fpl-${cutName}-${formatName}.${codec === 'vp8' ? 'webm' : 'mp4'}`)
+const themeTag = theme === 'light' ? '-light' : ''
+const outFile = path.join(outDir, `fpl-${cutName}-${formatName}${themeTag}.${codec === 'vp8' ? 'webm' : 'mp4'}`)
 const width = Math.round(format.css.width * format.scale)
 const height = Math.round(format.css.height * format.scale)
 
@@ -407,19 +537,19 @@ const browser = await chromium.launch({
 const ctx = await browser.newContext({
   viewport: format.css,
   deviceScaleFactor: format.scale,
-  colorScheme: 'dark',
+  colorScheme: theme === 'light' ? 'light' : 'dark',
   // The site's own static-render path: final counter values, no reveal
   // animations mid-flight, no infinite foil sweep ticking between frames.
   reducedMotion: 'reduce',
 })
-await ctx.addInitScript(() => {
+await ctx.addInitScript((mode) => {
   try {
-    localStorage.setItem('fpl_mode', 'dark')
+    localStorage.setItem('fpl_mode', mode)
     localStorage.setItem('fpl_onboarded', '1')
     localStorage.setItem('fpl_cover_seen_gw', '999')
     sessionStorage.setItem('fpl_intro_seen', '1')
   } catch { /* ignore */ }
-})
+}, theme === 'light' ? 'light' : 'dark')
 
 const page = await ctx.newPage()
 const manifest = []
@@ -437,6 +567,8 @@ for (const id of shotIds) {
   await page.evaluate((r) => { if (location.hash !== r.slice(1)) location.hash = r.slice(1) }, shot.route)
   await settle(page)
   await page.evaluate(installDirector, { caption: CAPTION, text: shot.captionStyle === 'endcard' ? '' : shot.caption })
+  await page.evaluate(installOverlays, shot.overlays || [])
+  await page.evaluate(() => { window.__fxPanEl = null })
 
   if (shot.setup) await shot.setup(page)
 
@@ -477,7 +609,10 @@ for (const id of shotIds) {
   for (let i = 0; i < frames; i++) {
     const t = frames === 1 ? 0 : i / (frames - 1)
     const tSec = t * seconds
-    const y = Math.round(clamp(yFrom + (clamp(yTo) - clamp(yFrom)) * smootherstep(t)))
+    // Motion runs on remapped progress; captions, pointer and ripple stay on
+    // clock time, so a hold freezes the page without freezing the caption fade.
+    const p2 = progressAt(shot, t, seconds)
+    const y = Math.round(clamp(yFrom + (clamp(yTo) - clamp(yFrom)) * smootherstep(p2)))
 
     // Captions fade in and out so cuts do not snap.
     const FADE = 0.4
@@ -503,10 +638,26 @@ for (const id of shotIds) {
     }
 
     const zoom = zoomOrigin
-      ? { ...zoomOrigin, k: shot.zoom.from + (shot.zoom.to - shot.zoom.from) * smootherstep(t) }
+      ? { ...zoomOrigin, k: shot.zoom.from + (shot.zoom.to - shot.zoom.from) * smootherstep(p2) }
       : null
 
-    await page.evaluate(applyFrame, { y, capOpacity, cursor, ring, endcard: isEnd, zoom })
+    // Overlays share the caption's fade so nothing pops on at a cut.
+    const fxOpacity = capOpacity
+    const panX = shot.panX
+      ? Math.round(shot.panX.from + (shot.panX.to - shot.panX.from) * smootherstep(p2))
+      : null
+
+    // Dip to black at the shot's edges when asked for.
+    let dip = 0
+    if (shot.dip) {
+      const d = shot.dip.seconds ?? 0.45
+      if (shot.dip.in && tSec < d) dip = 1 - tSec / d
+      if (shot.dip.out && tSec > seconds - d) dip = Math.max(dip, 1 - (seconds - tSec) / d)
+    }
+
+    await page.evaluate(applyFrame, {
+      y, capOpacity, cursor, ring, endcard: isEnd, zoom, t, fxOpacity, dip, panX,
+    })
 
     if (shot.action && !actionDone && t >= shot.action.at) {
       actionDone = true
