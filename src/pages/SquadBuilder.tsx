@@ -776,7 +776,10 @@ export default function SquadBuilder() {
       {view === 'compare' && (
         <SquadCompare
           plans={comparing}
-          gws={planner.gws.filter((g) => g >= liveGw).slice(0, 6)}
+          /* Twelve weeks, not six: the compare page owns the horizon now and
+             has to be able to offer more than the window it is given. It slices
+             this down to whatever the reader picks. */
+          gws={planner.gws.filter((g) => g >= liveGw).slice(0, 12)}
           engine={{ fixtureEase, avail, model: listXpModel, market: listMarket, profiles: listProfiles }}
         />
       )}
