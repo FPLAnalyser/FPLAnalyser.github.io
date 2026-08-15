@@ -1,5 +1,6 @@
 import { Fragment, useMemo, useState } from 'react'
 import { Panel } from './SquadShape'
+import { Tabs } from './Tabs'
 import { TeamBadge } from './badges'
 import { Pitch, PitchCard, CARD_W } from './Pitch'
 import { buildRoute, readState, buildLog, crossover, cumulative, converges, type RouteWeek, type LogRow } from '../lib/planRoutes'
@@ -43,11 +44,14 @@ export interface ComparePlan {
   transfers?: number
 }
 
-export function SquadCompare({ plans, gws, engine, draws = 4000 }: {
+export function SquadCompare({ plans, gws, engine, draws = 4000, onEdit }: {
   plans: ComparePlan[]
   gws: number[]
   engine: Engine
   draws?: number
+  /** Open a plan on the board. Reading a comparison and acting on it were two
+   *  pages with no door between them. */
+  onEdit?: (planId: string) => void
 }) {
   const gwKey = gws.join(',')
   const { fixtureEase, avail, model, market, profiles } = engine
@@ -67,8 +71,12 @@ export function SquadCompare({ plans, gws, engine, draws = 4000 }: {
   /* THE HORIZON IS A CONTROL. Six weeks was a house assumption and it decided
      the answer: a plan that pays a hit in GW2 loses at four weeks and wins at
      ten, and the page only ever showed one of those. */
-  const [horizon, setHorizon] = useState(6)
-  const weeks = useMemo(() => gws.slice(0, Math.min(horizon, gws.length)), [gws, horizon])
+  const [tab, setTab] = useState('answer')
+  const [range, setRange] = useState<{ from: number; to: number } | null>(null)
+  const bounds = { first: gws[0] ?? 1, last: gws[gws.length - 1] ?? 1 }
+  const from = Math.max(bounds.first, Math.min(range?.from ?? bounds.first, bounds.last))
+  const to = Math.max(from, Math.min(range?.to ?? gws[Math.min(5, gws.length - 1)] ?? bounds.last, bounds.last))
+  const weeks = useMemo(() => gws.filter((g) => g >= from && g <= to), [gws, from, to])
   const byEl = useMemo(() => {
     const m = new Map<number, RatingRow>()
     for (const p of plans) for (const r of p.squad) { const el = num(r, 'element'); if (el != null) m.set(el, r) }
@@ -92,6 +100,7 @@ export function SquadCompare({ plans, gws, engine, draws = 4000 }: {
       colours: [COLOURS[0], COLOURS[1]] as [string, string],
       routes,
       log: buildLog(routes[0], routes[1]),
+      ids: [two[0].plan.id, two[1].plan.id] as [string, string],
       convergeAt: converges(routes[0], routes[1]),
       xpOver: (el: number) => {
         const r = byEl.get(el)
@@ -153,19 +162,51 @@ export function SquadCompare({ plans, gws, engine, draws = 4000 }: {
     <div className="grid gap-4 [&>*]:min-w-0">
       {pair ? (
         <>
+          {/* THE WINDOW IS NOT PART OF A TAB. It changes every number on every
+              tab, so it sits above them — moving it must not mean going back
+              to the tab that happens to own it. */}
           <Frame
             names={pair.names} colours={pair.colours} routes={pair.routes} gws={pair.gws}
-            horizon={horizon} onHorizon={setHorizon} maxWeeks={gws.length}
+            all={gws} from={from} to={to}
+            onRange={(f, t) => setRange({ from: f, to: t })}
+            onEdit={onEdit ? (side) => onEdit(pair.ids[side]) : undefined}
           />
-          <Crossover names={pair.names} colours={pair.colours} routes={pair.routes} />
-          <Divergence names={pair.names} colours={pair.colours} log={pair.log} nameOf={nameOf} convergeAt={pair.convergeAt} />
-          <Timelines names={pair.names} colours={pair.colours} routes={pair.routes} nameOf={nameOf} />
-          <SquadDiff
-            names={pair.names} colours={pair.colours} routes={pair.routes} byEl={byEl}
-            xpOver={pair.xpOver} weeks={pair.gws.length}
-            boards={<Lineups rows={rows} gw={pair.gws[0]} fixtureEase={fixtureEase} />}
+          <Tabs
+            tabs={[
+              { id: 'answer', label: 'The answer' },
+              { id: 'weeks', label: 'Week by week' },
+              { id: 'squad', label: 'Squads' },
+              { id: 'fixtures', label: 'Fixtures' },
+            ]}
+            active={tab}
+            onChange={setTab}
+            layoutId="compare-tab"
           />
-          <ClubRisk rows={rows} />
+          {tab === 'answer' && (
+            <Crossover names={pair.names} colours={pair.colours} routes={pair.routes} />
+          )}
+          {tab === 'weeks' && (
+            <>
+              <Divergence names={pair.names} colours={pair.colours} log={pair.log} nameOf={nameOf} convergeAt={pair.convergeAt} />
+              <Timelines names={pair.names} colours={pair.colours} routes={pair.routes} nameOf={nameOf} />
+            </>
+          )}
+          {tab === 'squad' && (
+            <>
+              <SquadDiff
+                names={pair.names} colours={pair.colours} routes={pair.routes} byEl={byEl}
+                xpOver={pair.xpOver} weeks={pair.gws.length}
+                boards={<Lineups rows={rows} gw={pair.gws[0]} fixtureEase={fixtureEase} />}
+              />
+              <Dimensions rows={rows} />
+            </>
+          )}
+          {tab === 'fixtures' && (
+            <FixtureGap
+              names={pair.names} colours={pair.colours} routes={pair.routes}
+              fixtureEase={fixtureEase} byEl={byEl}
+            />
+          )}
         </>
       ) : (
         /* Three and four plans have no "the two routes" to draw, and pairing
@@ -210,17 +251,18 @@ function buildRows() {
    different captain, and those are what separate two plans.
    ════════════════════════════════════════════════════════════════════════ */
 
-const HORIZONS = [4, 6, 8, 10, 12]
-
 /** 1 · The frame. Horizon is a control, and the winner can change with it. */
-function Frame({ names, colours, routes, gws, horizon, onHorizon, maxWeeks }: {
+function Frame({ names, colours, routes, gws, all, from, to, onRange, onEdit }: {
   names: [string, string]
   colours: [string, string]
   routes: [RouteWeek[], RouteWeek[]]
   gws: number[]
-  horizon: number
-  onHorizon: (n: number) => void
-  maxWeeks: number
+  /** Every week the plans could be compared over. */
+  all: number[]
+  from: number
+  to: number
+  onRange: (from: number, to: number) => void
+  onEdit?: (side: 0 | 1) => void
 }) {
   const tot = (r: RouteWeek[]) => r.reduce((a, w) => a + w.xp, 0)
   const [ta, tb] = [tot(routes[0]), tot(routes[1])]
@@ -235,18 +277,19 @@ function Frame({ names, colours, routes, gws, horizon, onHorizon, maxWeeks }: {
      sentence says where the verdict changes hands. "Plan 2 is better" and
      "Plan 2 is better if you hold it past GW4" are different claims and only
      the second is actionable. */
-  const at = (n: number) => {
-    const a = routes[0].slice(0, n).reduce((x, w) => x + w.xp, 0)
-    const b = routes[1].slice(0, n).reduce((x, w) => x + w.xp, 0)
-    return Math.abs(a - b) < 0.05 ? null : a > b ? 0 : 1
-  }
+  /* Does the verdict change inside the window? Walk it week by week and find
+     the last week the OTHER plan was ahead — that is the week this decision
+     has to survive, and it is the sentence worth printing. */
   const flip = (() => {
-    for (const n of HORIZONS) {
-      if (n >= horizon || n > routes[0].length) continue
-      const w = at(n)
-      if (w != null && lead != null && w !== lead) return { n, side: w }
+    if (lead == null) return null
+    let cum = 0
+    let last: { n: number; side: 0 | 1 } | null = null
+    for (let i = 0; i < routes[0].length - 1; i++) {
+      cum += routes[1][i].xp - routes[0][i].xp
+      const side: 0 | 1 | null = Math.abs(cum) < 0.05 ? null : cum > 0 ? 1 : 0
+      if (side != null && side !== lead) last = { n: i + 1, side }
     }
-    return null
+    return last
   })()
 
   return (
@@ -254,20 +297,31 @@ function Frame({ names, colours, routes, gws, horizon, onHorizon, maxWeeks }: {
       title="The call"
       kicker={`Projected points over ${routes[0].length} ${routes[0].length === 1 ? 'week' : 'weeks'} from GW${gws[0]}, with each plan's own transfers, captains and chips — and its hits taken off.`}
     >
-      <div className="mb-3.5 flex flex-wrap items-center gap-1.5">
-        <span className="mr-1 text-[10px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Horizon</span>
-        {HORIZONS.filter((n) => n <= maxWeeks).map((n) => (
-          <button
-            key={n}
-            onClick={() => onHorizon(n)}
-            aria-pressed={n === horizon}
-            className={`min-h-8 rounded-lg border px-2.5 text-[12.5px] font-semibold transition-colors ${
-              n === horizon ? 'border-accent bg-accent-selected text-accent' : 'border-line-mid text-ink-2 hover:border-line-strong hover:text-ink'
-            }`}
-          >
-            {n} GWs
-          </button>
-        ))}
+      {/* START AND END, NOT A LIST OF WINDOWS. Five preset horizons were five
+          opinions about what a sensible window is; the reader's question is
+          usually bounded by something specific — a wildcard, a double, the
+          week a man is back — and only they know where it starts and ends. */}
+      <div className="mb-3.5 rounded-xl border border-line bg-surface-2/30 px-3 py-2.5">
+        <div className="mb-2 flex flex-wrap items-baseline gap-x-2.5">
+          <span className="text-[10px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Window</span>
+          <span className="font-num text-[14px] font-extrabold tabular-nums text-accent">GW{from} → GW{to}</span>
+          <span className="text-[12px] text-ink-3">{gws.length} {gws.length === 1 ? 'week' : 'weeks'}</span>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {([['Start', from, (v: number) => onRange(v, Math.max(v, to))],
+             ['End', to, (v: number) => onRange(Math.min(from, v), v)]] as const).map(([label, val, set]) => (
+            <label key={label} className="flex items-center gap-2.5 rounded-lg border border-line-subtle bg-bg-0/40 px-2.5 py-1.5">
+              <span className="w-9 shrink-0 text-[11px] font-semibold text-ink-2">{label}</span>
+              <input
+                type="range"
+                min={all[0]} max={all[all.length - 1]} step={1} value={val}
+                onChange={(e) => set(Number(e.target.value))}
+                className="h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-surface-3 accent-accent"
+              />
+              <span className="font-num w-11 shrink-0 text-right text-[12px] font-bold tabular-nums text-ink">GW{val}</span>
+            </label>
+          ))}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-end gap-x-7 gap-y-3">
@@ -290,10 +344,26 @@ function Frame({ names, colours, routes, gws, horizon, onHorizon, maxWeeks }: {
             ? <>The two routes are <b>level</b> over {routes[0].length} weeks.</>
             : <><b style={{ color: colours[lead] }}>{names[lead]} by {gap.toFixed(1)}</b> over {routes[0].length}{hits[lead] > 0 ? <> — after paying {hits[lead]} in hits</> : null}.</>}
           {flip && (
-            <> Over {flip.n} it is <b style={{ color: colours[flip.side] }}>{names[flip.side]}</b>, so this is a
-              decision you have to <b>hold past GW{gws[flip.n - 1]}</b> for.</>
+            <> It was <b style={{ color: colours[flip.side] }}>{names[flip.side]}</b> as late as GW{gws[flip.n - 1]},
+              so this is a decision you have to <b>hold past GW{gws[flip.n - 1]}</b> for.</>
           )}
         </p>
+        {onEdit && (
+          <div className="flex w-full flex-wrap gap-2 pt-1">
+            {/* BACK TO THE BOARD. Reading a comparison and acting on it were two
+                different pages with no door between them. */}
+            {[0, 1].map((i) => (
+              <button
+                key={i}
+                onClick={() => onEdit(i as 0 | 1)}
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-line-mid px-3 text-[12.5px] font-semibold text-ink-2 transition-colors hover:border-accent hover:text-accent"
+              >
+                <span className="size-2 rounded-[2px]" style={{ background: colours[i] }} />
+                Edit {names[i]} on the board
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </Panel>
   )
@@ -338,9 +408,16 @@ function Crossover({ names, colours, routes }: {
           <text x={L - 8} y={y(0) + 4} textAnchor="end" fontSize="11" fill="var(--ink-3)">0</text>
           <text x={L - 8} y={y(span * 0.75) + 4} textAnchor="end" fontSize="11" fill="var(--ink-3)">+{(span * 0.75).toFixed(0)}</text>
           <text x={L - 8} y={y(-span * 0.75) + 4} textAnchor="end" fontSize="11" fill="var(--ink-3)">−{(span * 0.75).toFixed(0)}</text>
-          {routes[0].map((w, i) => (w.hit || routes[1][i]?.hit ? (
-            <line key={`h${i}`} x1={x(i)} y1={y(cum[i])} x2={x(i)} y2={y(0)} stroke="var(--bad)" strokeWidth="1.5" strokeDasharray="3 3" />
-          ) : null))}
+          {routes[0].map((w, i) => {
+            const h = Math.max(w.hit, routes[1][i]?.hit ?? 0)
+            if (!h) return null
+            return (
+              <g key={`h${i}`}>
+                <line x1={x(i)} y1={y(cum[i])} x2={x(i)} y2={y(0)} stroke="var(--bad)" strokeWidth="1.5" strokeDasharray="3 3" />
+                <text x={x(i) + 7} y={y(cum[i]) + (cum[i] < 0 ? 16 : -8)} fontSize="12" fontWeight="700" fill="var(--bad)">−{h} hit</text>
+              </g>
+            )
+          })}
           {cross && (() => {
             const i = routes[0].findIndex((w) => w.gw === cross.gw)
             return (
@@ -349,11 +426,14 @@ function Crossover({ names, colours, routes }: {
                 <text x={x(i) - (x(1) - x(0)) / 2 + 8} y={T + 14} fontSize="12.5" fontWeight="800" fill="var(--good)">
                   {names[cross.to === 'a' ? 0 : 1]} goes ahead here
                 </text>
+                <text x={x(i) - (x(1) - x(0)) / 2 + 8} y={T + 31} fontSize="11.5" fill="var(--ink-2)">
+                  GW{routes[0][Math.max(i - 1, 0)].gw} → GW{cross.gw}
+                </text>
               </g>
             )
           })()}
-          <polyline points={line} fill="none" stroke="var(--ink)" strokeWidth="2.5" strokeLinejoin="round" />
-          {cum.map((v, i) => <circle key={i} cx={x(i)} cy={y(v)} r="3.5" fill="var(--ink)" />)}
+          <polyline points={line} fill="none" stroke="var(--ink-1)" strokeWidth="2.5" strokeLinejoin="round" />
+          {cum.map((v, i) => <circle key={i} cx={x(i)} cy={y(v)} r="3.5" fill="var(--ink-1)" />)}
           {routes[0].map((w, i) => (
             <text key={w.gw} x={x(i)} y={H - 8} textAnchor="middle" fontSize="11.5" fill="var(--ink-2)">GW{w.gw}</text>
           ))}
@@ -367,6 +447,112 @@ function Crossover({ names, colours, routes }: {
           The lead never changes hands over these {cum.length} weeks — whoever is ahead in the first week is ahead in the last.
         </p>
       )}
+    </Panel>
+  )
+}
+
+/** How hard each route's weeks actually are. A points gap with no fixture
+ *  context reads as "these players are better"; often it is "these players
+ *  have an easier month", which is a different and much more perishable
+ *  claim. */
+function FixtureGap({ names, colours, routes, fixtureEase, byEl }: {
+  names: [string, string]; colours: [string, string]; routes: [RouteWeek[], RouteWeek[]]
+  fixtureEase: FixtureEaseRow[]; byEl: Map<number, RatingRow>
+}) {
+  const byTeamGw = useMemo(() => {
+    const m = new Map<string, FixtureEaseRow[]>()
+    for (const f of fixtureEase) {
+      const k = `${f.team}:${f.gw}`
+      const at = m.get(k)
+      if (at) at.push(f); else m.set(k, [f])
+    }
+    return m
+  }, [fixtureEase])
+
+  /** Mean difficulty of the ELEVEN's fixtures, because the bench does not
+   *  play — and a blank counts as a 5, which is what it is worth. */
+  const week = (w: RouteWeek) => {
+    let sum = 0
+    let hard = 0
+    let blanks = 0
+    for (const el of w.xi) {
+      const team = String(byEl.get(el)?.team ?? '')
+      const fs = byTeamGw.get(`${team}:${w.gw}`) ?? []
+      const fdr = fs.length ? Math.min(...fs.map((f) => f.fdr)) : 5
+      if (!fs.length) blanks += 1
+      if (fdr >= 4) hard += 1
+      sum += fdr
+    }
+    return { mean: sum / Math.max(w.xi.length, 1), hard, blanks }
+  }
+  const cells = routes.map((r) => r.map(week)) as [ReturnType<typeof week>[], ReturnType<typeof week>[]]
+  const avg = cells.map((c) => c.reduce((a, x) => a + x.mean, 0) / Math.max(c.length, 1))
+  const hardTotal = cells.map((c) => c.reduce((a, x) => a + x.hard, 0))
+  const gap = avg[1] - avg[0]
+  const gws = routes[0].map((w) => w.gw)
+  const cols = `minmax(0,10rem) repeat(${gws.length}, minmax(3.2rem,1fr)) 4.5rem`
+  const ink = (v: number) => (v <= 2.2 ? 'text-[#3ddb84]' : v <= 2.8 ? 'text-[#8fe0ad]' : v <= 3.4 ? 'text-ink-2' : v <= 4 ? 'text-[#f0998a]' : 'text-[#f26a60]')
+
+  return (
+    <Panel
+      title="How hard the weeks are"
+      kicker="Mean fixture difficulty of the eleven each plan puts out, week by week. A blank counts as a 5, because that is what it is worth."
+      note={<>A points gap with no fixture context reads as "these are better players". Often it is "these players
+        have an easier month" — the same number, a much shorter shelf life. If one route is ahead on points AND on
+        difficulty, it is winning on the schedule rather than on the squad, and the schedule turns.</>}
+    >
+      <div className="overflow-x-auto">
+        <div className="grid min-w-max gap-[3px]" style={{ gridTemplateColumns: cols }}>
+          <span />
+          {gws.map((g) => (
+            <span key={g} className="pb-1 text-center text-[9.5px] font-extrabold tracking-[0.08em] text-ink-3 uppercase">GW{g}</span>
+          ))}
+          <span className="pb-1 text-right text-[9.5px] font-extrabold tracking-[0.08em] text-ink-3 uppercase">Mean</span>
+
+          {[0, 1].map((side) => (
+            <Fragment key={side}>
+              <span className="flex min-w-0 items-center gap-2 pr-2 text-[12.5px] font-semibold text-ink">
+                <span className="size-2.5 shrink-0 rounded-[3px]" style={{ background: colours[side] }} />
+                <span className="truncate">{names[side]}</span>
+              </span>
+              {cells[side].map((c, i) => (
+                <span
+                  key={gws[i]}
+                  title={`GW${gws[i]} — ${c.hard} of the eleven in a game rated 4 or 5${c.blanks ? `, ${c.blanks} blank` : ''}`}
+                  className={`flex flex-col items-center justify-center rounded-md border border-line bg-surface-2/40 py-1 ${ink(c.mean)}`}
+                >
+                  <span className="font-num text-[13px] font-extrabold tabular-nums">{c.mean.toFixed(1)}</span>
+                  {c.hard > 0 && <span className="text-[9px] font-bold text-ink-3">{c.hard} hard</span>}
+                </span>
+              ))}
+              <span className={`font-num flex items-center justify-end text-[15px] font-extrabold tabular-nums ${ink(avg[side])}`}>
+                {avg[side].toFixed(2)}
+              </span>
+            </Fragment>
+          ))}
+
+          <span className="pt-1 text-[11px] text-ink-3">Difference</span>
+          {cells[0].map((c, i) => {
+            const d = cells[1][i].mean - c.mean
+            return (
+              <span key={gws[i]} className="font-num pt-1 text-center text-[12px] font-bold tabular-nums"
+                style={{ color: Math.abs(d) < 0.05 ? 'var(--ink-3)' : d < 0 ? colours[1] : colours[0] }}>
+                {Math.abs(d) < 0.05 ? '—' : `${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(1)}`}
+              </span>
+            )
+          })}
+          <span className="font-num pt-1 text-right text-[12px] font-extrabold tabular-nums text-ink-2">
+            {gap >= 0 ? '+' : '−'}{Math.abs(gap).toFixed(2)}
+          </span>
+        </div>
+      </div>
+      <p className="mt-2.5 text-[13px] leading-snug text-ink-2">
+        {Math.abs(gap) < 0.08
+          ? <>The two routes walk into <b>the same schedule</b> — {hardTotal[0]} and {hardTotal[1]} hard games across the window. Whatever separates them, it is not the fixtures.</>
+          : <><b style={{ color: gap < 0 ? colours[1] : colours[0] }}>{names[gap < 0 ? 1 : 0]}</b> has the kinder run
+              by <b>{Math.abs(gap).toFixed(2)}</b> a week, and meets {Math.min(hardTotal[0], hardTotal[1])} games rated 4 or 5
+              against {Math.max(hardTotal[0], hardTotal[1])}.</>}
+      </p>
     </Panel>
   )
 }

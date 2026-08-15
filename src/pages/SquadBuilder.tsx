@@ -781,6 +781,9 @@ export default function SquadBuilder() {
              this down to whatever the reader picks. */
           gws={planner.gws.filter((g) => g >= liveGw).slice(0, 12)}
           engine={{ fixtureEase, avail, model: listXpModel, market: listMarket, profiles: listProfiles }}
+          /* A door back to the board. Reading a comparison and acting on it
+             were two pages with nothing between them. */
+          onEdit={(id) => { plans.setActive(id); setView('build') }}
         />
       )}
 
