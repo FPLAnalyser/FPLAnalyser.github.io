@@ -109,6 +109,38 @@ Two things differ in the vertical cuts, and both matter more than they sound:
   live FPL squad. Scouting stands in until GW1 is played; add the shot back
   after.
 
+## The motion-graphics layer
+
+`render.mjs` films the real product. `motion.mjs` adds what a screen recording
+cannot give you — sprung titles, a stat sting, an end card — and assembles the
+finished film, dissolving the joins.
+
+```bash
+node tools/video/motion.mjs --comp Intro          # 2.3s title card
+node tools/video/motion.mjs --comp EndCard        # 3s  end card
+node tools/video/motion.mjs --comp StatCard       # a number springing up
+node tools/video/motion.mjs --comp Film \
+  --clips build/video/fpl-full-wide.mp4           # intro + footage + end card
+```
+
+Compositions live in `remotion/Root.tsx` — plain React on a timeline, using the
+site's own fonts and gold. `--audio path.mp3 --music-volume 0.18` lays a track
+under the whole film; `--dissolve 12` sets the overlap in frames.
+
+Two things worth knowing before editing it:
+
+- **Remotion needs `chrome-headless-shell`**, not the ordinary Chromium binary,
+  and its own download host is blocked by the network policy. Playwright
+  already ships the shell, so `motion.mjs` points at that. Do not "fix" this by
+  letting Remotion download its own — it cannot reach the host.
+- **`publicDir` must be passed to `bundle()` explicitly.** The entry point is
+  nested under `tools/`, so Remotion's convention-based lookup misses it and
+  `staticFile()` 404s. That surfaces as a *fallback font*, not an error — the
+  render succeeds and the type is silently wrong, so check a frame.
+
+Fonts are gated behind `delayRender` in `remotion/brand.tsx`. Without it the
+first frames rasterise before the faces load and the type pops mid-shot.
+
 ## Changing the film
 
 `shots.mjs` is the whole edit — routes, durations, captions, scroll anchors and
