@@ -1564,16 +1564,17 @@ function Lineups({ rows, gw, fixtureEase }: { rows: Row[]; gw: number; fixtureEa
         ))}
       </div>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-ink-2">
-        <span className="flex items-center gap-1.5 opacity-45"><Rule c="var(--line-strong)" />Faded — same player, same role</span>
-        <span className="flex items-center gap-1.5"><Rule c="var(--warn)" />In both, different role</span>
-        <span className="flex items-center gap-1.5"><Rule c={rows[0].colour} /><Rule c={rows[1].colour} />Only in that plan</span>
+        <span className="flex items-center gap-1.5 opacity-40"><Swatch c="var(--line-strong)" />Faded — same player, same role</span>
+        <span className="flex items-center gap-1.5"><Swatch c="var(--warn)" />In both, different role</span>
+        <span className="flex items-center gap-1.5"><Swatch c={rows[0].colour} /><Swatch c={rows[1].colour} />Only in that plan</span>
+        <span className="text-ink-3">No tiers on this board — the only colour here is the difference.</span>
       </div>
     </Panel>
   )
 }
 
-function Rule({ c }: { c: string }) {
-  return <span className="inline-block h-[3px] w-5 rounded-full" style={{ background: c }} />
+function Swatch({ c }: { c: string }) {
+  return <span className="inline-block size-4 rounded-[5px]" style={{ boxShadow: `0 0 0 2px ${c}` }} />
 }
 
 const ROWS: { pos: string; label: string }[] = [
@@ -1604,15 +1605,20 @@ function Board({ row, roles, captain, verdict, fixtureEase, gw }: {
      means he is in both but not in the same role, and a solid edge in the
      plan's own colour means only this plan has him. */
   const identical = moved === 0 && only === 0
-  /* NOT A COLOURED RING ROUND THE CARD. That is what this was, and it was
-     ugly for a reason worth writing down: the card's own edge is its tier —
-     the metal that says how good he is — and drawing a second, flat, brighter
-     edge outside it puts two borders in a fight over a 100px card. The blue
-     one against the grass was the worst of it.
+  /* ONE THING ON THIS BOARD CARRIES COLOUR, AND IT IS THE DIFFERENCE.
 
-     So the difference goes UNDER the card as a rule, the way difficulty is a
-     rule everywhere else on this site, and the card is left alone. */
-  const mark = (el: number): string | null => {
+     Two attempts got this wrong in the same way. A ring round the card fought
+     the card's own tier edge — the gold, silver and bronze that says how good
+     a player is — and a rule under the card was quiet enough to miss. The
+     mistake in both was leaving the tier metal on: a board whose subject is
+     "which two of these thirty are different" cannot also spend its colour
+     saying how good each of them is. That belongs on the pitch you build on,
+     not on the one you compare with.
+
+     So every card here is graphite, the grass is gone, and the only saturated
+     colour left is the marker. On a neutral card on a dark surface a ring
+     reads at a glance, which is all it ever needed. */
+  const ringOf = (el: number): string | null => {
     const v = verdict(el)
     // Two plans holding the same fifteen in the same roles have nothing to
     // mark AGAINST, so nothing is marked.
@@ -1624,12 +1630,13 @@ function Board({ row, roles, captain, verdict, fixtureEase, gw }: {
   const faded = (el: number) => !identical && verdict(el) === 'same'
 
   const card = (p: PlayerSeries, isBench?: boolean) => {
-    const bar = mark(p.element)
+    const ring = ringOf(p.element)
     const rt = num(p.row, 'season_overall_score')
     return (
       <div
         key={p.element}
-        className={`${CARD_W} relative ${faded(p.element) ? 'opacity-45' : ''}`}
+        className={`${CARD_W} relative rounded-[13px] ${faded(p.element) ? 'opacity-40' : ''}`}
+        style={ring ? { boxShadow: `0 0 0 2px ${ring}, 0 0 14px -2px ${ring}` } : undefined}
         title={`${String(p.row.web_name)} · ${p.pos} · ${p.team} · £${p.price.toFixed(1)}m${
           verdict(p.element) === 'moved' ? ` — in both plans, ${isBench ? 'benched here' : 'starting here'}`
           : verdict(p.element) === 'only' ? ' — only in this plan' : ' — same player, same role in both'}`}
@@ -1642,10 +1649,10 @@ function Board({ row, roles, captain, verdict, fixtureEase, gw }: {
           price={p.price}
           code={num(p.row, 'code')}
           element={p.element}
+          tier="graphite"
           armband={p.element === captain ? 'C' : null}
           fixtures={<FixtureNames fixtureEase={fixtureEase} team={p.team} n={1} fromGw={gw} />}
         />
-        {bar && <span className="mt-1 block h-[3px] rounded-full" style={{ background: bar }} />}
       </div>
     )
   }
@@ -1677,6 +1684,7 @@ function Board({ row, roles, captain, verdict, fixtureEase, gw }: {
       </div>
 
       <Pitch
+        plain
         footer={
           <div className="flex justify-center gap-1 sm:gap-2">
             {bench.map((p) => card(p, true))}

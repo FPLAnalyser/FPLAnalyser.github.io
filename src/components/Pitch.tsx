@@ -9,8 +9,13 @@ import { SEV_COLOUR, type AvailBadgeInfo } from '../lib/availability'
    in a shared PNG.
    ════════════════════════════════════════════════════════════════════════ */
 
-export function Pitch({ children, footer, className, maxWidth, boosted, overlay, overlayLeft }: {
+export function Pitch({ children, footer, className, maxWidth, boosted, overlay, overlayLeft, plain }: {
   children: ReactNode; footer?: ReactNode; className?: string; maxWidth?: number
+  /** No grass. The comparison boards are a DIFF drawn on a pitch, and a
+   *  strong green under thirty cards is the loudest thing on a screen whose
+   *  whole message is which two of them are different. Same markings, same
+   *  shape, laid on the page's own surface instead. */
+  plain?: boolean
   /** Bench Boost is on, so the bench is scoring — it gets the gold edge and
    *  says BOOST, the same signal the live board gives it. */
   boosted?: boolean
@@ -35,11 +40,13 @@ export function Pitch({ children, footer, className, maxWidth, boosted, overlay,
       style={{
         maxWidth,
         margin: maxWidth ? '0 auto' : undefined,
-        background: [
-          'repeating-linear-gradient(180deg, rgba(255,255,255,.045) 0 7.14%, rgba(0,0,0,.05) 7.14% 14.28%)',
-          'radial-gradient(120% 70% at 50% 0%, rgba(255,255,255,.10), transparent 62%)',
-          'linear-gradient(180deg,#1b7a3a 0%,#15682f 45%,#125c29 100%)',
-        ].join(','),
+        background: plain
+          ? 'linear-gradient(180deg,#101114 0%,#0b0c0f 60%,#08090b 100%)'
+          : [
+            'repeating-linear-gradient(180deg, rgba(255,255,255,.045) 0 7.14%, rgba(0,0,0,.05) 7.14% 14.28%)',
+            'radial-gradient(120% 70% at 50% 0%, rgba(255,255,255,.10), transparent 62%)',
+            'linear-gradient(180deg,#1b7a3a 0%,#15682f 45%,#125c29 100%)',
+          ].join(','),
       }}
     >
       <svg
@@ -48,7 +55,7 @@ export function Pitch({ children, footer, className, maxWidth, boosted, overlay,
         className="pointer-events-none absolute inset-0 h-full w-full"
         aria-hidden="true"
       >
-        <g fill="none" stroke="rgba(255,255,255,.5)" strokeWidth="1.6">
+        <g fill="none" stroke={plain ? 'rgba(255,255,255,.10)' : 'rgba(255,255,255,.5)'} strokeWidth="1.6">
           <rect x="6" y="6" width="288" height="394" rx="2" />
           <line x1="6" y1="203" x2="294" y2="203" />
           <ellipse cx="150" cy="203" rx="46" ry="46" />
