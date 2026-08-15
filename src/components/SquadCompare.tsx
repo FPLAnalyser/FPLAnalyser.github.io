@@ -1564,16 +1564,16 @@ function Lineups({ rows, gw, fixtureEase }: { rows: Row[]; gw: number; fixtureEa
         ))}
       </div>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-ink-2">
-        <span className="flex items-center gap-1.5"><Key cls="border-line bg-surface-2/40 text-ink-3" />Same player, same role</span>
-        <span className="flex items-center gap-1.5"><Key cls="border-dashed border-warn" />In both, different role</span>
-        <span className="flex items-center gap-1.5"><Key cls="border-accent/55 text-accent" />Only in this plan</span>
+        <span className="flex items-center gap-1.5 opacity-45"><Rule c="var(--line-strong)" />Faded — same player, same role</span>
+        <span className="flex items-center gap-1.5"><Rule c="var(--warn)" />In both, different role</span>
+        <span className="flex items-center gap-1.5"><Rule c={rows[0].colour} /><Rule c={rows[1].colour} />Only in that plan</span>
       </div>
     </Panel>
   )
 }
 
-function Key({ cls }: { cls: string }) {
-  return <span className={`inline-block h-3 w-5 rounded-[3px] border ${cls}`} />
+function Rule({ c }: { c: string }) {
+  return <span className="inline-block h-[3px] w-5 rounded-full" style={{ background: c }} />
 }
 
 const ROWS: { pos: string; label: string }[] = [
@@ -1604,24 +1604,32 @@ function Board({ row, roles, captain, verdict, fixtureEase, gw }: {
      means he is in both but not in the same role, and a solid edge in the
      plan's own colour means only this plan has him. */
   const identical = moved === 0 && only === 0
-  const shell = (el: number) => {
+  /* NOT A COLOURED RING ROUND THE CARD. That is what this was, and it was
+     ugly for a reason worth writing down: the card's own edge is its tier —
+     the metal that says how good he is — and drawing a second, flat, brighter
+     edge outside it puts two borders in a fight over a 100px card. The blue
+     one against the grass was the worst of it.
+
+     So the difference goes UNDER the card as a rule, the way difficulty is a
+     rule everywhere else on this site, and the card is left alone. */
+  const mark = (el: number): string | null => {
     const v = verdict(el)
     // Two plans holding the same fifteen in the same roles have nothing to
-    // fade AGAINST, and greying all thirty cards read as a broken board.
-    if (identical) return { className: '', style: undefined }
-    if (v === 'only') return { className: 'rounded-xl', style: { boxShadow: `0 0 0 2px ${row.colour}` } }
-    if (v === 'moved') return { className: 'rounded-xl', style: { boxShadow: '0 0 0 2px var(--warn)' } }
-    return { className: 'opacity-45', style: undefined }
+    // mark AGAINST, so nothing is marked.
+    if (identical) return null
+    if (v === 'only') return row.colour
+    if (v === 'moved') return 'var(--warn)'
+    return null
   }
+  const faded = (el: number) => !identical && verdict(el) === 'same'
 
   const card = (p: PlayerSeries, isBench?: boolean) => {
-    const sh = shell(p.element)
+    const bar = mark(p.element)
     const rt = num(p.row, 'season_overall_score')
     return (
       <div
         key={p.element}
-        className={`${CARD_W} relative ${sh.className}`}
-        style={sh.style}
+        className={`${CARD_W} relative ${faded(p.element) ? 'opacity-45' : ''}`}
         title={`${String(p.row.web_name)} · ${p.pos} · ${p.team} · £${p.price.toFixed(1)}m${
           verdict(p.element) === 'moved' ? ` — in both plans, ${isBench ? 'benched here' : 'starting here'}`
           : verdict(p.element) === 'only' ? ' — only in this plan' : ' — same player, same role in both'}`}
@@ -1637,6 +1645,7 @@ function Board({ row, roles, captain, verdict, fixtureEase, gw }: {
           armband={p.element === captain ? 'C' : null}
           fixtures={<FixtureNames fixtureEase={fixtureEase} team={p.team} n={1} fromGw={gw} />}
         />
+        {bar && <span className="mt-1 block h-[3px] rounded-full" style={{ background: bar }} />}
       </div>
     )
   }

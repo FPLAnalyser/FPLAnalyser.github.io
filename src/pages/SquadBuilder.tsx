@@ -140,6 +140,27 @@ function MetricChips({ metric, onChange }: { metric: Metric; onChange: (m: Metri
   )
 }
 
+/* COLUMN WIDTHS, ONE DEFINITION. The heading row and the player rows are two
+   separate pieces of markup that have to line up to the pixel, so the widths
+   live here rather than being typed twice.
+
+   The narrow variant is not cosmetic. At 390px the fixed columns and their
+   gaps consumed all 348 available pixels and left the NAME 44 of them, which
+   truncates every player in the game to three letters — the column the list
+   is about, squeezed out by the columns that qualify it. Tightening the
+   numbers and the gaps below 430px of container gives the name ~125px back. */
+const COL = {
+  info: 'size-6 @[430px]:size-7',
+  price: 'w-10 @[430px]:w-12',
+  xp: 'w-[34px] @[430px]:w-11',
+  rtg: 'w-[26px] @[430px]:w-9',
+  own: 'w-[30px] @[430px]:w-11',
+  act: 'size-7 @[430px]:size-8',
+  gap: 'gap-1 @[430px]:gap-2.5',
+  pad: 'px-2 @[430px]:px-3',
+  num: 'text-[12px] @[430px]:text-[13px]',
+}
+
 /** A column heading that is also the control that sorts the column. */
 function SortHead({ label, k, sort, dir, onSort, className = '' }: {
   label: string; k: SortKey; sort: SortKey; dir: SortDir
@@ -1146,18 +1167,18 @@ export default function SquadBuilder() {
             {/* The heading row, and the sort control, and the only place the
                 words PRICE, XP and RTG now appear. Sticky, because a list this
                 long scrolls its own headings away otherwise. */}
-            <div className="sticky top-0 z-[2] flex items-center gap-2 border-b border-line-mid bg-surface-1 px-2.5 py-1.5 @[430px]:gap-2.5 @[430px]:px-3">
+            <div className={`sticky top-0 z-[2] flex items-center border-b border-line-mid bg-surface-1 py-1.5 ${COL.gap} ${COL.pad}`}>
               {/* Sits over the info buttons, so every heading lines up with
                   the column it names. */}
-              <span className="size-7 shrink-0" />
+              <span className={`${COL.info} shrink-0`} />
               <SortHead label="Player" k="name" sort={sort} dir={sortDir} onSort={sortBy} className="min-w-0 flex-1 text-left" />
               <span className="hidden shrink-0 text-[9px] font-extrabold tracking-[0.1em] text-ink-3 @[430px]:inline-block @[600px]:hidden" style={{ width: 3 * 34 + 2 * 2 }}>NEXT 3</span>
               <span className="hidden shrink-0 text-[9px] font-extrabold tracking-[0.1em] text-ink-3 @[600px]:inline-block" style={{ width: 4 * 34 + 3 * 2 }}>NEXT 4</span>
-              <SortHead label="Price" k="price" sort={sort} dir={sortDir} onSort={sortBy} className="w-12 shrink-0 text-right" />
-              <SortHead label="xP" k="xp" sort={sort} dir={sortDir} onSort={sortBy} className="w-11 shrink-0 text-right" />
-              <SortHead label="Rtg" k="rating" sort={sort} dir={sortDir} onSort={sortBy} className="w-9 shrink-0 text-right" />
-              <SortHead label="Own" k="owned" sort={sort} dir={sortDir} onSort={sortBy} className="w-11 shrink-0 text-right" />
-              <span className="size-8 shrink-0" />
+              <SortHead label="Price" k="price" sort={sort} dir={sortDir} onSort={sortBy} className={`${COL.price} shrink-0 text-right`} />
+              <SortHead label="xP" k="xp" sort={sort} dir={sortDir} onSort={sortBy} className={`${COL.xp} shrink-0 text-right`} />
+              <SortHead label="Rtg" k="rating" sort={sort} dir={sortDir} onSort={sortBy} className={`${COL.rtg} shrink-0 text-right`} />
+              <SortHead label="Own" k="owned" sort={sort} dir={sortDir} onSort={sortBy} className={`${COL.own} shrink-0 text-right`} />
+              <span className={`${COL.act} shrink-0`} />
             </div>
             {list.map((r) => {
               // A player on the market is still yours until someone replaces
@@ -1173,7 +1194,7 @@ export default function SquadBuilder() {
                 : blockReason(r)
               const o = ovOf(r)
               return (
-                <div key={r.element} className={`flex items-center gap-2 border-b border-line px-2.5 py-2 last:border-0 @[430px]:gap-2.5 @[430px]:px-3 ${inSquad ? 'bg-surface-2/40' : ''}`}>
+                <div key={r.element} className={`flex items-center border-b border-line py-2 last:border-0 ${COL.gap} ${COL.pad} ${inSquad ? 'bg-surface-2/40' : ''}`}>
                   {/* The same card the pitch opens, from the market. Reading a
                       player you are thinking of signing and reading one you
                       already own is the same act, and it wanted the same card
@@ -1185,9 +1206,9 @@ export default function SquadBuilder() {
                     onClick={() => setSheetFor(r)}
                     title={`${String(r.web_name)} — rating, form and fixtures`}
                     aria-label={`About ${String(r.web_name)}`}
-                    className="grid size-7 shrink-0 place-items-center rounded-full border border-line-mid text-ink-3 transition-colors hover:border-accent hover:text-accent"
+                    className={`grid ${COL.info} shrink-0 place-items-center rounded-full border border-line-mid text-ink-3 transition-colors hover:border-accent hover:text-accent`}
                   >
-                    <Icon name="info" size={13} />
+                    <Icon name="info" size={12} />
                   </button>
                   <TeamBadge team={String(r.team)} size={16} />
                   <div className="min-w-0 flex-1">
@@ -1245,11 +1266,11 @@ export default function SquadBuilder() {
                   <span className="hidden shrink-0 @[600px]:inline-flex">
                     <FixtureRun fixtureEase={fixtureEase} team={String(r.team)} n={4} fromGw={liveGw} />
                   </span>
-                  <span className="font-num w-12 shrink-0 text-right text-[13px] font-bold tabular-nums text-ink">£{priceOf(r).toFixed(1)}m</span>
-                  <span className="font-num w-11 shrink-0 text-right text-sm font-extrabold tabular-nums text-accent-2">{xpOf(r)?.toFixed(1) ?? '—'}</span>
-                  <span className="font-num w-9 shrink-0 text-right text-sm font-semibold tabular-nums text-ink-2">{o ?? '—'}</span>
-                  <span className="font-num w-11 shrink-0 text-right text-sm font-semibold tabular-nums text-ink-2">
-                    {Math.round(num(r, 'selected_by_percent') ?? 0)}<span className="text-[11px] text-ink-3">%</span>
+                  <span className={`font-num ${COL.price} ${COL.num} shrink-0 text-right font-bold tabular-nums text-ink`}>£{priceOf(r).toFixed(1)}m</span>
+                  <span className={`font-num ${COL.xp} ${COL.num} shrink-0 text-right font-extrabold tabular-nums text-accent-2`}>{xpOf(r)?.toFixed(1) ?? '—'}</span>
+                  <span className={`font-num ${COL.rtg} ${COL.num} shrink-0 text-right font-semibold tabular-nums text-ink-2`}>{o ?? '—'}</span>
+                  <span className={`font-num ${COL.own} ${COL.num} shrink-0 text-right font-semibold tabular-nums text-ink-2`}>
+                    {Math.round(num(r, 'selected_by_percent') ?? 0)}<span className="text-[10px] text-ink-3">%</span>
                   </span>
                   {/* Once he's on the market the sign-him button is dead, and a
                       greyed-out tick just looks broken. The one thing you can
@@ -1258,7 +1279,7 @@ export default function SquadBuilder() {
                     <button
                       onClick={() => { planner.undoTransfer(r.element); tapHaptic('light') }}
                       title="Keep him — undo the sale"
-                      className="grid size-8 shrink-0 place-items-center rounded-lg border border-good/50 text-good transition-colors hover:bg-good/10"
+                      className={`grid ${COL.act} shrink-0 place-items-center rounded-lg border border-good/50 text-good transition-colors hover:bg-good/10`}
                     >
                       <Icon name="undo" size={15} />
                     </button>
@@ -1271,7 +1292,7 @@ export default function SquadBuilder() {
                     <button
                       onClick={() => remove(r.element)}
                       title="Take him out of your squad"
-                      className="grid size-8 shrink-0 place-items-center rounded-lg border border-bad/55 text-bad transition-colors hover:bg-bad/10"
+                      className={`grid ${COL.act} shrink-0 place-items-center rounded-lg border border-bad/55 text-bad transition-colors hover:bg-bad/10`}
                     >
                       <Icon name="arrow-right" size={15} className="rotate-180" />
                     </button>
@@ -1284,7 +1305,7 @@ export default function SquadBuilder() {
                       }}
                       disabled={!!why}
                       title={why ?? (filling ? 'Sign him into the empty place' : complete ? 'Transfer in' : 'Add to squad')}
-                      className={`grid size-8 shrink-0 place-items-center rounded-lg border transition-colors ${
+                      className={`grid ${COL.act} shrink-0 place-items-center rounded-lg border transition-colors ${
                         why ? 'cursor-not-allowed border-line text-ink-3 opacity-50' : 'border-accent/50 text-accent hover:bg-accent-soft'
                       }`}
                     >
@@ -1502,7 +1523,7 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, ca
         onClick={capture ? undefined : () => onOpen?.(r)}
       />
       {onRemove && !capture && (
-        <button aria-label={`Remove ${r.web_name}`} onClick={() => onRemove(r.element)} className="absolute -top-1.5 -right-1.5 z-10 grid size-5 place-items-center rounded-full border border-line bg-surface-1 text-ink-2 shadow-lg transition-colors hover:border-bad hover:text-bad sm:-top-2 sm:-right-2 sm:size-7">
+        <button aria-label={`Remove ${r.web_name}`} onClick={() => onRemove(r.element)} className="absolute top-0 right-0 z-10 grid size-5 place-items-center rounded-full border border-line bg-surface-1 text-ink-2 shadow-lg transition-colors hover:border-bad hover:text-bad sm:-top-2 sm:-right-2 sm:size-7">
           <Icon name="x" size={11} />
         </button>
       )}

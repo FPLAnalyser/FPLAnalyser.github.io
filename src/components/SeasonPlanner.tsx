@@ -850,11 +850,13 @@ function PlayerChip({ onOpen, captain, vice, tripleCap, fixtures, rating, corner
           title={sold
             ? `Keep ${name}`
             : sellVerb === 'Remove' ? `Remove ${name} from your squad` : `Sell ${name} — his fee goes into the bank`}
-          /* Top-right, hanging off the card. This is only safe because the
-             armband moved inside: it was the one thing overhanging a card's
-             left edge, and two six-pixel overhangs don't fit a six-pixel gap.
-             With it gone, the corner opposite is empty. */
-          className={`absolute -top-1.5 -right-1.5 z-20 grid size-5 place-items-center rounded-full border text-[10px] shadow-md transition-colors sm:size-[22px] ${
+          /* Top-right, hanging off the card — from `sm` up. On a phone it sits
+             INSIDE it: the overhang is six pixels each way and the pitch clips
+             its own edges, so on the outside card of every row a third of the
+             button was cut away. Six pixels is also exactly how much every
+             card was overflowing its row on a 390px screen, which is what the
+             overhang was costing. */
+          className={`absolute top-0 right-0 z-20 grid size-5 place-items-center rounded-full border text-[10px] shadow-md transition-colors sm:-top-1.5 sm:-right-1.5 sm:size-[22px] ${
             sold
               ? 'border-good bg-good text-white'
               : 'border-line bg-surface-1 text-ink-2 hover:border-bad hover:bg-bad hover:text-white'
