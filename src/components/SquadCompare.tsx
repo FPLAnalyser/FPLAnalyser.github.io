@@ -1565,7 +1565,7 @@ function Lineups({ rows, gw, fixtureEase }: { rows: Row[]; gw: number; fixtureEa
       </div>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-ink-2">
         <span className="flex items-center gap-1.5 opacity-40"><Swatch c="var(--line-strong)" />Faded — same player, same role</span>
-        <span className="flex items-center gap-1.5"><Swatch c="var(--warn)" />In both, different role</span>
+        <span className="flex items-center gap-1.5"><Swatch c={MOVED_EDGE} />In both, different role</span>
         <span className="flex items-center gap-1.5"><Swatch c={rows[0].colour} /><Swatch c={rows[1].colour} />Only in that plan</span>
         <span className="text-ink-3">No tiers on this board — the only colour here is the difference.</span>
       </div>
@@ -1573,8 +1573,17 @@ function Lineups({ rows, gw, fixtureEase }: { rows: Row[]; gw: number; fixtureEa
   )
 }
 
+/* The one hue no plan is ever assigned. Plan colours run gold, blue, green,
+   hot — so a shared-but-moved player is plain light, which cannot be mistaken
+   for either side however many plans are on screen. */
+const MOVED_EDGE = '#dfe7ee'
+
 function Swatch({ c }: { c: string }) {
-  return <span className="inline-block size-4 rounded-[5px]" style={{ boxShadow: `0 0 0 2px ${c}` }} />
+  return (
+    <span className="inline-block size-4 rounded-[6px] p-[3px]" style={{ background: c }}>
+      <span className="block size-full rounded-[3px] bg-[#1c1b19]" />
+    </span>
+  )
 }
 
 const ROWS: { pos: string; label: string }[] = [
@@ -1615,28 +1624,32 @@ function Board({ row, roles, captain, verdict, fixtureEase, gw }: {
      saying how good each of them is. That belongs on the pitch you build on,
      not on the one you compare with.
 
-     So every card here is graphite, the grass is gone, and the only saturated
-     colour left is the marker. On a neutral card on a dark surface a ring
-     reads at a glance, which is all it ever needed. */
-  const ringOf = (el: number): string | null => {
+     So every card here is graphite, the grass is gone, and the difference is
+     painted on the card's OWN edge — the padded ring that is already its
+     border. Drawn outside it, a ring sits a pixel off the corner radius and
+     reads as a misaligned halo, which is what it was.
+
+     And the third colour is not amber. Amber against gold is the same colour
+     twice: plan one is gold, so "in both, different role" needs a hue neither
+     plan can be, and the one colour no plan is assigned is plain light. */
+  const edgeOf = (el: number): string | null => {
     const v = verdict(el)
     // Two plans holding the same fifteen in the same roles have nothing to
     // mark AGAINST, so nothing is marked.
     if (identical) return null
     if (v === 'only') return row.colour
-    if (v === 'moved') return 'var(--warn)'
+    if (v === 'moved') return MOVED_EDGE
     return null
   }
   const faded = (el: number) => !identical && verdict(el) === 'same'
 
   const card = (p: PlayerSeries, isBench?: boolean) => {
-    const ring = ringOf(p.element)
+    const edge = edgeOf(p.element)
     const rt = num(p.row, 'season_overall_score')
     return (
       <div
         key={p.element}
-        className={`${CARD_W} relative rounded-[13px] ${faded(p.element) ? 'opacity-40' : ''}`}
-        style={ring ? { boxShadow: `0 0 0 2px ${ring}, 0 0 14px -2px ${ring}` } : undefined}
+        className={`${CARD_W} relative ${faded(p.element) ? 'opacity-40' : ''}`}
         title={`${String(p.row.web_name)} · ${p.pos} · ${p.team} · £${p.price.toFixed(1)}m${
           verdict(p.element) === 'moved' ? ` — in both plans, ${isBench ? 'benched here' : 'starting here'}`
           : verdict(p.element) === 'only' ? ' — only in this plan' : ' — same player, same role in both'}`}
@@ -1650,6 +1663,7 @@ function Board({ row, roles, captain, verdict, fixtureEase, gw }: {
           code={num(p.row, 'code')}
           element={p.element}
           tier="graphite"
+          edge={edge ?? undefined}
           armband={p.element === captain ? 'C' : null}
           fixtures={<FixtureNames fixtureEase={fixtureEase} team={p.team} n={1} fromGw={gw} />}
         />

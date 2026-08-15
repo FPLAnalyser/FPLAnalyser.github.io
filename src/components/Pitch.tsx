@@ -195,20 +195,25 @@ const TIER_SKIN: Record<Tier, { edge: string; stock: string; glow?: string; pad?
 
 /** The foil shell shared by every card variant: gradient edge outside, stock
  *  inside. Children render on the stock. */
-export function FoilShell({ tier, className, style, onClick, children, innerClassName }: {
+export function FoilShell({ tier, className, style, onClick, children, innerClassName, edge }: {
   tier: Tier
   className?: string
   style?: CSSProperties
   onClick?: () => void
   children: ReactNode
   innerClassName?: string
+  /** Replace the tier's metal with a flat colour. The card's edge IS this
+   *  padded ring, so painting it is the only way to colour a card's border
+   *  that stays perfectly on the corner radius — anything drawn outside sits
+   *  a pixel off and reads as a misaligned halo. */
+  edge?: string
 }) {
   const skin = TIER_SKIN[tier]
   return (
     <button
       onClick={onClick}
       className={`tier-${tier} relative overflow-hidden rounded-[9px] text-center transition-transform hover:-translate-y-0.5 ${className ?? ''}`}
-      style={{ padding: skin.pad ?? 2, background: skin.edge, boxShadow: skin.glow, ...style }}
+      style={{ padding: edge ? 3 : skin.pad ?? 2, background: edge ?? skin.edge, boxShadow: edge ? 'none' : skin.glow, ...style }}
     >
       <span className={`block rounded-[7px] ${innerClassName ?? ''}`} style={{ background: skin.stock }}>
         {children}
@@ -219,7 +224,7 @@ export function FoilShell({ tier, className, style, onClick, children, innerClas
 
 /** Compact pitch card — rating, photo, name and the next fixtures. Sized so a
  * full XI fits the pitch without scrolling. */
-export function PitchCard({ rating, cornerText, name, team, price, code, element, fixtures, onClick, footer, tier, flag, armband }: {
+export function PitchCard({ rating, cornerText, name, team, price, code, element, fixtures, onClick, footer, tier, flag, armband, edge }: {
   rating: number | null
   /** Override for the corner figure (price, projected points…) — the TIER
    *  still comes from the rating, so the card's metal keeps meaning quality. */
@@ -238,10 +243,12 @@ export function PitchCard({ rating, cornerText, name, team, price, code, element
   flag?: AvailBadgeInfo | null
   /** Armband, when the card is showing a picked lineup: C, V or 3× . */
   armband?: 'C' | 'V' | '3×' | null
+  /** Paint the card's own edge a flat colour instead of its tier metal. */
+  edge?: string
 }) {
   const t = tier ?? tierOf(rating)
   return (
-    <FoilShell tier={t} onClick={onClick} className="w-full">
+    <FoilShell tier={t} edge={edge} onClick={onClick} className="w-full">
       {flag && <span className="absolute inset-x-0 top-0 z-10 h-1" style={{ background: SEV_COLOUR[flag.sev].bar }} />}
       {flag && (
         <span
