@@ -40,6 +40,7 @@ const PAGE_LOADERS = {
   compare: () => import('./pages/Compare'),
   squad: () => import('./pages/SquadBuilder'),
   captaincy: () => import('./pages/Captaincy'),
+  myratings: () => import('./pages/MyRatings'),
 }
 
 const Home = lazyRetry(PAGE_LOADERS.home)
@@ -55,6 +56,7 @@ const Fixtures = lazyRetry(PAGE_LOADERS.fixtures)
 const Compare = lazyRetry(PAGE_LOADERS.compare)
 const SquadBuilder = lazyRetry(PAGE_LOADERS.squad)
 const Captaincy = lazyRetry(PAGE_LOADERS.captaincy)
+const MyRatings = lazyRetry(PAGE_LOADERS.myratings)
 const Debug = lazyRetry(() => import('./pages/Debug'))
 
 // Every route is wrapped so a render throw OR a stale-chunk import failure
@@ -82,6 +84,9 @@ const router = createHashRouter([
       { path: 'squad', element: page(<SquadBuilder />) },
       // Captaincy is still being built — preview only, see lib/flags.
       ...(PREVIEW ? [{ path: 'captaincy', element: page(<Captaincy />) }] : []),
+      // Your ratings changes every projection on the site — preview only
+      // until it has been looked at. See lib/flags.
+      ...(PREVIEW ? [{ path: 'my-ratings', element: page(<MyRatings />) }] : []),
       { path: 'loadteam', element: page(<MyTeam />) },
       { path: 'preview', element: page(<Preview />) },
       { path: 'review', element: page(<Review />) },

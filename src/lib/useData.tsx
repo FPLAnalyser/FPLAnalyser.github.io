@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useTweakValues, adjustFixtureEase } from './tweaks'
 import { loadCore, loadTable, TableAbsent } from './data'
 import type { CoreData, RatingRow } from './types'
 
@@ -60,7 +61,14 @@ interface LiveRow { element: number; code: number; price?: number; own?: number
 export function useCore() {
   const core = useContext(CoreContext)
   const live = useLazyTable<{ players?: LiveRow[] }>('availability')
-  return useMemo(() => {
+  /* YOUR RATINGS, applied where every page reads the fixture table from. A
+     club you have re-rated changes the difficulty of all thirty-eight games
+     against it at once, and it changes them the same way everywhere: the
+     Fixtures page, the season spine, the squad's fixture views. The goal
+     lambdas behind the projection are adjusted from the same opinion in
+     lib/xp, so the colour and the number can never disagree. */
+  const tweaks = useTweakValues()
+  const withLive = useMemo(() => {
     const rows = live.data?.players
     if (!core.data || !Array.isArray(rows) || !rows.length) return core
     const byElement = new Map<number, LiveRow>()
@@ -148,6 +156,14 @@ export function useCore() {
     if (!changed && !unrated.length) return core
     return { ...core, data: { ...core.data, ratings: unrated.length ? [...ratings, ...unrated] : ratings } }
   }, [core, live.data])
+
+  /* Applied AFTER the live overlay, on the shape every page consumes. */
+  return useMemo(() => {
+    if (!withLive.data || !Object.keys(tweaks).length) return withLive
+    const rows = withLive.data.fixtureEase
+    const adjusted = adjustFixtureEase(rows, tweaks)
+    return adjusted === rows ? withLive : { ...withLive, data: { ...withLive.data, fixtureEase: adjusted } }
+  }, [withLive, tweaks])
 }
 
 interface LazyState<T> {

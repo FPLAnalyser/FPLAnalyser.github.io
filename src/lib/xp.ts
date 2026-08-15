@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTweakValues, adjustMarket } from './tweaks'
 import { num } from './rows'
 import { useLazyTable } from './useData'
 import { availFor, availabilityFactor, type Availability } from './availability'
@@ -112,7 +113,7 @@ export interface MarketOdds {
 export function useMarketOdds(): MarketOdds | null {
   const odds = useLazyTable<OddsFile>('odds')
   const teams = useLazyTable<TeamRow[]>('teams')
-  return useMemo(() => {
+  const base = useMemo(() => {
     const o = odds.data
     const t = teams.data
     if (!o || !Array.isArray(o.matches) || !Array.isArray(t) || !t.length) return null
@@ -128,6 +129,12 @@ export function useMarketOdds(): MarketOdds | null {
     }
     return { byKey, strength: o.strength ?? {} }
   }, [odds.data, teams.data])
+  /* YOUR RATINGS, APPLIED AT THE SOURCE. Every projection on this site is a
+     function of these lambdas, so adjusting them here is the only edit that
+     cannot leave two parts of a page disagreeing — xP, clean sheets,
+     captaincy and the plan comparison all move together or not at all. */
+  const tweaks = useTweakValues()
+  return useMemo(() => adjustMarket(base, tweaks), [base, tweaks])
 }
 
 // ── the maths ───────────────────────────────────────────────────────────────

@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+import { useTweaks } from '../lib/tweaks'
 /** A corner marker saying this build is not the live site.
  *
  *  Set at build time by .github/workflows/preview.yml, which passes the branch
@@ -29,6 +31,24 @@ const BUILT = (() => {
     } ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
   } catch { return null }
 })()
+
+/** YOUR RATINGS ARE ON. Every projection on the page is running on them, so
+ *  the page has to say so — a number nobody can tell is yours is a number
+ *  that will be reported as the site's being wrong. */
+export function TweakBadge() {
+  const { count } = useTweaks()
+  if (!count) return null
+  return (
+    <Link
+      to="/my-ratings"
+      title={`${count} club${count === 1 ? '' : 's'} re-rated by you — every projection on the site is using them`}
+      className="fixed right-2 bottom-[calc(env(safe-area-inset-bottom)+80px)] z-50 rounded-full border border-info bg-info/15
+                 px-2.5 py-1 text-[10px] font-semibold tracking-[.09em] text-info uppercase backdrop-blur-sm md:bottom-3"
+    >
+      Your ratings · {count}
+    </Link>
+  )
+}
 
 export function PreviewBadge() {
   if (!BRANCH) return null
