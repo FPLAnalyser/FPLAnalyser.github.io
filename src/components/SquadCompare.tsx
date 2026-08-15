@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
 import { Panel } from './SquadShape'
 import { TeamBadge } from './badges'
+import { Pitch, PitchCard, CARD_W } from './Pitch'
+import { FixtureNames } from './FixtureChips'
 import { squadDimensions, type Dimension } from './SquadVerdict'
 import { num } from '../lib/rows'
 import {
@@ -100,10 +102,15 @@ export function SquadCompare({ plans, gws, engine, draws = 4000 }: {
        chart, and you had to scroll past all three before seeing the two
        things being compared. Nobody reads a judgement about two squads
        before they have looked at the squads. Boards at the top with what
-       each is projected to score, then the call, then the working. */
-    <div className="grid gap-4">
+       each is projected to score, then the call, then the working.
+
+       [&>*]:min-w-0 because every panel here is a grid item, and a grid
+       item's automatic minimum is its MIN-CONTENT: one panel holding a pitch
+       set the width of the whole page and pushed a phone 134px into a
+       horizontal scroll. */
+    <div className="grid gap-4 [&>*]:min-w-0">
       {rows.length === 2
-        ? <Lineups rows={rows} gw={gws[0]} />
+        ? <Lineups rows={rows} gw={gws[0]} fixtureEase={fixtureEase} />
         : <SharedAndDifferent rows={rows} />}
       <Verdict rows={rows} />
       {/* Pairing two lists of players only means something when there are two
@@ -930,7 +937,7 @@ function ClubRisk({ rows }: { rows: Row[] }) {
 type Role = 'xi' | 'bench'
 type Verdict = 'same' | 'moved' | 'only'
 
-function Lineups({ rows, gw }: { rows: Row[]; gw: number }) {
+function Lineups({ rows, gw, fixtureEase }: { rows: Row[]; gw: number; fixtureEase: FixtureEaseRow[] }) {
   const [a, b] = rows
 
   const roleMap = (r: Row): Map<number, Role> => {
@@ -972,9 +979,12 @@ function Lineups({ rows, gw }: { rows: Row[]; gw: number }) {
         </>
       }
     >
-      <div className="grid gap-3 lg:grid-cols-2">
+      {/* min-w-0 on the tracks: a grid item defaults to min-width:auto, so
+          the pitch's own rows of cards set the column width and the panel
+          grew 134px past a phone screen. */}
+      <div className="grid gap-3 lg:grid-cols-2 [&>*]:min-w-0">
         {rows.map((r, i) => (
-          <Board key={r.name} row={r} roles={roles[i]} captain={caps[i]} verdict={(el) => verdictFor(el, i)} />
+          <Board key={r.name} row={r} roles={roles[i]} captain={caps[i]} verdict={(el) => verdictFor(el, i)} fixtureEase={fixtureEase} gw={gw} />
         ))}
       </div>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-ink-2">
@@ -995,19 +1005,68 @@ const ROWS: { pos: string; label: string }[] = [
   { pos: 'MID', label: 'MID' }, { pos: 'FWD', label: 'FWD' },
 ]
 
-function Board({ row, roles, captain, verdict }: {
+function Board({ row, roles, captain, verdict, fixtureEase, gw }: {
   row: Row
   roles: Map<number, Role>
   captain: number | null
   verdict: (el: number) => Verdict
+  fixtureEase: FixtureEaseRow[]
+  gw: number
 }) {
   const xi = row.series.filter((p) => roles.get(p.element) === 'xi')
   const bench = row.series.filter((p) => roles.get(p.element) === 'bench')
   const moved = row.series.filter((p) => verdict(p.element) === 'moved').length
   const only = row.series.filter((p) => verdict(p.element) === 'only').length
 
+  /* THE SAME BOARD THE BUILDER DRAWS, at half the width. This was thirty
+     name-chips on a grey card, and it was defensible — a diff is not a team
+     sheet, and grass under thirty small labels is loud. But it made you learn
+     a second way of looking at your own squad, one screen after the first,
+     and the pitch is how you know at a glance that the left one is 3-5-2 and
+     the right one is 3-4-3. The diff survives as what it always was: a state
+     on each card. Faded means both plans agree exactly, a dashed amber edge
+     means he is in both but not in the same role, and a solid edge in the
+     plan's own colour means only this plan has him. */
+  const identical = moved === 0 && only === 0
+  const shell = (el: number) => {
+    const v = verdict(el)
+    // Two plans holding the same fifteen in the same roles have nothing to
+    // fade AGAINST, and greying all thirty cards read as a broken board.
+    if (identical) return { className: '', style: undefined }
+    if (v === 'only') return { className: 'rounded-xl', style: { boxShadow: `0 0 0 2px ${row.colour}` } }
+    if (v === 'moved') return { className: 'rounded-xl', style: { boxShadow: '0 0 0 2px var(--warn)' } }
+    return { className: 'opacity-45', style: undefined }
+  }
+
+  const card = (p: PlayerSeries, isBench?: boolean) => {
+    const sh = shell(p.element)
+    const rt = num(p.row, 'season_overall_score')
+    return (
+      <div
+        key={p.element}
+        className={`${CARD_W} relative ${sh.className}`}
+        style={sh.style}
+        title={`${String(p.row.web_name)} · ${p.pos} · ${p.team} · £${p.price.toFixed(1)}m${
+          verdict(p.element) === 'moved' ? ` — in both plans, ${isBench ? 'benched here' : 'starting here'}`
+          : verdict(p.element) === 'only' ? ' — only in this plan' : ' — same player, same role in both'}`}
+      >
+        <PitchCard
+          rating={rt != null ? Math.round(rt * 20) : null}
+          cornerText={p.weeks[0] ? p.weeks[0].xp.toFixed(1) : null}
+          name={String(p.row.web_name)}
+          team={p.team}
+          price={p.price}
+          code={num(p.row, 'code')}
+          element={p.element}
+          armband={p.element === captain ? 'C' : null}
+          fixtures={<FixtureNames fixtureEase={fixtureEase} team={p.team} n={1} fromGw={gw} />}
+        />
+      </div>
+    )
+  }
+
   return (
-    <div className="rounded-xl border border-line bg-surface-1/60 p-3">
+    <div className="min-w-0 rounded-xl border border-line bg-surface-1/60 p-3">
       {/* The total, at the size of the thing it is. This was one line of grey
           micro-type ending in "42.1 xP", and it was the week's figure rather
           than the window's — the number the whole page is about, printed
@@ -1032,71 +1091,31 @@ function Board({ row, roles, captain, verdict }: {
         </span>
       </div>
 
-      {/* Not a green pitch. This is a diff, and grass would put a strong colour
-          under thirty small cards whose own colour is the entire message. */}
-      <div className="rounded-lg border border-line-subtle bg-surface-2/30 p-2">
-        {ROWS.map(({ pos, label }) => {
-          const line = xi.filter((p) => p.pos === pos)
-          if (!line.length) return null
-          return (
-            <div key={pos} className="mb-1.5 flex items-start gap-1.5 last:mb-0">
-              <span className="w-7 shrink-0 pt-1.5 text-[9px] font-bold tracking-[0.08em] text-ink-3 uppercase">{label}</span>
-              <span className="flex flex-1 flex-wrap justify-center gap-1.5">
-                {line.map((p) => (
-                  <Card key={p.element} p={p} colour={row.colour} v={verdict(p.element)} captain={p.element === captain} />
-                ))}
-              </span>
-            </div>
-          )
-        })}
-      </div>
-
-      <div className="mt-1.5 flex items-start gap-1.5">
-        <span className="w-7 shrink-0 pt-1.5 text-[9px] font-bold tracking-[0.08em] text-ink-3 uppercase">Sub</span>
-        <span className="flex flex-1 flex-wrap justify-center gap-1.5">
-          {bench.map((p) => (
-            <Card key={p.element} p={p} colour={row.colour} v={verdict(p.element)} bench />
-          ))}
-        </span>
-      </div>
+      <Pitch
+        footer={
+          <div className="flex justify-center gap-1 sm:gap-2">
+            {bench.map((p) => card(p, true))}
+          </div>
+        }
+      >
+        <div className="relative flex flex-col gap-2 sm:gap-3">
+          {ROWS.map(({ pos }) => {
+            const line = xi.filter((p) => p.pos === pos)
+            if (!line.length) return null
+            return (
+              <div key={pos} className="flex justify-center gap-1 sm:gap-2">
+                {line.map((p) => card(p))}
+              </div>
+            )
+          })}
+        </div>
+      </Pitch>
     </div>
   )
 }
 
-function Card({ p, colour, v, captain, bench }: {
-  p: PlayerSeries; colour: string; v: Verdict; captain?: boolean; bench?: boolean
-}) {
-  const tone =
-    v === 'only' ? { borderColor: colour, background: `color-mix(in oklab, ${colour} 14%, transparent)` }
-    : v === 'moved' ? undefined
-    : undefined
-  /* "Moved" is drawn with a DASHED edge, not another colour. The plan colours
-     start at gold and the obvious hue for a caution is amber, which put two
-     near-identical borders side by side on the first plan every time — Enzo
-     moved and Wharton unique read as the same state. Distinguishing by the
-     shape of the border instead survives whatever colour the plan is. */
-  const cls =
-    v === 'only' ? 'text-ink'
-    : v === 'moved' ? 'border-dashed border-warn text-ink'
-    : 'border-line bg-surface-2/40 text-ink-3'
-
-  return (
-    <span
-      className={`relative block min-w-[62px] rounded-md border px-1.5 py-1 text-center ${cls} ${bench ? 'opacity-95' : ''}`}
-      style={tone}
-      title={`${String(p.row.web_name)} · ${p.pos} · ${p.team} · £${p.price.toFixed(1)}${
-        v === 'moved' ? ` — in both plans, ${bench ? 'benched here' : 'starting here'}` : v === 'only' ? ' — only in this plan' : ''}`}
-    >
-      <span className="block max-w-[70px] truncate text-[10.5px] font-semibold">{String(p.row.web_name)}</span>
-      <span className="block text-[8.5px] text-ink-3">{p.team}</span>
-      {captain && (
-        <span className="absolute -top-1 -left-1 grid size-3.5 place-items-center rounded-full bg-accent text-[7.5px] font-extrabold text-accent-contrast">C</span>
-      )}
-      {v === 'moved' && (
-        <span className="absolute -top-1 -right-1 grid size-3.5 place-items-center rounded-full bg-warn text-[7.5px] font-extrabold text-[#231400]">
-          {bench ? 'B' : 'S'}
-        </span>
-      )}
-    </span>
-  )
-}
+/* The old name-chip Card lived here. The pitch cards carry the same three
+   states now — faded for agreement, a warn edge for a different role, the
+   plan's own colour for a player only it holds — so a second card component
+   drawing the same distinctions in a different visual language was one
+   language too many.  */
