@@ -5,7 +5,7 @@ import { TeamBadge } from './badges'
 import { useCore } from '../lib/useData'
 import { useAvailability } from '../lib/availability'
 import { num } from '../lib/rows'
-import { xpForGw, useXpModel, useMarketOdds } from '../lib/xp'
+import { xpForGw, useXpModel, useMarketOdds, useShotProfiles } from '../lib/xp'
 import { pointsHit } from '../lib/planner'
 import type { FixtureEaseRow, RatingRow } from '../lib/types'
 
@@ -45,6 +45,7 @@ export function SquadStrip() {
   const avail = useAvailability()
   const model = useXpModel()
   const market = useMarketOdds()
+  const profiles = useShotProfiles()
 
   const picked = useMemo<number[]>(() => {
     try { const s = localStorage.getItem(STORE_KEY); const v = s ? JSON.parse(s) : []; return Array.isArray(v) ? v : [] } catch { return [] }
@@ -73,7 +74,7 @@ export function SquadStrip() {
      * optimiser would pick. Two numbers for the same thing on two pages is
      * worse than one number in one place. Read the stored week; only fall back
      * to best-eleven when there is no week yet. */
-    const xpOf = (r: RatingRow) => xpForGw(r, gw, fixtureEase, avail, model, market) ?? 0
+    const xpOf = (r: RatingRow) => xpForGw(r, gw, fixtureEase, avail, model, market, profiles) ?? 0
     const byEl = new Map(squad.map((r) => [Number(r.element), r]))
     let week: { xi: number[]; bench: number[]; captain: number | null; chip: string | null } | null = null
     let hit = 0
@@ -116,7 +117,7 @@ export function SquadStrip() {
       // as "your squad" at a glance in a way a truncated list never does.
       clubs: [...new Set(squad.map((r) => String(r.team)))],
     }
-  }, [squad, data, avail, model, market])
+  }, [squad, data, avail, model, market, profiles])
 
   /* No fifteen yet — the invitation, which is the whole point of putting
      anything here. Not sticky: a banner pinned over a first-time visitor's

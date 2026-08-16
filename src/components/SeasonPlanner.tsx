@@ -4,7 +4,7 @@ import { PlayerPhoto } from './PlayerPhoto'
 import { FoilShell, Pitch, BenchSpine, CARD_W, initialsOf, tierOf, nameSize } from './Pitch'
 import { PlayerCardSheet } from './PlayerCardSheet'
 import { availBadge, availFor, SEV_COLOUR, type Availability } from '../lib/availability'
-import { xpForGw, useXpModel, useMarketOdds, gwBenchmark, gwRating, type XpModel, type MarketOdds } from '../lib/xp'
+import { xpForGw, useXpModel, useMarketOdds, useShotProfiles, gwBenchmark, gwRating, type XpModel, type MarketOdds, type ShotProfiles } from '../lib/xp'
 import { autoLineup } from '../lib/planner'
 import { Icon } from './Icon'
 import { tapHaptic } from '../lib/native'
@@ -238,6 +238,9 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
 }) {
   const xpModel = useXpModel()
   const market = useMarketOdds()
+  /* The dead-ball matchup. Omitted here for months, which made the pitch card's
+     xP disagree with the GW Preview's for the same player in the same week. */
+  const profiles = useShotProfiles()
   const { gw, gws, setGw, week, ft, banked, hit, spend } = planner
 
   const [sheet, setSheet] = useState<number | null>(null)
@@ -250,7 +253,7 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
   const ratingOf = (el: number) => Math.round((num(rowOf(el) ?? {}, 'season_overall_score') ?? 0) * 20)
   const xpOf = (el: number) => {
     const r = rowOf(el)
-    return r ? xpForGw(r, gw, fixtureEase, avail, xpModel, market) : null
+    return r ? xpForGw(r, gw, fixtureEase, avail, xpModel, market, profiles) : null
   }
   const cornerOf = (el: number): string => {
     const r = rowOf(el)
@@ -463,7 +466,7 @@ export function SeasonPlanner({ planner, byEl, pool, fixtureEase, metric = 'rati
         {!spineAbove && <GameweekStrip
           planner={planner}
           byEl={byEl}
-          engine={{ fixtureEase, avail, model: xpModel, market }}
+          engine={{ fixtureEase, avail, model: xpModel, market, profiles }}
           current={gw}
           onPick={setGw}
           ratingOf={ratingOf}
@@ -1059,13 +1062,13 @@ function RatingSheet({ gw, total, rating, benchmark, onClose }: {
 function GameweekStrip({ planner, byEl, engine, current, onPick, ratingOf }: {
   planner: Planner
   byEl: Map<number, RatingRow>
-  engine: { fixtureEase: FixtureEaseRow[]; avail?: Availability; model: XpModel | null; market: MarketOdds | null }
+  engine: { fixtureEase: FixtureEaseRow[]; avail?: Availability; model: XpModel | null; market: MarketOdds | null; profiles: ShotProfiles | null }
   current: number
   onPick: (gw: number) => void
   ratingOf: (el: number) => number
 }) {
   const { gws, startGw, squadAtGw, weekAt, hitAt, posOf, revision } = planner
-  const { fixtureEase, avail, model, market } = engine
+  const { fixtureEase, avail, model, market, profiles } = engine
 
   /* Ten weeks ahead, one behind for context. `gws` runs to GW38 and drawing all
      of it meant thirty-eight lineups per render for a strip nobody reads to the
@@ -1134,7 +1137,7 @@ function GameweekStrip({ planner, byEl, engine, current, onPick, ratingOf }: {
         let any = false
         for (const el of scoring) {
           const r = byEl.get(el)
-          const v = r ? xpForGw(r, gw, fixtureEase, avail, model, market) : null
+          const v = r ? xpForGw(r, gw, fixtureEase, avail, model, market, profiles) : null
           if (v != null) { total += v * (el === line.captain ? mult : 1); any = true }
         }
         // Hits are subtracted here exactly as they are in the headline stat, so
@@ -1146,7 +1149,7 @@ function GameweekStrip({ planner, byEl, engine, current, onPick, ratingOf }: {
       return { gw, xp, hard, chip: line?.chip ?? null, capName, planned: Boolean(weekAt(gw)) }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [window.join(','), revision, byEl, fixtureEase, avail, model, market])
+  }, [window.join(','), revision, byEl, fixtureEase, avail, model, market, profiles])
 
   /* Keep the week you are on in view. Stepping with the arrows moves the
      selection, and on one line the selection can be off the end of the rail —

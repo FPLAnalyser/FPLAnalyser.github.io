@@ -611,10 +611,14 @@ export default function SquadBuilder() {
   /* Expected points for the gameweek you are actually picking. Cached because
      the market list re-renders on every keystroke in the search box and the
      projection is not free. */
-  const xpCache = useMemo(() => new Map<number, number | null>(), [liveGw, listXpModel, listMarket, avail])
+  const xpCache = useMemo(() => new Map<number, number | null>(), [liveGw, listXpModel, listMarket, listProfiles, avail])
   const xpOf = (r: RatingRow): number | null => {
     const el = Number(r.element)
-    if (!xpCache.has(el)) xpCache.set(el, xpForGw(r, liveGw, fixtureEase, avail, listXpModel, listMarket))
+    /* `listProfiles` is not optional. Left off, this returned a different
+       number for the same player in the same week than the GW Preview did —
+       Haaland 6.72 here against 6.51 there — because the dead-ball matchup
+       silently fell back to 1.0. One projection, one set of arguments. */
+    if (!xpCache.has(el)) xpCache.set(el, xpForGw(r, liveGw, fixtureEase, avail, listXpModel, listMarket, listProfiles))
     return xpCache.get(el) ?? null
   }
   const unrated = liveChosen.length - liveRated.length
@@ -1495,13 +1499,16 @@ function SquadBoard({ chosen, fixtureEase, pickPos, onRemove, onPick, onOpen, ca
     : derived.form
   const xpModel = useXpModel()
   const market = useMarketOdds()
+  const shotProfiles = useShotProfiles()
 
   // The corner figure under the active metric. The tier (card metal) always
   // comes from the rating, so switching to £ or xP recolours nothing.
   const cornerFor = (r: RatingRow): string | null => {
     if (metric === 'price') return num(r, 'price') != null ? `£${num(r, 'price')}` : null
     if (metric === 'xp' && gw != null) {
-      const v = xpForGw(r, gw, fixtureEase, avail, xpModel, market)
+      // Profiles included, or the corner disagrees with every other xP on the
+      // site by the size of the dead-ball matchup. See the note on xpOf above.
+      const v = xpForGw(r, gw, fixtureEase, avail, xpModel, market, shotProfiles)
       return v == null ? '—' : v.toFixed(1)
     }
     return null
