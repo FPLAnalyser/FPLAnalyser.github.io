@@ -136,11 +136,16 @@ The vertical cards are not the wide ones letterboxed. A square mark has far
 more room in a 9:16 frame, so the lockup goes to 900px, and three timings
 change with the format:
 
-- **The intro drops to 1 second**, against 2.3 wide. A Short is scrolled past
-  in the first second, so spending two of them on a logo spends the only
-  attention the video gets. If you would rather not risk it at all, post the
-  Short with an outro only — the assembly takes `--intro-frames 0`-style edits
-  in `Root.tsx` via `INTRO_V`.
+- **There is no intro at all.** A Short is scrolled past in the first second,
+  so opening on a logo spends the only attention the video gets. Cut A now
+  opens on *"GW1 DEADLINE · 7d 7h 33m"*, and the outro carries the call to
+  action. Put one back for a render with `--intro-frames 30`; `--outro-frames`
+  works the same way, and `0` removes a card entirely.
+
+  Note `INTRO_V` (the standalone card's own length) is separate from
+  `FILM_INTRO_V` (how much of it the film uses). A Remotion composition cannot
+  have zero frames, so `IntroVertical` stays renderable on its own at 30 while
+  the film uses none of it.
 - **The end card block sits 190px above centre.** Shorts, Reels and TikTok all
   stack their own title, handle and action rail over the bottom of the frame;
   centred, the URL — the only thing on that card anyone needs to read — ends up

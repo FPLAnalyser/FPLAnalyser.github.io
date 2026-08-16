@@ -43,6 +43,10 @@ const outDir = arg('out', path.join(ROOT, 'build', 'video'))
 // The composition name alone collides when the same one is rendered against
 // different clips — all three Shorts would land on fpl-filmvertical.mp4.
 const outName = arg('name', null)
+// Overrides for the card lengths, so the intro can be dropped or restored per
+// render without editing the compositions. 0 removes the card entirely.
+const introFrames = arg('intro-frames', null)
+const outroFrames = arg('outro-frames', null)
 
 if (!existsSync(SHELL)) throw new Error(`chrome-headless-shell missing at ${SHELL}`)
 
@@ -110,6 +114,8 @@ if (audioArg) {
 }
 
 const inputProps = { clips, dissolve, audio, musicVolume }
+if (introFrames !== null) inputProps.introFrames = Number(introFrames)
+if (outroFrames !== null) inputProps.outroFrames = Number(outroFrames)
 
 console.log(`composition=${comp}`)
 if (clips.length) {

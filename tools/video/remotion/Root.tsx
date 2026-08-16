@@ -154,30 +154,40 @@ type FilmProps = {
   vertical?: boolean; introFrames?: number; outroFrames?: number
 }
 
-// Wide gets a proper 2.3s title. A Short does not have the seconds to spare and
-// is scrolled past in the first one, so its intro is a 1s flash of the mark and
-// the outro carries the call to action instead.
+// Wide gets a proper 2.3s title. The Shorts get none at all: they are scrolled
+// past in the first second, so opening on a logo spends the only attention the
+// video gets — they open hard on the content and the outro carries the call to
+// action. Override per render with --intro-frames / --outro-frames.
 const INTRO = 70
 const OUTRO = 90
+// The card's own length, so IntroVertical stays renderable on its own — a
+// composition cannot have zero frames.
 const INTRO_V = 30
 const OUTRO_V = 60
+// How much of it the vertical *film* uses. Zero: the Shorts open on content.
+const FILM_INTRO_V = 0
 
 /** Where each element starts, given every element overlaps the last by `dissolve`. */
 function layout(clips: Clip[], dissolve: number, intro: number, outro: number) {
-  const items: { from: number; dur: number; clip?: Clip }[] = []
+  const items: { from: number; dur: number; clip?: Clip; kind?: 'intro' | 'outro' }[] = []
   let at = 0
-  items.push({ from: 0, dur: intro })
-  at = intro - dissolve
+  // A zero-length card is dropped rather than emitted empty. Emitting it would
+  // set the next start to -dissolve, i.e. before the film begins.
+  if (intro > 0) {
+    items.push({ from: 0, dur: intro, kind: 'intro' })
+    at = intro - dissolve
+  }
   for (const clip of clips) {
     items.push({ from: at, dur: clip.durationInFrames, clip })
     at += clip.durationInFrames - dissolve
   }
-  items.push({ from: at, dur: outro })
-  return { items, total: at + outro }
+  if (outro > 0) items.push({ from: at, dur: outro, kind: 'outro' })
+  // Without an outro the last clip still owns its final `dissolve` frames.
+  return { items, total: at + (outro > 0 ? outro : dissolve) }
 }
 
 const framesFor = (p: FilmProps) => ({
-  intro: p.introFrames ?? (p.vertical ? INTRO_V : INTRO),
+  intro: p.introFrames ?? (p.vertical ? FILM_INTRO_V : INTRO),
   outro: p.outroFrames ?? (p.vertical ? OUTRO_V : OUTRO),
 })
 
@@ -203,7 +213,9 @@ export const Film: React.FC<FilmProps> = (props) => {
           <Dissolve dissolve={dissolve} first={i === 0}>
             {item.clip
               ? <OffthreadVideo src={staticFile(item.clip.src)} />
-              : (i === 0 ? <Intro vertical={vertical} /> : <EndCard vertical={vertical} />)}
+              : (item.kind === 'intro'
+                  ? <Intro vertical={vertical} />
+                  : <EndCard vertical={vertical} />)}
           </Dissolve>
         </Sequence>
       ))}
