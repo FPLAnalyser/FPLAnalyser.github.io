@@ -3,6 +3,7 @@ import { PREVIEW } from '../lib/flags'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Icon } from './Icon'
 import { PreviewBadge } from './PreviewBadge'
+import { RatingsSwitch } from './RatingsSwitch'
 import { OnboardingModal } from './OnboardingModal'
 import { ThemeSwitcher } from './ThemeSwitcher'
 import { SeasonSwitcher } from './SeasonSwitcher'
@@ -124,6 +125,12 @@ export function Layout() {
               <Icon name="search" size={18} />
             </button>
             <ThemeSwitcher />
+            {/* WHOSE NUMBERS IS THIS SITE SHOWING. On the top line, which is
+                what retiring the season selector made room for: that returned
+                77px to a row this needs 208px of, and at 1440 the nav had 158px
+                of slack already. Draws nothing until a club has been
+                re-rated. */}
+            <RatingsSwitch />
             <button
               className="flex min-h-11 min-w-10 items-center justify-center rounded-md text-ink-2 transition-colors hover:text-ink sm:min-w-11"
               title="How it works"

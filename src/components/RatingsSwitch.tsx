@@ -10,24 +10,27 @@ import { useRatingsSwitch } from '../lib/tweaks'
    is the failure this whole feature is built to avoid — and a global state
    deserves a global home rather than a copy in every page's furniture.
 
-   IT LIVES IN THE SECTION BANNER, in the tools slot every page's banner
-   already has. Three homes were tried getting here:
+   IT LIVES IN THE HEADER, on the same line as the nav, which is what the
+   season selector was moved out of the way for. That row had no slack when
+   this was first tried — the switch cost 208px, clipped My Team and pushed
+   Review off the nav at 1440 — and retiring the season control returned 77px,
+   which is what makes it fit now.
 
-     · the banner with no treatment — a bare row of text over a photograph,
-       which is how the control got lost in the first place. Fixed by giving it
-       an opaque plate and a blur rather than by moving it again.
-     · the header, which measured worse than it looked: at 1440 it took 208px
-       out of the nav row, clipping My Team and pushing Review off altogether,
-       and at 320 it ran the page 27px past a viewport with 0px of slack.
-     · a line of its own above the page, which worked but left a strip of
-       chrome floating above the banner with nothing to belong to.
+   It fits at 1440 and above. Below that the nav links scroll sideways, which
+   they already did at 1280 before any of this: the row is `overflow-x-auto` by
+   design, and a link that needs a swipe is a smaller cost than a control
+   nobody can find.
+
+   TWO SIZES, ONE VALUE. A phone gets the state as a single pill that flips on
+   tap, because the full pair plus its label does not fit beside the brand at
+   320. Both write the same switch.
 
    IT DRAWS NOTHING UNTIL A CLUB HAS BEEN RE-RATED, so a reader who has never
-   opened Your ratings never meets it.
+   opened Your ratings never meets it, and the header is exactly as it was.
    ════════════════════════════════════════════════════════════════════════ */
 
 /** The House / Yours switch. Renders nothing until a club has been re-rated. */
-export function RatingsSwitch({ onPhoto = false, className = '' }: { onPhoto?: boolean; className?: string }) {
+export function RatingsSwitch({ className = '' }: { className?: string }) {
   const { on, count, setOn } = useRatingsSwitch()
   if (!count) return null
   const btn = (mine: boolean, label: string, title: string) => (
@@ -42,36 +45,56 @@ export function RatingsSwitch({ onPhoto = false, className = '' }: { onPhoto?: b
       {label}
     </button>
   )
+  /* NO DISPLAY UTILITY IN HERE. Written as `inline-flex ...` it fought the
+     `hidden` on the wide variant and won, so at 320 both controls were in the
+     header and the row ran 63px past the viewport — the second time that exact
+     mistake has been made in this file. The display belongs to the variant. */
+  const plate = 'shrink-0 items-center gap-0.5 rounded-full border border-line-mid bg-surface-2 p-0.5'
+  const label = `${count} club${count === 1 ? '' : 's'} re-rated by you. House uses the site's own numbers; Yours uses yours, everywhere.`
   return (
-    <span
-      /* The display utility lives entirely inside the branch. Written as
-         `inline-flex ... ${compact ? '' : 'hidden sm:inline-flex'}` both
-         displays were in play and the base one won, so the header control and
-         the phone one drew at the same time on a 390px screen. */
-      /* GROUND OF ITS OWN. On the banner this sits over a photograph, and the
-         first version was a bare row of text on it — the one control that says
-         "these numbers are not the site's own" was the hardest thing on the
-         page to see. An opaque plate and a blur give it an edge against
-         whatever the picture happens to be doing behind it. */
-      className={`inline-flex shrink-0 items-center gap-0.5 rounded-full border p-0.5 ${
-        onPhoto
-          ? 'border-white/20 bg-bg-0/80 shadow-float backdrop-blur-md'
-          : 'border-line-mid bg-surface-2'
-      } ${className}`}
-      title={`${count} club${count === 1 ? '' : 's'} re-rated by you. House uses the site's own numbers; Yours uses yours, everywhere.`}
-    >
-      <span className="px-1.5 text-[10px] font-bold tracking-[0.1em] text-ink-3 uppercase">Ratings</span>
-      {btn(false, 'House', "The site's own numbers")}
-      {btn(true, 'Yours', `Your ratings — ${count} club${count === 1 ? '' : 's'} re-rated`)}
-      <Link
-        to="/my-ratings"
-        title="Edit your ratings"
-        aria-label="Edit your ratings"
-        className="inline-flex min-h-8 items-center px-1.5 text-ink-3 transition-colors hover:text-accent"
-      >
-        <Icon name="pencil" size={13} />
-      </Link>
-    </span>
+    <>
+      {/* PHONE: the state, tappable. The pair plus its label runs the header
+          cluster past a 320px viewport, and the pill still answers "whose
+          numbers am I looking at" at a glance. */}
+      <span className={`${plate} inline-flex sm:hidden ${className}`} title={label}>
+        <button
+          onClick={() => setOn(!on)}
+          aria-pressed={on}
+          title={on ? 'Your ratings are on — tap for the house numbers' : "The site's own numbers — tap for yours"}
+          className={`min-h-8 rounded-full px-2.5 text-[11.5px] font-bold transition-colors ${
+            on ? 'bg-accent text-bg-0' : 'text-ink-3'
+          }`}
+        >
+          {on ? 'Yours' : 'House'}
+        </button>
+        <Link
+          to="/my-ratings"
+          title="Edit your ratings"
+          aria-label="Edit your ratings"
+          className="inline-flex min-h-8 items-center px-1 text-ink-3 transition-colors hover:text-accent"
+        >
+          <Icon name="pencil" size={13} />
+        </Link>
+      </span>
+
+      <span className={`${plate} hidden sm:inline-flex ${className}`} title={label}>
+        {/* The word waits for a screen wide enough that it is not competing
+            with the nav links for the same pixels. */}
+        <span className="hidden px-1.5 text-[10px] font-bold tracking-[0.1em] text-ink-3 uppercase lg:inline">
+          Ratings
+        </span>
+        {btn(false, 'House', "The site's own numbers")}
+        {btn(true, 'Yours', `Your ratings — ${count} club${count === 1 ? '' : 's'} re-rated`)}
+        <Link
+          to="/my-ratings"
+          title="Edit your ratings"
+          aria-label="Edit your ratings"
+          className="inline-flex min-h-8 items-center px-1.5 text-ink-3 transition-colors hover:text-accent"
+        >
+          <Icon name="pencil" size={13} />
+        </Link>
+      </span>
+    </>
   )
 }
 
