@@ -32,6 +32,7 @@ import { SHARE_FORMATS, frameHeight, drawFitted, type FormatId } from '../lib/fr
 import { deliverImage } from '../lib/share'
 import { num } from '../lib/rows'
 import { useDiffScale } from '../lib/fixtureRuns'
+import { RatingsEntry } from '../components/RatingsSwitch'
 import { usePlans, weeksKey } from '../lib/plans'
 import { useAvailability, availBadge, availFor, SEV_COLOUR, type Availability } from '../lib/availability'
 import { xpForGw, useXpModel, useMarketOdds, useShotProfiles } from '../lib/xp'
@@ -792,6 +793,12 @@ export default function SquadBuilder() {
             layoutId="squad-view"
           />
         )}
+        {/* The second place a reader disagrees with a fixture rating, after
+            the Fixtures page itself — the Fixtures panel in the right column
+            is built on exactly the same numbers. basis-full below sm for the
+            same reason the plan library is: the tabs already take 330 of 390
+            on a phone, so anything sharing that line runs off the edge. */}
+        <RatingsEntry className="basis-full sm:basis-auto" />
         {/* basis-full below lg, or it tries to share the line with the tabs
             on a phone and loses: the tabs take 330 of 390, the library is left
             with 44, and the Compare button — which cannot shrink — hangs 85px

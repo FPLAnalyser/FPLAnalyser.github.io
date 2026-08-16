@@ -8,7 +8,7 @@ import { PageSkeleton } from '../components/Skeleton'
 import { useCore } from '../lib/useData'
 import { useAvailability } from '../lib/availability'
 import { useXpModel, useMarketOdds, useShotProfiles } from '../lib/xp'
-import { captainBoard, captainMatrix, tripleCaptainWeeks, type CapRow } from '../lib/captaincy'
+import { captainBoard, tripleCaptainWeeks, type CapRow } from '../lib/captaincy'
 import { teamLabel } from '../lib/util'
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -26,18 +26,18 @@ import { teamLabel } from '../lib/util'
    scoring parts held at their mean inside the distribution.
    ════════════════════════════════════════════════════════════════════════ */
 
+/* FIVE TABS BECAME TWO. "By week" was the board again with the gameweek on
+   the other axis, and "Differentials" was that same table with an ownership
+   filter — so the gameweek is a dropdown on the board now, and the filter is a
+   toggle beside it. "Risk & reward" plotted haul against projection, which is
+   two columns the board already prints, as a scatter nobody could read a
+   decision out of. What is left is the two questions the page exists to
+   answer: who to captain this week, and when to spend the chip. */
 const TABS: TabDef[] = [
   { id: 'board', label: 'Captain board' },
-  { id: 'risk', label: 'Risk & reward' },
   { id: 'tc', label: 'Triple Captain' },
-  { id: 'matrix', label: 'By week' },
-  { id: 'diff', label: 'Differentials' },
 ]
 
-/** How far the long views look. Twelve is the planning half-horizon the
- *  fixtures page settled on, and it is as many columns as a phone can carry
- *  while a name still fits in the cell. */
-const HORIZON = 12
 /** A differential is a captain the field is not already on. */
 const DIFF_OWNED = 10
 
@@ -52,6 +52,11 @@ export default function Captaincy() {
   const market = useMarketOdds()
   const profiles = useShotProfiles()
   const [tab, setTab] = useState('board')
+  const [diffOnly, setDiffOnly] = useState(false)
+  /** Which half of the season the chip view looks at. A Triple Captain is
+   *  spent once, and the decision people actually make is "before Christmas or
+   *  after" — a rolling twelve-week window could not express either. */
+  const [half, setHalf] = useState<1 | 2>(1)
 
   const ratings = data?.ratings ?? []
   const fixtureEase = data?.fixtureEase ?? []
@@ -63,7 +68,12 @@ export default function Captaincy() {
   )
   const [gw, setGw] = useState<number | null>(null)
   const activeGw = gw ?? gws[0] ?? null
-  const window = useMemo(() => gws.slice(0, HORIZON), [gws])
+  /* 38 games, so the first half ends at 19 — the same split the fixtures page
+     uses for its best-runs windows. */
+  const window = useMemo(
+    () => gws.filter((g) => (half === 1 ? g <= 19 : g >= 20)),
+    [gws, half],
+  )
 
   const board = useMemo(
     () => (activeGw == null || !ratings.length
@@ -79,14 +89,6 @@ export default function Captaincy() {
     [tab, ratings, window, fixtureEase, avail, xpModel, market, profiles],
   )
 
-  const matrix = useMemo(
-    () => (!['matrix', 'diff'].includes(tab) || !ratings.length
-      ? null
-      : captainMatrix(ratings, window, fixtureEase, avail, xpModel, market, profiles, 5,
-        tab === 'diff' ? DIFF_OWNED : 101)),
-    [tab, ratings, window, fixtureEase, avail, xpModel, market, profiles],
-  )
-
   // No rows yet means the core tables are still in flight — the provider
   // exposes no loading flag, and an absent `data` says the same thing.
   if (!data) return <PageSkeleton />
@@ -99,27 +101,35 @@ export default function Captaincy() {
         subtitle="The biggest call of the week, priced against what everyone else is doing"
       />
 
-      {activeGw != null && gws.length > 1 && (
-        <div className="mb-4 flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <span className="shrink-0 text-[10px] font-extrabold uppercase tracking-[0.12em] text-ink-3">
-            Gameweek
-          </span>
-          {gws.slice(0, 8).map((g) => (
-            <button
-              key={g}
-              onClick={() => setGw(g)}
-              aria-pressed={g === activeGw}
-              className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
-                g === activeGw
-                  ? 'border-accent bg-accent/15 text-accent'
-                  : 'border-line bg-surface-1 text-ink-2 hover:text-ink'
-              }`}
+      <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+        {tab === 'board' && activeGw != null && gws.length > 1 && (
+          <label className="flex items-center gap-2">
+            <span className="text-[10px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Gameweek</span>
+            {/* A DROPDOWN, NOT EIGHT PILLS. The row showed `gws.slice(0, 8)`,
+                so the back half of the season was unreachable — which is most
+                of what the removed "By week" tab was for. */}
+            <select
+              value={activeGw}
+              onChange={(e) => setGw(Number(e.target.value))}
+              className="min-h-9 rounded-lg border border-line-mid bg-surface-1 px-2.5 text-xs font-bold text-ink"
             >
-              GW{g}
-            </button>
-          ))}
-        </div>
-      )}
+              {gws.map((g) => <option key={g} value={g}>GW{g}</option>)}
+            </select>
+          </label>
+        )}
+        {tab === 'board' && (
+          <label className="flex items-center gap-2 text-[12.5px] font-semibold text-ink-2">
+            <input
+              type="checkbox"
+              checked={diffOnly}
+              onChange={(e) => setDiffOnly(e.target.checked)}
+              className="size-4 accent-accent"
+            />
+            Differentials only
+            <InfoTip text={`Captains owned by ${DIFF_OWNED}% of managers or fewer. A differential only pays if it hauls — the board's edge column is what it has to beat.`} />
+          </label>
+        )}
+      </div>
 
       <Tabs tabs={TABS} active={tab} onChange={setTab} />
 
@@ -127,13 +137,9 @@ export default function Captaincy() {
         {!ratings.length ? (
           <EmptyState>No ratings loaded yet.</EmptyState>
         ) : tab === 'board' ? (
-          <Board board={board} gw={activeGw} />
-        ) : tab === 'risk' ? (
-          <Risk board={board} gw={activeGw} />
-        ) : tab === 'tc' ? (
-          <TripleCaptain weeks={tc} />
+          <Board board={board} gw={activeGw} diffOnly={diffOnly} />
         ) : (
-          <Matrix weeks={window} matrix={matrix} differential={tab === 'diff'} />
+          <TripleCaptain weeks={tc} half={half} onHalf={setHalf} />
         )}
       </div>
     </PageShell>
@@ -157,9 +163,16 @@ function Wide({ children }: { children: React.ReactNode }) {
 
 /* ── 1 · the captain board ───────────────────────────────────────────── */
 
-function Board({ board, gw }: { board: { rows: CapRow[]; field: number } | null; gw: number | null }) {
+function Board({ board, gw, diffOnly }: {
+  board: { rows: CapRow[]; field: number } | null; gw: number | null; diffOnly: boolean
+}) {
   if (!board || !board.rows.length) return <EmptyState>No projections for this gameweek yet.</EmptyState>
-  const rows = board.rows.slice(0, 10)
+  /* Filtered AFTER the field benchmark is computed, never before: the field is
+     what every manager's armband returns, so working it out over differentials
+     alone would price the board against a league that does not exist. */
+  const pool = diffOnly ? board.rows.filter((r) => r.owned <= DIFF_OWNED) : board.rows
+  if (!pool.length) return <EmptyState>No differential captains projected this week.</EmptyState>
+  const rows = pool.slice(0, 10)
   return (
     <section>
       <Why>
@@ -179,14 +192,17 @@ function Board({ board, gw }: { board: { rows: CapRow[]; field: number } | null;
               <th className="px-2 py-2 text-left">Player</th>
               <th className="px-2 py-2 text-right">Cap xP</th>
               <th className="px-2 py-2 text-right">
-                Haul <InfoTip text="12 or more after the armband." />
+                Haul <InfoTip text="The chance of 12 or more points AFTER doubling. Read off a full points distribution for the week — goals and assists drawn as Poisson from his projected rates, minutes, clean sheet and bonus on top — not a rule of thumb. Its mean comes back to the same expected points shown in the Cap xP column." />
               </th>
-              <th className="px-2 py-2 text-right">Blank</th>
-              <th className="px-2 py-2 text-left">Ceiling / floor</th>
-              <th className="px-2 py-2 text-right">Owned</th>
-              <th className="px-2 py-2 text-right">Cap %</th>
               <th className="px-2 py-2 text-right">
-                EO <InfoTip text="Ownership times one plus the modelled captaincy share. FPL does not publish captaincy before a deadline, so that share is modelled from projection and ownership, not observed." />
+                Blank <InfoTip text="The chance of 4 or fewer points after doubling, off the same distribution. A captain who blanks costs you roughly what the field's armband returned." />
+              </th>
+              <th className="px-2 py-2 text-left">
+                Ceiling / floor <InfoTip text="The doubled score at the 90th and 10th percentile of the week's distribution: a good week and a bad one, not the best and worst possible. Doubling a score doubles its spread, which is why the pair sits beside the mean." />
+              </th>
+              <th className="px-2 py-2 text-right">Owned</th>
+              <th className="px-2 py-2 text-right">
+                EO <InfoTip text="Effective ownership: ownership times one plus his captaincy share. MODELLED, NOT OBSERVED — FPL publishes no captaincy data before a deadline, so the share is estimated from projection and ownership. Treat it as a shape, not a measurement." />
               </th>
               <th className="px-2 py-2 text-right">Edge</th>
             </tr>
@@ -234,7 +250,6 @@ function Board({ board, gw }: { board: { rows: CapRow[]; field: number } | null;
                   )}
                 </td>
                 <td className="px-2 py-1.5 text-right tabular-nums text-ink-2">{r.owned.toFixed(0)}%</td>
-                <td className="px-2 py-1.5 text-right tabular-nums text-ink-2">{pc(r.capShare)}</td>
                 <td className="px-2 py-1.5 text-right tabular-nums text-ink-2">{r.eo.toFixed(0)}%</td>
                 <td className={`px-2 py-1.5 text-right font-extrabold tabular-nums ${r.edge >= 0 ? 'text-good' : 'text-bad'}`}>
                   {signed(r.edge)}
@@ -255,88 +270,49 @@ function Board({ board, gw }: { board: { rows: CapRow[]; field: number } | null;
   )
 }
 
-/* ── 2 · risk and reward ─────────────────────────────────────────────── */
+/* ── 2 · Triple Captain ──────────────────────────────────────────────── */
 
-function Risk({ board, gw }: { board: { rows: CapRow[]; field: number } | null; gw: number | null }) {
-  if (!board || !board.rows.length) return <EmptyState>No projections for this gameweek yet.</EmptyState>
-  const rows = board.rows.slice(0, 12)
-  const W = 760
-  const H = 340
-  const xs = rows.map((r) => r.outlook.xp * 2)
-  const lo = Math.min(...xs, board.field) - 0.8
-  const hi = Math.max(...xs) + 0.8
-  const hiHaul = Math.max(...rows.map((r) => r.outlook.haul), 0.1)
-  const x = (v: number) => 54 + ((v - lo) / (hi - lo)) * (W - 90)
-  const y = (v: number) => H - 46 - (v / (hiHaul * 1.15)) * (H - 80)
-  const rad = (eo: number) => 7 + Math.sqrt(Math.max(0, eo)) * 2.2
-
-  return (
-    <section>
-      <Why>
-        The same twelve as a shape. Across is the captained projection, up is the chance of a haul,
-        and bubble size is effective ownership. The gold line is the field.{' '}
-        <b className="font-bold text-ink">Anything left of the line needs a reason.</b> Small and
-        high is a differential — low effective ownership with real ceiling, which is the trade you
-        want when you are behind and the one to avoid when you are ahead.
-      </Why>
-      <Wide>
-        <svg viewBox={`0 0 ${W} ${H}`} className="block w-full min-w-[560px] rounded-xl border border-line bg-surface-1">
-          {[0.2, 0.3, 0.4, 0.5, 0.6].filter((g) => g < hiHaul * 1.15).map((g) => (
-            <g key={g}>
-              <line x1={44} y1={y(g)} x2={W - 20} y2={y(g)} stroke="currentColor" className="text-line" />
-              <text x={38} y={y(g) + 3} textAnchor="end" fontSize={10} fill="currentColor" className="text-ink-3">
-                {pc(g)}
-              </text>
-            </g>
-          ))}
-          <line
-            x1={x(board.field)} y1={16} x2={x(board.field)} y2={H - 40}
-            stroke="currentColor" className="text-accent" strokeDasharray="4 3" strokeWidth={1.4}
-          />
-          <text x={x(board.field) + 6} y={26} fontSize={10.5} fill="currentColor" className="text-accent">
-            field {one(board.field)}
-          </text>
-          {rows.map((r) => {
-            const ahead = r.edge >= 0
-            return (
-              <g key={r.element}>
-                <circle
-                  cx={x(r.outlook.xp * 2)} cy={y(r.outlook.haul)} r={rad(r.eo)}
-                  className={ahead ? 'text-good' : 'text-bad'}
-                  fill="currentColor" fillOpacity={0.24} stroke="currentColor" strokeWidth={1.3}
-                />
-                <text
-                  x={x(r.outlook.xp * 2)} y={y(r.outlook.haul) - rad(r.eo) - 4}
-                  textAnchor="middle" fontSize={10.5} fill="currentColor" className="text-ink-2"
-                >
-                  {r.name}
-                </text>
-              </g>
-            )
-          })}
-          <text x={W / 2} y={H - 8} textAnchor="middle" fontSize={10.5} fill="currentColor" className="text-ink-3">
-            captained expected points &middot; GW{gw}
-          </text>
-        </svg>
-      </Wide>
-    </section>
+function TripleCaptain({ weeks, half, onHalf }: {
+  weeks: ReturnType<typeof tripleCaptainWeeks> | null
+  half: 1 | 2
+  onHalf: (h: 1 | 2) => void
+}) {
+  const picker = (
+    /* HALVES, NOT A ROLLING TWELVE. The chip is spent once and the question
+       people actually ask is "before Christmas or after"; a twelve-week window
+       could express neither, and it hid GW20 onward entirely. */
+    <label className="mb-3 flex items-center gap-2">
+      <span className="text-[10px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Season</span>
+      <select
+        value={half}
+        onChange={(e) => onHalf(Number(e.target.value) as 1 | 2)}
+        className="min-h-9 rounded-lg border border-line-mid bg-surface-1 px-2.5 text-xs font-bold text-ink"
+      >
+        <option value={1}>First half · GW1–19</option>
+        <option value={2}>Second half · GW20–38</option>
+      </select>
+    </label>
   )
-}
-
-/* ── 3 · Triple Captain ──────────────────────────────────────────────── */
-
-function TripleCaptain({ weeks }: { weeks: ReturnType<typeof tripleCaptainWeeks> | null }) {
-  if (!weeks || !weeks.length) return <EmptyState>No projections in this window yet.</EmptyState>
+  if (!weeks || !weeks.length) {
+    return <section>{picker}<EmptyState>No projections in this half yet.</EmptyState></section>
+  }
   const top = Math.max(...weeks.map((w) => w.gain))
+  const bestWeek = weeks.find((w) => w.best)
   return (
     <section>
+      {picker}
       <Why>
-        A chip is a one-time option, and the mistake is spending it below its value because it is
-        burning a hole. Triple Captain adds one further multiple of the captain, so its worth in any
-        week is simply the best captain expectation going.{' '}
-        <b className="font-bold text-ink">Gold bars are weeks that beat every week left after them</b>{' '}
-        — so playing where the bar is gold is the stopping rule, and everything between is a week to
-        hold.
+        <b className="font-bold text-ink">Each bar is the best captain available that week</b>, and
+        its height is what that player is projected to score — so a Triple Captain played then adds
+        roughly that many points again, on top of the double you were getting anyway. The name and
+        fixture under each bar are who that captain would be.{' '}
+        <b className="font-bold text-ink">A gold bar beats every week left after it</b>, which makes
+        it the stopping rule: play the chip on the first gold bar you reach and you cannot do better
+        later in this half.{' '}
+        {bestWeek && (
+          <>As it stands that is <b className="font-bold text-ink">GW{bestWeek.gw}</b>, on{' '}
+            {bestWeek.name} against {bestWeek.fixture}.</>
+        )}
       </Why>
       <Wide>
         <div className="flex min-w-[560px] items-end gap-1.5 rounded-xl border border-line bg-surface-1 p-3">
@@ -363,69 +339,6 @@ function TripleCaptain({ weeks }: { weeks: ReturnType<typeof tripleCaptainWeeks>
         the gap between your XI and the best available XI — but both need the blank and double
         calendar, which is not published this far out.
       </p>
-    </section>
-  )
-}
-
-/* ── 4 & 5 · the matrices ────────────────────────────────────────────── */
-
-function Matrix({ weeks, matrix, differential }: {
-  weeks: number[]
-  matrix: ReturnType<typeof captainMatrix> | null
-  differential: boolean
-}) {
-  if (!matrix || !matrix.size) return <EmptyState>No projections in this window yet.</EmptyState>
-  const all = weeks.flatMap((g) => matrix.get(g) ?? [])
-  const top = Math.max(...all.map((c) => c.xp), 1)
-  return (
-    <section>
-      <Why>
-        {differential ? (
-          <>Not who is best, but who is best among players the field is not already on — everyone
-          here is under <b className="font-bold text-ink">{DIFF_OWNED}% owned</b>. A differential
-          captain is how you gain on a rival who is on the same template as you.</>
-        ) : (
-          <>Rank one to five down the side, gameweek across. A solid row is a hold; the same name
-          reappearing eleven weeks apart is a fixture-swing play. Home fixtures are upper case, away
-          lower.</>
-        )}
-      </Why>
-      <Wide>
-        <div className="min-w-[860px] rounded-xl border border-line bg-surface-1 p-2">
-          <div className="mb-1 flex gap-1">
-            <span className="w-7 shrink-0" />
-            {weeks.map((g) => (
-              <span key={g} className="flex-1 text-center text-[9px] font-extrabold tracking-wide text-ink-3">
-                GW{g}
-              </span>
-            ))}
-          </div>
-          {[0, 1, 2, 3, 4].map((rank) => (
-            <div key={rank} className="mb-1 flex gap-1">
-              <span className="flex w-7 shrink-0 items-center justify-center text-[10.5px] font-extrabold text-ink-3">
-                {rank + 1}
-              </span>
-              {weeks.map((g) => {
-                const cell = (matrix.get(g) ?? [])[rank]
-                if (!cell) return <span key={g} className="min-h-[34px] flex-1 rounded bg-surface-2/50" />
-                return (
-                  <span
-                    key={g}
-                    className="flex min-h-[34px] flex-1 flex-col justify-center rounded px-1 py-0.5 text-center leading-tight"
-                    style={{ background: `rgba(201,162,39,${(0.12 + 0.34 * (cell.xp / top)).toFixed(3)})` }}
-                    title={`${cell.name} (${teamLabel(cell.team)}) v ${cell.fixture} — ${one(cell.xp)} xP, ${cell.owned.toFixed(0)}% owned`}
-                  >
-                    <b className="truncate text-[10px] font-extrabold text-ink">{cell.name}</b>
-                    <small className="truncate text-[7.5px] font-semibold text-ink-2">
-                      {cell.fixture} &middot; {one(cell.xp)}
-                    </small>
-                  </span>
-                )
-              })}
-            </div>
-          ))}
-        </div>
-      </Wide>
     </section>
   )
 }
