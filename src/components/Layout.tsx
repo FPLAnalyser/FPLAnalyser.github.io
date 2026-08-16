@@ -123,7 +123,6 @@ export function Layout() {
             >
               <Icon name="search" size={18} />
             </button>
-            <SeasonSwitcher />
             <ThemeSwitcher />
             <button
               className="flex min-h-11 min-w-10 items-center justify-center rounded-md text-ink-2 transition-colors hover:text-ink sm:min-w-11"
@@ -151,6 +150,14 @@ export function Layout() {
           <footer className="mx-auto max-w-[1400px] px-2.5 pt-2 pb-8 text-[12px] text-ink-3 sm:px-4 md:px-6">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line pt-4">
               <span>FPL Analyser — independent, and not affiliated with the Premier League or Fantasy Premier League.</span>
+              {/* THE ARCHIVE, OUT OF THE HEADER. It sat in the nav cluster
+                  costing 77px of a row that runs out of width at 1280, for a
+                  control almost nobody touches: it names the current season,
+                  which every page already implies, and its only real job is
+                  reaching last season's data. Down here it is still one click
+                  from every page and it is no longer competing with the nav.
+                  It renders as a plain label when only one season exists. */}
+              <SeasonSwitcher />
               <NavLink to="/legal" className="text-accent underline underline-offset-2 hover:text-accent-2">
                 Data, credits &amp; privacy
               </NavLink>

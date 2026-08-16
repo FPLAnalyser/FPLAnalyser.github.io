@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSeason } from '../lib/season'
 
-/** Compact season selector for the nav. Shows the active season; when more than
- *  one season exists it opens a menu to switch (which reloads onto that data). */
+/** Season selector. Shows the active season; when more than one exists it opens
+ *  a menu to switch, which reloads onto that data.
+ *
+ *  Lives in the page footer rather than the nav. It was in the header cluster
+ *  taking 77px from a row that has none to spare below 1440 — measured, the nav
+ *  links already overflow at 1280 — and it is a control for reading last
+ *  season's archive, not something anyone reaches for on the way to a squad.
+ *  The menu opens UPWARD for the same reason: there is nothing below it. */
 export function SeasonSwitcher() {
   const { season, seasons, setSeason } = useSeason()
   const [open, setOpen] = useState(false)
@@ -22,7 +28,7 @@ export function SeasonSwitcher() {
     <div ref={ref} className="relative">
       <button
         onClick={() => multi && setOpen((o) => !o)}
-        className="flex min-h-9 items-center gap-1 rounded-md border border-line-mid px-2.5 text-xs font-semibold whitespace-nowrap text-ink-2 transition-colors hover:text-ink"
+        className="flex min-h-8 items-center gap-1 rounded-md border border-line-mid px-2 text-[12px] font-semibold whitespace-nowrap text-ink-2 transition-colors hover:text-ink"
         aria-label={`Season: ${label}`}
         title={multi ? 'Change season' : `Season ${label}`}
       >
@@ -30,7 +36,7 @@ export function SeasonSwitcher() {
         {multi && <span className="text-[10px] text-ink-3">▾</span>}
       </button>
       {open && multi && (
-        <div className="absolute right-0 z-[120] mt-1.5 w-36 overflow-hidden rounded-lg border border-line-mid bg-surface-2 shadow-float">
+        <div className="absolute bottom-full left-0 z-[120] mb-1.5 w-36 overflow-hidden rounded-lg border border-line-mid bg-surface-2 shadow-float">
           <div className="border-b border-line px-3 py-1.5 text-[10px] font-semibold tracking-[0.12em] text-ink-3 uppercase">Season</div>
           {seasons.map((s) => (
             <button
