@@ -123,8 +123,16 @@ node tools/video/motion.mjs --comp Film \
   --clips build/video/fpl-full-wide.mp4           # intro + footage + end card
 ```
 
-Compositions live in `remotion/Root.tsx` — plain React on a timeline, using the
-site's own fonts and gold. `--audio path.mp3 --music-volume 0.18` lays a track
+Compositions live in `remotion/Root.tsx` — plain React on a timeline. The cards
+are built on the real mark, `public/brand/lockup.jpg`, rather than a re-typeset
+imitation of it, so they cannot drift from the brand. Two consequences:
+
+- The lockup already contains the wordmark, so nothing re-states the name
+  under it — the end card adds only the URL and the call to action.
+- Its black field samples at `rgb(8,8,8)`, four levels off the site's ink. The
+  cards use the logo's own black (`LOGO_BG`) so H.264, which bands flat dark
+  areas, has no edge to draw. Never scale it past its 640px source either;
+  beyond that the metal goes soft. `--audio path.mp3 --music-volume 0.18` lays a track
 under the whole film; `--dissolve 12` sets the overlap in frames.
 
 Two things worth knowing before editing it:

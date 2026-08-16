@@ -54,9 +54,12 @@ function probeFrames(file, fps) {
 await rm(path.join(PUBLIC, 'clips'), { recursive: true, force: true })
 await mkdir(path.join(PUBLIC, 'clips'), { recursive: true })
 await mkdir(path.join(PUBLIC, 'fonts'), { recursive: true })
+await mkdir(path.join(PUBLIC, 'brand'), { recursive: true })
 for (const f of ['manrope-800.woff2', 'archivo-black-400.woff2']) {
   await copyFile(path.join(ROOT, 'src/fonts', f), path.join(PUBLIC, 'fonts', f))
 }
+// The cards are built on the real mark, not a re-typeset imitation of it.
+await copyFile(path.join(ROOT, 'public/brand/lockup.jpg'), path.join(PUBLIC, 'brand/lockup.jpg'))
 
 const FPS = 30
 const clips = []
