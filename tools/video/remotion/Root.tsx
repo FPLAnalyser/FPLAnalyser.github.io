@@ -57,7 +57,9 @@ const Lockup: React.FC<{ size: number; opacity: number; scale: number; sheenAt?:
     </div>
   )
 
-export const Intro: React.FC = () => {
+type CardProps = { vertical?: boolean }
+
+export const Intro: React.FC<CardProps> = ({ vertical }) => {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
 
@@ -65,29 +67,41 @@ export const Intro: React.FC = () => {
   // to be small or it reads as a slide transition.
   const rise = spring({ frame, fps, config: { damping: 200 } })
 
+  // 840 of 1080 wide; 900 of 1080 in the vertical frame, where a square has far
+  // more room. Both are downscales of the 1280px asset motion.mjs prepares, not
+  // the browser guessing at pixels that were never there.
+  const size = vertical ? 900 : 840
+
   return (
     <AbsoluteFill style={{ background: LOGO_BG, justifyContent: 'center', alignItems: 'center' }}>
-      {/* 840 of 1080 — the mark carries the card, so it should own the frame.
-          Safe because motion.mjs hands over a cropped 1280px asset, so this is
-          a downscale, not the browser guessing at missing pixels. */}
-      <Lockup size={840} opacity={rise} scale={interpolate(rise, [0, 1], [0.94, 1])} sheenAt={16} />
+      <Lockup size={size} opacity={rise} scale={interpolate(rise, [0, 1], [0.94, 1])} sheenAt={vertical ? 8 : 16} />
     </AbsoluteFill>
   )
 }
 
-export const EndCard: React.FC = () => {
+export const EndCard: React.FC<CardProps> = ({ vertical }) => {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
   const a = spring({ frame, fps, config: { damping: 200 } })
-  const b = spring({ frame: frame - 16, fps, config: { damping: 200 } })
+  const b = spring({ frame: frame - (vertical ? 10 : 16), fps, config: { damping: 200 } })
+
+  const size = vertical ? 760 : 620
+  const urlSize = vertical ? 58 : 54
+  // Shorts, Reels and TikTok all stack their own title, handle and action rail
+  // over the bottom of a vertical frame. The block sits above that, or the URL
+  // — the only thing on this card anyone needs to read — ends up underneath it.
+  const lift = vertical ? -190 : 0
 
   return (
-    <AbsoluteFill style={{ background: LOGO_BG, justifyContent: 'center', alignItems: 'center' }}>
-      <Lockup size={620} opacity={a} scale={interpolate(a, [0, 1], [0.95, 1])} sheenAt={20} />
+    <AbsoluteFill style={{
+      background: LOGO_BG, justifyContent: 'center', alignItems: 'center',
+      transform: `translateY(${lift}px)`,
+    }}>
+      <Lockup size={size} opacity={a} scale={interpolate(a, [0, 1], [0.95, 1])} sheenAt={vertical ? 12 : 20} />
       {/* The lockup already carries the wordmark, so this adds only the call to
           action — repeating the name under it would read as a mistake. */}
       <div style={{
-        marginTop: 26, fontFamily: BODY, fontWeight: 800, fontSize: 54, color: '#fff',
+        marginTop: 26, fontFamily: BODY, fontWeight: 800, fontSize: urlSize, color: '#fff',
         opacity: b, transform: `translateY(${interpolate(b, [0, 1], [16, 0])}px)`,
       }}>
         fplanalyser.co.uk
@@ -135,24 +149,37 @@ export const StatCard: React.FC<{ kicker: string; name: string; value: number; s
 // ---------------------------------------------------------------- assembly
 
 type Clip = { src: string; durationInFrames: number }
-type FilmProps = { clips: Clip[]; dissolve: number; audio: string | null; musicVolume: number }
+type FilmProps = {
+  clips: Clip[]; dissolve: number; audio: string | null; musicVolume: number
+  vertical?: boolean; introFrames?: number; outroFrames?: number
+}
 
+// Wide gets a proper 2.3s title. A Short does not have the seconds to spare and
+// is scrolled past in the first one, so its intro is a 1s flash of the mark and
+// the outro carries the call to action instead.
 const INTRO = 70
 const OUTRO = 90
+const INTRO_V = 30
+const OUTRO_V = 60
 
 /** Where each element starts, given every element overlaps the last by `dissolve`. */
-function layout(clips: Clip[], dissolve: number) {
+function layout(clips: Clip[], dissolve: number, intro: number, outro: number) {
   const items: { from: number; dur: number; clip?: Clip }[] = []
   let at = 0
-  items.push({ from: 0, dur: INTRO })
-  at = INTRO - dissolve
+  items.push({ from: 0, dur: intro })
+  at = intro - dissolve
   for (const clip of clips) {
     items.push({ from: at, dur: clip.durationInFrames, clip })
     at += clip.durationInFrames - dissolve
   }
-  items.push({ from: at, dur: OUTRO })
-  return { items, total: at + OUTRO }
+  items.push({ from: at, dur: outro })
+  return { items, total: at + outro }
 }
+
+const framesFor = (p: FilmProps) => ({
+  intro: p.introFrames ?? (p.vertical ? INTRO_V : INTRO),
+  outro: p.outroFrames ?? (p.vertical ? OUTRO_V : OUTRO),
+})
 
 /** Fades in over the first `dissolve` frames; the element beneath shows through. */
 const Dissolve: React.FC<{ dissolve: number; first: boolean; children: React.ReactNode }> =
@@ -164,8 +191,10 @@ const Dissolve: React.FC<{ dissolve: number; first: boolean; children: React.Rea
     return <AbsoluteFill style={{ opacity }}>{children}</AbsoluteFill>
   }
 
-export const Film: React.FC<FilmProps> = ({ clips, dissolve, audio, musicVolume }) => {
-  const { items } = layout(clips, dissolve)
+export const Film: React.FC<FilmProps> = (props) => {
+  const { clips, dissolve, audio, musicVolume, vertical } = props
+  const { intro, outro } = framesFor(props)
+  const { items } = layout(clips, dissolve, intro, outro)
   return (
     <AbsoluteFill style={{ background: INK }}>
       {audio ? <Audio src={staticFile(audio)} volume={musicVolume} /> : null}
@@ -174,7 +203,7 @@ export const Film: React.FC<FilmProps> = ({ clips, dissolve, audio, musicVolume 
           <Dissolve dissolve={dissolve} first={i === 0}>
             {item.clip
               ? <OffthreadVideo src={staticFile(item.clip.src)} />
-              : (i === 0 ? <Intro /> : <EndCard />)}
+              : (i === 0 ? <Intro vertical={vertical} /> : <EndCard vertical={vertical} />)}
           </Dissolve>
         </Sequence>
       ))}
@@ -184,10 +213,21 @@ export const Film: React.FC<FilmProps> = ({ clips, dissolve, audio, musicVolume 
 
 // ---------------------------------------------------------------- root
 
+const WV = 1080
+const HV = 1920
+
 export const RemotionRoot: React.FC = () => (
   <BrandFonts>
     <Composition id="Intro" component={Intro} durationInFrames={INTRO} fps={FPS} width={W} height={H} />
     <Composition id="EndCard" component={EndCard} durationInFrames={OUTRO} fps={FPS} width={W} height={H} />
+    <Composition
+      id="IntroVertical" component={Intro} durationInFrames={INTRO_V} fps={FPS}
+      width={WV} height={HV} defaultProps={{ vertical: true }}
+    />
+    <Composition
+      id="EndCardVertical" component={EndCard} durationInFrames={OUTRO_V} fps={FPS}
+      width={WV} height={HV} defaultProps={{ vertical: true }}
+    />
     <Composition
       id="StatCard" component={StatCard} durationInFrames={105} fps={FPS} width={W} height={H}
       defaultProps={{ kicker: 'The captain pick', name: 'B.Fernandes', value: 6.45, suffix: 'xP' }}
@@ -198,9 +238,19 @@ export const RemotionRoot: React.FC = () => (
       defaultProps={{ clips: [], dissolve: 12, audio: null, musicVolume: 0.18 } as FilmProps}
       // The film's length is whatever the supplied clips add up to, minus the
       // overlaps, so it is computed rather than declared.
-      calculateMetadata={({ props }) => ({
-        durationInFrames: Math.max(1, layout(props.clips, props.dissolve).total),
-      })}
+      calculateMetadata={({ props }) => {
+        const f = framesFor(props)
+        return { durationInFrames: Math.max(1, layout(props.clips, props.dissolve, f.intro, f.outro).total) }
+      }}
+    />
+    <Composition
+      id="FilmVertical" component={Film} fps={FPS} width={WV} height={HV}
+      durationInFrames={600}
+      defaultProps={{ clips: [], dissolve: 10, audio: null, musicVolume: 0.18, vertical: true } as FilmProps}
+      calculateMetadata={({ props }) => {
+        const f = framesFor(props)
+        return { durationInFrames: Math.max(1, layout(props.clips, props.dissolve, f.intro, f.outro).total) }
+      }}
     />
   </BrandFonts>
 )

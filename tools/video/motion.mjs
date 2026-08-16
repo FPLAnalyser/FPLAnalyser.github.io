@@ -32,11 +32,17 @@ const argv = process.argv.slice(2)
 const arg = (n, d) => { const i = argv.indexOf(`--${n}`); return i === -1 ? d : argv[i + 1] }
 
 const comp = arg('comp', 'Film')
-const clipArg = arg('clips', path.join(ROOT, 'build/video/fpl-full-wide.mp4'))
+const clipArg = arg('clips', null)
 const audioArg = arg('audio', null)
-const dissolve = Number(arg('dissolve', 12))
+// A shorter overlap in the vertical cuts: they are 13-15s to begin with, so a
+// 12-frame dissolve at each join eats a noticeable share of the run time.
+const isVertical = /vertical$/i.test(comp)
+const dissolve = Number(arg('dissolve', isVertical ? 10 : 12))
 const musicVolume = Number(arg('music-volume', 0.18))
 const outDir = arg('out', path.join(ROOT, 'build', 'video'))
+// The composition name alone collides when the same one is rendered against
+// different clips — all three Shorts would land on fpl-filmvertical.mp4.
+const outName = arg('name', null)
 
 if (!existsSync(SHELL)) throw new Error(`chrome-headless-shell missing at ${SHELL}`)
 
@@ -81,8 +87,10 @@ const logoOut = path.join(PUBLIC, 'brand/lockup-hi.png')
 
 const FPS = 30
 const clips = []
-if (comp === 'Film') {
-  for (const raw of clipArg.split(',').map((s) => s.trim()).filter(Boolean)) {
+if (/^Film/i.test(comp)) {
+  const fallback = isVertical ? 'build/video/fpl-a-vertical.mp4' : 'build/video/fpl-full-wide.mp4'
+  const spec = clipArg || path.join(ROOT, fallback)
+  for (const raw of String(spec).split(',').map((s) => s.trim()).filter(Boolean)) {
     const src = path.isAbsolute(raw) ? raw : path.join(ROOT, raw)
     if (!existsSync(src)) throw new Error(`clip not found: ${src}\nRun render.mjs first.`)
     const base = path.basename(src)
@@ -118,7 +126,7 @@ const composition = await selectComposition({
 })
 
 await mkdir(outDir, { recursive: true })
-const outFile = path.join(outDir, `fpl-${comp.toLowerCase()}.mp4`)
+const outFile = path.join(outDir, `${outName || `fpl-${comp.toLowerCase()}`}.mp4`)
 
 console.log(`${composition.width}x${composition.height} · ${composition.durationInFrames} frames @${composition.fps}`)
 

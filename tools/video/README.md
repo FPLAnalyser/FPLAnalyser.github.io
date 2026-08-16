@@ -121,7 +121,32 @@ node tools/video/motion.mjs --comp EndCard        # 3s  end card
 node tools/video/motion.mjs --comp StatCard       # a number springing up
 node tools/video/motion.mjs --comp Film \
   --clips build/video/fpl-full-wide.mp4           # intro + footage + end card
+
+# Vertical, for the Shorts
+node tools/video/motion.mjs --comp IntroVertical
+node tools/video/motion.mjs --comp EndCardVertical
+node tools/video/motion.mjs --comp FilmVertical \
+  --clips build/video/fpl-a-vertical.mp4 --name fpl-short-a
 ```
+
+`--name` sets the output basename; without it every `FilmVertical` render
+lands on the same file and the three Shorts overwrite each other.
+
+The vertical cards are not the wide ones letterboxed. A square mark has far
+more room in a 9:16 frame, so the lockup goes to 900px, and three timings
+change with the format:
+
+- **The intro drops to 1 second**, against 2.3 wide. A Short is scrolled past
+  in the first second, so spending two of them on a logo spends the only
+  attention the video gets. If you would rather not risk it at all, post the
+  Short with an outro only — the assembly takes `--intro-frames 0`-style edits
+  in `Root.tsx` via `INTRO_V`.
+- **The end card block sits 190px above centre.** Shorts, Reels and TikTok all
+  stack their own title, handle and action rail over the bottom of the frame;
+  centred, the URL — the only thing on that card anyone needs to read — ends up
+  underneath it.
+- **The dissolve shortens to 10 frames.** At 13–15 seconds a 12-frame overlap
+  at each join is a noticeable share of the run time.
 
 Compositions live in `remotion/Root.tsx` — plain React on a timeline. The cards
 are built on the real mark, `public/brand/lockup.jpg`, rather than a re-typeset
