@@ -21,8 +21,10 @@
     try {
       var root = document.documentElement;
       var accent = 'aurum';
-      var mode = localStorage.getItem('fpl_mode');
-      if (mode !== 'light' && mode !== 'dark') mode = 'dark';
+      // Light is withdrawn while the design settles — see MODES in lib/theme.
+      // This must stay in step with initialMode() or a visitor who had chosen
+      // light gets a flash of it on every cold load.
+      var mode = 'dark';
       root.dataset.accent = accent;
       root.dataset.mode = mode;
     } catch (e) {

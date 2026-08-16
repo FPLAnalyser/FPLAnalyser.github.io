@@ -10,30 +10,18 @@ export function PageShell({ children }: { children: ReactNode }) {
   // wants to be near the chrome, but the last card on a long page still needs
   // room to breathe above the mobile nav bar. A single py- gave the banner the
   // same generous gap as the page footer, which is the wrong trade.
-  return (
-    <div className="mx-auto w-full max-w-[1500px] px-2.5 pt-2 pb-6 sm:px-4 md:px-6 md:pt-3 md:pb-8">
-      {/* WHOSE NUMBERS IS THIS PAGE SHOWING — above the page, at every width.
-          Two homes were tried and both were wrong. In the section banner it sat
-          on a photograph with nothing behind it, so the one control that says
-          "these are not the site's numbers" was the hardest thing on the page
-          to see. In the header it cost 208px of a row that had none to give:
-          at 1440 it clipped My Team and pushed Review off the nav entirely, and
-          at 320 it ran the page 27px past the viewport.
-          Here it has its own line, the same place on every route, and it draws
-          nothing at all until a club has been re-rated. */}
-      <div className="mb-1.5 flex justify-end md:mb-2">
-        <RatingsSwitch />
-      </div>
-      {children}
-    </div>
-  )
+  return <div className="mx-auto w-full max-w-[1500px] px-2.5 pt-2 pb-6 sm:px-4 md:px-6 md:pt-3 md:pb-8">{children}</div>
 }
 
 export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <header className="mb-7">
-      <h1 className="text-3xl font-extrabold tracking-[-0.02em] text-ink md:text-4xl">{title}</h1>
-      {subtitle && <p className="mt-1.5 text-sm text-ink-2 md:text-[15px]">{subtitle}</p>}
+    <header className="mb-7 flex flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0">
+        <h1 className="text-3xl font-extrabold tracking-[-0.02em] text-ink md:text-4xl">{title}</h1>
+        {subtitle && <p className="mt-1.5 text-sm text-ink-2 md:text-[15px]">{subtitle}</p>}
+      </div>
+      {/* The banner carries this on every page that has one; these few do not. */}
+      <RatingsSwitch className="mt-1 shrink-0" />
     </header>
   )
 }

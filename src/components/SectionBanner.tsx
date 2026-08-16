@@ -1,4 +1,6 @@
 import { useState, type ReactNode } from 'react'
+import { useRatingsSwitch } from '../lib/tweaks'
+import { RatingsSwitch } from './RatingsSwitch'
 import { TeamBadge } from './badges'
 import { clubInfo } from '../lib/clubs'
 import { teamFullNames } from '../lib/util'
@@ -21,6 +23,23 @@ function BannerImg({ src }: { src: string }) {
       onError={(e) => { e.currentTarget.style.display = 'none' }}
       className={`hw-img ${loaded ? 'is-on' : ''}`}
     />
+  )
+}
+
+/* WHICH NUMBERS AM I LOOKING AT — on every page built on them.
+ *
+ * Drawn here rather than wired into each page one at a time, because one at a
+ * time is how a page gets missed, and a page running on someone's private
+ * ratings without saying so is the single thing that would make this feature
+ * dishonest. It renders nothing until a club has been re-rated. */
+function BannerTools({ tools }: { tools?: ReactNode }) {
+  const { count } = useRatingsSwitch()
+  if (!tools && !count) return null
+  return (
+    <div className="sb-tools">
+      {tools}
+      <RatingsSwitch onPhoto />
+    </div>
   )
 }
 
@@ -51,7 +70,7 @@ export function SectionBanner({
           <h1 className="sb-title font-cond">{title}</h1>
           {subtitle && <p className="sb-sub">{subtitle}</p>}
         </div>
-        {tools && <div className="sb-tools">{tools}</div>}
+        <BannerTools tools={tools} />
       </div>
     </header>
   )

@@ -22,6 +22,20 @@ export const ACCENTS = ALL_ACCENTS.filter((a) => a.id === 'aurum')
 
 const ACCENT_IDS = ACCENTS.map((a) => a.id)
 
+/** The modes a visitor can actually pick.
+ *
+ *  Same pattern as ACCENTS above, and the same reasoning taken one step
+ *  further: the site is designed in dark, every share image and screenshot
+ *  that brings somebody here is in dark, and the light palette is the one that
+ *  gets checked last and looks it. Rather than ship a half-tuned second skin,
+ *  the toggle is withdrawn while the design settles — the light tokens stay in
+ *  index.css untouched and nothing has been deleted.
+ *
+ *  Widen this array to bring it back; the toggle reappears on its own, and a
+ *  visitor who had chosen light gets it back with it. */
+const ALL_MODES: Mode[] = ['dark', 'light']
+export const MODES: Mode[] = ALL_MODES.filter((m) => m === 'dark')
+
 const ACCENT_KEY = 'fpl_accent'
 const MODE_KEY = 'fpl_mode'
 const DEFAULT_ACCENT: Accent = 'aurum'
@@ -50,6 +64,10 @@ function readStored<T extends string>(key: string, allowed: readonly T[], fallba
  *  Kept in step with the pre-paint script in index.html; changing one without
  *  the other produces a flash of the wrong theme on every cold load. */
 function initialMode(): Mode {
+  /* A stored 'light' from before the toggle was withdrawn resolves to dark
+     rather than stranding that visitor in a mode with no control to leave it
+     by. The value is left in localStorage, so widening MODES hands it back. */
+  if (MODES.length < 2) return MODES[0] ?? 'dark'
   try {
     const v = localStorage.getItem(MODE_KEY)
     if (v === 'light' || v === 'dark') return v

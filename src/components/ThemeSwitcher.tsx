@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { ACCENTS, useTheme } from '../lib/theme'
+import { ACCENTS, MODES, useTheme } from '../lib/theme'
 import { Icon } from './Icon'
 
 /** Compact theme control: light/dark toggle + an accent-colour picker. */
@@ -24,9 +24,17 @@ export function ThemeSwitcher() {
   // While only Aurum is offered the swatch goes away entirely and the header
   // is the light/dark toggle alone. Re-widen ACCENTS and it comes back.
   const pickable = ACCENTS.length > 1
+  // Same argument one level up: with light withdrawn there is one mode, and a
+  // toggle between one state and itself is a control that spends attention to
+  // say there is no choice. Re-widen MODES and it returns.
+  const switchable = MODES.length > 1
+
+  // Nothing left to offer — render nothing at all rather than an empty box.
+  if (!pickable && !switchable) return null
 
   return (
     <div className="flex items-center gap-1">
+      {switchable && (
       <button
         type="button"
         onClick={toggleMode}
@@ -36,6 +44,7 @@ export function ThemeSwitcher() {
       >
         <Icon name={mode === 'dark' ? 'moon' : 'sun'} size={16} />
       </button>
+      )}
 
       {/* The accent picker is a preference, not a tool — on a phone the header
           has room for the controls people actually reach for, so it waits

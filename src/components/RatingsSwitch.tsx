@@ -10,25 +10,24 @@ import { useRatingsSwitch } from '../lib/tweaks'
    is the failure this whole feature is built to avoid — and a global state
    deserves a global home rather than a copy in every page's furniture.
 
-   IT HAS ITS OWN LINE, ABOVE THE PAGE. Two other homes were tried and both
-   were wrong, in ways worth not repeating:
+   IT LIVES IN THE SECTION BANNER, in the tools slot every page's banner
+   already has. Three homes were tried getting here:
 
-     · in the section banner it sat on a photograph with nothing behind it, so
-       the one control on the site that says "these numbers are not the site's"
-       was the hardest thing on the page to see
-     · in the header it cost 208px of a row with none to give — measured at
-       1440 it clipped My Team and pushed Review off the nav altogether, and at
-       320 it ran the page 27px past the viewport
+     · the banner with no treatment — a bare row of text over a photograph,
+       which is how the control got lost in the first place. Fixed by giving it
+       an opaque plate and a blur rather than by moving it again.
+     · the header, which measured worse than it looked: at 1440 it took 208px
+       out of the nav row, clipping My Team and pushing Review off altogether,
+       and at 320 it ran the page 27px past a viewport with 0px of slack.
+     · a line of its own above the page, which worked but left a strip of
+       chrome floating above the banner with nothing to belong to.
 
-   A line of its own is in the same place on every route, has room at every
-   width, and needs no second compact variant to maintain.
-
-   IT DRAWS NOTHING UNTIL A CLUB HAS BEEN RE-RATED, so the line costs a reader
-   who has never opened Your ratings exactly nothing.
+   IT DRAWS NOTHING UNTIL A CLUB HAS BEEN RE-RATED, so a reader who has never
+   opened Your ratings never meets it.
    ════════════════════════════════════════════════════════════════════════ */
 
 /** The House / Yours switch. Renders nothing until a club has been re-rated. */
-export function RatingsSwitch() {
+export function RatingsSwitch({ onPhoto = false, className = '' }: { onPhoto?: boolean; className?: string }) {
   const { on, count, setOn } = useRatingsSwitch()
   if (!count) return null
   const btn = (mine: boolean, label: string, title: string) => (
@@ -49,7 +48,16 @@ export function RatingsSwitch() {
          `inline-flex ... ${compact ? '' : 'hidden sm:inline-flex'}` both
          displays were in play and the base one won, so the header control and
          the phone one drew at the same time on a 390px screen. */
-      className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-line-mid bg-surface-2 p-0.5"
+      /* GROUND OF ITS OWN. On the banner this sits over a photograph, and the
+         first version was a bare row of text on it — the one control that says
+         "these numbers are not the site's own" was the hardest thing on the
+         page to see. An opaque plate and a blur give it an edge against
+         whatever the picture happens to be doing behind it. */
+      className={`inline-flex shrink-0 items-center gap-0.5 rounded-full border p-0.5 ${
+        onPhoto
+          ? 'border-white/20 bg-bg-0/80 shadow-float backdrop-blur-md'
+          : 'border-line-mid bg-surface-2'
+      } ${className}`}
       title={`${count} club${count === 1 ? '' : 's'} re-rated by you. House uses the site's own numbers; Yours uses yours, everywhere.`}
     >
       <span className="px-1.5 text-[10px] font-bold tracking-[0.1em] text-ink-3 uppercase">Ratings</span>
