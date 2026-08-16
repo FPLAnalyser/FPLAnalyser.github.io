@@ -1,10 +1,11 @@
 import { useMemo } from 'react'
 import { useTweakValues, adjustMarket } from './tweaks'
+import { houseBaselines } from './baselines'
 import { num } from './rows'
 import { useLazyTable } from './useData'
 import { availFor, availabilityFactor, type Availability } from './availability'
 import { suppliedXp } from './promotedXp'
-import type { FixtureEaseRow, RatingRow } from './types'
+import type { FixtureEaseRow, RatingRow, Row } from './types'
 
 /* ════════════════════════════════════════════════════════════════════════
    Per-gameweek expected points — the component engine.
@@ -142,7 +143,20 @@ export function useMarketOdds(): MarketOdds | null {
      cannot leave two parts of a page disagreeing — xP, clean sheets,
      captaincy and the plan comparison all move together or not at all. */
   const tweaks = useTweakValues()
-  return useMemo(() => adjustMarket(base, tweaks), [base, tweaks])
+  /* Both already in the shared table cache — team_metrics is part of the core
+     bundle every page loads, so this is a map lookup, not a second fetch. It
+     has to be read here rather than passed in because useMarketOdds is called
+     from twenty components, most of which have no CoreData to hand. */
+  const metrics = useLazyTable<Row[]>('team_metrics')
+  const meta = useLazyTable<{ next_gw?: number }>('meta')
+  return useMemo(() => {
+    const house = houseBaselines(
+      metrics.data ?? undefined,
+      meta.data?.next_gw != null ? Number(meta.data.next_gw) : null,
+      base?.strength,
+    )
+    return adjustMarket(base, tweaks, house)
+  }, [base, tweaks, metrics.data, meta.data])
 }
 
 // ── the maths ───────────────────────────────────────────────────────────────

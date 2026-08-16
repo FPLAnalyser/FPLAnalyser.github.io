@@ -1,19 +1,16 @@
 import { useMemo } from 'react'
-import { num, str } from './rows'
+import { num } from './rows'
 import { useMarketOdds } from './xp'
+import { gamesInWindow, houseBaselines, leagueRange, tweakedBase, type TeamBase } from './baselines'
+import { useTweakValues } from './tweaks'
 import type { CoreData, FixtureEaseRow, Row } from './types'
+
+export type { TeamBase } from './baselines'
 
 /** How many games a metrics window covers, so a window TOTAL can be turned
  *  into a per-game rate. Never show a total as a rate. */
 export function windowGames(metrics: Row | null, data: CoreData): number {
-  if (!metrics) return 1
-  const g = num(metrics, 'games')
-  if (g != null && g > 0) return g
-  const w = str(metrics, 'window')
-  if (w === '4gw') return 4
-  if (w === '6gw') return 6
-  const nextGw = data.meta?.next_gw != null ? Number(data.meta.next_gw) : null
-  return nextGw != null && !isNaN(nextGw) && nextGw > 1 ? Math.min(38, nextGw - 1) : 38
+  return gamesInWindow(metrics, data.meta?.next_gw != null ? Number(data.meta.next_gw) : null)
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -26,10 +23,6 @@ export function windowGames(metrics: Row | null, data: CoreData): number {
    ════════════════════════════════════════════════════════════════════════ */
 
 export type Lens = 'overall' | 'attack' | 'defence'
-
-/** Per-game attacking/defensive baselines (chance quality), plus the league
- *  means — the inputs to every fixture projection on the site. */
-export interface TeamBase { xg: number; xgc: number }
 
 export interface DiffScale {
   /** Venue is an argument, not an afterthought — see buildDiffScale. */
@@ -181,35 +174,27 @@ export function diffTick(d: number): string {
  */
 export function useTeamBaselines(data: CoreData | null): { baselines: Map<string, TeamBase>; house: Map<string, TeamBase>; leagueBase: TeamBase } {
   const market = useMarketOdds()
+  const tweaks = useTweakValues()
   return useMemo(() => {
-    const house = new Map<string, TeamBase>()
-    for (const t of data?.teamMetrics ?? []) {
-      if (str(t, 'window') !== 'season') continue
-      const g = windowGames(t, data as CoreData)
-      const xg = num(t, 'team_xg')
-      const xgc = num(t, 'team_xgc')
-      if (xg != null && xgc != null && g > 0) house.set(String(t.team), { xg: xg / g, xgc: xgc / g })
-    }
-    for (const [team, v] of Object.entries(market?.strength ?? {})) {
-      if (!house.has(team)) house.set(team, { xg: v.att, xgc: v.def })
-    }
-    /* The league average stays on house numbers for the same reason the scale's
-       spread does: one club's dial should not silently re-rate the other
-       nineteen through the denominator. */
+    const house = houseBaselines(
+      data?.teamMetrics,
+      data?.meta?.next_gw != null ? Number(data.meta.next_gw) : null,
+      market?.strength,
+    )
+    /* The league average stays on house numbers for the same reason the
+       difficulty scale's spread does: one club's dial should not silently
+       re-rate the other nineteen through the denominator. */
     const vals = [...house.values()]
     const leagueBase: TeamBase = vals.length
       ? { xg: vals.reduce((s, v) => s + v.xg, 0) / vals.length, xgc: vals.reduce((s, v) => s + v.xgc, 0) / vals.length }
       : { xg: 1.4, xgc: 1.4 }
 
-    const tw = market?.tweak
-    if (!tw || !Object.keys(tw).length) return { baselines: house, house, leagueBase }
+    if (!Object.keys(tweaks).length) return { baselines: house, house, leagueBase }
+    const r = leagueRange(house)
     const baselines = new Map<string, TeamBase>()
-    for (const [team, v] of house) {
-      const t = tw[team]
-      baselines.set(team, t ? { xg: v.xg * t.att, xgc: v.xgc * t.def } : v)
-    }
+    for (const [team, v] of house) baselines.set(team, tweakedBase(v, tweaks[team], r))
     return { baselines, house, leagueBase }
-  }, [data, market])
+  }, [data, market, tweaks])
 }
 
 /** The difficulty scale for the current season's data, built once and shared. */

@@ -66,6 +66,33 @@ Produce the artefact and inspect it. Playwright is available; Chromium is at
 `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`. Screenshot the page, read
 the pixels, compare against the live thing. Say what you measured.
 
+### Trace the data, never assume its route
+
+Before changing a number on a screen, follow it **bottom up** — from the JSON
+file, through the hook that loads it, through every transform, to the component
+that prints it. Read the actual call sites. Do not reason from what a field is
+named or from where it would obviously come from.
+
+This has cost real time more than once:
+
+- Custom fixture difficulty was wired into the `fdr` column of
+  `fixture_ease.json`, because that is plainly the fixture difficulty. The
+  Fixtures page does not use it. Difficulty there is computed from per-game
+  xG/xGC baselines through `buildDiffScale`, and `fdr` is only a fallback for an
+  opponent with no baseline. The whole feature moved nothing.
+- Then the Fixtures page turned out to be building its **own** copy of those
+  baselines rather than using the shared hook, so fixing the shared one still
+  would not have moved the grid.
+- The same class of error: editing a pitch card in `SquadBuilder.tsx` when the
+  board actually rendering it was `SeasonPlanner.tsx`.
+
+Two habits that catch it. `grep` every call site of the function you are about
+to change and check what each one passes — four call sites of `xpForGw` were
+silently dropping the shot-profiles argument, so the same player showed a
+different xP on two pages. And when a number is wrong, print it from a probe
+harness (esbuild a throwaway `.ts` against `site_data/`, or drive the built
+bundle in Playwright) before theorising about why.
+
 ## Where things are
 
 - `docs/OPERATING_CALENDAR.md` — what runs on its own, what needs the owner, by when

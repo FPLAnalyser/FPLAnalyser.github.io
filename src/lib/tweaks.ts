@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { tweakMultipliers, TWEAK_MAX, type TeamBase } from './baselines'
 import type { MarketOdds } from './xp'
 import type { FixtureEaseRow } from './types'
+
+export { TWEAK_MAX } from './baselines'
 
 /* ════════════════════════════════════════════════════════════════════════
    YOUR RATINGS.
@@ -13,9 +16,10 @@ import type { FixtureEaseRow } from './types'
    they would recolour a fixture green while the projection under it did not
    move — two contradictory opinions about one game on one screen.
 
-   So the edit is on the INPUT: two bounded deltas per club, attack and
-   defence, in steps of a half up to ±2. Everything else is derived from
-   them, which is what keeps the site coherent:
+   So the edit is on the INPUT: two dials per club, attack and defence, in
+   halves from −2 to +2, where the ends mean AS STRONG AS THE STRONGEST CLUB IN
+   THE LEAGUE at that end of the pitch and as weak as the weakest. Everything
+   else is derived from them, which is what keeps the site coherent:
 
      · a club's defence delta changes what every opponent is expected to
        score against them — so their clean sheets, their opponents' goals,
@@ -25,23 +29,24 @@ import type { FixtureEaseRow } from './types'
 
    One edit, thirty-eight fixtures, one source. See docs/CUSTOM_FDR.md.
 
-   DELTAS, NOT ABSOLUTES. The house numbers refresh several times a day. A
-   stored absolute would freeze a stale opinion; a delta keeps meaning "I
-   think you have this club a step wrong", which stays true after a refresh.
+   MEASURED AGAINST THE LEAGUE, NOT AGAINST THE CLUB. The first version made a
+   step a fixed 13% of a club's own goal rate, and it could not do the job:
+   Hull on both dials at maximum reached 2.21 on the 1–5, where 5.0 would have
+   needed eight steps against a cap of two. A control that cannot say "this
+   promoted side is actually dangerous" is not a rating control. Anchoring the
+   ends to the league's best and worst makes every club able to reach both
+   ends, and makes +2 mean the same thing on every card.
+
+   RELATIVE, NOT ABSOLUTE. The house numbers refresh several times a day. A
+   stored 2.11 would freeze a stale opinion; "halfway to the best attack in the
+   league" still means what you meant after the next refresh.
    ════════════════════════════════════════════════════════════════════════ */
 
 export interface Tweak { att: number; def: number }
 export type Tweaks = Record<string, Tweak>
 
 const STORE = 'fpl_tweaks'
-export const TWEAK_MAX = 2
 export const TWEAK_STEP = 0.5
-
-/** One step of opinion is worth this much of a goal rate. Two steps — the
- *  most anyone can enter — is a club a third better or worse at defending
- *  than the model has them, which is a strong disagreement and about as far
- *  as a projection stays worth printing. */
-const PER_STEP = 0.88
 
 export const clampTweak = (v: number): number =>
   Math.max(-TWEAK_MAX, Math.min(TWEAK_MAX, Math.round(v / TWEAK_STEP) * TWEAK_STEP))
@@ -109,61 +114,60 @@ export function useTweakValues(): Tweaks {
   return t
 }
 
-/** How much of a goal rate a club's delta is worth. Positive `def` means a
- *  better defence, so fewer goals are expected against them. */
-const defMult = (d: number) => Math.pow(PER_STEP, d)
-const attMult = (a: number) => Math.pow(1 / PER_STEP, a)
-
 /**
  * The market's goal lambdas, adjusted.
  *
- * Each entry is keyed `team:gw:opponent` and carries what THAT team is
- * expected to score (`for`) and concede (`against`). A club's own attack
- * delta lifts its `for`; the opponent's defence delta lifts it too, because
- * a leakier defence concedes more. `against` is the same statement from the
- * other side, so both move together and the two entries for one match stay
- * consistent with each other.
+ * MULTIPLIERS, NOT REWRITTEN ODDS. The first cut scaled every entry in
+ * `byKey`, and it only moved the first gameweek or two — because that is as far
+ * ahead as the bookmakers price. Everything past that falls back to the model's
+ * own team strengths, which the rewrite never touched, so an opinion faded out
+ * after a week. Carried as multipliers and applied inside componentXp, a priced
+ * fixture and an unpriced one now get the same treatment, all thirty-eight
+ * weeks of it.
+ *
+ * The multipliers come from `house` — the same per-game baselines the fixture
+ * difficulty is built from — because that is where the league's best and worst
+ * live, and a dial now means a position in that range rather than a percentage
+ * of the club's own rate. Without those baselines there is no opinion to apply
+ * yet, so the market comes back untouched and the page renders house numbers
+ * until team_metrics lands.
+ *
+ * `strength` IS LEFT ALONE, and that is not an oversight. componentXp applies
+ * these multipliers itself, and the unpriced branch of every scale is built out
+ * of `strength` — so scaling it here as well applied the same opinion twice,
+ * once through the strength and once through the multiplier. It also meant
+ * nothing could show a reader the house number to compare against, because the
+ * house number had already moved. One application, in one place.
  */
-export function adjustMarket(market: MarketOdds | null, tweaks: Tweaks): MarketOdds | null {
-  if (!market || !Object.keys(tweaks).length) return market
-  /* MULTIPLIERS, NOT REWRITTEN ODDS. The first cut scaled every entry in
-     `byKey`, and it only moved the first gameweek or two — because that is as
-     far ahead as the bookmakers price. Everything past that falls back to the
-     model's own team strengths, which the rewrite never touched, so an
-     opinion faded out after a week. Carried as multipliers and applied inside
-     componentXp, a priced fixture and an unpriced one now get the same
-     treatment, all thirty-eight weeks of it. */
-  const tweak: Record<string, { att: number; def: number }> = {}
-  for (const [team, t] of Object.entries(tweaks)) {
-    tweak[team] = { att: attMult(t.att), def: defMult(t.def) }
-  }
-  /* `strength` IS LEFT ALONE, and that is not an oversight. componentXp now
-     applies these multipliers itself, and the unpriced branch of every scale
-     is built out of `strength` — so scaling it here as well applied the same
-     opinion twice, once through the strength and once through the multiplier.
-     It also meant nothing could show a reader the house number to compare
-     against, because the house number had already moved. One application,
-     in one place. */
+export function adjustMarket(market: MarketOdds | null, tweaks: Tweaks, house: Map<string, TeamBase>): MarketOdds | null {
+  if (!market || !Object.keys(tweaks).length || house.size < 8) return market
+  const tweak = tweakMultipliers(house, tweaks)
+  if (!Object.keys(tweak).length) return market
   return { byKey: market.byKey, strength: market.strength, tweak }
 }
 
 /**
- * Fixture difficulty, derived from the same opinion.
+ * FPL's own FDR column, moved in step with the rest.
  *
- * A fixture is harder when the OPPONENT is better, so both of their deltas
- * count: a stronger attack and a meaner defence each make the game worse to
- * own a player in. Rounded back to the 1–5 the whole site draws in, and
- * clamped, because a 0 or a 6 has no colour and no meaning.
+ * Not what this site's grids draw — those are computed from the baselines
+ * through buildDiffScale, and assuming otherwise is what made the first version
+ * of this feature appear to do nothing. This is the fallback for an opponent
+ * with no baseline at all, and a handful of squad views still read it directly,
+ * so it moves too rather than sitting there contradicting the page around it.
+ *
+ * Derived from the same multipliers, so it cannot drift from them: a club whose
+ * goal rate doubles is worth about two rungs of a five-point scale.
  */
-export function adjustFixtureEase(rows: FixtureEaseRow[], tweaks: Tweaks): FixtureEaseRow[] {
-  if (!rows.length || !Object.keys(tweaks).length) return rows
+export function adjustFixtureEase(rows: FixtureEaseRow[], tweaks: Tweaks, house: Map<string, TeamBase>): FixtureEaseRow[] {
+  if (!rows.length || !Object.keys(tweaks).length || house.size < 8) return rows
+  const mult = tweakMultipliers(house, tweaks)
+  if (!Object.keys(mult).length) return rows
   return rows.map((f) => {
-    const opp = tweaks[f.opponent]
-    if (!opp) return f
-    /* 0.6 a step, not 0.5: at a half the smallest opinion anyone can enter
-       rounded away to nothing and the colours never moved, which reads as the
-       control being broken. One full step on either dial now always shows. */
-    const shift = (opp.att + opp.def) * 0.6
+    const m = mult[f.opponent]
+    if (!m) return f
+    // A harder fixture is one where they score more (att above 1) and concede
+    // less (def below 1); both push the same way.
+    const shift = (m.att - 1) * 2 + (1 - m.def) * 2
     const fdr = Math.max(1, Math.min(5, Math.round(f.fdr + shift))) as FixtureEaseRow['fdr']
     return fdr === f.fdr ? f : { ...f, fdr }
   })
@@ -191,10 +195,14 @@ export function clubImpact(
   strength: Record<string, { att: number; def: number }> | undefined,
   league: { att: number; def: number; hAtt: number } | undefined,
   tweaks: Tweaks,
+  house: Map<string, TeamBase>,
   fromGw: number,
   n = 6,
 ): Impact | null {
   if (!strength || !league) return null
+  /* The SAME multipliers componentXp uses, from the same builder. A preview of
+     a projection computed a second way is not a preview of that projection. */
+  const mult = tweakMultipliers(house, tweaks)
   const fixtures = rows
     .filter((f) => f.team === team && f.gw >= fromGw)
     .sort((a, b) => a.gw - b.gw)
@@ -210,10 +218,10 @@ export function clubImpact(
   for (const fx of fixtures) {
     const opp = strength[fx.opponent]
     const home = fx.venue === 'H'
-    const twMe = tweaks[team]
-    const twOpp = tweaks[fx.opponent]
-    const mineFor = Math.pow(1 / PER_STEP, twMe?.att ?? 0) * Math.pow(PER_STEP, twOpp?.def ?? 0)
-    const mineAgainst = Math.pow(1 / PER_STEP, twOpp?.att ?? 0) * Math.pow(PER_STEP, twMe?.def ?? 0)
+    const twMe = mult[team]
+    const twOpp = mult[fx.opponent]
+    const mineFor = (twMe?.att ?? 1) * (twOpp?.def ?? 1)
+    const mineAgainst = (twOpp?.att ?? 1) * (twMe?.def ?? 1)
     const lamFor = me.att * (opp ? opp.def / league.def : 1) * (home ? hA : 1 / hA) * mineFor
     const lamAgainst = me.def * (opp ? opp.att / league.att : 1) * (home ? 1 / hA : hA) * mineAgainst
     f += lamFor
@@ -230,4 +238,17 @@ export const tweakLabel = (t: Tweak): string => {
   if (t.att) bits.push(`attack ${t.att > 0 ? '+' : '−'}${Math.abs(t.att)}`)
   if (t.def) bits.push(`defence ${t.def > 0 ? '+' : '−'}${Math.abs(t.def)}`)
   return bits.join(' · ')
+}
+
+/** Where a dial puts a club, in words. The number alone does not say that ±2
+ *  is the league's own best and worst rather than an arbitrary amount. */
+export function dialWords(v: number, side: 'att' | 'def'): string {
+  if (v === 0) return 'As the model has them'
+  const end = side === 'att' ? 'attack' : 'defence'
+  const best = side === 'att' ? 'best' : 'meanest'
+  const worst = side === 'att' ? 'weakest' : 'leakiest'
+  const to = v > 0 ? best : worst
+  const frac = Math.abs(v) / TWEAK_MAX
+  if (frac >= 1) return `As if they had the league's ${to} ${end}`
+  return `${Math.round(frac * 100)}% of the way to the league's ${to} ${end}`
 }

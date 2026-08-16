@@ -3,7 +3,7 @@ import { PageHeader, PageShell } from '../components/PageShell'
 import { TeamBadge } from '../components/badges'
 import { Icon } from '../components/Icon'
 import { useCore } from '../lib/useData'
-import { useTweaks, clubImpact, TWEAK_MAX, TWEAK_STEP, type Tweak } from '../lib/tweaks'
+import { useTweaks, clubImpact, dialWords, TWEAK_MAX, TWEAK_STEP, type Tweak } from '../lib/tweaks'
 import { useXpModel, useMarketOdds } from '../lib/xp'
 import { teamLabel } from '../lib/util'
 import { buildDiffScale, useTeamBaselines, type DiffScale } from '../lib/fixtureRuns'
@@ -18,20 +18,20 @@ import { buildDiffScale, useTeamBaselines, type DiffScale } from '../lib/fixture
    any page can contradict anything on another. The reasoning is in
    docs/CUSTOM_FDR.md; the engine is in lib/tweaks.
 
-   Deltas, not absolutes. The house numbers refresh several times a day and a
-   stored absolute would freeze a stale opinion, where "I think you have
-   Newcastle a step light at the back" stays true across a refresh.
+   The ends of each dial are the LEAGUE's best and worst, not a fixed
+   percentage of the club's own rate. That is what lets a promoted side be
+   re-rated at all: a percentage step could move Hull from 1.2 to 2.2 on the
+   1-5 and no further, and "this promoted side is actually dangerous" is
+   exactly the opinion someone wants to express.
+
+   Relative, not absolute. The house numbers refresh several times a day and a
+   stored 2.11 would freeze a stale opinion, where "halfway to the best attack
+   in the league" stays true across a refresh.
    ════════════════════════════════════════════════════════════════════════ */
 
-const WORDS: Record<string, [string, string]> = {
-  att: ['weaker going forward', 'stronger going forward'],
-  def: ['leakier at the back', 'meaner at the back'],
-}
-
 function Dial({ label, hint, value, onChange }: {
-  label: string; hint: string; value: number; onChange: (v: number) => void
+  label: string; hint: 'att' | 'def'; value: number; onChange: (v: number) => void
 }) {
-  const words = WORDS[hint]
   return (
     <div className="flex items-center gap-2">
       <span className="w-[54px] shrink-0 text-[11px] font-semibold text-ink-2">{label}</span>
@@ -39,7 +39,7 @@ function Dial({ label, hint, value, onChange }: {
         type="range"
         min={-TWEAK_MAX} max={TWEAK_MAX} step={TWEAK_STEP} value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        title={value === 0 ? 'As the model has them' : `${Math.abs(value)} step${Math.abs(value) === 1 ? '' : 's'} ${words[value > 0 ? 1 : 0]}`}
+        title={dialWords(value, hint)}
         className="h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-surface-3 accent-accent"
       />
       <span className={`font-num w-9 shrink-0 text-right text-[12px] font-bold tabular-nums ${
@@ -187,13 +187,18 @@ export default function MyRatings() {
           {' '}<b className="text-ink">the difficulty of all thirty-eight fixtures against them</b>, their opponents'
           projected points, their clean-sheet odds, the captaincy board and every plan you compare.
         </p>
+        <p className="mb-2">
+          <b className="text-ink">+2 means the best in the league at that</b>, and −2 the worst — not a fixed
+          percentage. So any club can be taken to either end: rate a promoted side's attack at +2 and you are
+          saying they create like the league's best, and the projection says so too. It is deliberately not
+          linear in goals, because moving a bottom club to the top is a far bigger claim than nudging one that
+          is nearly there — the figures under each pair of dials show exactly how big.
+        </p>
         <p className="mb-0 text-ink-3">
-          One step moves that club's goal rate by about an eighth; two is a strong disagreement and as far as
-          the projection stays worth printing. The figures under each pair of dials are per game across that
-          club's next few fixtures; the difficulty is what facing them is worth on the site's 1–5, home and
-          away averaged, and it applies to all thirty-eight. Your changes are stored as a difference from the
-          model rather than as a fixed number, so they still mean what you meant after the next data refresh —
-          and they live on this device only.
+          The figures under each pair of dials are per game across that club's next few fixtures; the
+          difficulty is what facing them is worth on the site's 1–5, home and away averaged, and it applies to
+          all thirty-eight. Your changes are stored as a position in the league rather than as a fixed number,
+          so they still mean what you meant after the next data refresh — and they live on this device only.
         </p>
         {count > 0 && (
           <div className="mt-3 flex flex-wrap items-center gap-2.5">
@@ -242,8 +247,8 @@ export default function MyRatings() {
                   <Dial label="Defence" hint="def" value={v.def} onChange={(n) => set(t, { def: n })} />
                 </div>
                 <Impact
-                  house={clubImpact(t, rows, strength, league, {}, fromGw)}
-                  yours={on ? clubImpact(t, rows, strength, league, tweaks, fromGw) : null}
+                  house={clubImpact(t, rows, strength, league, {}, house, fromGw)}
+                  yours={on ? clubImpact(t, rows, strength, league, tweaks, house, fromGw) : null}
                   diff={(() => {
                     const h = facing(t, scales.house)
                     const y = facing(t, scales.yours)

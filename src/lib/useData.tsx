@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useTweakValues, adjustFixtureEase } from './tweaks'
+import { houseBaselines } from './baselines'
 import { loadCore, loadTable, TableAbsent } from './data'
 import type { CoreData, RatingRow } from './types'
 
@@ -157,12 +158,16 @@ export function useCore() {
     return { ...core, data: { ...core.data, ratings: unrated.length ? [...ratings, ...unrated] : ratings } }
   }, [core, live.data])
 
-  /* Applied AFTER the live overlay, on the shape every page consumes. */
+  /* Applied AFTER the live overlay, on the shape every page consumes. The
+     baselines are built from the same core data being overlaid, so this needs
+     no extra load — and it is the same builder lib/xp and the fixture grids
+     use, so the fdr column cannot disagree with them. */
   return useMemo(() => {
     if (!withLive.data || !Object.keys(tweaks).length) return withLive
-    const rows = withLive.data.fixtureEase
-    const adjusted = adjustFixtureEase(rows, tweaks)
-    return adjusted === rows ? withLive : { ...withLive, data: { ...withLive.data, fixtureEase: adjusted } }
+    const d = withLive.data
+    const house = houseBaselines(d.teamMetrics, d.meta?.next_gw != null ? Number(d.meta.next_gw) : null, undefined)
+    const adjusted = adjustFixtureEase(d.fixtureEase, tweaks, house)
+    return adjusted === d.fixtureEase ? withLive : { ...withLive, data: { ...d, fixtureEase: adjusted } }
   }, [withLive, tweaks])
 }
 
