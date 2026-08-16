@@ -179,27 +179,34 @@ export default function MyRatings() {
         subtitle="Where you disagree with the model, and what that changes."
       />
 
+      {/* ONE LINE, THEN THE CONTROLS. This was three paragraphs, and every one
+          of them was explaining something the cards below already label: the
+          impact strip names its own window, the difficulty row names itself,
+          and a slider that says +2 next to a badge does not need a sentence.
+          A wall of text above twenty controls is a wall between the reader and
+          the controls. The rest is still here, one tap down, for the reader who
+          wants to know why a dial is not linear in goals. */}
       <div className="mb-4 rounded-2xl border border-line bg-surface-1/60 p-4 text-[13.5px] leading-relaxed text-ink-2">
-        <p className="mb-2">
-          Two dials a club. <b className="text-ink">Attack</b> is what they are expected to score;
-          {' '}<b className="text-ink">defence</b> is what they are expected to concede. Everything else on this site
-          is derived from those two numbers, so a club you move here moves with it —
-          {' '}<b className="text-ink">the difficulty of all thirty-eight fixtures against them</b>, their opponents'
-          projected points, their clean-sheet odds, the captaincy board and every plan you compare.
+        <p className="mb-0">
+          Two dials a club — what they <b className="text-ink">score</b> and what they
+          {' '}<b className="text-ink">concede</b>. <b className="text-ink">+2 is the best in the league at that,
+          −2 the worst.</b> Everything follows: fixture difficulty, clean sheets, projected points, captaincy,
+          every plan you compare.
         </p>
-        <p className="mb-2">
-          <b className="text-ink">+2 means the best in the league at that</b>, and −2 the worst — not a fixed
-          percentage. So any club can be taken to either end: rate a promoted side's attack at +2 and you are
-          saying they create like the league's best, and the projection says so too. It is deliberately not
-          linear in goals, because moving a bottom club to the top is a far bigger claim than nudging one that
-          is nearly there — the figures under each pair of dials show exactly how big.
-        </p>
-        <p className="mb-0 text-ink-3">
-          The figures under each pair of dials are per game across that club's next few fixtures; the
-          difficulty is what facing them is worth on the site's 1–5, home and away averaged, and it applies to
-          all thirty-eight. Your changes are stored as a position in the league rather than as a fixed number,
-          so they still mean what you meant after the next data refresh — and they live on this device only.
-        </p>
+        <details className="group mt-2">
+          <summary className="inline-flex cursor-pointer list-none items-center gap-1 text-[12.5px] font-semibold text-accent hover:underline">
+            <Icon name="chevron-right" size={12} className="transition-transform group-open:rotate-90" />
+            How this works
+          </summary>
+          <p className="mt-2 mb-0 text-[13px] text-ink-3">
+            The ends are the league's own best and worst rather than a fixed percentage, so any club can be
+            taken to either — rate a promoted side's attack at +2 and you are saying they create like the
+            league's best, and the projection says so too. That makes it deliberately uneven in goals: moving a
+            bottom club to the top is a far bigger claim than nudging one already near it, and the figures
+            under each pair of dials show how big. Your changes are stored as a position in the league rather
+            than a fixed number, so they survive the next data refresh, and they live on this device only.
+          </p>
+        </details>
         {count > 0 && (
           <div className="mt-3 flex flex-wrap items-center gap-2.5">
             <span className="rounded-lg border border-accent bg-accent-selected px-2.5 py-1 text-[12px] font-bold text-accent">
