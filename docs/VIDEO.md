@@ -117,10 +117,23 @@ Free, no signup → https://fplanalyser.co.uk
 
 Only the wide cut needs one; Shorts use a frame from the video.
 
-`node tools/video/thumbnail.mjs` renders it from the live captain podium —
-gold foil, a face, a number, which `docs/LAUNCH.md` correctly identifies as the
-strongest still the site produces. It writes 1280×720 to
-`build/video/thumbnail.png`.
+`node tools/video/thumbnail.mjs --variant <v>` renders it from the live captain
+podium — gold foil, a face, a number, which `docs/LAUNCH.md` correctly
+identifies as the strongest still the site produces. Three layouts, because
+which one wins a click is an empirical question:
+
+| Variant | Carries | At 210px |
+|---------|---------|----------|
+| `question` | "WHO'S YOUR CAPTAIN?" | **Strongest.** Biggest type, highest contrast |
+| `number` | the live xP and the player's name | Strong — a number survives shrinking better than a sentence |
+| `headline` | "EVERY PLAYER, RATED." | Readable, but the claim is abstract |
+
+The player and figure in `number` are read from the page, so it always states
+the real pick rather than a number typed in once and left to rot.
+
+**The kicker line is illegible at 210px in all three.** It reads as a brand
+mark rather than information, which is fine — just do not put anything there
+you need someone to actually read.
 
 Re-render it in launch week. The podium is live data, and a thumbnail naming a
 captain who has since been injured is worse than no thumbnail.
