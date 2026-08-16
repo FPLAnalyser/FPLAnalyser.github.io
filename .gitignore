@@ -19,6 +19,10 @@ dev-dist/
 # rendered video — regenerate with tools/video/render.mjs
 build/video/
 
+# drafted posts — regenerate with tools/social/draft.mjs. They are per-morning
+# artefacts of that day's site_data; the GitHub issue is the record.
+build/social/
+
 # local scratch verification
 _verify.mjs
 _share_test.mjs
