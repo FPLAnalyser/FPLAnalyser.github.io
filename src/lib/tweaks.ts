@@ -73,7 +73,7 @@ const read = (): Tweaks => {
 
 /* ── ONE SWITCH, DRAWN IN MANY PLACES ────────────────────────────────────
 
-   House or yours, and it is a single value rather than a setting per page.
+   Default or custom, and it is a single value rather than a setting per page.
    A per-page toggle reads like more control and is less: Fixtures on yours
    while the Squad Builder sat on house would put two different difficulties
    for the same game on two screens, which is the exact thing every other

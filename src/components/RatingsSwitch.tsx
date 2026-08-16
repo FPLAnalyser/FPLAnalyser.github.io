@@ -3,7 +3,14 @@ import { Icon } from './Icon'
 import { useRatingsSwitch } from '../lib/tweaks'
 
 /* ════════════════════════════════════════════════════════════════════════
-   House or yours.
+   Default or custom.
+
+   NAMED FOR THE NUMBERS, NOT FOR WHOSE THEY ARE. This read "House / Yours"
+   first — bookmaker's language, and a pair that mixes registers: one label is
+   about the system, the other about the person. "Base" was the other candidate
+   and it collides with the baselines this whole feature edits, which are a
+   real named thing in lib/baselines. Default and custom both describe the
+   numbers, which is what the reader is choosing between.
 
    ONE VALUE, so one control. A setting per page would let the Fixtures grid
    and the Squad Builder print different difficulties for the same game, which
@@ -29,7 +36,7 @@ import { useRatingsSwitch } from '../lib/tweaks'
    opened Your ratings never meets it, and the header is exactly as it was.
    ════════════════════════════════════════════════════════════════════════ */
 
-/** The House / Yours switch. Renders nothing until a club has been re-rated. */
+/** The Default / Custom switch. Renders nothing until a club has been re-rated. */
 export function RatingsSwitch({ className = '' }: { className?: string }) {
   const { on, count, setOn } = useRatingsSwitch()
   if (!count) return null
@@ -50,7 +57,7 @@ export function RatingsSwitch({ className = '' }: { className?: string }) {
      header and the row ran 63px past the viewport — the second time that exact
      mistake has been made in this file. The display belongs to the variant. */
   const plate = 'shrink-0 items-center gap-0.5 rounded-full border border-line-mid bg-surface-2 p-0.5'
-  const label = `${count} club${count === 1 ? '' : 's'} re-rated by you. House uses the site's own numbers; Yours uses yours, everywhere.`
+  const label = `${count} club${count === 1 ? '' : 's'} re-rated by you. Default is the site's own ratings; Custom is yours, on every page.`
   return (
     <>
       {/* PHONE: the state, tappable. The pair plus its label runs the header
@@ -60,12 +67,12 @@ export function RatingsSwitch({ className = '' }: { className?: string }) {
         <button
           onClick={() => setOn(!on)}
           aria-pressed={on}
-          title={on ? 'Your ratings are on — tap for the house numbers' : "The site's own numbers — tap for yours"}
+          title={on ? "Your ratings are on — tap for the site's own" : "The site's own ratings — tap for yours"}
           className={`min-h-8 rounded-full px-2.5 text-[11.5px] font-bold transition-colors ${
             on ? 'bg-accent text-bg-0' : 'text-ink-3'
           }`}
         >
-          {on ? 'Yours' : 'House'}
+          {on ? 'Custom' : 'Default'}
         </button>
         <Link
           to="/my-ratings"
@@ -83,8 +90,8 @@ export function RatingsSwitch({ className = '' }: { className?: string }) {
         <span className="hidden px-1.5 text-[10px] font-bold tracking-[0.1em] text-ink-3 uppercase lg:inline">
           Ratings
         </span>
-        {btn(false, 'House', "The site's own numbers")}
-        {btn(true, 'Yours', `Your ratings — ${count} club${count === 1 ? '' : 's'} re-rated`)}
+        {btn(false, 'Default', "The site's own ratings")}
+        {btn(true, 'Custom', `Your ratings — ${count} club${count === 1 ? '' : 's'} re-rated`)}
         <Link
           to="/my-ratings"
           title="Edit your ratings"
