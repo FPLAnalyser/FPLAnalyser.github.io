@@ -122,13 +122,19 @@ export function RatingsEntry({ className = '' }: { className?: string }) {
   const { count } = useRatingsSwitch()
   if (count) return null
   return (
+    /* AN OFFER, NOT A SETTING. It was grey on grey and read as chrome you
+       could not use. Accent-tinted and phrased as the thing a reader would
+       actually want — "rate them yourself" rather than "your ratings", which
+       names a page nobody has heard of yet. */
     <Link
       to="/my-ratings"
-      title="Disagree with a club's rating? Change it, and every fixture against them changes with it."
-      className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border border-line-mid px-2.5 text-[12px]
-                  font-semibold text-ink-3 transition-colors hover:border-accent hover:text-accent ${className}`}
+      title="Disagree with a club's rating? Change it, and every fixture against them moves with it — difficulty, clean sheets and projected points alike."
+      className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border border-accent/45 bg-accent-soft px-2.5
+                  text-[12px] font-semibold text-accent transition-colors hover:border-accent ${className}`}
     >
-      <Icon name="pencil" size={13} /> Your ratings
+      <Icon name="pencil" size={13} />
+      <span className="hidden sm:inline">Disagree? Rate the clubs yourself</span>
+      <span className="sm:hidden">Rate the clubs yourself</span>
     </Link>
   )
 }

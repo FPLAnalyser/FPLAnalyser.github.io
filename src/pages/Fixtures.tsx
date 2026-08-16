@@ -391,7 +391,21 @@ export default function Fixtures() {
     <PageShell>
       <SectionBanner imgKey="fixtures" title="Fixtures" subtitle="Our own difficulty ratings for every upcoming game — grid, best runs, rotations and matchups" />
 
-      <div className="mb-4"><Tabs tabs={VIEW_TABS} active={view} onChange={(id) => setView(id as View)} layoutId="fx-view" /></div>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {/* Full width on a phone so the chip wraps BELOW rather than eating
+            the tab row — beside them at 390 it truncated "Goals & Clean Sheets"
+            and pushed two tabs behind the scroller. */}
+        <div className="w-full min-w-0 sm:w-auto sm:flex-1"><Tabs tabs={VIEW_TABS} active={view} onChange={(id) => setView(id as View)} layoutId="fx-view" /></div>
+        {/* WHERE THE DISAGREEMENT FORMS, and the only place the feature is
+            advertised at all. A reader looks at a run of green against a club
+            they rate and thinks the site has it wrong; that is the moment the
+            offer means something, and it is not a moment that happens in a nav
+            bar. Beside the tabs rather than inside the difficulty controls
+            because every view on this page runs on the same ratings — it was
+            on one tab of four. It steps aside once a club is re-rated, since
+            the header switch then says the same thing better. */}
+        <RatingsEntry className="shrink-0" />
+      </div>
 
       {view === 'difficulty' || view === 'projections' ? (
         hasFixtures ? (
@@ -435,12 +449,6 @@ export default function Fixtures() {
                       <InfoTip text={LENS_TIP[l.id as Lens]} />
                     </span>
                   ))}
-                  {/* WHERE THE DISAGREEMENT FORMS. A reader looks at this grid,
-                      sees a run of green against a club they rate, and thinks
-                      the site has it wrong — so the way to say so belongs
-                      beside the grid rather than in a nav bar. Once a club has
-                      been re-rated this becomes the House/Yours switch. */}
-                  <RatingsEntry className="ml-auto" />
                 </div>
               )}
             </div>

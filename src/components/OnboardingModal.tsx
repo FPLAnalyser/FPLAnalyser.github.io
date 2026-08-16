@@ -70,6 +70,11 @@ export function OnboardingModal({ open, onClose }: Props) {
                 <strong className="text-ink">Scouting</strong> — compare up to four players on per-90 percentiles
                 versus their peers, with an automatic head-to-head verdict.
               </li>
+              <li>
+                <strong className="text-ink">Your own ratings</strong> — think we've got a club wrong? Re-rate its
+                attack or defence and every fixture against them moves with it, along with clean sheets and
+                projected points. Off by default, and one tap to switch back.
+              </li>
             </ul>
             <div className="mb-5 rounded-md bg-accent-soft px-3 py-2 text-xs leading-relaxed text-ink-2">
               Tip: on your phone, tap the ⓘ icons to see what any rating or metric means. Add the site to your
