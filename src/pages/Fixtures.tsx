@@ -19,6 +19,7 @@ import { useMarketOdds, type MarketOdds } from '../lib/xp'
 import { teamLabel, playerHref } from '../lib/util'
 import { analyserDiff, bandOf, bestRuns, buildDiffScale, diffFill, useTeamBaselines, type Lens, type TeamBase } from '../lib/fixtureRuns'
 import { RunsTimeline } from '../components/BestRuns'
+import { RatingsEntry } from '../components/RatingsSwitch'
 import type { FixtureEaseRow, RatingRow, Row } from '../lib/types'
 
 
@@ -434,6 +435,12 @@ export default function Fixtures() {
                       <InfoTip text={LENS_TIP[l.id as Lens]} />
                     </span>
                   ))}
+                  {/* WHERE THE DISAGREEMENT FORMS. A reader looks at this grid,
+                      sees a run of green against a club they rate, and thinks
+                      the site has it wrong — so the way to say so belongs
+                      beside the grid rather than in a nav bar. Once a club has
+                      been re-rated this becomes the House/Yours switch. */}
+                  <RatingsEntry className="ml-auto" />
                 </div>
               )}
             </div>

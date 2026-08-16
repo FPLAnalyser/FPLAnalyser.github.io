@@ -46,6 +46,10 @@ export interface Tweak { att: number; def: number }
 export type Tweaks = Record<string, Tweak>
 
 const STORE = 'fpl_tweaks'
+/* THE SWITCH IS A SEPARATE KEY, so turning your ratings off to check a number
+   against the house one does not throw twenty clubs' worth of opinion away.
+   Off is the state you can always get back from. */
+const STORE_ON = 'fpl_tweaks_on'
 export const TWEAK_STEP = 0.5
 
 export const clampTweak = (v: number): number =>
@@ -67,26 +71,72 @@ const read = (): Tweaks => {
   } catch { return {} }
 }
 
+/* ── ONE SWITCH, DRAWN IN MANY PLACES ────────────────────────────────────
+
+   House or yours, and it is a single value rather than a setting per page.
+   A per-page toggle reads like more control and is less: Fixtures on yours
+   while the Squad Builder sat on house would put two different difficulties
+   for the same game on two screens, which is the exact thing every other
+   decision in this feature exists to prevent. Every switch on every page reads
+   and writes this one value, so the whole site is only ever in one state.
+
+   Editorial pages move with it too. Pinning the GW Preview's numbers to house
+   while its prose reasons about them does not remove the contradiction, it
+   relocates it onto one screen — a paragraph arguing from figures the reader
+   cannot see. Everything moves together and the marker says so. */
+
 /** Changed in one tab, honoured in the others — and in every hook on the
  *  page, which is the point: this has to move the whole site at once. */
 const listeners = new Set<(t: Tweaks) => void>()
 let current: Tweaks | null = null
+let currentOn: boolean | null = null
+
+const readOn = (): boolean => {
+  try { return localStorage.getItem(STORE_ON) !== '0' } catch { return true }
+}
 
 const snapshot = (): Tweaks => (current ??= read())
+const snapshotOn = (): boolean => (currentOn ??= readOn())
+
+/** What the ENGINE should use: your clubs when the switch is on, nothing when
+ *  it is off. Every hook downstream reads this, so one boolean moves the goal
+ *  lambdas, the fixture difficulty, the squad ratings and the plan comparison
+ *  together, and no call site needs to know the switch exists. */
+const active = (): Tweaks => (snapshotOn() ? snapshot() : {})
+
+function announce() {
+  const a = active()
+  for (const fn of listeners) fn(a)
+}
 
 function write(next: Tweaks) {
   current = next
   try { localStorage.setItem(STORE, JSON.stringify(next)) } catch { /* private mode */ }
-  for (const fn of listeners) fn(next)
+  /* Dialling a club is itself a statement that you want it used. Landing a
+     first opinion into a site that ignores it until a second control is found
+     is how a feature gets reported as broken. */
+  if (Object.keys(next).length && !snapshotOn()) writeOn(true)
+  else announce()
+}
+
+function writeOn(on: boolean) {
+  currentOn = on
+  try { localStorage.setItem(STORE_ON, on ? '1' : '0') } catch { /* private mode */ }
+  announce()
 }
 
 export function useTweaks() {
-  const [tweaks, setTweaks] = useState<Tweaks>(snapshot)
+  const [, bump] = useState(0)
   useEffect(() => {
-    const fn = (t: Tweaks) => setTweaks(t)
+    const fn = () => bump((n) => n + 1)
     listeners.add(fn)
     return () => { listeners.delete(fn) }
   }, [])
+  /* The EDITOR sees the clubs whether the switch is on or not — sliders that
+     jumped to zero when you turned your ratings off would look like the site
+     had thrown them away. */
+  const tweaks = snapshot()
+  const on = snapshotOn()
 
   const set = useCallback((team: string, patch: Partial<Tweak>) => {
     const cur = snapshot()
@@ -98,14 +148,30 @@ export function useTweaks() {
   }, [])
 
   const reset = useCallback(() => write({}), [])
+  const setOn = useCallback((v: boolean) => writeOn(v), [])
   const count = useMemo(() => Object.keys(tweaks).length, [tweaks])
-  return { tweaks, set, reset, count, active: count > 0 }
+  return { tweaks, set, reset, count, on, setOn, active: on && count > 0 }
+}
+
+/** The switch alone, for the control drawn on every affected page. */
+export function useRatingsSwitch() {
+  const [, bump] = useState(0)
+  useEffect(() => {
+    const fn = () => bump((n) => n + 1)
+    listeners.add(fn)
+    return () => { listeners.delete(fn) }
+  }, [])
+  return {
+    on: snapshotOn(),
+    count: Object.keys(snapshot()).length,
+    setOn: writeOn,
+  }
 }
 
 /** Read-only access for the engine hooks, which do not need to re-render on
  *  a change of their own — the components above them do. */
 export function useTweakValues(): Tweaks {
-  const [t, setT] = useState<Tweaks>(snapshot)
+  const [t, setT] = useState<Tweaks>(active)
   useEffect(() => {
     const fn = (v: Tweaks) => setT(v)
     listeners.add(fn)
