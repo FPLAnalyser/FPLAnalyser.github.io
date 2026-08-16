@@ -1805,13 +1805,30 @@ function FixtureGrid({
             <span className="mt-2 flex gap-1">
               {gws.map((gw) => {
                 const fs = r.byGw.get(gw) ?? []
-                if (!fs.length) return <span key={gw} className="flex-1 rounded bg-surface-2 py-1 text-center text-[9.5px] font-bold text-ink-3"><span className="block text-[9px] opacity-70">GW{gw}</span>–</span>
+                if (!fs.length) return (
+                  <span key={gw} className="flex-1 rounded bg-surface-2 py-1 text-center text-[9.5px] leading-tight font-bold text-ink-3">
+                    <span className="block text-[9px] opacity-70">GW{gw}</span>–
+                    {/* Same four lines as a played week, or a blank makes the
+                        whole row jump a line shorter than its neighbours. */}
+                    <span className="font-num block text-[11px] font-extrabold tabular-nums">–</span>
+                    <span className="block text-[9px] opacity-70">&nbsp;</span>
+                  </span>
+                )
                 const f = fs[0]
                 const d = diffOf(f).diff
                 return (
                   <span key={gw} className="flex-1 rounded py-1 text-center text-[9.5px] leading-tight font-bold text-ink" style={{ background: diffFill(d) }}>
                     <span className="block text-[9px] font-semibold opacity-70">GW{gw}</span>
                     {f.opponent}
+                    {/* THE RATING ITSELF, which this cell computed and then threw
+                        away — `d` set the background and was never printed, so a
+                        phone got the colour and the desktop grid got the colour
+                        AND the number. Five washes cannot carry a 1–5 scale on
+                        their own: two fixtures a full point apart share a band,
+                        and at the hard end the colour saturates while the number
+                        keeps moving, which is precisely where a re-rated club
+                        ends up. */}
+                    <span className="font-num block text-[11px] font-extrabold tabular-nums">{d.toFixed(1)}</span>
                     <span className="block text-[9px] font-semibold opacity-70">{f.venue}{fs.length > 1 ? ' ×2' : ''}</span>
                   </span>
                 )
