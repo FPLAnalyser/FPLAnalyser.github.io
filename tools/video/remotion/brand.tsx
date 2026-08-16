@@ -11,12 +11,13 @@ export const GOLD_2 = '#ead188'
 export const INK = '#0c0b09'
 export const PAPER = '#ffffff'
 
-// public/brand/lockup.jpg is a square with its own black field, sampled at
-// rgb(8,8,8) — four levels off the site's ink. Alone that is invisible, but
-// H.264 bands flat dark areas and would draw the logo's edge as a faint
-// square. The cards use the logo's own black so there is no edge to find.
+// The lockup is a square with its own black field, sampled at rgb(8,8,8) —
+// four levels off the site's ink. Alone that is invisible, but H.264 bands flat
+// dark areas and would draw the logo's edge as a faint square. The cards use
+// the logo's own black so there is no edge to find.
 export const LOGO_BG = '#080808'
-export const LOGO = 'brand/lockup.jpg'
+// Prepared by motion.mjs: margin cropped, pre-scaled to 1280 with lanczos.
+export const LOGO = 'brand/lockup-hi.png'
 
 export const DISPLAY = "'ArchivoBlack', system-ui, sans-serif"
 export const BODY = "'Manrope', system-ui, sans-serif"

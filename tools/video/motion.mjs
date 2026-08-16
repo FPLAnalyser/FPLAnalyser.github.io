@@ -59,7 +59,25 @@ for (const f of ['manrope-800.woff2', 'archivo-black-400.woff2']) {
   await copyFile(path.join(ROOT, 'src/fonts', f), path.join(PUBLIC, 'fonts', f))
 }
 // The cards are built on the real mark, not a re-typeset imitation of it.
-await copyFile(path.join(ROOT, 'public/brand/lockup.jpg'), path.join(PUBLIC, 'brand/lockup.jpg'))
+//
+// It is prepared rather than copied, for two reasons. The source carries about
+// 4.4% of dead black margin on every side (content measured at 585x579 inside
+// 640x640), which is screen area the mark is not using. And at 640px it is
+// smaller than the size the cards want it, so the browser would be upscaling
+// at render time with plain bilinear filtering. Cropping the margin and
+// pre-scaling to 1280 with lanczos means the browser *downscales* into place
+// instead, which is the direction that stays sharp.
+const logoOut = path.join(PUBLIC, 'brand/lockup-hi.png')
+{
+  const r = spawnSync(ffmpegStatic, [
+    '-y', '-hide_banner', '-v', 'error',
+    '-i', path.join(ROOT, 'public/brand/lockup.jpg'),
+    // Proportional crop, so replacing the logo does not need this re-measured.
+    '-vf', 'crop=iw*0.92:ih*0.92,scale=1280:1280:flags=lanczos',
+    logoOut,
+  ], { encoding: 'utf8' })
+  if (r.status !== 0) throw new Error(`logo prep failed: ${r.stderr}`)
+}
 
 const FPS = 30
 const clips = []

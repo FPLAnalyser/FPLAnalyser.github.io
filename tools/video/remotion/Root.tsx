@@ -67,8 +67,10 @@ export const Intro: React.FC = () => {
 
   return (
     <AbsoluteFill style={{ background: LOGO_BG, justifyContent: 'center', alignItems: 'center' }}>
-      {/* Never scaled past its 640px source, which would soften the metal. */}
-      <Lockup size={620} opacity={rise} scale={interpolate(rise, [0, 1], [0.94, 1])} sheenAt={16} />
+      {/* 840 of 1080 — the mark carries the card, so it should own the frame.
+          Safe because motion.mjs hands over a cropped 1280px asset, so this is
+          a downscale, not the browser guessing at missing pixels. */}
+      <Lockup size={840} opacity={rise} scale={interpolate(rise, [0, 1], [0.94, 1])} sheenAt={16} />
     </AbsoluteFill>
   )
 }
@@ -81,7 +83,7 @@ export const EndCard: React.FC = () => {
 
   return (
     <AbsoluteFill style={{ background: LOGO_BG, justifyContent: 'center', alignItems: 'center' }}>
-      <Lockup size={470} opacity={a} scale={interpolate(a, [0, 1], [0.95, 1])} sheenAt={20} />
+      <Lockup size={620} opacity={a} scale={interpolate(a, [0, 1], [0.95, 1])} sheenAt={20} />
       {/* The lockup already carries the wordmark, so this adds only the call to
           action — repeating the name under it would read as a mistake. */}
       <div style={{
