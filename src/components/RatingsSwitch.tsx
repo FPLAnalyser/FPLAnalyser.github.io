@@ -60,18 +60,22 @@ export function RatingsSwitch({ className = '' }: { className?: string }) {
   const label = `${count} club${count === 1 ? '' : 's'} re-rated by you. Default is the site's own ratings; Custom is yours, on every page.`
   return (
     <>
-      {/* PHONE: the state, tappable. The pair plus its label runs the header
-          cluster past a 320px viewport, and the pill still answers "whose
-          numbers am I looking at" at a glance. */}
+      {/* PHONE: the state, tappable, behind the icon this site already uses
+          for Fixtures — in the bottom nav and in every fixtures empty state.
+          A lone word reading "Custom" says nothing about WHAT is custom, and
+          the wide variant's "RATINGS" label does not fit beside the wordmark
+          at 320. The icon costs 18px where there are 42px going spare and
+          borrows a meaning the reader has already learnt. */}
       <span className={`${plate} inline-flex sm:hidden ${className}`} title={label}>
         <button
           onClick={() => setOn(!on)}
           aria-pressed={on}
-          title={on ? "Your ratings are on — tap for the site's own" : "The site's own ratings — tap for yours"}
-          className={`min-h-8 rounded-full px-2.5 text-[11.5px] font-bold transition-colors ${
+          title={on ? 'Fixture ratings: your own — tap for the site\u2019s' : 'Fixture ratings: the site\u2019s own — tap for yours'}
+          className={`inline-flex min-h-8 items-center gap-1 rounded-full px-2.5 text-[11.5px] font-bold transition-colors ${
             on ? 'bg-accent text-bg-0' : 'text-ink-3'
           }`}
         >
+          <Icon name="calendar" size={12} />
           {on ? 'Custom' : 'Default'}
         </button>
         <Link
