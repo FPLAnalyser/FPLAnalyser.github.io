@@ -17,7 +17,7 @@ import { useWide } from '../lib/useWide'
 import { num, str } from '../lib/rows'
 import { useMarketOdds, type MarketOdds } from '../lib/xp'
 import { teamLabel, playerHref } from '../lib/util'
-import { analyserDiff, bandOf, bestRuns, buildDiffScale, diffFill, windowGames, type Lens, type TeamBase } from '../lib/fixtureRuns'
+import { analyserDiff, bandOf, bestRuns, buildDiffScale, diffFill, useTeamBaselines, type Lens, type TeamBase } from '../lib/fixtureRuns'
 import { RunsTimeline } from '../components/BestRuns'
 import type { FixtureEaseRow, RatingRow, Row } from '../lib/types'
 
@@ -334,38 +334,14 @@ export default function Fixtures() {
   const mode: GridMode = view === 'projections' ? projMode : 'diff'
 
 
-  // Per-game xG / xGC baselines for the projection modes (normalised from
-  // window totals — never show a total as a rate).
-  const { baselines: rawBaselines, leagueBase } = useMemo(() => {
-    const m = new Map<string, TeamBase>()
-    if (data) {
-      for (const t of data.teamMetrics) {
-        if (str(t, 'window') !== 'season') continue
-        const g = windowGames(t, data)
-        const xg = num(t, 'team_xg')
-        const xgc = num(t, 'team_xgc')
-        if (xg != null && xgc != null && g > 0) m.set(String(t.team), { xg: xg / g, xgc: xgc / g })
-      }
-    }
-    const vals = [...m.values()]
-    const leagueBase: TeamBase = vals.length
-      ? { xg: vals.reduce((s, v) => s + v.xg, 0) / vals.length, xgc: vals.reduce((s, v) => s + v.xgc, 0) / vals.length }
-      : { xg: 1.4, xgc: 1.4 }
-    return { baselines: m, leagueBase }
-  }, [data])
-
-  // Promoted clubs have no season history, so their cells would be blank.
-  // The odds layer backs their attack/defence out of every priced fixture
-  // against a club we do know — a real baseline that sharpens each week,
-  // rather than a league-average stand-in.
+  /* Per-game xG / xGC baselines for difficulty AND the projection modes, from
+     the one shared builder. This page used to assemble its own copy, which is
+     how Your ratings could move the goal lambdas everywhere else and leave
+     every cell on this page exactly where it was. `house` is the same map with
+     nobody re-rated — the distribution the 1–5 scale is measured against, so
+     one club's dial cannot shift the other nineteen. */
+  const { baselines, house, leagueBase } = useTeamBaselines(data)
   const marketStrength = useMarketOdds()
-  const baselines = useMemo(() => {
-    const m = new Map(rawBaselines)
-    for (const [team, v] of Object.entries(marketStrength?.strength ?? {})) {
-      if (!m.has(team)) m.set(team, { xg: v.att, xgc: v.def })
-    }
-    return m
-  }, [rawBaselines, marketStrength])
 
   // Per-team + league concession profiles for the fixture read (lazy — the
   // grid only needs them for the expandable commentary).
@@ -467,7 +443,7 @@ export default function Fixtures() {
             <MarketNote market={marketStrength} />
 
             <Exportable title={`${mode === 'diff' ? 'Fixture difficulty' : mode === 'xg' ? 'Projected xG' : 'Clean sheet odds'} — ${winLabel(shownWin)}${shownWin.skip != null ? `, free hit GW${shownWin.skip}` : ''}`}>
-            <FixtureGrid key={mode} fixtureEase={fixtureEase} gws={gridGws} lens={lens} mode={mode} baselines={baselines} leagueBase={leagueBase} profiles={profiles} league={league} />
+            <FixtureGrid key={mode} fixtureEase={fixtureEase} gws={gridGws} lens={lens} mode={mode} baselines={baselines} house={house} leagueBase={leagueBase} profiles={profiles} league={league} />
             </Exportable>
           </>
         ) : (
@@ -482,6 +458,7 @@ export default function Fixtures() {
             fixtureEase={fixtureEase}
             lens={lens}
             baselines={baselines}
+            house={house}
             lensControl={
               /* The lens matters more here than anywhere: a run that's kind to
                  a striker is not the same run that's kind to a keeper. */
@@ -512,6 +489,7 @@ export default function Fixtures() {
             ratings={data.ratings as RatingRow[]}
             fixtureEase={fixtureEase}
             baselines={baselines}
+            house={house}
             leagueBase={leagueBase}
             initialTeams={(params.get('rot') ?? '').split(',').filter(Boolean)}
           />
@@ -543,17 +521,19 @@ export default function Fixtures() {
    which is what you plan a wildcard or a bench slot around. Sorted by club
    name so you can find one, rather than by quality, which would make it a
    second leaderboard of the same twenty teams. */
-function SeasonRunsBoard({ fixtureEase, lens, baselines, lensControl }: {
+function SeasonRunsBoard({ fixtureEase, lens, baselines, house, lensControl }: {
   fixtureEase: FixtureEaseRow[]
   lens: Lens
   baselines: Map<string, TeamBase>
+  /** The same map with nobody re-rated — the scale's yardstick. */
+  house: Map<string, TeamBase>
   /** The page's "Rate for" pills, rendered inline with this board's own
    *  filters. They belong on one line — all three change what the same table
    *  shows, and stacking them cost three bands of height above it. */
   lensControl?: ReactNode
 }) {
   const wide = useWide()
-  const scale = useMemo(() => buildDiffScale(baselines), [baselines])
+  const scale = useMemo(() => buildDiffScale(baselines, house), [baselines, house])
   const [half, setHalf] = useState<'all' | 1 | 2>('all')
   const [view, setView] = useState<'ranked' | 'map'>('ranked')
 
@@ -846,16 +826,18 @@ const mean = (ds: number[]) => (ds.length ? ds.reduce((a, b) => a + b, 0) / ds.l
    chosen lens. You set how many teams are in the rotation (N) and how many you
    actually start each week (K) — every gameweek we start the K with the kindest
    fixtures. With nothing picked we surface the best-rotating groups of size N. */
-function RotationPlanner({ ratings, fixtureEase, baselines, leagueBase, initialTeams = [] }: {
+function RotationPlanner({ ratings, fixtureEase, baselines, house, leagueBase, initialTeams = [] }: {
   ratings: RatingRow[]
   fixtureEase: FixtureEaseRow[]
   baselines: Map<string, TeamBase>
+  /** The same map with nobody re-rated — the scale's yardstick. */
+  house: Map<string, TeamBase>
   leagueBase: TeamBase
   /** Clubs to open with, from ?rot= — a deep link from a club's page. */
   initialTeams?: string[]
 }) {
   const market = useMarketOdds()
-  const diffScale = useMemo(() => buildDiffScale(baselines), [baselines])
+  const diffScale = useMemo(() => buildDiffScale(baselines, house), [baselines, house])
   const [teams, setTeams] = useState<string[]>(initialTeams)
   // Ruled out entirely. Separate from "not picked": a club you already own a
   // player from, or one you refuse to buy into, should never be offered as
@@ -1592,20 +1574,22 @@ function MarketNote({ market }: { market: MarketOdds | null }) {
    lens. Click any GW header (or the Run column) to rank teams by that week; tap a
    team to expand a scouting read of where its upcoming opponents are weak. */
 function FixtureGrid({
-  fixtureEase, gws, lens, mode, baselines, leagueBase, profiles, league,
+  fixtureEase, gws, lens, mode, baselines, house, leagueBase, profiles, league,
 }: {
   fixtureEase: FixtureEaseRow[]
   gws: number[]
   lens: Lens
   mode: GridMode
   baselines: Map<string, TeamBase>
+  /** The same map with nobody re-rated — the scale's yardstick. */
+  house: Map<string, TeamBase>
   leagueBase: TeamBase
   profiles: Map<string, Profile>
   league: Profile
 }) {
   const market = useMarketOdds()
   const wide = useWide()
-  const diffScale = useMemo(() => buildDiffScale(baselines), [baselines])
+  const diffScale = useMemo(() => buildDiffScale(baselines, house), [baselines, house])
   const [sortKey, setSortKey] = useState<number | 'run' | 'team'>('run')
   // Difficulty: ascending = easiest first. Projections: descending = most
   // goals / best clean-sheet odds first.

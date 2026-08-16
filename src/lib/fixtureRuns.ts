@@ -83,9 +83,19 @@ const VENUE_SD = 0.42
  *  clamping nothing at all. */
 const CURVE_K = 1.2
 
-export function buildDiffScale(baselines: Map<string, TeamBase>): DiffScale | null {
-  const clubs = [...baselines.values()]
-  if (clubs.length < 8) return null
+/**
+ * @param baselines the clubs being rated — YOUR ratings applied, if any.
+ * @param ref       the distribution to measure them against. Defaults to the
+ *   same map, and callers with your ratings on pass the HOUSE map instead: a
+ *   scale whose own mean and spread move with your opinion would re-rate the
+ *   other nineteen clubs as a side effect of one dial, so "Newcastle are a
+ *   step better" would quietly make every other fixture on the page a shade
+ *   easier. The yardstick stays the league as the model has it; your opinion
+ *   moves the club along it.
+ */
+export function buildDiffScale(baselines: Map<string, TeamBase>, ref: Map<string, TeamBase> = baselines): DiffScale | null {
+  const clubs = [...ref.values()]
+  if (clubs.length < 8 || baselines.size < 8) return null
   const mean = (xs: number[]) => xs.reduce((s, v) => s + v, 0) / xs.length
   const sd = (xs: number[], m: number) => Math.sqrt(mean(xs.map((v) => (v - m) ** 2))) || 1
   const xg = clubs.map((c) => c.xg)
@@ -146,28 +156,66 @@ export function diffTick(d: number): string {
   return t <= -0.6 ? '#e0655f' : t <= -0.2 ? '#e8b04a' : t < 0.2 ? '#8b8274' : t < 0.6 ? '#5ec98a' : '#3ddc7a'
 }
 
-/** The difficulty scale for the current season's data, built once and shared.
- *  Promoted clubs have no season history, so the odds layer backs their
- *  attack/defence out of every priced fixture against a club we do know —
- *  a real baseline that sharpens each week, rather than a league-average
- *  stand-in. Without it the scale is missing three of its twenty clubs and
- *  the whole ranking skews. */
-export function useDiffScale(data: CoreData | null): DiffScale | null {
+/**
+ * The per-game attack/defence baselines every fixture read on this site is
+ * built from — difficulty, projected goals, clean-sheet odds, the run finder.
+ *
+ * Promoted clubs have no season history, so the odds layer backs their
+ * attack/defence out of every priced fixture against a club we do know — a
+ * real baseline that sharpens each week, rather than a league-average
+ * stand-in. Without it the scale is missing three of its twenty clubs and the
+ * whole ranking skews.
+ *
+ * YOUR RATINGS LAND HERE, and they have to. The first cut adjusted the FDR
+ * column in fixture_ease and nothing on the Fixtures page moved, which read as
+ * the dials being broken — because this site's difficulty is not FPL's FDR. It
+ * is computed from these two numbers, and `fdr` is only the fallback for an
+ * opponent we have no baseline for at all. Attack scales what a club is
+ * expected to SCORE and defence what it CONCEDES, the same two multipliers the
+ * goal lambdas in lib/xp use, so the colour of a fixture and the projection
+ * printed inside it cannot disagree.
+ *
+ * `house` is the same map with nobody re-rated. It is what the difficulty
+ * scale's mean and spread are taken from, and what Your ratings shows a
+ * before-and-after against.
+ */
+export function useTeamBaselines(data: CoreData | null): { baselines: Map<string, TeamBase>; house: Map<string, TeamBase>; leagueBase: TeamBase } {
   const market = useMarketOdds()
   return useMemo(() => {
-    const m = new Map<string, TeamBase>()
+    const house = new Map<string, TeamBase>()
     for (const t of data?.teamMetrics ?? []) {
       if (str(t, 'window') !== 'season') continue
       const g = windowGames(t, data as CoreData)
       const xg = num(t, 'team_xg')
       const xgc = num(t, 'team_xgc')
-      if (xg != null && xgc != null && g > 0) m.set(String(t.team), { xg: xg / g, xgc: xgc / g })
+      if (xg != null && xgc != null && g > 0) house.set(String(t.team), { xg: xg / g, xgc: xgc / g })
     }
     for (const [team, v] of Object.entries(market?.strength ?? {})) {
-      if (!m.has(team)) m.set(team, { xg: v.att, xgc: v.def })
+      if (!house.has(team)) house.set(team, { xg: v.att, xgc: v.def })
     }
-    return buildDiffScale(m)
+    /* The league average stays on house numbers for the same reason the scale's
+       spread does: one club's dial should not silently re-rate the other
+       nineteen through the denominator. */
+    const vals = [...house.values()]
+    const leagueBase: TeamBase = vals.length
+      ? { xg: vals.reduce((s, v) => s + v.xg, 0) / vals.length, xgc: vals.reduce((s, v) => s + v.xgc, 0) / vals.length }
+      : { xg: 1.4, xgc: 1.4 }
+
+    const tw = market?.tweak
+    if (!tw || !Object.keys(tw).length) return { baselines: house, house, leagueBase }
+    const baselines = new Map<string, TeamBase>()
+    for (const [team, v] of house) {
+      const t = tw[team]
+      baselines.set(team, t ? { xg: v.xg * t.att, xgc: v.xgc * t.def } : v)
+    }
+    return { baselines, house, leagueBase }
   }, [data, market])
+}
+
+/** The difficulty scale for the current season's data, built once and shared. */
+export function useDiffScale(data: CoreData | null): DiffScale | null {
+  const { baselines, house } = useTeamBaselines(data)
+  return useMemo(() => buildDiffScale(baselines, house), [baselines, house])
 }
 
 /* ════════════════════════════════════════════════════════════════════════

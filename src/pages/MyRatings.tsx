@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { PageHeader, PageShell } from '../components/PageShell'
 import { TeamBadge } from '../components/badges'
 import { Icon } from '../components/Icon'
@@ -6,6 +6,7 @@ import { useCore } from '../lib/useData'
 import { useTweaks, clubImpact, TWEAK_MAX, TWEAK_STEP, type Tweak } from '../lib/tweaks'
 import { useXpModel, useMarketOdds } from '../lib/xp'
 import { teamLabel } from '../lib/util'
+import { buildDiffScale, useTeamBaselines, type DiffScale } from '../lib/fixtureRuns'
 
 /* ════════════════════════════════════════════════════════════════════════
    Where you disagree with the model.
@@ -51,8 +52,18 @@ function Dial({ label, hint, value, onChange }: {
 }
 
 /** The consequence, beside the control. Without it a slider from 0 to +2 is
- *  a guess, and a projection built on a guess is worth nothing. */
-function Impact({ house, yours }: { house: ReturnType<typeof clubImpact>; yours: ReturnType<typeof clubImpact> }) {
+ *  a guess, and a projection built on a guess is worth nothing.
+ *
+ *  THE WINDOW IS NAMED, because a bare 1.87 next to a dial is unreadable —
+ *  one week, six, a season? The goal and clean-sheet figures are per game
+ *  across their next few fixtures; the difficulty is what facing this club is
+ *  worth on the site's own 1–5, which is a property of the club rather than of
+ *  a window, so it sits on its own line and says so. */
+function Impact({ house, yours, diff }: {
+  house: ReturnType<typeof clubImpact>
+  yours: ReturnType<typeof clubImpact>
+  diff: { house: number; yours: number } | null
+}) {
   if (!house) return null
   const show = yours ?? house
   const moved = !!yours
@@ -73,14 +84,40 @@ function Impact({ house, yours }: { house: ReturnType<typeof clubImpact>; yours:
       </span>
     )
   }
+  const dMoved = diff && Math.abs(diff.yours - diff.house) >= 0.05
   return (
-    <div
-      className="mt-2 flex gap-1 rounded-lg border border-line-subtle bg-bg-0/40 px-2 py-1.5"
-      title={`Averages over their next ${house.games} fixtures, on the same arithmetic the projection uses`}
-    >
-      {cell('Scores', house.forGoals, show.forGoals, 2)}
-      {cell('Concedes', house.against, show.against, 2)}
-      {cell('Clean sheet', house.cs * 100, show.cs * 100, 0, '%')}
+    <div className="mt-2 rounded-lg border border-line-subtle bg-bg-0/40 px-2 py-1.5">
+      <div className="mb-1 text-[9px] font-extrabold tracking-[0.08em] text-ink-3 uppercase">
+        Their next {house.games} fixtures, per game
+      </div>
+      <div
+        className="flex gap-1"
+        title={`Averaged over their next ${house.games} fixtures, on the same arithmetic the projection uses`}
+      >
+        {cell('Scores', house.forGoals, show.forGoals, 2)}
+        {cell('Concedes', house.against, show.against, 2)}
+        {cell('Clean sheet', house.cs * 100, show.cs * 100, 0, '%')}
+      </div>
+      {diff && (
+        <div
+          className="mt-1.5 flex items-center gap-2 border-t border-line-subtle pt-1.5"
+          title="What a fixture against this club is worth on the site's 1–5 difficulty, averaged over home and away. Every one of their thirty-eight games, not just the next few."
+        >
+          <span className="min-w-0 flex-1 truncate text-[9px] font-extrabold tracking-[0.08em] text-ink-3 uppercase">
+            Difficulty of facing them
+          </span>
+          {dMoved && (
+            <span className="font-num text-[10px] font-bold tabular-nums text-ink-3">
+              {diff.house.toFixed(1)} →
+            </span>
+          )}
+          <span className={`font-num text-[12.5px] font-bold tabular-nums ${
+            !dMoved ? 'text-ink' : diff.yours > diff.house ? 'text-bad' : 'text-good'
+          }`}>
+            {diff.yours.toFixed(1)}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
@@ -104,6 +141,31 @@ export default function MyRatings() {
     return out
   }, [model, market])
   const league = model ? { att: model.league.att, def: model.league.def, hAtt: model.league.hAtt } : undefined
+
+  /* THE DIFFICULTY THESE DIALS PRODUCE, from the builder the Fixtures page
+     draws its grid with — not a second opinion computed for this page. Two
+     scales off the same yardstick: `house` as the model has everyone, and
+     yours with the dials applied. Venue-neutral, because a club is not a
+     harder opponent at home in a way this control should be asked about. */
+  const { baselines, house } = useTeamBaselines(core.data)
+  const scales = useMemo(() => ({
+    house: buildDiffScale(house, house),
+    yours: buildDiffScale(baselines, house),
+  }), [baselines, house])
+  const facing = useCallback((team: string, scale: DiffScale | null): number | null => {
+    if (!scale) return null
+    const vs: ('H' | 'A')[] = ['H', 'A']
+    let n = 0
+    let sum = 0
+    for (const v of vs) {
+      const a = scale.attackDiff(team, v)
+      const d = scale.defenceDiff(team, v)
+      if (a == null || d == null) continue
+      sum += (a + d) / 2
+      n++
+    }
+    return n ? sum / n : null
+  }, [])
   const teams = useMemo(
     () => [...new Set((core.data?.fixtureEase ?? []).map((f) => String(f.team)))]
       .sort((a, b) => teamLabel(a).localeCompare(teamLabel(b))),
@@ -126,10 +188,12 @@ export default function MyRatings() {
           projected points, their clean-sheet odds, the captaincy board and every plan you compare.
         </p>
         <p className="mb-0 text-ink-3">
-          One step is worth about a tenth of a goal a game; two is a strong disagreement and as far as the
-          projection stays worth printing. Your changes are stored as a difference from the model rather than
-          as a fixed number, so they still mean what you meant after the next data refresh — and they live on
-          this device only.
+          One step moves that club's goal rate by about an eighth; two is a strong disagreement and as far as
+          the projection stays worth printing. The figures under each pair of dials are per game across that
+          club's next few fixtures; the difficulty is what facing them is worth on the site's 1–5, home and
+          away averaged, and it applies to all thirty-eight. Your changes are stored as a difference from the
+          model rather than as a fixed number, so they still mean what you meant after the next data refresh —
+          and they live on this device only.
         </p>
         {count > 0 && (
           <div className="mt-3 flex flex-wrap items-center gap-2.5">
@@ -180,6 +244,11 @@ export default function MyRatings() {
                 <Impact
                   house={clubImpact(t, rows, strength, league, {}, fromGw)}
                   yours={on ? clubImpact(t, rows, strength, league, tweaks, fromGw) : null}
+                  diff={(() => {
+                    const h = facing(t, scales.house)
+                    const y = facing(t, scales.yours)
+                    return h == null || y == null ? null : { house: h, yours: y }
+                  })()}
                 />
               </div>
             )
