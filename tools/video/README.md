@@ -132,8 +132,10 @@ imitation of it, so they cannot drift from the brand. Two consequences:
 - Its black field samples at `rgb(8,8,8)`, four levels off the site's ink. The
   cards use the logo's own black (`LOGO_BG`) so H.264, which bands flat dark
   areas, has no edge to draw. Never scale it past its 640px source either;
-  beyond that the metal goes soft. `--audio path.mp3 --music-volume 0.18` lays a track
-under the whole film; `--dissolve 12` sets the overlap in frames.
+  beyond that the metal goes soft.
+
+`--audio path.mp3 --music-volume 0.18` lays a track under the whole film;
+`--dissolve 12` sets the overlap in frames.
 
 Two things worth knowing before editing it:
 
