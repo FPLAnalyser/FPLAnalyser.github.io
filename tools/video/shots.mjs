@@ -10,6 +10,88 @@
 // search accepts works; pick someone recognisable and in form at launch.
 export const FEATURED_PLAYER = 'Haaland'
 
+
+// ---------------------------------------------------------------- planner setup
+
+const settle = (page, ms) => page.waitForTimeout(ms)
+
+/**
+ * Builds the plan every planner shot is filmed against: an auto-picked fifteen,
+ * Bench Boost on GW2, and a transfer in GW3 and GW4.
+ *
+ * Idempotent — plans persist between page loads, so after the first shot has
+ * built one the rest of the cut finds it already there and skips straight on.
+ * Rebuilding per shot would cost about fifteen seconds a time and, worse, could
+ * auto-pick a different fifteen and make the cut discontinuous.
+ */
+export async function buildPlan(page) {
+  const already = await page.locator('[aria-label^="Remove "], [aria-label^="Sell "]').count()
+  if (!already) {
+    await page.getByRole('button', { name: 'Auto pick', exact: true }).click()
+    await settle(page, 3500)
+
+    // GW2: Bench Boost.
+    await page.getByLabel('Next gameweek').click()
+    await settle(page, 1400)
+    await page.getByRole('button', { name: 'Bench Boost', exact: true }).click()
+    await settle(page, 1400)
+
+    // GW3 and GW4: one transfer each. Selling opens an empty place, and the
+    // market's first row is "keep him — undo the sale", so the signing is the
+    // first row actually offering the empty place.
+    for (const gw of [3, 4]) {
+      await page.getByLabel('Next gameweek').click()
+      await settle(page, 1600)
+      const sell = page.locator('[aria-label^="Sell "]').last()
+      if (await sell.count()) {
+        await sell.click()
+        await settle(page, 1800)
+        const sign = page.locator('[title="Sign him into the empty place"]').first()
+        if (await sign.count()) { await sign.click(); await settle(page, 1800) }
+      }
+      void gw
+    }
+
+    // Back to the opening week, which is where the film starts.
+    for (let i = 0; i < 3; i++) {
+      await page.getByLabel('Previous gameweek').click()
+      await settle(page, 700)
+    }
+    await settle(page, 1200)
+  }
+
+  // The grid is collapsed by default; every planner shot wants it open.
+  const pull = page.getByText('Pull down for the whole plan', { exact: false }).first()
+  if (await pull.count()) { await pull.click(); await settle(page, 2200) }
+}
+
+/** Clicks one of the planner's metric toggles. */
+const toggle = (label) => async (page) => {
+  await page.getByRole('button', { name: label, exact: true }).first().click()
+}
+
+/**
+ * Drives a toggle to a known state rather than flipping whatever it finds.
+ *
+ * Names and Crests both default to pressed, so the first attempt at the names
+ * shot clicked Names and turned it *off* — the shot demonstrated the feature
+ * by removing it. Toggle state also persists between shots, so by the time a
+ * later shot runs the row is wherever the previous one left it.
+ */
+const setToggle = (label, want) => async (page) => {
+  const b = page.getByRole('button', { name: label, exact: true }).first()
+  if (!(await b.count())) return
+  const pressed = (await b.getAttribute('aria-pressed')) === 'true'
+  if (pressed !== want) { await b.click(); await settle(page, 500) }
+}
+
+/** Puts the toggle row in a known state before a shot films it. */
+const presetToggles = (state) => async (page) => {
+  await buildPlan(page)
+  for (const [label, want] of Object.entries(state)) await setToggle(label, want)(page)
+  await settle(page, 800)
+}
+
 /** Output formats. CSS width drives which layout the site renders. */
 export const FORMATS = {
   // 1280x720 CSS at 1.5x = 1920x1080. Desktop layout, full HD.
@@ -17,6 +99,17 @@ export const FORMATS = {
   // 432x768 CSS at 2.5x = 1080x1920. Mobile layout, natively rendered rather
   // than cropped out of the desktop capture, so text stays readable.
   vertical: { css: { width: 432, height: 768 }, scale: 2.5, label: '1080x1920' },
+  // 1440x810 CSS at 1.3333x = 1920x1080. A roomier desktop, for screens the
+  // 1280 layout squeezes: the Risk table overflows its column by 62px at 1280
+  // and clips the status pills off the right edge, against 6px here.
+  desk: { css: { width: 1440, height: 810 }, scale: 1.3333, label: '1920x1080' },
+}
+
+/** Per-format values fall back to the wide desktop framing. */
+function forFormat(spec, format) {
+  const keys = Object.keys(FORMATS)
+  if (!keys.some((k) => k in spec)) return spec
+  return spec[format] ?? spec.wide ?? spec[keys.find((k) => k in spec)]
 }
 
 /**
@@ -140,20 +233,18 @@ export const SHOTS = {
   squad_insights: {
     route: '/#/squad',
     seconds: { wide: 8, vertical: 8 },
-    // Filled before filming this time — the click already happened in the shot
-    // before, and repeating it would read as a stutter across the cut.
+    // The redesign on main replaced Squad Lab with a tabbed panel, so this
+    // shot now opens the Analysis tab rather than scrolling to a section that
+    // no longer exists. --dry caught it: the old anchor failed outright rather
+    // than quietly filming the wrong part of the page.
     setup: async (page) => {
       await page.getByRole('button', { name: 'Auto pick', exact: true }).click()
-      await page.waitForTimeout(2500)
+      await page.waitForTimeout(3000)
+      const tab = page.getByRole('tab', { name: 'Analysis', exact: true })
+      if (await tab.count()) { await tab.click(); await page.waitForTimeout(1500) }
     },
-    from: { y: 60 },
-    // Stops just above Squad Lab's explainer, which ends "…and what the
-    // bookmakers make of each fixture". Same reason the Fixtures shot starts
-    // low: docs/DOMAIN_CATEGORISATION.md wants that word out of anything
-    // indexable, and a burned-in caption cannot be edited after upload. The
-    // offset is large but stays pinned to the heading, so a data refresh moving
-    // the panel moves the stop with it.
-    to: { text: 'Squad Lab', align: 'top', offset: -320 },
+    from: { text: 'Analysis', align: 'top', offset: -90 },
+    to: { text: 'Analysis', align: 'top', offset: -90 },
     caption: 'Then it tells you what is wrong with it.',
     cursor: [[0, 0.5, 0.35], [1, 0.74, 0.55]],
   },
@@ -275,6 +366,98 @@ export const SHOTS = {
     cursor: null,
   },
 
+  // ---------------------------------------------------------------- planner
+  // The season planner, for a standalone post. Every shot shares one plan:
+  // an auto-picked fifteen, a Bench Boost on GW2 and a transfer in each of
+  // GW3 and GW4, so the grid has something to show before the toggles start.
+
+
+  plan_open: {
+    route: '/#/squad',
+    seconds: 6,
+    setup: buildPlan,
+    // Opens on the squad header and settles onto the planner.
+    from: { y: 0 },
+    to: { text: 'Your season', align: 'top', offset: -110 },
+    caption: 'The whole season, every man, every week.',
+    cursor: [[0, 0.5, 0.3], [1, 0.42, 0.5]],
+  },
+
+  plan_bars: {
+    route: '/#/squad',
+    seconds: 7,
+    setup: buildPlan,
+    from: { text: 'Your season', align: 'top', offset: -110 },
+    to: { text: 'Your season', align: 'top', offset: -110 },
+    // Pushes in on the bars so the per-week totals and the green and red
+    // edges under them are readable, then holds.
+    zoom: { from: 1, to: 1.28, at: { text: 'Points' } },
+    caption: 'Projected points, week by week — and where the run turns.',
+    cursor: null,
+  },
+
+  plan_toggles: {
+    route: '/#/squad',
+    seconds: 12,
+    // Starts on Fix every time, so the sequence reads Fix -> xP -> CS% -> xGI
+    // -> DC% however the previous shot left the row.
+    setup: presetToggles({ Fix: true, Names: false, Crests: true }),
+    from: { text: 'Your season', align: 'top', offset: -110 },
+    to: { text: 'Your season', align: 'top', offset: -110 },
+    caption: 'One grid, five readings: fixtures, points, clean sheets, threat, defensive returns.',
+    cursor: [
+      [0, 0.55, 0.6],
+      [0.12, { text: 'xP' }], [0.26, { text: 'xP' }],
+      [0.38, { text: 'CS%' }], [0.5, { text: 'CS%' }],
+      [0.62, { text: 'xGI' }], [0.74, { text: 'xGI' }],
+      [0.86, { text: 'DC%' }], [1, { text: 'DC%' }],
+    ],
+    actions: [
+      { at: 0.14, run: toggle('xP') },
+      { at: 0.40, run: toggle('CS%') },
+      { at: 0.64, run: toggle('xGI') },
+      { at: 0.88, run: toggle('DC%') },
+    ],
+  },
+
+  plan_names: {
+    route: '/#/squad',
+    seconds: 8,
+    // Back on Fix with names off, so the click adds names to the fixtures and
+    // the transfer edges are read against opponent codes rather than a metric.
+    setup: presetToggles({ Fix: true, Names: false, Crests: true }),
+    from: { text: 'Your season', align: 'top', offset: -110 },
+    to: { text: 'Your season', align: 'top', offset: -110 },
+    caption: 'Names on: a green edge is a man arriving, a red edge is one leaving.',
+    cursor: [[0, 0.6, 0.35], [0.2, { text: 'Names' }], [0.34, { text: 'Names' }], [1, 0.35, 0.62]],
+    actions: [{ at: 0.22, run: setToggle('Names', true) }],
+  },
+
+  plan_panels: {
+    route: '/#/squad',
+    seconds: 11,
+    setup: buildPlan,
+    // Anchored to the tab row itself, not to the planner above it — the panel
+    // below the tabs is the point, so the tabs sit near the top of frame.
+    from: { text: 'Analysis', align: 'top', offset: -90 },
+    to: { text: 'Analysis', align: 'top', offset: -90 },
+    caption: 'Then the read on it: the analysis, the fixtures, and what could go wrong.',
+    cursor: [
+      [0, 0.55, 0.5],
+      [0.14, { text: 'Analysis', role: 'tab' }], [0.34, { text: 'Analysis', role: 'tab' }],
+      [0.46, { text: 'Fixtures', role: 'tab' }], [0.64, { text: 'Fixtures', role: 'tab' }],
+      [0.76, { text: 'Risk', role: 'tab' }], [1, { text: 'Risk', role: 'tab' }],
+    ],
+    actions: [
+      // role 'tab', not 'button'. As buttons these matched nothing at all and
+      // every click silently timed out; and "Fixtures" as a plain name also
+      // matches the top-nav link, which would have navigated off the page.
+      { at: 0.16, run: async (p) => { await p.getByRole('tab', { name: 'Analysis', exact: true }).click() } },
+      { at: 0.48, run: async (p) => { await p.getByRole('tab', { name: 'Fixtures', exact: true }).click() } },
+      { at: 0.78, run: async (p) => { await p.getByRole('tab', { name: 'Risk', exact: true }).click() } },
+    ],
+  },
+
   home_close: {
     route: '/#/',
     seconds: 5,
@@ -301,8 +484,12 @@ export const CUTS = {
   c: ['fixtures_runs', 'squad_autopick'],
   // A sampler of the effects, not part of the film. See the fx_* shots.
   fx: ['fx_dip', 'fx_spotlight', 'fx_callout', 'fx_blur', 'fx_hold', 'fx_progress'],
+  // The season planner, for a standalone post on X.
+  planner: ['plan_open', 'plan_bars', 'plan_toggles', 'plan_names', 'plan_panels'],
 }
 
 export function secondsFor(shot, format) {
-  return typeof shot.seconds === 'number' ? shot.seconds : shot.seconds[format]
+  return typeof shot.seconds === 'number' ? shot.seconds : forFormat(shot.seconds, format)
 }
+
+export { forFormat }

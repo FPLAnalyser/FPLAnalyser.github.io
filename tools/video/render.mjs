@@ -23,7 +23,7 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { FORMATS, CUTS, SHOTS, secondsFor } from './shots.mjs'
+import { FORMATS, CUTS, SHOTS, secondsFor, forFormat } from './shots.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const DIST = path.join(ROOT, 'dist')
@@ -381,20 +381,24 @@ async function resolveCursorPath(page, points, scrollY, css) {
   const out = []
   for (const pt of points) {
     if (pt.length !== 2 || typeof pt[1] !== 'object') { out.push(pt); continue }
-    const box = await page.evaluate(({ text, sy }) => {
+    const box = await page.evaluate(({ text, sy, role }) => {
       window.scrollTo(0, sy)
       const want = text.trim().toLowerCase()
       let best = null
-      for (const el of document.querySelectorAll('button,[role=button],a,summary')) {
+      for (const el of document.querySelectorAll('button,[role=button],[role=tab],a,summary')) {
         const t = (el.textContent || '').trim().toLowerCase()
         if (t !== want) continue
+        // "Fixtures" is both a tab and a top-nav link. Without the role filter
+        // the pointer aims at whichever comes first in the DOM — the nav — and
+        // appears to press a control the click never touches.
+        if (role && el.getAttribute('role') !== role) continue
         const r = el.getBoundingClientRect()
         if (r.width > 0 && r.height > 0 && (!best || t.length < best.len)) {
           best = { x: r.left + r.width / 2, y: r.top + r.height / 2, len: t.length }
         }
       }
       return best
-    }, { text: pt[1].text, sy: scrollY })
+    }, { text: pt[1].text, sy: scrollY, role: pt[1].role || null })
     if (!box) throw new Error(`cursor target not found: "${pt[1].text}"`)
     out.push([pt[0], box.x / css.width, box.y / css.height])
   }
@@ -430,7 +434,7 @@ async function resolveZoomOrigin(page, at) {
 async function resolveAnchor(page, spec, label) {
   // An anchor may be given per format ({wide: …, vertical: …}) when the desktop
   // and mobile layouts need genuinely different framing.
-  const anchor = spec[formatName] ?? spec
+  const anchor = forFormat(spec, formatName)
   if (anchor.y !== undefined) return anchor.y
   const y = await page.evaluate(({ text, offset }) => {
     const want = text.trim().toLowerCase()
@@ -586,18 +590,21 @@ for (const id of shotIds) {
     throw new Error(`${id}: zoom below 1 exposes the page edges — keep from/to >= 1`)
   }
   const zoomOrigin = shot.zoom ? await resolveZoomOrigin(page, shot.zoom.at) : null
-  const clickPt = shot.action ? pathAt(cursorPath, shot.action.at) : null
+  // A shot may declare one `action` or a list of `actions`; the toggle row
+  // needs five clicks in a single take, so both normalise to a list here.
+  const actions = shot.actions || (shot.action ? [shot.action] : [])
+  const clickPts = actions.map((a) => ({ at: a.at, pt: pathAt(cursorPath, a.at) }))
   const isEnd = shot.captionStyle === 'endcard'
   const vw = format.css.width
   const vh = format.css.height
-  let actionDone = false
+  const actionDone = []
 
   process.stdout.write(`  ${id.padEnd(18)} ${String(seconds).padStart(4)}s  y ${clamp(yFrom)}→${clamp(yTo)}  `)
 
   if (dry) {
     const travel = Math.abs(clamp(yTo) - clamp(yFrom))
-    const fromSpec = shot.from[formatName] ?? shot.from
-    const toSpec = shot.to[formatName] ?? shot.to
+    const fromSpec = forFormat(shot.from, formatName)
+    const toSpec = forFormat(shot.to, formatName)
     // A deliberately static shot (home_close) is not a warning.
     const warn = travel < 40 && fromSpec.y !== toSpec.y ? '  ** barely moves **' : ''
     console.log(`ok · page ${maxY + vh}px · travel ${travel}px${warn}`)
@@ -626,14 +633,16 @@ for (const id of shotIds) {
     // The ripple is pinned to where the click landed, not to the live pointer.
     // A click mark that slides along behind the cursor does not read as a click.
     let ring = null
-    if (clickPt) {
-      const dt = t - shot.action.at
-      if (dt >= 0 && dt < 0.14) {
-        const k = dt / 0.14
+    for (const { at, pt } of clickPts) {
+      if (!pt) continue
+      const dt = t - at
+      if (dt >= 0 && dt < 0.12) {
+        const k = dt / 0.12
         ring = {
-          x: Math.round(clickPt.fx * vw), y: Math.round(clickPt.fy * vh),
+          x: Math.round(pt.fx * vw), y: Math.round(pt.fy * vh),
           scale: 1 + k * 2.6, opacity: 1 - k,
         }
+        break
       }
     }
 
@@ -659,10 +668,12 @@ for (const id of shotIds) {
       y, capOpacity, cursor, ring, endcard: isEnd, zoom, t, fxOpacity, dip, panX,
     })
 
-    if (shot.action && !actionDone && t >= shot.action.at) {
-      actionDone = true
-      await shot.action.run(page).catch((e) => console.warn(`\n    action failed: ${e.message}`))
-      await page.waitForTimeout(200)
+    for (let a = 0; a < actions.length; a++) {
+      if (!actionDone[a] && t >= actions[a].at) {
+        actionDone[a] = true
+        await actions[a].run(page).catch((e) => console.warn(`\n    action ${a} failed: ${e.message}`))
+        await page.waitForTimeout(150)
+      }
     }
 
     const buf = await page.screenshot({ type: 'jpeg', quality: 92 })
