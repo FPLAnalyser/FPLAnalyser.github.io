@@ -3,7 +3,8 @@ import { PageHeader, PageShell } from '../components/PageShell'
 import { TeamBadge } from '../components/badges'
 import { Icon } from '../components/Icon'
 import { useCore } from '../lib/useData'
-import { useTweaks, TWEAK_MAX, TWEAK_STEP, type Tweak } from '../lib/tweaks'
+import { useTweaks, clubImpact, TWEAK_MAX, TWEAK_STEP, type Tweak } from '../lib/tweaks'
+import { useXpModel, useMarketOdds } from '../lib/xp'
 import { teamLabel } from '../lib/util'
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -49,9 +50,60 @@ function Dial({ label, hint, value, onChange }: {
   )
 }
 
+/** The consequence, beside the control. Without it a slider from 0 to +2 is
+ *  a guess, and a projection built on a guess is worth nothing. */
+function Impact({ house, yours }: { house: ReturnType<typeof clubImpact>; yours: ReturnType<typeof clubImpact> }) {
+  if (!house) return null
+  const show = yours ?? house
+  const moved = !!yours
+  const cell = (label: string, was: number, now: number, dp: number, suffix = '') => {
+    const up = now > was + 0.005
+    const down = now < was - 0.005
+    return (
+      <span className="flex min-w-0 flex-1 flex-col items-center">
+        <span className="text-[9px] font-extrabold tracking-[0.08em] text-ink-3 uppercase">{label}</span>
+        <span className="font-num text-[12.5px] font-bold tabular-nums text-ink">
+          {now.toFixed(dp)}{suffix}
+        </span>
+        {moved && (up || down) && (
+          <span className={`font-num text-[10px] font-bold tabular-nums ${up ? 'text-good' : 'text-bad'}`}>
+            {was.toFixed(dp)}{suffix} → {now.toFixed(dp)}{suffix}
+          </span>
+        )}
+      </span>
+    )
+  }
+  return (
+    <div
+      className="mt-2 flex gap-1 rounded-lg border border-line-subtle bg-bg-0/40 px-2 py-1.5"
+      title={`Averages over their next ${house.games} fixtures, on the same arithmetic the projection uses`}
+    >
+      {cell('Scores', house.forGoals, show.forGoals, 2)}
+      {cell('Concedes', house.against, show.against, 2)}
+      {cell('Clean sheet', house.cs * 100, show.cs * 100, 0, '%')}
+    </div>
+  )
+}
+
 export default function MyRatings() {
   const core = useCore()
+  const model = useXpModel()
+  const market = useMarketOdds()
   const { tweaks, set, reset, count } = useTweaks()
+  const rows = core.data?.fixtureEase ?? []
+  const fromGw = useMemo(() => Math.min(...(rows.length ? rows.map((f) => f.gw) : [1])), [rows])
+  /* The engine's own strengths, so the preview and the projection are the same
+     arithmetic. The market's implied figures where it has an opinion, the
+     model's where it does not — exactly what strengthOf does. */
+  const strength = useMemo(() => {
+    const out: Record<string, { att: number; def: number }> = {}
+    for (const t of Object.keys(model?.teams ?? {})) {
+      const implied = market?.strength?.[t]
+      out[t] = implied && implied.att > 0 ? { att: implied.att, def: implied.def } : model!.teams[t]
+    }
+    return out
+  }, [model, market])
+  const league = model ? { att: model.league.att, def: model.league.def, hAtt: model.league.hAtt } : undefined
   const teams = useMemo(
     () => [...new Set((core.data?.fixtureEase ?? []).map((f) => String(f.team)))]
       .sort((a, b) => teamLabel(a).localeCompare(teamLabel(b))),
@@ -125,6 +177,10 @@ export default function MyRatings() {
                   <Dial label="Attack" hint="att" value={v.att} onChange={(n) => set(t, { att: n })} />
                   <Dial label="Defence" hint="def" value={v.def} onChange={(n) => set(t, { def: n })} />
                 </div>
+                <Impact
+                  house={clubImpact(t, rows, strength, league, {}, fromGw)}
+                  yours={on ? clubImpact(t, rows, strength, league, tweaks, fromGw) : null}
+                />
               </div>
             )
           })}

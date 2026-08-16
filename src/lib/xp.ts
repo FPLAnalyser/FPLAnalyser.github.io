@@ -108,6 +108,14 @@ interface TeamRow { short_name?: string }
 export interface MarketOdds {
   byKey: Map<string, { for: number; against: number }>
   strength: Record<string, { att: number; def: number; n: number }>
+  /** YOUR RATINGS, as goal-rate multipliers per club — 1 when untouched.
+   *
+   *  Carried rather than baked into `byKey`, and that is the whole point: the
+   *  bookmakers only price a round or two ahead, so scaling those entries
+   *  moved the near weeks and left every later one on the model's own
+   *  strengths. Applied inside componentXp instead, one place, so a priced
+   *  fixture and an unpriced one are adjusted identically. */
+  tweak?: Record<string, { att: number; def: number }>
 }
 
 export function useMarketOdds(): MarketOdds | null {
@@ -221,12 +229,21 @@ function componentXp(
   // How much the team should create / concede in THIS fixture, relative to
   // its own norm. Market numbers when the fixture is priced; strengths
   // otherwise.
-  const attScale = mkt && base ? mkt.for / Math.max(base.att, 0.2)
-    : (o ? o.def / lg.def : 1) * (home ? hA : 1 / hA)
-  const lamCs = mkt ? mkt.against
-    : (t ? t.def : lg.def) * (o ? o.att / lg.att : 1) * (home ? 1 / hA : hA)
-  const svScale = mkt && base ? mkt.against / Math.max(base.def, 0.2)
-    : (o ? o.att / lg.att : 1) * (home ? 1 / hA : hA)
+  /* YOUR RATINGS. A club's own attack and the opponent's defence set what it
+     scores; the opponent's attack and its own defence set what it concedes.
+     Applied here, after both branches, so the week the market has priced and
+     the week it has not are adjusted the same way. Both are 1 unadjusted. */
+  const twMe = market?.tweak?.[fix.team]
+  const twOpp = market?.tweak?.[fix.opponent]
+  const mineFor = (twMe?.att ?? 1) * (twOpp?.def ?? 1)
+  const mineAgainst = (twOpp?.att ?? 1) * (twMe?.def ?? 1)
+
+  const attScale = (mkt && base ? mkt.for / Math.max(base.att, 0.2)
+    : (o ? o.def / lg.def : 1) * (home ? hA : 1 / hA)) * mineFor
+  const lamCs = (mkt ? mkt.against
+    : (t ? t.def : lg.def) * (o ? o.att / lg.att : 1) * (home ? 1 / hA : hA)) * mineAgainst
+  const svScale = (mkt && base ? mkt.against / Math.max(base.def, 0.2)
+    : (o ? o.att / lg.att : 1) * (home ? 1 / hA : hA)) * mineAgainst
 
   const emf = p.p60 + 0.5 * Math.max(p.ppl - p.p60, 0)
 
@@ -236,8 +253,8 @@ function componentXp(
      Market goals-against where the fixture is priced; opponent attack and
      venue otherwise. Not FDR: that is an editorial 1–5 that exists for no
      historical fixture, so the curve keyed on it could never be refitted. */
-  const press = mkt ? mkt.against / lg.def
-    : (o ? o.att / lg.att : 1) * (home ? 1 / hA : hA)
+  const press = (mkt ? mkt.against / lg.def
+    : (o ? o.att / lg.att : 1) * (home ? 1 / hA : hA)) * mineAgainst
   const cur = model.dcCurve[pos] as Record<string, number> | undefined
   const dcMult = typeof cur?.beta === 'number'
     ? Math.pow(Math.max(press, 0.2), cur.beta)

@@ -126,21 +126,25 @@ const attMult = (a: number) => Math.pow(1 / PER_STEP, a)
  */
 export function adjustMarket(market: MarketOdds | null, tweaks: Tweaks): MarketOdds | null {
   if (!market || !Object.keys(tweaks).length) return market
-  const byKey = new Map<string, { for: number; against: number }>()
-  for (const [key, v] of market.byKey) {
-    const [team, , opp] = key.split(':')
-    const me = tweaks[team]
-    const them = tweaks[opp]
-    const f = v.for * attMult(me?.att ?? 0) * defMult(them?.def ?? 0)
-    const a = v.against * attMult(them?.att ?? 0) * defMult(me?.def ?? 0)
-    byKey.set(key, { for: f, against: a })
-  }
-  const strength = { ...market.strength }
+  /* MULTIPLIERS, NOT REWRITTEN ODDS. The first cut scaled every entry in
+     `byKey`, and it only moved the first gameweek or two — because that is as
+     far ahead as the bookmakers price. Everything past that falls back to the
+     model's own team strengths, which the rewrite never touched, so an
+     opinion faded out after a week. Carried as multipliers and applied inside
+     componentXp, a priced fixture and an unpriced one now get the same
+     treatment, all thirty-eight weeks of it. */
+  const tweak: Record<string, { att: number; def: number }> = {}
   for (const [team, t] of Object.entries(tweaks)) {
-    const s = strength[team]
-    if (s) strength[team] = { ...s, att: s.att * attMult(t.att), def: s.def * defMult(t.def) }
+    tweak[team] = { att: attMult(t.att), def: defMult(t.def) }
   }
-  return { byKey, strength }
+  /* `strength` IS LEFT ALONE, and that is not an oversight. componentXp now
+     applies these multipliers itself, and the unpriced branch of every scale
+     is built out of `strength` — so scaling it here as well applied the same
+     opinion twice, once through the strength and once through the multiplier.
+     It also meant nothing could show a reader the house number to compare
+     against, because the house number had already moved. One application,
+     in one place. */
+  return { byKey: market.byKey, strength: market.strength, tweak }
 }
 
 /**
@@ -156,10 +160,68 @@ export function adjustFixtureEase(rows: FixtureEaseRow[], tweaks: Tweaks): Fixtu
   return rows.map((f) => {
     const opp = tweaks[f.opponent]
     if (!opp) return f
-    const shift = (opp.att + opp.def) / 2
+    /* 0.6 a step, not 0.5: at a half the smallest opinion anyone can enter
+       rounded away to nothing and the colours never moved, which reads as the
+       control being broken. One full step on either dial now always shows. */
+    const shift = (opp.att + opp.def) * 0.6
     const fdr = Math.max(1, Math.min(5, Math.round(f.fdr + shift))) as FixtureEaseRow['fdr']
     return fdr === f.fdr ? f : { ...f, fdr }
   })
+}
+
+/**
+ * What a club's dials actually do, in goals.
+ *
+ * Moving a slider from 0 to +2 without being told what it means is a guess,
+ * and a projection built on a guess is worth nothing. So the page shows the
+ * consequence beside the control: over the club's next few fixtures, what
+ * they are expected to score and concede, and how often that is a clean
+ * sheet — as the model has it, and as you have it.
+ *
+ * Deliberately the SAME quantities the projection is built from rather than a
+ * summary invented for this page: goals for, goals against, and exp(−goals
+ * against) for the clean sheet. If the preview and the engine ever disagree,
+ * one of them is lying.
+ */
+export interface Impact { games: number; forGoals: number; against: number; cs: number }
+
+export function clubImpact(
+  team: string,
+  rows: FixtureEaseRow[],
+  strength: Record<string, { att: number; def: number }> | undefined,
+  league: { att: number; def: number; hAtt: number } | undefined,
+  tweaks: Tweaks,
+  fromGw: number,
+  n = 6,
+): Impact | null {
+  if (!strength || !league) return null
+  const fixtures = rows
+    .filter((f) => f.team === team && f.gw >= fromGw)
+    .sort((a, b) => a.gw - b.gw)
+    .slice(0, n)
+  if (!fixtures.length) return null
+
+  const me = strength[team]
+  if (!me) return null
+  const hA = league.hAtt || 1
+  let f = 0
+  let a = 0
+  let cs = 0
+  for (const fx of fixtures) {
+    const opp = strength[fx.opponent]
+    const home = fx.venue === 'H'
+    const twMe = tweaks[team]
+    const twOpp = tweaks[fx.opponent]
+    const mineFor = Math.pow(1 / PER_STEP, twMe?.att ?? 0) * Math.pow(PER_STEP, twOpp?.def ?? 0)
+    const mineAgainst = Math.pow(1 / PER_STEP, twOpp?.att ?? 0) * Math.pow(PER_STEP, twMe?.def ?? 0)
+    const lamFor = me.att * (opp ? opp.def / league.def : 1) * (home ? hA : 1 / hA) * mineFor
+    const lamAgainst = me.def * (opp ? opp.att / league.att : 1) * (home ? 1 / hA : hA) * mineAgainst
+    f += lamFor
+    a += lamAgainst
+    cs += Math.exp(-lamAgainst)
+  }
+  const k = fixtures.length
+  return { games: k, forGoals: f / k, against: a / k, cs: cs / k }
 }
 
 /** A club's opinion in words, for a tooltip or a chip. */
