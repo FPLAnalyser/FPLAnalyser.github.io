@@ -38,8 +38,14 @@ const MAX_G = 12
 interface XpPlayer {
   code: number; xg90: number; xa90: number; sv90: number
   dc: number; bon: number; yel: number; p60: number; ppl: number
+  /** His goal rate WITHOUT penalties. Absent in files built before the split,
+   *  in which case everything below falls back to xg90 and behaves as it did. */
+  npxg90?: number
 }
 interface XpModelFile {
+  /** What one penalty is worth and how often a team wins one, both measured in
+   *  the pipeline off the published shot data rather than guessed at here. */
+  pen?: { xg: number; perGame: number }
   league: { att: number; def: number; hAtt: number }
   teams: Record<string, { att: number; def: number; prior?: boolean }>
   dcCurve: Record<string, Record<string, number>>
@@ -225,6 +231,9 @@ function componentXp(
   mkt: { for: number; against: number } | null,
   market: MarketOdds | null,
   matchup = 1,
+  /** Whether he takes his club's penalties NOW — first choice only, from the
+   *  live feed where there is one and the squad list otherwise. */
+  penTaker = false,
 ): XpParts {
   const lg = model.league
   const t = strengthOf(fix.team, model, market)
@@ -274,7 +283,22 @@ function componentXp(
     ? Math.pow(Math.max(press, 0.2), cur.beta)
     : cur?.[String(fix.fdr)] ?? 1   // pre-2026 files still carry the FDR table
 
-  const lamGoal = p.xg90 * attScale * matchup * emf
+  /* PENALTIES BELONG TO THE JOB, NOT TO THE PLAYER'S HISTORY.
+     `xg90` includes whatever spot kicks he happened to take last season, at
+     his old club and his old role, permanently — so a player just handed the
+     job got nothing for it and one who lost it kept the credit for good.
+     Measured on this data that was worth a third of Palmer's goal threat and
+     0.083 of Haaland's. The pipeline now splits the rate; this adds the
+     penalty share back for whoever actually takes them now.
+
+     The dead-ball matchup does not apply to a penalty — the spot is twelve
+     yards out whoever is defending — so `matchup` multiplies open play only.
+     `attScale` does apply: a side dominating a weak opponent wins more of
+     them. */
+  const pen = model.pen
+  const penFor = penTaker && pen ? pen.xg * pen.perGame * (base && lg.att > 0 ? base.att / lg.att : 1) : 0
+  const openXg = p.npxg90 ?? p.xg90
+  const lamGoal = (openXg * matchup + penFor) * attScale * emf
   const lamAssist = p.xa90 * attScale * emf
   const bScale = pos === 'MID' || pos === 'FWD' ? Math.min(attScale, 1.3) : 1
   return {
@@ -326,13 +350,17 @@ export function xpPartsForGw(
   const code = num(r, 'code')
   const element = num(r, 'element')
   const p = model && code != null ? model.byCode.get(code) : undefined
+  /* First choice only. Second and third takers convert so rarely that crediting
+     them is worse than crediting nobody — the same rule the Players page badge
+     already uses. */
+  const penTaker = num(r, 'penalties_order') === 1
   const out = ZERO_PARTS()
 
   if (model && p) {
     for (const f of fixes) {
       const mkt = market?.byKey.get(`${f.team}:${gw}:${f.opponent}`) ?? null
       const m = matchupMult(element, f.opponent, profiles ?? null)
-      const part = componentXp(p, String(r.position), f, model, mkt, market ?? null, m)
+      const part = componentXp(p, String(r.position), f, model, mkt, market ?? null, m, penTaker)
       for (const k of Object.keys(out) as (keyof XpParts)[]) out[k] += part[k]
       out.matchup = m
     }

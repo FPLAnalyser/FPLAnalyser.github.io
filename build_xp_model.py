@@ -155,6 +155,62 @@ def fit_dc_curve(starts, h_att):
         out[pos] = round(float(np.mean(betas)), 3) if betas and gain > 0 else 0.0
     return out
 
+# ── penalties, separated ───────────────────────────────────────────────────
+#
+# expected_goals INCLUDES penalties, so xg90 has always carried whatever
+# penalties a player happened to take last season, permanently, at his old
+# club and his old role. That is wrong in both directions: a player who has
+# just been handed the job gets no credit for it, and one who has lost it
+# keeps the credit forever. Measured on this data, Palmer's xg90 of 0.408 sits
+# against a non-penalty rate of 0.262 — over a third of his projected goal
+# threat was a job he may or may not still have.
+#
+# So the rate is split here and recombined in lib/xp, where the CURRENT taker
+# is known: npxg90 is what he does from open play and set pieces, and the
+# penalty share is added back only for whoever actually takes them now.
+#
+# The count comes from player_shots.json — the same Understat shot data the
+# site already publishes, keyed by element, with `situation` marking each
+# penalty — rather than a second source that would have to be kept in step.
+# Each is valued at the league mean penalty xG measured off that same file,
+# so the split is internally consistent even though the totals come from FPL.
+with open(os.path.join(SITE, season, "player_shots.json"), encoding="utf-8") as f:
+    _shots = json.load(f)
+_pen_xgs = [s["xg"] for v in _shots.values() for s in (v or []) if s.get("situation") == "Penalty"]
+PEN_XG = round(sum(_pen_xgs) / len(_pen_xgs), 3) if _pen_xgs else 0.76
+# KEYED BY CODE, NOT ELEMENT. player_shots.json is keyed by THIS season's
+# element ids; player_gw_enriched.csv carries LAST season's, because that is
+# the season it describes. Element ids are reassigned every summer, so joining
+# the two directly subtracts one player's penalties from whoever inherited his
+# number — which is what the first version of this did, silently, leaving
+# Haaland's four spot kicks in his rate and taking them off a stranger. Code is
+# the only id stable across seasons.
+with open(os.path.join(SITE, season, "ratings.json"), encoding="utf-8") as f:
+    _cur = json.load(f)
+_code_of = {int(r["element"]): int(r["code"]) for r in _cur
+            if r.get("element") is not None and r.get("code") is not None}
+pen_taken: dict[int, int] = {}
+for k, v in _shots.items():
+    if not str(k).lstrip("-").isdigit():
+        continue
+    c = _code_of.get(int(k))
+    if c is None:
+        continue
+    n = sum(1 for s in (v or []) if s.get("situation") == "Penalty")
+    if n:
+        pen_taken[c] = pen_taken.get(c, 0) + n
+# How often a team gets one, from the TEAM shot file rather than the player
+# one: player_shots.json only carries players who cleared the rating floor, so
+# counting penalties there misses the ones taken by everyone else and would
+# understate the rate a current taker is credited with.
+with open(os.path.join(SITE, season, "shots_for.json"), encoding="utf-8") as f:
+    _tshots = json.load(f)
+_team_games = len({(t, s.get("kickoff_date")) for t, v in _tshots.items() for s in (v or [])})
+_team_pens = sum(1 for v in _tshots.values() for s in (v or []) if s.get("situation") == "Penalty")
+PEN_PER_GAME = round(_team_pens / max(_team_games, 1), 4)
+print(f"  penalties: {sum(pen_taken.values())} split out across {len(pen_taken)} players,"
+      f" mean {PEN_XG} xG each; {_team_pens} league-wide = {PEN_PER_GAME}/team-game")
+
 # ── players: per-90 rates shrunk to position means (M = 600 minutes) ────────
 agg = played.groupby("element").agg(
     code=("code", "first"), pos=("position", "first"),
@@ -190,8 +246,16 @@ n_gws = gw["round"].nunique()
 agg["p60"] = starters.groupby("element")["round"].nunique().reindex(agg.index).fillna(0) / n_gws
 agg["ppl"] = played.groupby("element")["round"].nunique().reindex(agg.index).fillna(0) / n_gws
 
+# Penalty xG out of the season total BEFORE shrinking, so the non-penalty rate
+# is shrunk against a non-penalty position mean rather than one inflated by
+# other people's spot kicks. Clipped at zero: FPL and Understat value a penalty
+# a shade differently, and a player whose only xG was a penalty could otherwise
+# come out slightly negative.
+agg["pen_n"] = agg["code"].map(lambda c: pen_taken.get(int(c), 0) if pd.notna(c) else 0).astype(float)
+agg["npxg"] = (agg["xg"] - agg["pen_n"] * PEN_XG).clip(lower=0.0)
+
 M = 600.0
-for col, name in [("xg", "xg90"), ("xa", "xa90"), ("saves", "sv90")]:
+for col, name in [("xg", "xg90"), ("npxg", "npxg90"), ("xa", "xa90"), ("saves", "sv90")]:
     pos_rate = agg.groupby("pos")[col].sum() / agg.groupby("pos")["mins"].sum() * 90
     prior = agg["pos"].map(pos_rate)
     agg[name] = (agg[col] / agg["mins"].clip(lower=1) * 90 * agg["mins"] + prior * M) / (agg["mins"] + M)
@@ -202,7 +266,12 @@ for _, r in agg.iterrows():
         continue
     players.append({
         "code": int(r["code"]),
-        "xg90": round(float(r["xg90"]), 4), "xa90": round(float(r["xa90"]), 4),
+        "xg90": round(float(r["xg90"]), 4),
+        # What he does WITHOUT the armband of penalty duty. lib/xp adds the
+        # penalty share back for the current taker; a file without this field
+        # falls back to xg90 and behaves exactly as before.
+        "npxg90": round(float(r["npxg90"]), 4),
+        "xa90": round(float(r["xa90"]), 4),
         "sv90": round(float(r["sv90"]), 3), "dc": round(float(r["dc"]), 3),
         "bon": round(float(r["bonus"] / max(r["games"], 1)), 3),
         "yel": round(float(r["yellows"] / max(r["games"], 1)), 3),
@@ -210,6 +279,9 @@ for _, r in agg.iterrows():
     })
 
 payload = {
+    # What one penalty is worth, and how often a team gets one — measured off
+    # the same shot file, so lib/xp does not carry a hardcoded guess.
+    "pen": {"xg": PEN_XG, "perGame": PEN_PER_GAME},
     "league": league,
     "teams": teams,
     "dcCurve": {p: {"beta": b} for p, b in dc_beta.items()},
