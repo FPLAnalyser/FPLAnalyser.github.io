@@ -240,15 +240,20 @@ export const tweakLabel = (t: Tweak): string => {
   return bits.join(' · ')
 }
 
-/** Where a dial puts a club, in words. The number alone does not say that ±2
- *  is the league's own best and worst rather than an arbitrary amount. */
+/** Where a dial puts a club, in words. The number alone does not say that the
+ *  ends are the league's own extremes and a bit beyond, rather than an
+ *  arbitrary amount — which is the whole reason a club already top of the
+ *  league at something can still be moved. */
+const ENDS: Record<'att' | 'def', [string, string]> = {
+  att: ['weaker going forward than any club in the league', 'stronger going forward than any club in the league'],
+  def: ['leakier at the back than any club in the league', 'meaner at the back than any club in the league'],
+}
+
 export function dialWords(v: number, side: 'att' | 'def'): string {
   if (v === 0) return 'As the model has them'
-  const end = side === 'att' ? 'attack' : 'defence'
-  const best = side === 'att' ? 'best' : 'meanest'
-  const worst = side === 'att' ? 'weakest' : 'leakiest'
-  const to = v > 0 ? best : worst
+  const end = ENDS[side][v > 0 ? 1 : 0]
   const frac = Math.abs(v) / TWEAK_MAX
-  if (frac >= 1) return `As if they had the league's ${to} ${end}`
-  return `${Math.round(frac * 100)}% of the way to the league's ${to} ${end}`
+  return frac >= 1
+    ? end.charAt(0).toUpperCase() + end.slice(1)
+    : `${Math.round(frac * 100)}% of the way to ${end}`
 }

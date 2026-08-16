@@ -69,11 +69,18 @@ export function houseBaselines(
    would have taken eight steps against a cap of two. "Hull are actually
    dangerous" was a thing the control could not say.
 
-   So +2 now means AS STRONG AS THE STRONGEST CLUB IN THE LEAGUE at that end of
-   the pitch, and −2 as weak as the weakest, with the halves in between. Every
-   club can reach both ends by construction, which is what full flexibility
-   has to mean here, and the dial reads the same on every card: +2 is always
-   "the best in the league at this", whoever you are pointing it at.
+   So +2 now means BETTER THAN ANY CLUB IN THE LEAGUE at that end of the pitch,
+   and −2 worse than any of them, with the halves in between. Every club can
+   reach both ends by construction, which is what full flexibility has to mean
+   here, and the dial reads the same on every card whoever you point it at.
+
+   The ends sit a quarter of the league's spread OUTSIDE its best and worst
+   rather than exactly on them, because on them left the boundary club stuck:
+   Arsenal are the meanest defence in the league, so a target of "the meanest
+   defence in the league" was a target of where they already stood, and their
+   defence dial did nothing. The fixture colour still saturates at 5 — the
+   scale has an end — but the goals, the clean sheets and the xP underneath it
+   keep moving, which is what someone re-rating an already-good side means.
 
    It is deliberately NOT linear in goals. Moving Hull from 0 to +2 is a much
    bigger change in goal rate than moving Arsenal the same distance, because
@@ -85,16 +92,51 @@ export function houseBaselines(
    survives a data refresh with its meaning intact, which a stored 2.11 would
    not — the house numbers move several times a day. */
 
-export interface LeagueRange { xgMin: number; xgMax: number; xgcMin: number; xgcMax: number }
+export interface LeagueRange {
+  /** What a +2 attack dial aims at, and a −2. */
+  attBest: number; attWorst: number
+  /** What a +2 DEFENCE dial aims at — the FEWEST goals conceded, so the lower
+   *  of the pair — and what a −2 aims at. */
+  defBest: number; defWorst: number
+}
+
+/* HOW FAR PAST THE LEAGUE THE ENDS SIT.
+ *
+ * The ends were the league's own best and worst, and that had a hole in it:
+ * Arsenal already ARE the meanest defence in the league at 0.751 goals a game,
+ * exactly the minimum, so their defence dial multiplied by 1.00 and moving it
+ * did nothing at all. Same for Man City's attack. The one club a reader is most
+ * likely to have a strong opinion about is the one the control could not touch.
+ *
+ * A quarter of the league's own spread past each end fixes it and stays a
+ * statement about football rather than an arbitrary number: on this season's
+ * data it puts the meanest-defence target at 0.45 goals a game — about 17 over
+ * a season, which is roughly the best any Premier League side has managed — and
+ * the best-attack target at 2.44, or 93 goals. Strong opinions, not impossible
+ * ones, and the projection stays worth printing at either.
+ *
+ * Anyone can still reach the ends from anywhere, which was the point of
+ * anchoring to the league in the first place; the ends are now simply outside
+ * it, so the club sitting on the boundary has somewhere to go. */
+const MARGIN = 0.25
+/** No lambda may reach zero — Poisson with λ=0 is a certainty, and nothing
+ *  about a football match is certain. */
+const FLOOR = 0.15
 
 export function leagueRange(base: Map<string, TeamBase>): LeagueRange | null {
   const vals = [...base.values()]
   if (vals.length < 8) return null
   const xg = vals.map((v) => v.xg)
   const xgc = vals.map((v) => v.xgc)
+  const xgLo = Math.min(...xg), xgHi = Math.max(...xg)
+  const cLo = Math.min(...xgc), cHi = Math.max(...xgc)
+  const mXg = (xgHi - xgLo) * MARGIN
+  const mC = (cHi - cLo) * MARGIN
   return {
-    xgMin: Math.min(...xg), xgMax: Math.max(...xg),
-    xgcMin: Math.min(...xgc), xgcMax: Math.max(...xgc),
+    attBest: xgHi + mXg,
+    attWorst: Math.max(FLOOR, xgLo - mXg),
+    defBest: Math.max(FLOOR, cLo - mC),
+    defWorst: cHi + mC,
   }
 }
 
@@ -104,10 +146,11 @@ export const TWEAK_MAX = 2
 /**
  * One club's baseline with its dials applied.
  *
- * `att` positive moves them towards the league's best attack, negative towards
- * its worst. `def` positive moves them towards the league's meanest defence —
- * which is the LOWEST xGC — so the sign flips against the range, deliberately:
- * on the card, right is always better at the thing the dial is named after.
+ * `att` positive moves them towards — and past — the league's best attack,
+ * negative towards its worst. `def` positive moves them towards the meanest
+ * defence, which is the LOWEST xGC, so the target flips against the axis
+ * deliberately: on the card, right is always better at the thing the dial is
+ * named after.
  */
 export function tweakedBase(base: TeamBase, t: { att: number; def: number } | undefined, r: LeagueRange | null): TeamBase {
   if (!t || !r || (!t.att && !t.def)) return base
@@ -115,8 +158,8 @@ export function tweakedBase(base: TeamBase, t: { att: number; def: number } | un
   const a = Math.max(-TWEAK_MAX, Math.min(TWEAK_MAX, t.att)) / TWEAK_MAX
   const d = Math.max(-TWEAK_MAX, Math.min(TWEAK_MAX, t.def)) / TWEAK_MAX
   return {
-    xg: a === 0 ? base.xg : towards(base.xg, a > 0 ? r.xgMax : r.xgMin, Math.abs(a)),
-    xgc: d === 0 ? base.xgc : towards(base.xgc, d > 0 ? r.xgcMin : r.xgcMax, Math.abs(d)),
+    xg: a === 0 ? base.xg : Math.max(FLOOR, towards(base.xg, a > 0 ? r.attBest : r.attWorst, Math.abs(a))),
+    xgc: d === 0 ? base.xgc : Math.max(FLOOR, towards(base.xgc, d > 0 ? r.defBest : r.defWorst, Math.abs(d))),
   }
 }
 

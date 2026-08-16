@@ -189,8 +189,8 @@ export default function MyRatings() {
       <div className="mb-4 rounded-2xl border border-line bg-surface-1/60 p-4 text-[13.5px] leading-relaxed text-ink-2">
         <p className="mb-0">
           Two dials a club — what they <b className="text-ink">score</b> and what they
-          {' '}<b className="text-ink">concede</b>. <b className="text-ink">+2 is the best in the league at that,
-          −2 the worst.</b> Everything follows: fixture difficulty, clean sheets, projected points, captaincy,
+          {' '}<b className="text-ink">concede</b>. <b className="text-ink">+2 is better than any club in the league at
+          that, −2 worse.</b> Everything follows: fixture difficulty, clean sheets, projected points, captaincy,
           every plan you compare.
         </p>
         <details className="group mt-2">
@@ -199,12 +199,13 @@ export default function MyRatings() {
             How this works
           </summary>
           <p className="mt-2 mb-0 text-[13px] text-ink-3">
-            The ends are the league's own best and worst rather than a fixed percentage, so any club can be
-            taken to either — rate a promoted side's attack at +2 and you are saying they create like the
-            league's best, and the projection says so too. That makes it deliberately uneven in goals: moving a
-            bottom club to the top is a far bigger claim than nudging one already near it, and the figures
-            under each pair of dials show how big. Your changes are stored as a position in the league rather
-            than a fixed number, so they survive the next data refresh, and they live on this device only.
+            The ends are set from the league's own best and worst, and sit a little outside them — so any club
+            can be taken to either, including one already top of the league at it. That makes the dial
+            deliberately uneven in goals: moving a bottom club to the top is a far bigger claim than pushing
+            one that is nearly there, and the figures under each pair of dials show how big. A fixture's colour
+            stops at 5 because the scale ends there, but the goals and clean sheets underneath keep moving.
+            Your changes are stored as a position in the league rather than a fixed number, so they survive the
+            next data refresh, and they live on this device only.
           </p>
         </details>
         {count > 0 && (
