@@ -152,15 +152,45 @@ jobs:
             echo "::error::${PREVIEW_REPO} is not readable with PREVIEW_TOKEN (anon ${anon}, token ${auth}). Check the repo exists under that exact name and is public, and that the token's Resource owner is the org that owns it — that cannot be changed after creation, so it has to be reissued."
             exit 1
           fi
-          cd dist
-          git init -q
+          # ONE FOLDER PER BRANCH, NOT ONE SITE PER PUSH.
+          #
+          # This used to `git init` in dist and force-push the whole tree to
+          # the preview's main, which meant every branch overwrote every other
+          # one: two workstreams previewing at once and whichever built last
+          # owned the site. A link to a page only one branch has would open the
+          # other branch's build and fall through to Home, which is impossible
+          # to tell apart from a caching problem and wasted an afternoon.
+          #
+          # So each branch gets b/<slug>/ and the others are left alone.
+          slug=$(printf '%s' "${BRANCH}" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-//; s/-$//')
+          repo_url="https://x-access-token:${PREVIEW_TOKEN}@github.com/${PREVIEW_REPO}.git"
+          git clone -q --depth 1 "${repo_url}" site 2>/dev/null || { mkdir -p site && git -C site init -q; }
+          rm -rf "site/b/${slug}"
+          mkdir -p "site/b/${slug}"
+          cp -r dist/. "site/b/${slug}/"
+          # A root index, so the preview site is navigable rather than a set of
+          # URLs you have to be told.
+          {
+            echo '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+            echo '<title>FPL Analyser — branch previews</title><meta name="robots" content="noindex">'
+            echo '<style>body{margin:0;background:#0a0908;color:#f4efe3;font:16px/1.6 ui-sans-serif,system-ui,sans-serif}'
+            echo '.w{max-width:640px;margin:0 auto;padding:40px 20px}a{color:#e8c85a}'
+            echo 'li{margin:.5em 0}code{color:#a9a294}</style><div class=w>'
+            echo '<h1>Branch previews</h1><p>Each branch builds to its own folder. Not the live site.</p><ul>'
+            for d in site/b/*/; do
+              b=$(basename "$d")
+              echo "<li><a href=\"b/${b}/\">${b}</a></li>"
+            done
+            echo '</ul></div>'
+          } > site/index.html
+          touch site/.nojekyll
+          cd site
           git config user.name "FPL Analyser"
           git config user.email "224126997+FPLAnalyser@users.noreply.github.com"
           git add -A
-          git commit -q -m "Preview of ${BRANCH} at ${GITHUB_SHA::7}"
-          git push -q --force \
-            "https://x-access-token:${PREVIEW_TOKEN}@github.com/${PREVIEW_REPO}.git" \
-            HEAD:main
+          git commit -q -m "Preview of ${BRANCH} at ${GITHUB_SHA::7}" || echo "nothing changed"
+          git push -q --force "${repo_url}" HEAD:main
+          cd ..
           # A project site lives at <org>.github.io/<repo>/; an org site at
           # <org>.github.io. Both are valid PREVIEW_REPO values, so work out
           # which this is rather than printing a URL that 404s.
@@ -170,6 +200,7 @@ jobs:
           else
             base="https://${org}.github.io/${repo}/"
           fi
+          base="${base}b/${slug}/"
           echo "published ${BRANCH} → ${base}"
           echo "base=${base}" >> "$GITHUB_OUTPUT"
 
