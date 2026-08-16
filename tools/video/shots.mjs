@@ -29,6 +29,23 @@ export async function buildPlan(page) {
   if (!already) {
     await page.getByRole('button', { name: 'Auto pick', exact: true }).click()
     await settle(page, 3500)
+    await openGrid(page)
+
+    // WHICH men are sold is a framing decision, not an incidental one. Taking
+    // whatever the market listed last put both moves on the bench rows at the
+    // bottom of the grid, and the first cut of this film went out with the
+    // transfers off the bottom of every frame — the part of the plan the video
+    // exists to show, filmed and then cropped away.
+    //
+    // So the sale is chosen from the GRID's row order rather than the market's.
+    // The market lists the eleven and then the bench, so its indices move with
+    // the formation; the grid is sorted by position and price, and rows five
+    // and ten are a defender and a midfielder whatever shape the auto-pick
+    // came out. Five rows apart, the two seams both sit inside one zoomed
+    // frame without colliding.
+    const rows = await page.evaluate(() =>
+      [...document.querySelectorAll('[title="Show only this player"]')]
+        .map((b) => (b.children[1]?.textContent || '').trim()))
 
     // GW2: Bench Boost.
     await page.getByLabel('Next gameweek').click()
@@ -39,17 +56,19 @@ export async function buildPlan(page) {
     // GW3 and GW4: one transfer each. Selling opens an empty place, and the
     // market's first row is "keep him — undo the sale", so the signing is the
     // first row actually offering the empty place.
-    for (const gw of [3, 4]) {
+    for (const row of [4, 9]) {
       await page.getByLabel('Next gameweek').click()
       await settle(page, 1600)
-      const sell = page.locator('[aria-label^="Sell "]').last()
+      const named = rows[row] ? page.getByLabel(`Sell ${rows[row]}`, { exact: true }) : null
+      // A plan with no moves in it is worse than one with the moves in the
+      // wrong row, so an unrecognised name falls back rather than skipping.
+      const sell = named && await named.count() ? named : page.locator('[aria-label^="Sell "]').first()
       if (await sell.count()) {
         await sell.click()
         await settle(page, 1800)
         const sign = page.locator('[title="Sign him into the empty place"]').first()
         if (await sign.count()) { await sign.click(); await settle(page, 1800) }
       }
-      void gw
     }
 
     // Back to the opening week, which is where the film starts.
@@ -60,9 +79,25 @@ export async function buildPlan(page) {
     await settle(page, 1200)
   }
 
-  // The grid is collapsed by default; every planner shot wants it open.
+  await openGrid(page)
+}
+
+/** The grid is collapsed on every mount, so every planner shot opens it. */
+async function openGrid(page) {
   const pull = page.getByText('Pull down for the whole plan', { exact: false }).first()
   if (await pull.count()) { await pull.click(); await settle(page, 2200) }
+}
+
+/** Switches the right-hand column to one of its panels. */
+const openPanel = (label) => async (page) => {
+  await page.getByRole('tab', { name: label, exact: true }).click()
+  await settle(page, 900)
+}
+
+/** buildPlan, then whatever else the shot needs standing before it films. */
+const planThen = (...steps) => async (page) => {
+  await buildPlan(page)
+  for (const step of steps) await step(page)
 }
 
 /** Clicks one of the planner's metric toggles. */
@@ -370,92 +405,241 @@ export const SHOTS = {
   // The season planner, for a standalone post. Every shot shares one plan:
   // an auto-picked fifteen, a Bench Boost on GW2 and a transfer in each of
   // GW3 and GW4, so the grid has something to show before the toggles start.
-
+  //
+  // The cut is built around ZOOMS, and they are the reason it works at all.
+  // The first version of this film sat at page scale throughout and named the
+  // features in one sweeping caption each: the chip badge is fifteen pixels
+  // tall, the diverging bar is five, the armband is nine. Everything the
+  // planner does was in frame and none of it was legible, which is the same as
+  // not filming it. Each of these shots now magnifies ONE mark and says what
+  // that mark means.
+  //
+  // A zoom is a fixed point, not a crop: the origin stays where it is on
+  // screen and the page grows around it. So the scroll anchor and the zoom
+  // target are the same element, offset by roughly half a viewport, and the
+  // subject sits still in frame while the push-in happens around it. Move one
+  // without the other and the shot drifts off its own subject.
 
   plan_open: {
     route: '/#/squad',
-    seconds: 6,
+    seconds: 4.5,
     setup: buildPlan,
     // Opens on the squad header and settles onto the planner.
     from: { y: 0 },
-    to: { text: 'Your season', align: 'top', offset: -110 },
-    caption: 'The whole season, every man, every week.',
-    cursor: [[0, 0.5, 0.3], [1, 0.42, 0.5]],
+    to: { text: 'Your season', align: 'top', offset: -60 },
+    caption: 'The season planner: your whole squad, twelve weeks ahead.',
+    cursor: [[0, 0.5, 0.3], [1, 0.4, 0.52]],
   },
 
   plan_bars: {
     route: '/#/squad',
-    seconds: 7,
+    seconds: 8,
     setup: buildPlan,
-    from: { text: 'Your season', align: 'top', offset: -110 },
-    to: { text: 'Your season', align: 'top', offset: -110 },
-    // Pushes in on the bars so the per-week totals and the green and red
-    // edges under them are readable, then holds.
-    zoom: { from: 1, to: 1.28, at: { text: 'Points' } },
-    caption: 'Projected points, week by week — and where the run turns.',
+    // Anchored on GW2's own label so the push-in holds the opening weeks
+    // still. -421 puts that label a little below the middle of the frame,
+    // which leaves the column above it — chip, number, bar, fixture strip —
+    // room to grow into.
+    from: { text: 'GW2', align: 'top', offset: -421 },
+    to: { text: 'GW2', align: 'top', offset: -421 },
+    zoom: { from: 1, to: 1.95, at: { text: 'GW2' } },
+    caption: 'One bar per gameweek — the points your fifteen is projected to score that week.',
     cursor: null,
   },
 
-  plan_toggles: {
+  plan_chip: {
     route: '/#/squad',
-    seconds: 12,
-    // Starts on Fix every time, so the sequence reads Fix -> xP -> CS% -> xGI
-    // -> DC% however the previous shot left the row.
-    setup: presetToggles({ Fix: true, Names: false, Crests: true }),
-    from: { text: 'Your season', align: 'top', offset: -110 },
-    to: { text: 'Your season', align: 'top', offset: -110 },
-    caption: 'One grid, five readings: fixtures, points, clean sheets, threat, defensive returns.',
-    cursor: [
-      [0, 0.55, 0.6],
-      [0.12, { text: 'xP' }], [0.26, { text: 'xP' }],
-      [0.38, { text: 'CS%' }], [0.5, { text: 'CS%' }],
-      [0.62, { text: 'xGI' }], [0.74, { text: 'xGI' }],
-      [0.86, { text: 'DC%' }], [1, { text: 'DC%' }],
-    ],
-    actions: [
-      { at: 0.14, run: toggle('xP') },
-      { at: 0.40, run: toggle('CS%') },
-      { at: 0.64, run: toggle('xGI') },
-      { at: 0.88, run: toggle('DC%') },
-    ],
+    seconds: 6,
+    setup: buildPlan,
+    // The chip badge is the top thing in its column, so this frames high: the
+    // badge a fifth down and the bar it belongs to hanging below it. Framed
+    // any lower and a 2.35x push fills the top third of the shot with the plan
+    // switcher above the card, which is not what the caption is talking about.
+    from: { text: 'BB', align: 'top', offset: -158 },
+    to: { text: 'BB', align: 'top', offset: -158 },
+    // Carries on from where plan_bars finished rather than restarting at page
+    // scale, so the cut reads as one continuous push rather than a bounce.
+    zoom: { from: 1.9, to: 2.35, at: { text: 'BB' } },
+    caption: 'Chips show on the week you play them — GW2 here is the Bench Boost.',
+    cursor: null,
+  },
+
+  plan_risk: {
+    route: '/#/squad',
+    seconds: 6,
+    setup: buildPlan,
+    // Scrolled to the very top (the offset clamps), which puts the label row
+    // in the lower half and leaves the whole column above it in frame. At 3x
+    // the strip was unmistakable and the bar it belongs under was cropped
+    // away, which makes "under every bar" a caption about something off
+    // screen; 2.3x holds the number, the bar and the strip together.
+    from: { text: 'GW3', align: 'top', offset: -460 },
+    to: { text: 'GW3', align: 'top', offset: -460 },
+    zoom: { from: 1.5, to: 2.3, at: { text: 'GW3' } },
+    caption: 'Under every bar: green for the easy fixtures that week, red for the hard ones and the blanks.',
+    cursor: null,
+  },
+
+  plan_captain: {
+    route: '/#/squad',
+    seconds: 6,
+    setup: buildPlan,
+    // Frames the grid, not the bars: this is about the badge on the MAN.
+    //
+    // It said "and, on the week, a squad holding the best captain in the
+    // game" as well, for the second gold C the spine draws beside a gameweek
+    // label. That one is conditional on the squad actually holding the best
+    // armband in the game, and the plan this cut builds does not, so the
+    // frame showed one badge while the caption named two. A caption may not
+    // describe a mark the viewer cannot see.
+    from: { text: 'GW4', align: 'top', offset: -110 },
+    to: { text: 'GW4', align: 'top', offset: -110 },
+    // ox at the left margin so the name column stays in shot — an armband on
+    // an anonymous row is a gold dot rather than a decision.
+    zoom: { from: 1.6, to: 2.55, at: { text: 'GW4', ox: 44 } },
+    caption: 'A gold C on the cell is the man wearing your armband that week.',
+    cursor: null,
+  },
+
+  // The five readings. One shot each, because the single caption this used to
+  // carry — "fixtures, points, clean sheets, threat, defensive returns" — was
+  // guesswork dressed as an explanation, and three of the five were wrong.
+  // Every caption below is now the page's own MODE_NOTE for that mode, so the
+  // film cannot drift from what the grid actually shows. Each shot presets the
+  // PREVIOUS mode and clicks its own, so the sequence reads as one pass along
+  // the row however the shot order is cut.
+  //
+  // None of these zoom. The pointer is resolved against the unzoomed page, so
+  // a click under a moving zoom lands the cursor next to the control it
+  // appears to press — and here the click is the shot.
+
+  plan_fix: {
+    route: '/#/squad',
+    seconds: 4,
+    setup: presetToggles({ Fix: true, Names: true, Crests: true }),
+    from: { text: 'Your season', align: 'top', offset: -70 },
+    to: { text: 'Your season', align: 'top', offset: -70 },
+    caption: 'Fix — the opponent, upper case at home, and difficulty is the colour of the text.',
+    cursor: [[0, 0.5, 0.5], [1, 0.72, 0.14]],
+  },
+
+  plan_xp: {
+    route: '/#/squad',
+    seconds: 4,
+    setup: presetToggles({ Fix: true, Names: true, Crests: true }),
+    from: { text: 'Your season', align: 'top', offset: -70 },
+    to: { text: 'Your season', align: 'top', offset: -70 },
+    caption: 'xP — the points that man is projected to score that week.',
+    cursor: [[0, 0.62, 0.36], [0.2, { text: 'xP' }], [0.5, { text: 'xP' }], [1, 0.6, 0.5]],
+    actions: [{ at: 0.3, run: toggle('xP') }],
+  },
+
+  plan_cs: {
+    route: '/#/squad',
+    seconds: 4,
+    setup: presetToggles({ xP: true, Names: true, Crests: true }),
+    from: { text: 'Your season', align: 'top', offset: -70 },
+    to: { text: 'Your season', align: 'top', offset: -70 },
+    caption: 'CS% — the chance his team keeps a clean sheet.',
+    cursor: [[0, 0.62, 0.36], [0.2, { text: 'CS%' }], [0.5, { text: 'CS%' }], [1, 0.6, 0.5]],
+    actions: [{ at: 0.3, run: toggle('CS%') }],
+  },
+
+  plan_xgi: {
+    route: '/#/squad',
+    seconds: 4,
+    setup: presetToggles({ 'CS%': true, Names: true, Crests: true }),
+    from: { text: 'Your season', align: 'top', offset: -70 },
+    to: { text: 'Your season', align: 'top', offset: -70 },
+    caption: 'xGI — his expected goals plus assists.',
+    cursor: [[0, 0.62, 0.36], [0.2, { text: 'xGI' }], [0.5, { text: 'xGI' }], [1, 0.6, 0.5]],
+    actions: [{ at: 0.3, run: toggle('xGI') }],
+  },
+
+  plan_dc: {
+    route: '/#/squad',
+    seconds: 4,
+    setup: presetToggles({ xGI: true, Names: true, Crests: true }),
+    from: { text: 'Your season', align: 'top', offset: -70 },
+    to: { text: 'Your season', align: 'top', offset: -70 },
+    caption: 'DC% — the chance he hits the defensive-contribution threshold.',
+    cursor: [[0, 0.62, 0.36], [0.2, { text: 'DC%' }], [0.5, { text: 'DC%' }], [1, 0.6, 0.5]],
+    actions: [{ at: 0.3, run: toggle('DC%') }],
   },
 
   plan_names: {
     route: '/#/squad',
-    seconds: 8,
+    seconds: 5,
     // Back on Fix with names off, so the click adds names to the fixtures and
-    // the transfer edges are read against opponent codes rather than a metric.
+    // the transfer bands appear against opponent codes rather than a metric.
     setup: presetToggles({ Fix: true, Names: false, Crests: true }),
-    from: { text: 'Your season', align: 'top', offset: -110 },
-    to: { text: 'Your season', align: 'top', offset: -110 },
-    caption: 'Names on: a green edge is a man arriving, a red edge is one leaving.',
-    cursor: [[0, 0.6, 0.35], [0.2, { text: 'Names' }], [0.34, { text: 'Names' }], [1, 0.35, 0.62]],
-    actions: [{ at: 0.22, run: setToggle('Names', true) }],
+    // The same framing as the five mode shots, and for the same reason: the
+    // site's own nav is sticky and about seventy pixels deep, so anything that
+    // puts the toggle row higher than this slides it underneath — and the
+    // pointer then appears to press the nav rather than the control it clicks.
+    from: { text: 'Your season', align: 'top', offset: -70 },
+    to: { text: 'Your season', align: 'top', offset: -70 },
+    // One line, deliberately: a two-line caption reaches far enough up the
+    // frame to cover the second transfer band this shot is revealing.
+    caption: 'Names on, and the plan shows its moves.',
+    cursor: [[0, 0.6, 0.4], [0.18, { text: 'Names' }], [0.42, { text: 'Names' }], [1, 0.3, 0.6]],
+    actions: [{ at: 0.28, run: setToggle('Names', true) }],
   },
 
-  plan_panels: {
+  plan_transfers: {
     route: '/#/squad',
-    seconds: 11,
+    seconds: 8,
+    setup: presetToggles({ Fix: true, Names: true, Crests: true }),
+    // Anchored on the seam mark itself. buildPlan puts the two moves on grid
+    // rows five and ten, which is what makes a single frame able to hold both.
+    from: { contains: '◂', align: 'top', offset: -223 },
+    to: { contains: '◂', align: 'top', offset: -223 },
+    // ox pins the origin at the left margin. Without it a 2.35x push around
+    // the seam drags the sticky name column off the frame, and a transfer with
+    // no player names beside it shows a colour rather than a decision.
+    zoom: { from: 1.5, to: 2.35, at: { contains: '◂', ox: 44 } },
+    // The bands sit low in the frame at the end of the push, so the caption
+    // goes up top rather than over them.
+    captionTop: true,
+    caption: 'Red out, green in — the man leaving over his last week, the man arriving over his first.',
+    cursor: null,
+  },
+
+  plan_tab_read: {
+    route: '/#/squad',
+    seconds: 4.5,
     setup: buildPlan,
     // Anchored to the tab row itself, not to the planner above it — the panel
     // below the tabs is the point, so the tabs sit near the top of frame.
     from: { text: 'Analysis', align: 'top', offset: -90 },
     to: { text: 'Analysis', align: 'top', offset: -90 },
-    caption: 'Then the read on it: the analysis, the fixtures, and what could go wrong.',
-    cursor: [
-      [0, 0.55, 0.5],
-      [0.14, { text: 'Analysis', role: 'tab' }], [0.34, { text: 'Analysis', role: 'tab' }],
-      [0.46, { text: 'Fixtures', role: 'tab' }], [0.64, { text: 'Fixtures', role: 'tab' }],
-      [0.76, { text: 'Risk', role: 'tab' }], [1, { text: 'Risk', role: 'tab' }],
-    ],
-    actions: [
-      // role 'tab', not 'button'. As buttons these matched nothing at all and
-      // every click silently timed out; and "Fixtures" as a plain name also
-      // matches the top-nav link, which would have navigated off the page.
-      { at: 0.16, run: async (p) => { await p.getByRole('tab', { name: 'Analysis', exact: true }).click() } },
-      { at: 0.48, run: async (p) => { await p.getByRole('tab', { name: 'Fixtures', exact: true }).click() } },
-      { at: 0.78, run: async (p) => { await p.getByRole('tab', { name: 'Risk', exact: true }).click() } },
-    ],
+    caption: 'Beside the board, the read: what you have actually built.',
+    // role 'tab', not 'button'. As buttons these matched nothing at all and
+    // every click silently timed out; and "Fixtures" as a plain name also
+    // matches the top-nav link, which would have navigated off the page.
+    cursor: [[0, 0.5, 0.45], [0.16, { text: 'Analysis', role: 'tab' }], [0.5, { text: 'Analysis', role: 'tab' }], [1, 0.45, 0.6]],
+    actions: [{ at: 0.24, run: openPanel('Analysis') }],
+  },
+
+  plan_tab_fixtures: {
+    route: '/#/squad',
+    seconds: 4.5,
+    setup: planThen(openPanel('Analysis')),
+    from: { text: 'Analysis', align: 'top', offset: -90 },
+    to: { text: 'Analysis', align: 'top', offset: -90 },
+    caption: 'Fixtures — every man’s run, week by week.',
+    cursor: [[0, 0.5, 0.45], [0.16, { text: 'Fixtures', role: 'tab' }], [0.5, { text: 'Fixtures', role: 'tab' }], [1, 0.45, 0.6]],
+    actions: [{ at: 0.24, run: openPanel('Fixtures') }],
+  },
+
+  plan_tab_risk: {
+    route: '/#/squad',
+    seconds: 4.5,
+    setup: planThen(openPanel('Fixtures')),
+    from: { text: 'Analysis', align: 'top', offset: -90 },
+    to: { text: 'Analysis', align: 'top', offset: -90 },
+    caption: 'And Risk: what could go wrong with it, before it does.',
+    cursor: [[0, 0.5, 0.45], [0.16, { text: 'Risk', role: 'tab' }], [0.5, { text: 'Risk', role: 'tab' }], [1, 0.45, 0.6]],
+    actions: [{ at: 0.24, run: openPanel('Risk') }],
   },
 
   home_close: {
@@ -484,8 +668,13 @@ export const CUTS = {
   c: ['fixtures_runs', 'squad_autopick'],
   // A sampler of the effects, not part of the film. See the fx_* shots.
   fx: ['fx_dip', 'fx_spotlight', 'fx_callout', 'fx_blur', 'fx_hold', 'fx_progress'],
-  // The season planner, for a standalone post on X.
-  planner: ['plan_open', 'plan_bars', 'plan_toggles', 'plan_names', 'plan_panels'],
+  // The season planner, for a standalone post on X. Render it --format desk.
+  planner: [
+    'plan_open', 'plan_bars', 'plan_chip', 'plan_risk', 'plan_captain',
+    'plan_fix', 'plan_xp', 'plan_cs', 'plan_xgi', 'plan_dc',
+    'plan_names', 'plan_transfers',
+    'plan_tab_read', 'plan_tab_fixtures', 'plan_tab_risk',
+  ],
 }
 
 export function secondsFor(shot, format) {

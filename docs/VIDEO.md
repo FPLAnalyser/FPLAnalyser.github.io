@@ -11,10 +11,11 @@ What to upload, where, and with what copy. The files themselves come from
 | `fpl-a-vertical.mp4` | YouTube Shorts, Reels, TikTok | 15s · 1080×1920 |
 | `fpl-b-vertical.mp4` | Shorts, Reels, TikTok | 14s · 1080×1920 |
 | `fpl-c-vertical.mp4` | Shorts, Reels, TikTok | 13s · 1080×1920 |
+| `fpl-planner-x.mp4` | X, as a standalone product demo | 81s · 1920×1080 |
 
-All four are H.264/AAC in an MP4 — silent, with captions burned in, which is
+All of them are H.264/AAC in an MP4 — silent, with captions burned in, which is
 how they are meant to run: most Shorts are watched muted. Nothing needs
-re-encoding for YouTube, Instagram or TikTok, and they play on a phone.
+re-encoding for YouTube, Instagram, TikTok or X, and they play on a phone.
 
 **Do not publish these as WebM.** The renderer can still emit VP8/WebM with
 `--codec vp8`, and YouTube does accept it *from a desktop browser* — but an
@@ -110,6 +111,53 @@ Free, no signup → https://fplanalyser.co.uk
 
 #FPL #FantasyPremierLeague #FPLTips #Shorts
 ```
+
+---
+
+## The planner cut, for X
+
+`fpl-planner-x.mp4` is a single-feature demo rather than a tour: the season
+planner, filmed on the desktop layout, with a plan already built — an
+auto-picked fifteen, a Bench Boost on GW2, and a transfer in each of GW3 and
+GW4 so the grid has moves in it to point at.
+
+```bash
+node tools/video/render.mjs --cut planner --format desk
+node tools/video/motion.mjs --comp Film --clips build/video/fpl-planner-desk.mp4 \
+  --name fpl-planner-x --intro-frames 45
+```
+
+`--format desk` renders at 1440 CSS px rather than 1280. The Risk table
+overflows its column by 62px at 1280 and clips the status pills off the right
+edge; at 1440 it is 6px. Do not film this cut at `wide`.
+
+**Post it as a video, not a GIF.** X converts an uploaded GIF to a silent MP4
+anyway and caps it far lower; the file already carries a silent audio track,
+which is what stops the mobile uploaders choking on it.
+
+**Copy** — 280 characters including the link:
+
+```
+Your FPL season, twelve weeks on one screen.
+
+Every bar is a gameweek's projected points. Chips, captain and transfers
+show on the week you play them, and five toggles re-read the same grid:
+fixtures, xP, clean sheets, xGI, defensive contribution.
+
+Free, no signup → fplanalyser.co.uk
+```
+
+The thread reply, if you run one: *"The green and red under each bar is how
+many of your fifteen have an easy week and how many have a hard one or a blank
+— so a tall bar with a red tail is a week that is carrying you on two men."*
+
+Fifteen shots, and each one names exactly one mark on screen. The five toggle
+captions are copied from `MODE_NOTE` in `src/lib/spine.ts`, which is the same
+string the page itself prints under the grid — so if a mode's meaning ever
+changes, the caption is wrong in one findable place rather than paraphrased
+from memory. **Re-read them against `spine.ts` before re-rendering.** An
+earlier cut summarised all five in one sweeping caption and got three of them
+wrong, including omitting defensive contribution entirely.
 
 ---
 

@@ -13,24 +13,28 @@ alongside a `.json` manifest of what was filmed.
 
 ## The cuts
 
-| Cut | Shots | Wide | Vertical |
-|-----|-------|------|----------|
-| `full` | the whole tour | 71s · 1920×1080 | — |
-| `a` | deadline · fixtures · team news | — | 15s · 1080×1920 |
-| `b` | one player, one slow scroll | — | 14s · 1080×1920 |
-| `c` | fixtures · squad builder | — | 15s · 1080×1920 |
+| Cut | Shots | Format | Length |
+|-----|-------|--------|--------|
+| `full` | the whole tour | `wide` | 71s · 1920×1080 |
+| `a` | deadline · fixtures · team news | `vertical` | 15s · 1080×1920 |
+| `b` | one player, one slow scroll | `vertical` | 14s · 1080×1920 |
+| `c` | fixtures · squad builder | `vertical` | 15s · 1080×1920 |
+| `planner` | the season planner, zoom by zoom | `desk` | 77s · 1920×1080 |
 
 `--format wide` renders the desktop layout at 1280 CSS px scaled to full HD.
 `--format vertical` renders the **mobile** layout at 432 CSS px scaled to
 1080×1920 — natively, not cropped out of the desktop capture, so the text stays
-readable at phone size.
+readable at phone size. `--format desk` is a roomier desktop at 1440 CSS px,
+for pages the 1280 layout squeezes: the Squad Builder's Risk table overflows
+its column by 62px at 1280 and clips the status pills off the right edge,
+against 6px here. The `planner` cut needs it.
 
 ## Flags
 
 | Flag | Default | Notes |
 |------|---------|-------|
-| `--cut` | `full` | `full`, `a`, `b`, `c` |
-| `--format` | `wide` | `wide`, `vertical` |
+| `--cut` | `full` | `full`, `a`, `b`, `c`, `planner` |
+| `--format` | `wide` | `wide`, `vertical`, `desk` |
 | `--fps` | `30` | |
 | `--codec` | `h264` | `h264` (MP4) or `vp8` (WebM) |
 | `--shots` | — | Explicit shot list, overrides `--cut`, e.g. `squad_autopick` |
@@ -220,3 +224,48 @@ frames either side of `action.at`:
 ```bash
 node_modules/ffmpeg-static/ffmpeg -ss 2.1 -i build/video/fpl-full-wide.mp4 -frames:v 1 click.png
 ```
+
+### Zooming
+
+`zoom: {from, to, at}` scales `<body>` about a point in page coordinates, so
+the browser re-rasterises and the type stays sharp. Doing it in ffmpeg with
+`zoompan` magnifies finished pixels and goes soft. Only magnification: below 1
+would pull the page edges in and expose bare background.
+
+**The origin is a fixed point, not a crop.** It sits still on screen while
+everything grows around it, which means the scroll anchor and the zoom target
+have to agree or the shot drifts off its own subject. The reliable recipe is to
+anchor `from`/`to` on the *same* element the zoom targets, offset by roughly
+half a viewport: the subject then holds its place in frame for the whole
+push-in. Every planner shot is built that way.
+
+`at` takes:
+
+| Key | Matches |
+|-----|---------|
+| `text` | exact, then falling back to a prefix |
+| `contains` | anywhere in the text; first innermost match in document order |
+| `ox` / `oy` | override the resolved centre on one axis |
+| `x` / `y` | skip resolution entirely |
+
+`contains` exists because some targets are a mark rather than a word — the
+planner's transfer seam is only ever identifiable by its arrow glyph, since the
+names either side of it change with the data. It has to take the *innermost*
+match: every ancestor up to `<html>` contains the string too, and taking the
+first of those resolved a shot to the top of the page.
+
+`ox` exists because a hard zoom on something to the right drags the sticky
+left-hand name column out of frame, and a transfer you cannot put a name to is
+just a colour. Pinning `ox` near the left margin keeps the row legible.
+
+**Do not put a click inside a moving zoom.** The pointer path is resolved
+against the unzoomed page, so the cursor lands next to whatever it appears to
+press. The five toggle shots in the `planner` cut are deliberately flat for
+that reason; the zooms are the shots with no clicks in them.
+
+One more thing that only shows up in the file: consecutive shots on the same
+route **do not reload the page**, so the transform a zoom finishes on is still
+sitting on `<body>` when the next shot measures its anchors. `render.mjs` clears
+it after the route is forced. Without that, three planner shots in a row
+resolved to plausible-looking scroll positions that had nothing to do with
+their anchors — the render succeeded and the framing was silently wrong.

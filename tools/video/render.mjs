@@ -406,27 +406,50 @@ async function resolveCursorPath(page, points, scrollY, css) {
 }
 
 // The point a zoom magnifies around, in page coordinates.
+//
+// `text` matches exactly, then falls back to a prefix: the planner's gameweek
+// label carries the captain badge inside its own span, so GW4 reads "GW4C" and
+// an exact match finds nothing on precisely the week worth zooming into.
+//
+// `contains` matches anywhere in the text, for a target identified by a mark
+// rather than a word. The transfer seam is one of those — the only fixed thing
+// about it is the arrow; the names either side change with the data and with
+// whatever the auto-pick produced that morning.
+//
+// `ox`/`oy` override the resolved centre on one axis. A hard zoom is a fixed
+// point, so magnifying around something on the right of the grid drags the
+// sticky name column off the left edge — and a transfer you cannot put a name
+// to is the shot missing its point. Pinning the origin near the left margin
+// keeps the row legible while the seam still lands in frame.
 async function resolveZoomOrigin(page, at) {
   if (at.x !== undefined) return { ox: at.x, oy: at.y }
-  const box = await page.evaluate(({ text }) => {
-    const want = text.trim().toLowerCase()
+  const box = await page.evaluate(({ text, contains }) => {
+    const want = String(contains ?? text).trim().toLowerCase()
     let best = null
     for (const el of document.querySelectorAll('h1,h2,h3,h4,div,span,section,button,a')) {
       const t = (el.textContent || '').trim().toLowerCase()
-      if (t !== want) continue
+      if (!t) continue
+      // A `contains` match takes the first INNERMOST match in document order
+      // rather than the tightest: the tightest is whichever of the two names
+      // either side of the seam happens to be shorter, which is not a framing
+      // decision — and without "innermost" every ancestor up to <html>
+      // contains the string as well.
+      const hit = contains ? t.includes(want) : (t === want || t.startsWith(want))
+      if (!hit) continue
+      if (contains && [...el.children].some((c) => (c.textContent || '').toLowerCase().includes(want))) continue
       const r = el.getBoundingClientRect()
-      if (r.width > 0 && r.height > 0 && (!best || t.length < best.len)) {
-        best = {
-          ox: Math.round(r.left + r.width / 2 + window.scrollX),
-          oy: Math.round(r.top + r.height / 2 + window.scrollY),
-          len: t.length,
-        }
+      if (r.width <= 0 || r.height <= 0) continue
+      if (best && (contains || t.length >= best.len)) continue
+      best = {
+        ox: Math.round(r.left + r.width / 2 + window.scrollX),
+        oy: Math.round(r.top + r.height / 2 + window.scrollY),
+        len: t.length,
       }
     }
     return best
-  }, { text: at.text })
-  if (!box) throw new Error(`zoom target not found: "${at.text}"`)
-  return box
+  }, { text: at.text ?? null, contains: at.contains ?? null })
+  if (!box) throw new Error(`zoom target not found: "${at.contains ?? at.text}"`)
+  return { ox: at.ox ?? box.ox, oy: at.oy ?? box.oy }
 }
 
 // Resolve a scroll anchor to an absolute Y. Anchors are heading text so they
@@ -436,24 +459,30 @@ async function resolveAnchor(page, spec, label) {
   // and mobile layouts need genuinely different framing.
   const anchor = forFormat(spec, formatName)
   if (anchor.y !== undefined) return anchor.y
-  const y = await page.evaluate(({ text, offset }) => {
-    const want = text.trim().toLowerCase()
+  const y = await page.evaluate(({ text, contains, offset }) => {
+    const want = String(contains ?? text).trim().toLowerCase()
     let best = null
     for (const el of document.querySelectorAll('h1,h2,h3,h4,span,div,p,button')) {
       const t = (el.textContent || '').trim().toLowerCase()
       if (!t) continue
-      if (t === want || t.startsWith(want)) {
-        // Prefer the tightest element carrying the text, not its container.
-        if (!best || t.length < best.len) {
-          const r = el.getBoundingClientRect()
-          if (r.height > 0) best = { y: Math.round(r.top + window.scrollY), len: t.length }
-        }
-      }
+      // A plain anchor prefers the tightest element carrying the text, not its
+      // container. `contains` cannot use tightness at all: the two names
+      // either side of a seam are different lengths, so the shortest is
+      // whichever squad the auto-pick produced. It takes the first INNERMOST
+      // match in document order instead — innermost because every ancestor up
+      // to <html> contains the string too and the first of those is the whole
+      // page, which is how this anchor first resolved to y 0.
+      const hit = contains ? t.includes(want) : (t === want || t.startsWith(want))
+      if (!hit) continue
+      if (contains && [...el.children].some((c) => (c.textContent || '').toLowerCase().includes(want))) continue
+      if (best && (contains || t.length >= best.len)) continue
+      const r = el.getBoundingClientRect()
+      if (r.height > 0) best = { y: Math.round(r.top + window.scrollY), len: t.length }
     }
     return best ? best.y + (offset || 0) : null
-  }, { text: anchor.text, offset: anchor.offset })
+  }, { text: anchor.text ?? null, contains: anchor.contains ?? null, offset: anchor.offset })
 
-  if (y === null) throw new Error(`anchor not found for ${label}: "${anchor.text}"`)
+  if (y === null) throw new Error(`anchor not found for ${label}: "${anchor.contains ?? anchor.text}"`)
   return Math.max(0, y)
 }
 
@@ -569,8 +598,25 @@ for (const id of shotIds) {
   await page.goto(BASE + '/' + shot.route.replace(/^\//, ''), { waitUntil: 'domcontentloaded' })
   // A hash change does not reload, so force the route then settle.
   await page.evaluate((r) => { if (location.hash !== r.slice(1)) location.hash = r.slice(1) }, shot.route)
+  // And because it does not reload, the zoom the LAST shot finished on is
+  // still sitting on <body> as a transform. Anchors and cursor targets are
+  // read with getBoundingClientRect(), which reports the transformed box — so
+  // without this every shot after a zoom measures the previous shot's
+  // magnified layout and frames itself somewhere the page is not. It surfaced
+  // as three consecutive planner shots resolving to plausible-looking
+  // scroll positions that were nothing to do with their anchors.
+  await page.evaluate(() => {
+    document.body.style.transform = ''
+    document.body.style.transformOrigin = ''
+  })
   await settle(page)
-  await page.evaluate(installDirector, { caption: CAPTION, text: shot.captionStyle === 'endcard' ? '' : shot.caption })
+  // A lower third is the default, but it sits exactly where a hard zoom puts
+  // the thing being zoomed into. `captionTop` lifts it out of the way for the
+  // shots where the subject is low in the frame rather than moving the subject.
+  const capCfg = shot.captionTop && CAPTION.edge !== 'top'
+    ? { ...CAPTION, edge: 'top', offset: '6%' }
+    : CAPTION
+  await page.evaluate(installDirector, { caption: capCfg, text: shot.captionStyle === 'endcard' ? '' : shot.caption })
   await page.evaluate(installOverlays, shot.overlays || [])
   await page.evaluate(() => { window.__fxPanEl = null })
 
