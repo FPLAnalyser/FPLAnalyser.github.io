@@ -230,21 +230,38 @@ export function minuteShares(
     const w = share(sharpen(rawWeights(g), gamma[pos] ?? 1))
 
     /* Scale to the shirts, then push whatever the cap rejects back into the
-       rest of the group and settle. Two passes is enough for a squad of this
-       size; a third never moved anything in testing. */
+       rest of the group and settle.
+       THE SPILL FOLLOWS THE PECKING ORDER, NOT THE HEADROOM. This shared the
+       overflow in proportion to `CAP - v` — how much room a player had left —
+       which is very nearly the opposite of the right answer, because the man
+       with the most room is by definition the one the group ranks lowest. Two
+       consequences, both measured on Arsenal's defence:
+
+         · A RULED-OUT PLAYER ABSORBED THE MOST. Timber and Saliba are both
+           out, `fitness` 0, weight 0 — and they held 0.24 of a shirt each,
+           because zero weight means maximum headroom. Twelve per cent of
+           Arsenal's back four was allocated to two men who cannot play, and
+           every fit defender was short by his share of it.
+         · IT INVERTED THE ORDER AMONG THE FIT. White at 0.43 had more room
+           than Mosquera at 0.64, so White drew more of the spill than the
+           player the blend ranks above him.
+
+       Sharing it by `w` fixes both at once: a ruled-out player has weight
+       zero and takes none of it, and the fit players take it in the order
+       they were ranked. Players already at the cap are excluded so the spill
+       does not immediately re-spill, and the loop settles what is left. */
     let starts = w.map((x) => x * sh.start)
-    for (let pass = 0; pass < 3; pass++) {
+    for (let pass = 0; pass < 6; pass++) {
       let spill = 0
-      const room: number[] = []
       starts = starts.map((v) => {
-        if (v > CAP) { spill += v - CAP; room.push(0); return CAP }
-        room.push(CAP - v)
+        if (v > CAP) { spill += v - CAP; return CAP }
         return v
       })
       if (spill <= 1e-9) break
-      const capacity = room.reduce((a, b) => a + b, 0)
-      if (capacity <= 1e-9) break
-      starts = starts.map((v, i) => v + spill * (room[i] / capacity))
+      const take = starts.map((v, i) => (v < CAP - 1e-9 ? w[i] : 0))
+      const total = take.reduce((a, b) => a + b, 0)
+      if (total <= 1e-9) break
+      starts = starts.map((v, i) => v + spill * (take[i] / total))
     }
 
     /* Appearances: the SAME sharpened allocation against the bigger "used"
