@@ -84,9 +84,13 @@ const router = createHashRouter([
       { path: 'squad', element: page(<SquadBuilder />) },
       // Captaincy is still being built — preview only, see lib/flags.
       ...(PREVIEW ? [{ path: 'captaincy', element: page(<Captaincy />) }] : []),
-      // Your ratings changes every projection on the site — preview only
-      // until it has been looked at. See lib/flags.
-      ...(PREVIEW ? [{ path: 'my-ratings', element: page(<MyRatings />) }] : []),
+      /* Your ratings is LIVE. It has no nav link of its own and does not need
+         one: the way in is the offer beside the fixture grid that provokes it,
+         and once a club has been re-rated the header switch says which numbers
+         you are reading. A reader who never opens it sees the site exactly as
+         it was — the dials default to the model, and the switch draws nothing
+         until something has been changed. */
+      { path: 'my-ratings', element: page(<MyRatings />) },
       { path: 'loadteam', element: page(<MyTeam />) },
       { path: 'preview', element: page(<Preview />) },
       { path: 'review', element: page(<Review />) },

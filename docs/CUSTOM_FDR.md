@@ -53,8 +53,8 @@ consequences worth accepting deliberately rather than discovering later:
 
 | Layer | Used by | Editable |
 |---|---|---|
-| **House ratings** | GW Preview, Scouting, Team of the Week, everything published or shared | no |
-| **Your ratings** | Fixtures, Squad Builder, Compare Plans, Captaincy | yes |
+| **Default ratings** | GW Preview, Scouting, Team of the Week, everything published or shared | no |
+| **Custom ratings** | Fixtures, Squad Builder, Compare Plans, Captaincy | yes |
 
 Off by default. Unmistakable when on. One click to reset.
 

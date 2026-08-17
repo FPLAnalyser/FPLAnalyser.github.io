@@ -34,6 +34,9 @@ import type { FixtureEaseRow, RatingRow, Row } from '../lib/types'
 export interface GwWindow { from: number; to: number; skip: number | null }
 
 const winLabel = (w: GwWindow) => `GW${w.from}\u2013GW${w.to}`
+/** A stable empty list, so a memo keyed on "no fixtures yet" is not
+ *  invalidated by a fresh `[]` on every render while the data loads. */
+const NO_ROWS: FixtureEaseRow[] = []
 /** Longest span the difficulty and projection grids offer on a phone. */
 const MOBILE_WINDOW_CAP = 12
 
@@ -359,16 +362,10 @@ export default function Fixtures() {
     return { profiles, league: profileOf(all, true) }
   }, [concededQ.data])
 
-  if (!data) {
-    return (
-      <PageShell>
-        <SectionBanner imgKey="fixtures" title="Fixtures" subtitle="Our own difficulty ratings for every upcoming game — grid, best runs, rotations and matchups" />
-        <PageSkeleton error={coreError} />
-      </PageShell>
-    )
-  }
-
-  const fixtureEase = data.fixtureEase
+  /* NO_ROWS is a module constant, not a fresh `[]`: written inline it would be
+     a new array identity on every render while the core data is still loading,
+     and the memo below keys on it. */
+  const fixtureEase = data?.fixtureEase ?? NO_ROWS
   const hasFixtures = fixtureEase.length > 0
   /* A phone shows these two as cards and a ladder rather than the wide grid,
      and past a dozen gameweeks that is a very long scroll for a view you read
@@ -386,6 +383,19 @@ export default function Fixtures() {
   const shownWin: GwWindow = maxSpan && win.to - win.from + 1 > maxSpan
     ? { ...win, to: win.from + maxSpan - 1 } : win
   const gridGws = useMemo(() => gwsIn(allGws, shownWin), [allGws, shownWin])
+
+  /* AFTER THE HOOKS. This used to sit above `allGws` and `gridGws`, so the
+     render before the core data arrived ran two fewer hooks than the one after
+     it — the same React #310 as in SeasonRunsBoard below, waiting for a slow
+     enough network to show itself. */
+  if (!data) {
+    return (
+      <PageShell>
+        <SectionBanner imgKey="fixtures" title="Fixtures" subtitle="Our own difficulty ratings for every upcoming game — grid, best runs, rotations and matchups" />
+        <PageSkeleton error={coreError} />
+      </PageShell>
+    )
+  }
 
   return (
     <PageShell>
@@ -558,7 +568,6 @@ function SeasonRunsBoard({ fixtureEase, lens, baselines, house, lensControl }: {
   }, [fixtureEase, lens, scale])
 
   const shown = useMemo(() => (half === 'all' ? runs : runs.filter((r) => r.half === half)), [runs, half])
-  if (!runs.length) return null
   const spansSeason = runs.some((r) => r.half === 2) && runs.some((r) => r.half === 1)
 
   // Ranking is the whole point of the table, so it is fixed to the score
@@ -640,6 +649,16 @@ function SeasonRunsBoard({ fixtureEase, lens, baselines, house, lensControl }: {
     if (half === 'all') return all
     return all.filter((gw) => (half === 1 ? gw <= 19 : gw >= 20))
   }, [fixtureEase, half])
+
+  /* BELOW EVERY HOOK, not above them. This bailed out at the top, after five
+     of the eight hooks in this component — so the first render that produced
+     no runs ran five, and the next render that produced some ran eight, and
+     React threw #310 for it. That is not theoretical: flipping the ratings
+     switch back to Default crashed this page every time, because the switch
+     rebuilds `baselines`, `baselines` rebuilds `scale`, and for one render
+     `runs` came back empty. Hooks are positional; an early return in the
+     middle of them is a bug waiting for the state that triggers it. */
+  if (!runs.length) return null
 
   return (
     <div>
