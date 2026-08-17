@@ -94,10 +94,24 @@ const HIST_WEIGHT = 0.5
  *  collapsing to nothing. Two points is about the level below which ownership
  *  stops carrying information. */
 const OWN_FLOOR = 2
-/** Where a fit player the depth chart never mentions ranks, as a fraction of
- *  the last man it does. Half of the smallest listed share — behind everyone
- *  named, ahead of nobody, and never zero. */
-const UNLISTED = 0.5
+/**
+ * How much of a shirt a fit player the depth chart never mentions is worth.
+ *
+ * AN ABSOLUTE FIGURE, and it has to be. Written as a fraction of the smallest
+ * LISTED share it was fine wherever the chart named a few players deep and
+ * catastrophic where it named one: Arsenal's chart lists a single keeper, Raya
+ * at 100%, so the smallest listed share was 1.0 and Arrizabalaga and Meslier
+ * were each handed half a starter. Raya came out on 0.50 of a shirt against
+ * every other first-choice keeper's 0.94, and his projection read 2.31 where
+ * it should read about 4.4 — a number nobody could arrive at from a 56% clean
+ * sheet against a promoted side.
+ *
+ * Chart weights are already in slot units, one being a full shirt, so 0.02 is
+ * a plain claim: a squad player nobody projects starts about one league game
+ * in fifty. Capped below the last man actually listed as well, so an omitted
+ * player can never outrank a named one however thinly the slot is drawn.
+ */
+const UNLISTED = 0.02
 
 /**
  * How much of a shirt a player can take, from his status alone.
@@ -309,7 +323,7 @@ export function minuteShares(
     if (cw) {
       const listed = cw.filter((x) => x > 1e-9)
       if (listed.length) {
-        const floor = Math.min(...listed) * UNLISTED
+        const floor = Math.min(UNLISTED, Math.min(...listed) / 2)
         for (let i = 0; i < cw.length; i++) if (cw[i] <= 1e-9) cw[i] = floor * g[i].fitness
       }
     }
