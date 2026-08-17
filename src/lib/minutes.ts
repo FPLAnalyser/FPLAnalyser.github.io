@@ -52,6 +52,13 @@ export interface MinuteShare {
 
 export interface Shirts { start: number; used: number }
 
+/** A projected lineup: each role slot, and who is expected to fill it.
+ *  `share` sums to one within a slot. Keyed by club short name. */
+export interface DepthCharts {
+  captured?: string | null
+  teams: Record<string, { formation?: string; slots: Record<string, { code: number; share: number }[]> }>
+}
+
 /** A player as this needs him: enough to place him in his club's pecking
  *  order, and nothing that requires a game to have been played. */
 export interface SquadSeat {
@@ -87,6 +94,10 @@ const HIST_WEIGHT = 0.5
  *  collapsing to nothing. Two points is about the level below which ownership
  *  stops carrying information. */
 const OWN_FLOOR = 2
+/** Where a fit player the depth chart never mentions ranks, as a fraction of
+ *  the last man it does. Half of the smallest listed share — behind everyone
+ *  named, ahead of nobody, and never zero. */
+const UNLISTED = 0.5
 
 /**
  * How much of a shirt a player can take, from his status alone.
@@ -187,6 +198,55 @@ function solveGamma(groups: Map<string, SquadSeat[]>, conc?: Record<string, numb
 }
 
 /**
+ * The pecking order from a projected lineup, where there is one.
+ *
+ * WHAT THE CHART ADDS AND WHAT IT MUST NOT TOUCH. FPL publishes one position
+ * per player — DEF — so everything below pooled all seven Arsenal defenders
+ * against 4.04 shirts, and Timber being ruled out spread his minutes across
+ * centre backs. The chart knows he is the right back. So the chart supplies the
+ * ORDERING and the role structure, and the measured shirt counts still set the
+ * TOTALS: each slot is allocated as one unit, a player's units are summed
+ * across the slots he appears in, and the result is then rescaled so his FPL
+ * position still adds up to the shirts that position was measured to field.
+ *
+ * That split matters. Eleven slots against 10.42 measured starts would inflate
+ * every projection by 5.6% if the slots were taken as shirts — a start being a
+ * 60-minute appearance, and a man subbed at 55 not being one. Taking only the
+ * ordering from the chart leaves the zero-sum property this whole file rests on
+ * exactly where it was.
+ *
+ * FITNESS APPLIES INSIDE THE SLOT, which is the entire point: Timber's 86% of
+ * Arsenal's right back goes to White and Mosquera in the ratio the chart gives
+ * them, rather than leaking into the centre of defence.
+ *
+ * A player the chart does not mention gets nothing. That is the forecast
+ * speaking — it is a claim that he will not play — and it is why this returns
+ * null rather than a partial answer for a club with no chart at all.
+ */
+function chartWeights(
+  seats: SquadSeat[],
+  club: string | undefined,
+  charts: DepthCharts | undefined,
+): Map<number, number> | null {
+  const slots = club ? charts?.teams?.[club]?.slots : undefined
+  if (!slots) return null
+  const fit = new Map<number, number>(seats.map((s) => [s.code, s.fitness]))
+  const out = new Map<number, number>()
+  let placed = 0
+  for (const rows of Object.values(slots)) {
+    const live = rows.filter((r) => fit.has(r.code))
+    const w = live.map((r) => r.share * (fit.get(r.code) ?? 0))
+    const total = w.reduce((a, b) => a + b, 0)
+    if (total <= 1e-9) continue
+    live.forEach((r, i) => {
+      out.set(r.code, (out.get(r.code) ?? 0) + w[i] / total)
+      placed++
+    })
+  }
+  return placed ? out : null
+}
+
+/**
  * Distribute each club's shirts across its squad, position by position.
  *
  * Returns nothing for a group it cannot place — fewer than two players, or no
@@ -197,16 +257,27 @@ export function minuteShares(
   seats: SquadSeat[],
   shirts: Record<string, Shirts>,
   conc?: Record<string, number>,
+  charts?: DepthCharts,
+  clubOf?: (team: number | string) => string | undefined,
 ): Map<number, MinuteShare> {
   const out = new Map<number, MinuteShare>()
   const groups = new Map<string, SquadSeat[]>()
+  const byClub = new Map<string, SquadSeat[]>()
   for (const s of seats) {
     if (s.code == null || s.team == null || !s.pos) continue
     const k = `${s.team}|${s.pos}`
     const g = groups.get(k)
     if (g) g.push(s)
     else groups.set(k, [s])
+    const t = String(s.team)
+    byClub.set(t, [...(byClub.get(t) ?? []), s])
   }
+
+  /* One chart lookup per club rather than per position group, because a slot
+     crosses FPL positions — Palace's wing backs are DEF and their wide
+     midfielders are MID, and both come out of the same eleven. */
+  const chartOf = new Map<string, Map<number, number> | null>()
+  for (const [t, g] of byClub) chartOf.set(t, chartWeights(g, clubOf?.(t), charts))
 
   const gamma = solveGamma(groups, conc)
 
@@ -215,19 +286,40 @@ export function minuteShares(
     const sh = shirts[pos]
     if (!sh || g.length < 2) continue
 
-    /* Two opinions about the pecking order, each normalised to sum to one so
-       neither can dominate by being on a bigger scale.
-
-       The historical one is what he did last season, wherever that was. The
-       market one is price times ownership: FPL prices a role before a ball is
-       kicked, and ownership is several million managers forecasting the same
-       Ownership enters PROPORTIONALLY, plus a floor. Written as
-       `1 + own/100` it turned Kinsky's 19.8% against Vicario's 1.4% — a
-       fourteen-to-one statement by several million managers about who keeps
-       goal for Spurs — into a ratio of 1.18 to 1, which is not using the
-       signal so much as acknowledging it. The floor keeps an unowned squad
-       player ranked by his price rather than zeroed out. */
-    const w = share(sharpen(rawWeights(g), gamma[pos] ?? 1))
+    /* THE CHART WHERE THERE IS ONE, the blend where there is not.
+       A projected lineup is a direct statement of the thing the blend is
+       trying to infer, so it replaces the blend rather than joining it — and
+       it is NOT sharpened, because its own concentration is already real
+       (Raya 100%, Gabriel 97%) and gamma would push a genuine three-way into
+       a false certainty. Shared out within the position exactly as the blend
+       would be, so the shirts still add up to what was measured. */
+    const chart = chartOf.get(String(g[0].team))
+    const cw = chart ? g.map((s) => chart.get(s.code) ?? 0) : null
+    /* A FIT PLAYER THE CHART OMITS IS UNLIKELY, NOT IMPOSSIBLE.
+       Left at zero this projected Pope, Vicario, Romero, Rashford, Grealish
+       and Elliott at exactly nothing — every one of them fit, available and
+       pickable — on the strength of one forecaster leaving them out of a
+       graphic. "Not in the projected eleven" is a strong opinion about a
+       squad; "will not play a minute all season" is a different claim and not
+       one this file is entitled to make.
+       So an omitted player sits BELOW the last man listed in his position
+       rather than off the end of it. A ruled-out player still gets nothing,
+       because fitness multiplies through — the distinction being that we know
+       he cannot play, where here we only think he will not. */
+    if (cw) {
+      const listed = cw.filter((x) => x > 1e-9)
+      if (listed.length) {
+        const floor = Math.min(...listed) * UNLISTED
+        for (let i = 0; i < cw.length; i++) if (cw[i] <= 1e-9) cw[i] = floor * g[i].fitness
+      }
+    }
+    /* Sum of zero means the chart has an eleven for this club but nobody in
+       THIS position — every forward unlisted, or the whole group ruled out.
+       `share` would answer that with a flat 1/n, which is a guess dressed as
+       an allocation, so fall through to the blend instead. */
+    const w = cw && cw.reduce((a, b) => a + b, 0) > 1e-9
+      ? share(cw)
+      : share(sharpen(rawWeights(g), gamma[pos] ?? 1))
 
     /* Scale to the shirts, then push whatever the cap rejects back into the
        rest of the group and settle.

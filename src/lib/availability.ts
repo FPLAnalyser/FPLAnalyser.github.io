@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useLazyTable } from './useData'
-import { minuteShares, seatFitness, type MinuteShare, type Shirts } from './minutes'
+import { minuteShares, seatFitness, type MinuteShare, type Shirts, type DepthCharts } from './minutes'
 
 /* ════════════════════════════════════════════════════════════════════════
    The live layer: who is actually available, and who takes what — from
@@ -87,6 +87,10 @@ export function useAvailability(): Availability {
      a numeric FPL team id and the model carries a short code, so one of them
      has to be translated before they can be compared. */
   const teams = useLazyTable<{ short_name?: string }[]>('teams')
+  /* Who plays WHERE, which FPL's one-position-per-player data cannot say. A
+     dated snapshot rather than a live feed — see docs and the `captured`
+     stamp on the file. Absent, everything below falls back to the blend. */
+  const depth = useLazyTable<DepthCharts>('depth_charts')
   return useMemo(() => {
     const d = q.data as AvailFile | null
     if (!d || !Array.isArray(d.players)) return EMPTY
@@ -133,11 +137,17 @@ export function useAvailability(): Availability {
         })),
         shirts,
         xp.data?.conc,
+        depth.data ?? undefined,
+        /* Slots are keyed by club short name because a role is a football
+           thing and FPL's numeric team id is not; availability carries the
+           id, so one of them has to be translated. Same translation the
+           `sameClub` check above already does. */
+        (team) => teams.data?.[Number(team) - 1]?.short_name,
       )
       : new Map<number, MinuteShare>()
 
     return { shares, byElement, byCode, deadlines, kickoffs, fixtures: d.fixtures ?? [], table: buildTable(d.fixtures ?? []), generatedAt: d.generated_at ?? null }
-  }, [q.data, xp.data, teams.data])
+  }, [q.data, xp.data, teams.data, depth.data])
 }
 
 /** The league table and each club's last five, from finished fixtures.
