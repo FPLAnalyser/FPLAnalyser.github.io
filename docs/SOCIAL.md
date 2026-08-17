@@ -102,6 +102,30 @@ automated engagement (mass follows, auto-likes, auto-replies to strangers), and
 running several accounts posting the same thing. One account posting one
 genuinely different thing a day is squarely inside the developer policy.
 
+## Screenshots for a thread
+
+```bash
+npm run build && node tools/social/screens.mjs
+```
+
+Five clean 16:9 shots of the planner into `build/social/shots/` — the whole
+card, the bars, the grid re-read as DC%, the transfer seams, and the risk
+panel. 1440×810 at 2x, which is exactly 16:9, so the timeline crops nothing.
+
+**Not video stills.** `render.mjs` burns a caption and a pointer into every
+frame, which is right for a video and wrong in a thread: the tweet above the
+image is already the caption, and a second one inside the picture makes it read
+as a screenshot of a video rather than of the product.
+
+The framings are the ones the planner cut already proved legible — same
+anchors, same zooms, same reasons — so `tools/video/README.md` § Zooming
+explains the mechanics. Two things it gets wrong if you copy a framing
+carelessly: the site's nav is sticky and about 70px deep, so a shot that
+scrolls a card header up to meet it half-hides the header and reads as a
+rendering bug; and toggle state survives between shots, so a shot that wants
+fixture codes has to select `Fix` itself rather than inherit whatever the
+previous one left.
+
 ## Running it by hand
 
 `workflow_dispatch` on *Draft social posts* takes a candidate count and a
