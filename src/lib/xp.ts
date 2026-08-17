@@ -41,6 +41,11 @@ interface XpPlayer {
   /** His goal rate WITHOUT penalties. Absent in files built before the split,
    *  in which case everything below falls back to xg90 and behaves as it did. */
   npxg90?: number
+  /** True when this row is ENTIRELY an assumption — a squad player with no
+   *  Premier League record at all, given his position's replacement-level rate
+   *  placed by price. He is projected because the shirts he holds have to go
+   *  somewhere, not because anything was measured about him. */
+  prior?: boolean
 }
 interface XpModelFile {
   /** What one penalty is worth and how often a team wins one, both measured in

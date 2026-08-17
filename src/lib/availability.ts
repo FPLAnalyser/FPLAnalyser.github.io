@@ -82,7 +82,7 @@ export function useAvailability(): Availability {
      this is a map lookup rather than a second fetch. Read here rather than
      passed in because availability is threaded to every projection call site
      already and the model is not. */
-  const xp = useLazyTable<{ players?: { code: number; p60?: number; ppl?: number; club?: string }[]; shirts?: Record<string, Shirts> }>('xp_model')
+  const xp = useLazyTable<{ players?: { code: number; p60?: number; ppl?: number; club?: string }[]; shirts?: Record<string, Shirts>; conc?: Record<string, number> }>('xp_model')
   /* The squad list, for the club each player is at NOW — availability carries
      a numeric FPL team id and the model carries a short code, so one of them
      has to be translated before they can be compared. */
@@ -132,6 +132,7 @@ export function useAvailability(): Availability {
           })(),
         })),
         shirts,
+        xp.data?.conc,
       )
       : new Map<number, MinuteShare>()
 

@@ -110,6 +110,82 @@ const share = (xs: number[]): number[] => {
   return t > 0 ? xs.map((x) => x / t) : xs.map(() => (xs.length ? 1 / xs.length : 0))
 }
 
+/** The pecking order for one club-position, before the shirts are counted.
+ *
+ *  Two opinions, each normalised to sum to one so neither can dominate by
+ *  being on a bigger scale. The historical one is what he did last season,
+ *  wherever that was; the market one is price times ownership, FPL pricing a
+ *  role before a ball is kicked and several million managers forecasting the
+ *  same. Ownership enters PROPORTIONALLY, plus a floor: written as
+ *  `1 + own/100` it turned Kinsky's 19.8% against Vicario's 1.4% — a
+ *  fourteen-to-one statement about who keeps goal for Spurs — into a ratio of
+ *  1.18 to 1, which is not using the signal so much as acknowledging it. The
+ *  floor keeps an unowned squad player ranked by his price rather than zeroed.
+ *
+ *  A history from ANOTHER club is discarded rather than discounted: it is not
+ *  weak evidence about this pecking order, it is evidence about a different
+ *  one. Dubravka started 90% of Burnley's games and that told us nothing about
+ *  who keeps goal for Spurs. */
+function rawWeights(g: SquadSeat[]): number[] {
+  const hist = share(g.map((s) => (s.p60 != null && s.p60 > 0 && s.sameClub !== false ? s.p60 : NO_RECORD)))
+  const mkt = share(g.map((s) => Math.max(0.1, s.price ?? 4.5) * ((s.own ?? 0) + OWN_FLOOR)))
+  return g.map((s, i) => (HIST_WEIGHT * hist[i] + (1 - HIST_WEIGHT) * mkt[i]) * s.fitness)
+}
+
+const sharpen = (xs: number[], g: number): number[] => (g === 1 ? xs : xs.map((x) => x ** g))
+
+/**
+ * How sharp a pecking order should be, solved rather than chosen.
+ *
+ * A blend of two sources that disagree comes out flatter than either of them.
+ * Measured against last season that is harmless where a club fields ten of a
+ * position and wrong where it fields one: a first-choice keeper really takes
+ * 85% of his club's keeper starts and the flat blend gave him 65%, which put
+ * Alisson on half a shirt behind five squad keepers.
+ *
+ * So each position's weights are raised to a power, and the power is solved so
+ * that the LEAGUE-WIDE mean top-man share matches what last season actually
+ * did — `conc`, measured in the pipeline. League-wide and not per club, which
+ * is the part that matters: forcing every club's top keeper to 85% would erase
+ * the real three-way at Spurs, where the market and the history genuinely
+ * disagree about who plays. Sharpening the whole position instead leaves the
+ * contested clubs contested and the settled ones settled.
+ *
+ * Where the allocation is already right the solve returns 1 and nothing moves,
+ * which is why DEF and MID need no special case — they came out at 0.22 and
+ * 0.19 against a real 0.23 and 0.20.
+ */
+function solveGamma(groups: Map<string, SquadSeat[]>, conc?: Record<string, number>): Record<string, number> {
+  const out: Record<string, number> = {}
+  if (!conc) return out
+  const byPos = new Map<string, number[][]>()
+  for (const [k, g] of groups) {
+    if (g.length < 2) continue
+    const pos = k.split('|')[1]
+    const w = rawWeights(g)
+    if (w.reduce((a, b) => a + b, 0) <= 0) continue
+    byPos.set(pos, [...(byPos.get(pos) ?? []), w])
+  }
+  for (const [pos, ws] of byPos) {
+    const target = conc[pos]
+    if (!(target > 0 && target < 1)) continue
+    const topAt = (gm: number) =>
+      ws.reduce((acc, w) => acc + Math.max(...share(sharpen(w, gm))), 0) / ws.length
+    if (topAt(1) >= target) { out[pos] = 1; continue }
+    /* Bisect. Monotone in gamma — sharpening can only raise the top share —
+       so twenty halvings of [1, 8] land well inside the rounding. */
+    let lo = 1
+    let hi = 8
+    for (let i = 0; i < 20; i++) {
+      const mid = (lo + hi) / 2
+      if (topAt(mid) < target) lo = mid
+      else hi = mid
+    }
+    out[pos] = (lo + hi) / 2
+  }
+  return out
+}
+
 /**
  * Distribute each club's shirts across its squad, position by position.
  *
@@ -117,7 +193,11 @@ const share = (xs: number[]): number[] => {
  * shirt count for the position — so a caller always falls back to the
  * player's own history rather than to a guess.
  */
-export function minuteShares(seats: SquadSeat[], shirts: Record<string, Shirts>): Map<number, MinuteShare> {
+export function minuteShares(
+  seats: SquadSeat[],
+  shirts: Record<string, Shirts>,
+  conc?: Record<string, number>,
+): Map<number, MinuteShare> {
   const out = new Map<number, MinuteShare>()
   const groups = new Map<string, SquadSeat[]>()
   for (const s of seats) {
@@ -127,6 +207,8 @@ export function minuteShares(seats: SquadSeat[], shirts: Record<string, Shirts>)
     if (g) g.push(s)
     else groups.set(k, [s])
   }
+
+  const gamma = solveGamma(groups, conc)
 
   for (const [k, g] of groups) {
     const pos = k.split('|')[1]
@@ -145,19 +227,7 @@ export function minuteShares(seats: SquadSeat[], shirts: Record<string, Shirts>)
        goal for Spurs — into a ratio of 1.18 to 1, which is not using the
        signal so much as acknowledging it. The floor keeps an unowned squad
        player ranked by his price rather than zeroed out. */
-    /* A history from another club is discarded for ORDERING purposes and the
-       player falls back to replacement level, to be placed by the market
-       signal instead. Not discounted, discarded: it is not weak evidence about
-       this pecking order, it is evidence about a different one. */
-    const hist = share(g.map((s) => (s.p60 != null && s.p60 > 0 && s.sameClub !== false ? s.p60 : NO_RECORD)))
-    const mkt = share(g.map((s) => Math.max(0.1, s.price ?? 4.5) * ((s.own ?? 0) + OWN_FLOOR)))
-
-    /* Fitness multiplies AFTER the blend and BEFORE the normalisation, which
-       is the whole point: a ruled-out player's weight drops to zero and the
-       shirts he is not going to fill are shared out among whoever is left,
-       rather than quietly vanishing from the club's total. */
-    const raw = g.map((s, i) => (HIST_WEIGHT * hist[i] + (1 - HIST_WEIGHT) * mkt[i]) * s.fitness)
-    let w = share(raw)
+    const w = share(sharpen(rawWeights(g), gamma[pos] ?? 1))
 
     /* Scale to the shirts, then push whatever the cap rejects back into the
        rest of the group and settle. Two passes is enough for a squad of this
@@ -177,10 +247,12 @@ export function minuteShares(seats: SquadSeat[], shirts: Record<string, Shirts>)
       starts = starts.map((v, i) => v + spill * (room[i] / capacity))
     }
 
-    /* Appearances: the same allocation against the bigger "used" count, and
-       never below the starts — a player cannot start more games than he plays
-       in. `used` exceeds `start` because substitutes exist. */
-    w = share(raw)
+    /* Appearances: the SAME sharpened allocation against the bigger "used"
+       count, and never below the starts — a player cannot start more games
+       than he plays in. `used` exceeds `start` because substitutes exist.
+       Sharpened like the starts rather than left flat, or a fourth-choice
+       keeper who never starts would still be credited with appearing in a
+       quarter of his club's games. */
     const plays = w.map((x, i) => Math.min(CAP + 0.05, Math.max(starts[i], x * sh.used)))
 
     g.forEach((s, i) => out.set(s.code, { p60: starts[i], ppl: plays[i] }))

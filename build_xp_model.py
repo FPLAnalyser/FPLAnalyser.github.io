@@ -28,8 +28,19 @@ with open(os.path.join(SITE, "seasons.json"), encoding="utf-8") as f:
     season = json.load(f)["seasons"][0]["id"]
 
 gw = pd.read_csv(os.path.join(ROOT, "player_gw_enriched.csv"))
-codes = pd.read_csv(os.path.join(ROOT, "fpl_analyser_ratings.csv"), usecols=["element", "code"])
-gw = gw.merge(codes.drop_duplicates("element"), on="element", how="left")
+# THE CODE MAP MUST NOT BE RATING-GATED. This read fpl_analyser_ratings.csv,
+# which only holds players who cleared the 900-minute/10-start RATING floor —
+# 342 of the 841 elements in the gameweek file. Everyone else merged to a null
+# code and was dropped by the emitter below, so 499 players with real Premier
+# League records were discarded for failing a bar that has nothing to do with
+# whether they can be projected. Isak was one of them: 694 minutes and 8
+# starts, absent from the model entirely.
+#
+# season_summary.csv carries the same map ungated. Checked before switching,
+# rather than assumed: it covers all 841 elements, web_name agrees on 841 of
+# 841, and the code agrees on all 342 rows where both files have one.
+codes = pd.read_csv(os.path.join(ROOT, "season_summary.csv"), usecols=["id", "code"])
+gw = gw.merge(codes.drop_duplicates("id").rename(columns={"id": "element"}), on="element", how="left")
 
 played = gw[gw["minutes"] > 0]
 starters = gw[gw["minutes"] >= 60]
@@ -215,8 +226,12 @@ print(f"  penalties: {sum(pen_taken.values())} split out across {len(pen_taken)}
 agg = played.groupby("element").agg(
     code=("code", "first"), pos=("position", "first"), club=("team", "last"),
     mins=("minutes", "sum"), games=("round", "nunique"),
+    # His price at his FIRST appearance, so it is the pre-season valuation and
+    # not one marked up by the season it is about to be used to predict.
+    price=("value", "first"),
     xg=("expected_goals", "sum"), xa=("expected_assists", "sum"),
     saves=("saves", "sum"), bonus=("bonus", "sum"), yellows=("yellow_cards", "sum"))
+agg["price"] = agg["price"] / 10.0
 st = starters.copy()
 st["dc_hit"] = dc_hit(st).astype(int)
 dc_beta = fit_dc_curve(st, h_att)
@@ -263,16 +278,116 @@ agg["npxg"] = (agg["xg"] - agg["pen_n"] * PEN_XG).clip(lower=0.0)
 # right. The prior is now the rate among the bottom half of the position by
 # minutes: what a fringe player actually does, which is what a fringe player
 # should be assumed to do.
+#
+# AND PLACED BY PRICE WITHIN THE POSITION. One replacement rate per position
+# says a £9m new signing and a £4.5m squad player are the same footballer,
+# which is the difference between a prior and a guess. It matters most for the
+# players this file previously had nothing at all for — the 182 in the current
+# squad with no Premier League record, whose whole rate IS the prior.
+#
+# The tilt is fitted, not chosen. log rate on log price, weighted by minutes,
+# within position, then the slope pulled toward flat by its own t so a thin
+# position cannot run away with it. What comes out is football rather than
+# "expensive equals good" — the fit finds MID heavily price-driven, FWD barely,
+# and keeper saves NEGATIVE, an expensive keeper being one behind a defence
+# that gives him less to do:
+#
+#   MID  xG   slope +2.24   £5.0m -> £7.0m  x2.13
+#   MID  xA   slope +1.32                   x1.56
+#   DEF  xA   slope +1.01   £4.0m -> £5.5m  x1.38
+#   DEF  xG   slope +0.57                   x1.20
+#   FWD  xG   slope +0.39   £5.2m -> £8.1m  x1.19
+#   FWD  xA   slope +0.09                   x1.04
+#   GKP  sv   slope -0.48   £4.0m -> £5.3m  x0.87
+#
+# The tilt only redistributes: it is renormalised so the minute-weighted mean
+# prior across the fringe group is exactly the fringe rate it was before, so
+# this moves who gets what and never the position's total.
 M = 600.0
 below = agg.groupby("pos")["mins"].transform(lambda x: x <= x.median())
-for col, name in [("xg", "xg90"), ("npxg", "npxg90"), ("xa", "xa90"), ("saves", "sv90")]:
-    fringe = agg[below].groupby("pos")[col].sum() / agg[below].groupby("pos")["mins"].sum() * 90
-    prior = agg["pos"].map(fringe).fillna(0.0)
+T2 = 4.0   # slope shrinkage: a t of 2 keeps half the fit, a t of 8 keeps 94%
+
+
+def fit_price_curve(col: str) -> dict:
+    """Fit log(rate) on log(price) per position, minute-weighted.
+
+    Returns {pos: (slope, reference price, renormalising scale)} — enough to
+    price a player who is not in `agg` at all, which is the whole point.
+    """
+    curve = {}
+    for pos, d in agg.groupby("pos"):
+        d = d[(d["mins"] >= 270) & (d["price"] > 0)]
+        if len(d) < 20:
+            continue
+        w = d["mins"].to_numpy(float)
+        lp = np.log(d["price"].to_numpy(float))
+        x = lp - np.average(lp, weights=w)
+        y = np.log(d[col].to_numpy(float) / d["mins"].to_numpy(float) * 90 + 1e-3)
+        ybar = np.average(y, weights=w)
+        sxx = float(np.sum(w * x * x))
+        if sxx <= 1e-9:
+            continue
+        b = float(np.sum(w * x * (y - ybar)) / sxx)
+        resid = y - (ybar + b * x)
+        se = np.sqrt(np.sum(w * resid ** 2) / max(np.sum(w), 1.0)
+                     / max(sxx / np.sum(w), 1e-9) / max(len(x) - 2, 1))
+        t = b / max(se, 1e-9)
+        b *= t * t / (t * t + T2)
+        ref = float(np.exp(np.average(lp, weights=w)))
+        # Renormalise over the FRINGE group, which is what the prior describes,
+        # so the tilt moves who gets what and never the position's total.
+        f = agg.loc[(agg["pos"] == pos) & below]
+        fw = f["mins"].to_numpy(float)
+        tilt = np.clip((f["price"].clip(lower=0.1).to_numpy(float) / ref) ** b, 0.25, 4.0)
+        scale = float(np.sum(fw)) / max(float(np.sum(fw * tilt)), 1e-9)
+        curve[pos] = (b, ref, scale)
+    return curve
+
+
+def priced_prior(col: str, pos, price) -> np.ndarray:
+    """The replacement-level rate for these positions, each tilted by price."""
+    pos = np.asarray(pos, dtype=object).reshape(-1)
+    pr = np.asarray(price, dtype=float).reshape(-1)
+    out = np.zeros(len(pos), dtype=float)
+    for i, p in enumerate(pos):
+        b, ref, scale = CURVES[col].get(p, (0.0, 1.0, 1.0))
+        tilt = float(np.clip((max(pr[i], 0.1) / ref) ** b, 0.25, 4.0))
+        out[i] = FRINGE[col].get(p, 0.0) * tilt * scale
+    return out
+
+
+RATE_COLS = [("xg", "xg90"), ("npxg", "npxg90"), ("xa", "xa90"), ("saves", "sv90")]
+FRINGE = {col: (agg[below].groupby("pos")[col].sum()
+                / agg[below].groupby("pos")["mins"].sum() * 90).to_dict()
+          for col, _ in RATE_COLS}
+CURVES = {col: fit_price_curve(col) for col, _ in RATE_COLS}
+print("  price tilt on the replacement prior: " + ", ".join(
+    f"{pos} {col} {CURVES[col][pos][0]:+.2f}"
+    for col, _ in RATE_COLS for pos in ["GKP", "DEF", "MID", "FWD"]
+    if pos in CURVES[col] and abs(CURVES[col][pos][0]) >= 0.2))
+
+for col, name in RATE_COLS:
+    prior = priced_prior(col, agg["pos"].to_numpy(), agg["price"].to_numpy())
     agg[name] = (agg[col] / agg["mins"].clip(lower=1) * 90 * agg["mins"] + prior * M) / (agg["mins"] + M)
+
+# A LOWER BAR THAN 270 MINUTES, for two reasons that are both new.
+#
+# The prior a thin record is shrunk toward is now replacement level placed by
+# price, rather than the average starter — so three appearances no longer
+# inherit a first-choice player's rate, which is what 270 was protecting
+# against. And the frontend now OVERRIDES p60/ppl with the squad-wide minutes
+# allocation, so a near-empty minutes history can no longer distort how much of
+# a shirt he is given; it only decides how well he uses it.
+#
+# At 90 minutes, M = 600 means his own record carries 13% of his rate and the
+# priced prior carries 87%. That is an estimate rather than a measurement, and
+# it is a great deal better than the alternative, which is that he holds a
+# shirt in the allocation and returns nothing at all.
+MIN_MINS_ROW = 90
 
 players = []
 for _, r in agg.iterrows():
-    if pd.isna(r["code"]) or r["mins"] < 270:   # too little record to project
+    if pd.isna(r["code"]) or r["mins"] < MIN_MINS_ROW:
         continue
     players.append({
         "code": int(r["code"]),
@@ -294,6 +409,65 @@ for _, r in agg.iterrows():
         "p60": round(float(r["p60"]), 3), "ppl": round(float(r["ppl"]), 3),
     })
 
+# ── the squad players with no Premier League record at all ────────────────
+#
+# 182 of the 587 players in this season's squads have never played a Premier
+# League minute: promoted-club players, and signings from abroad. Nothing above
+# can produce a row for them, and until now nothing did — so they took a share
+# of their club's shirts in the frontend's minutes allocation and returned
+# exactly zero points against it. Every team-mate above them in the pecking
+# order lost the difference. That is the coverage hole: not that these players
+# were rated badly, but that the shirts they hold vanished from the projection.
+#
+# They get the same replacement-level prior as anyone else with nothing to go
+# on, placed within the position by price — which for this group IS the whole
+# estimate, and the reason the tilt was fitted rather than assumed. It is a
+# genuine understatement for a marquee signing, and it is stated as such on the
+# row: `prior: true`, so the frontend can mark the number as an assumption
+# rather than a measurement.
+#
+# What it CANNOT do is invent a minutes history. p60 and ppl are left at the
+# fringe group's own rates, and the allocation in lib/minutes overrides them
+# from price, ownership and fitness anyway — which is exactly the signal that
+# does exist for a player with no record.
+with open(os.path.join(SITE, season, "availability.json"), encoding="utf-8") as f:
+    _squad = json.load(f).get("players", [])
+_have = {p["code"] for p in players}
+_fringe_rows = agg[below]
+_p60_prior = _fringe_rows.groupby("pos")["p60"].mean().to_dict()
+_ppl_prior = _fringe_rows.groupby("pos")["ppl"].mean().to_dict()
+_dc_prior = ((_fringe_rows["dc_raw"] * _fringe_rows["dc_n"]).groupby(_fringe_rows["pos"]).sum()
+             / _fringe_rows.groupby("pos")["dc_n"].sum().clip(lower=1)).to_dict()
+_bon_prior = (_fringe_rows.groupby("pos")["bonus"].sum()
+              / _fringe_rows.groupby("pos")["games"].sum().clip(lower=1)).to_dict()
+_yel_prior = (_fringe_rows.groupby("pos")["yellows"].sum()
+              / _fringe_rows.groupby("pos")["games"].sum().clip(lower=1)).to_dict()
+_added = {}
+for sp in _squad:
+    code, pos = sp.get("code"), sp.get("pos")
+    if code is None or code in _have or pos not in FRINGE["xg"]:
+        continue
+    price = float(sp.get("price") or 4.5)
+    tid = sp.get("team")
+    players.append({
+        "code": int(code),
+        "club": str(current[tid - 1]) if isinstance(tid, int) and 0 < tid <= len(current) else "",
+        "xg90": round(float(priced_prior("xg", pos, price)[0]), 4),
+        "npxg90": round(float(priced_prior("npxg", pos, price)[0]), 4),
+        "xa90": round(float(priced_prior("xa", pos, price)[0]), 4),
+        "sv90": round(float(priced_prior("saves", pos, price)[0]), 3),
+        "dc": round(float(_dc_prior.get(pos, 0.0)), 3),
+        "bon": round(float(_bon_prior.get(pos, 0.0)), 3),
+        "yel": round(float(_yel_prior.get(pos, 0.0)), 3),
+        "p60": round(float(_p60_prior.get(pos, 0.0)), 3),
+        "ppl": round(float(_ppl_prior.get(pos, 0.0)), 3),
+        "prior": True,
+    })
+    _have.add(int(code))
+    _added[pos] = _added.get(pos, 0) + 1
+print("  squad players with no PL record, given a priced replacement prior: "
+      + ", ".join(f"{k} {v}" for k, v in sorted(_added.items())) + f" ({sum(_added.values())} total)")
+
 # ── how many shirts a club actually fields, per position ──────────────────
 #
 # Minutes are a zero-sum allocation: a club plays one keeper, not the 1.90 that
@@ -308,6 +482,40 @@ shirts = {pos: {"start": round(float(_starts.get(pos, pd.Series(dtype=float)).su
                 "used": round(float(_used.get(pos, pd.Series(dtype=float)).sum()) / _tg, 3)}
           for pos in ["GKP", "DEF", "MID", "FWD"]}
 print("  shirts per team-game: " + ", ".join(f"{k} {v['start']}" for k, v in shirts.items()))
+
+# ── how concentrated a pecking order really is ────────────────────────────
+#
+# The allocation blends history with price and ownership, and a blend of two
+# disagreeing sources comes out flatter than either. Measured against last
+# season, that is harmless for the crowded positions and wrong for the sparse
+# one: a club's first-choice keeper takes 85% of its keeper starts and the
+# allocation was giving him 65%, so Alisson came out at half a shirt.
+#
+#   position   real top man's share   allocation gave him
+#   GKP               0.85                   0.65
+#   DEF               0.23                   0.22
+#   MID               0.20                   0.19
+#   FWD               0.68                   0.63
+#
+# Emitted as a target rather than a fix: lib/minutes solves one sharpening
+# exponent per position so the LEAGUE-WIDE mean matches this. League-wide, not
+# per club — forcing every club's top keeper to 0.85 would flatten out the real
+# three-way at Spurs, which is a genuine uncertainty and not an artefact.
+# Where the allocation is already right the solve returns 1 and changes
+# nothing, which is why DEF and MID need no special case.
+_ss = starters.groupby(["position", "team", "element"]).size().rename("n").reset_index()
+conc = {}
+for pos in ["GKP", "DEF", "MID", "FWD"]:
+    tops = []
+    for _, d in _ss[_ss["position"] == pos].groupby("team"):
+        tot = float(d["n"].sum())
+        if tot < 10:
+            continue
+        tops.append(float(d["n"].max()) / tot)
+    if tops:
+        conc[pos] = round(float(np.mean(tops)), 3)
+print("  top man's real share of a club-position's starts: "
+      + ", ".join(f"{k} {v}" for k, v in conc.items()))
 
 # ── what an appearance is actually worth, in minutes ──────────────────────
 #
@@ -336,6 +544,7 @@ print("  minutes per appearance: " + ", ".join(f"{k} {v['start']}/{v['cameo']}" 
 payload = {
     "mins": mins_per,
     "shirts": shirts,
+    "conc": conc,
     # What one penalty is worth, and how often a team gets one — measured off
     # the same shot file, so lib/xp does not carry a hardcoded guess.
     "pen": {"xg": PEN_XG, "perGame": PEN_PER_GAME},
