@@ -213,7 +213,7 @@ print(f"  penalties: {sum(pen_taken.values())} split out across {len(pen_taken)}
 
 # ── players: per-90 rates shrunk to position means (M = 600 minutes) ────────
 agg = played.groupby("element").agg(
-    code=("code", "first"), pos=("position", "first"),
+    code=("code", "first"), pos=("position", "first"), club=("team", "last"),
     mins=("minutes", "sum"), games=("round", "nunique"),
     xg=("expected_goals", "sum"), xa=("expected_assists", "sum"),
     saves=("saves", "sum"), bonus=("bonus", "sum"), yellows=("yellow_cards", "sum"))
@@ -266,6 +266,12 @@ for _, r in agg.iterrows():
         continue
     players.append({
         "code": int(r["code"]),
+        # WHERE THE START RATE WAS EARNED. p60 says how often he started for
+        # whoever he played for; the frontend needs to know whether that was
+        # this club, because a pecking order at Burnley says nothing about the
+        # one at Spurs. Without it Dubravka's 0.895 outranked the keeper who
+        # actually has the shirt.
+        "club": str(r["club"]),
         "xg90": round(float(r["xg90"]), 4),
         # What he does WITHOUT the armband of penalty duty. lib/xp adds the
         # penalty share back for the current taker; a file without this field
@@ -278,7 +284,23 @@ for _, r in agg.iterrows():
         "p60": round(float(r["p60"]), 3), "ppl": round(float(r["ppl"]), 3),
     })
 
+# ── how many shirts a club actually fields, per position ──────────────────
+#
+# Minutes are a zero-sum allocation: a club plays one keeper, not the 1.90 that
+# summing three keepers' individual start rates implies. lib/availability
+# normalises against these, so they are measured here rather than assumed — and
+# assuming is how the first draft of this got FWD wrong, guessing two when the
+# real figure is one: FPL's forward class is narrow and most attackers are MID.
+_starts = starters.groupby(["position", "team", "round"]).size()
+_used = played.groupby(["position", "team", "round"]).size()
+_tg = max(gw.groupby(["team", "round"]).ngroups, 1)
+shirts = {pos: {"start": round(float(_starts.get(pos, pd.Series(dtype=float)).sum()) / _tg, 3),
+                "used": round(float(_used.get(pos, pd.Series(dtype=float)).sum()) / _tg, 3)}
+          for pos in ["GKP", "DEF", "MID", "FWD"]}
+print("  shirts per team-game: " + ", ".join(f"{k} {v['start']}" for k, v in shirts.items()))
+
 payload = {
+    "shirts": shirts,
     # What one penalty is worth, and how often a team gets one — measured off
     # the same shot file, so lib/xp does not carry a hardcoded guess.
     "pen": {"xg": PEN_XG, "perGame": PEN_PER_GAME},

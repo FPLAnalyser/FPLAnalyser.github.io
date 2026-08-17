@@ -349,7 +349,15 @@ export function xpPartsForGw(
   const fixes = fixtureEase.filter((f) => f.team === r.team && f.gw === gw)
   const code = num(r, 'code')
   const element = num(r, 'element')
-  const p = model && code != null ? model.byCode.get(code) : undefined
+  const p0 = model && code != null ? model.byCode.get(code) : undefined
+  /* EXPECTED MINUTES FOR THIS SEASON, not last season's start rate at whatever
+     club he was at. The allocation is built once in lib/availability across
+     each club's whole squad and constrained to the shirts actually available;
+     see lib/minutes for why summing per-player histories cannot work. Absent
+     — no availability file, or a group too small to place — this falls
+     through to the model's own p60 and behaves exactly as it did. */
+  const alloc = code != null ? avail?.shares.get(code) : undefined
+  const p = p0 && alloc ? { ...p0, p60: alloc.p60, ppl: alloc.ppl } : p0
   /* First choice only. Second and third takers convert so rarely that crediting
      them is worse than crediting nobody — the same rule the Players page badge
      already uses. */

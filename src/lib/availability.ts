@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useLazyTable } from './useData'
+import { minuteShares, seatFitness, type MinuteShare, type Shirts } from './minutes'
 
 /* ════════════════════════════════════════════════════════════════════════
    The live layer: who is actually available, and who takes what — from
@@ -20,6 +21,8 @@ export interface AvailPlayer {
   news?: string
   news_added?: string
   chance?: number
+  /** GKP | DEF | MID | FWD, from the FPL squad list. */
+  pos?: string
   /** Transfers in and out this gameweek, and the price move they have already
    *  caused (in tenths of a million). FPL publishes all three; it does not
    *  publish the threshold for the NEXT move, so nothing here is a forecast. */
@@ -53,6 +56,11 @@ export interface TeamRecord {
 interface AvailFile { generated_at: string; events: AvailEvent[]; players: AvailPlayer[]; fixtures?: AvailFixture[] }
 
 export interface Availability {
+  /** Expected START and APPEARANCE share for this season, allocated across
+   *  each club's squad rather than read off last season's per-player history.
+   *  Empty until both availability and the model are loaded, in which case
+   *  every caller falls back to the history it always used. See lib/minutes. */
+  shares: Map<number, MinuteShare>
   byElement: Map<number, AvailPlayer>
   byCode: Map<number, AvailPlayer>
   deadlines: Map<number, Date>
@@ -65,10 +73,20 @@ export interface Availability {
   generatedAt: string | null
 }
 
-const EMPTY: Availability = { byElement: new Map(), byCode: new Map(), deadlines: new Map(), kickoffs: new Map(), fixtures: [], table: new Map(), generatedAt: null }
+const EMPTY: Availability = { shares: new Map(), byElement: new Map(), byCode: new Map(), deadlines: new Map(), kickoffs: new Map(), fixtures: [], table: new Map(), generatedAt: null }
 
 export function useAvailability(): Availability {
   const q = useLazyTable<AvailFile>('availability')
+  /* The historical prior and the shirt counts, both already in the shared
+     table cache — xp_model is on the wire for the projection regardless, so
+     this is a map lookup rather than a second fetch. Read here rather than
+     passed in because availability is threaded to every projection call site
+     already and the model is not. */
+  const xp = useLazyTable<{ players?: { code: number; p60?: number; ppl?: number; club?: string }[]; shirts?: Record<string, Shirts> }>('xp_model')
+  /* The squad list, for the club each player is at NOW — availability carries
+     a numeric FPL team id and the model carries a short code, so one of them
+     has to be translated before they can be compared. */
+  const teams = useLazyTable<{ short_name?: string }[]>('teams')
   return useMemo(() => {
     const d = q.data as AvailFile | null
     if (!d || !Array.isArray(d.players)) return EMPTY
@@ -88,8 +106,37 @@ export function useAvailability(): Availability {
         kickoffs.set(key, [...(kickoffs.get(key) ?? []), when])
       }
     }
-    return { byElement, byCode, deadlines, kickoffs, fixtures: d.fixtures ?? [], table: buildTable(d.fixtures ?? []), generatedAt: d.generated_at ?? null }
-  }, [q.data])
+    /* THE SQUAD, NOT THE RATED SUBSET. Built from availability's 587 rows
+       rather than the model's 342: the rating floor drops backups, and a
+       backup who takes no shirt still has to be in the group or the players
+       above him inherit minutes that in reality go to him. */
+    const hist = new Map<number, { p60?: number; ppl?: number; club?: string }>()
+    for (const p of xp.data?.players ?? []) hist.set(p.code, p)
+    const shirts = xp.data?.shirts
+    const shares = shirts
+      ? minuteShares(
+        d.players.map((p) => ({
+          code: p.code,
+          team: p.team ?? 0,
+          pos: p.pos ?? '',
+          price: p.price,
+          own: p.own,
+          fitness: seatFitness(p),
+          p60: hist.get(p.code)?.p60,
+          ppl: hist.get(p.code)?.ppl,
+          sameClub: (() => {
+            const was = hist.get(p.code)?.club
+            if (!was || p.team == null) return true
+            const now = teams.data?.[p.team - 1]?.short_name
+            return now == null ? true : was === now
+          })(),
+        })),
+        shirts,
+      )
+      : new Map<number, MinuteShare>()
+
+    return { shares, byElement, byCode, deadlines, kickoffs, fixtures: d.fixtures ?? [], table: buildTable(d.fixtures ?? []), generatedAt: d.generated_at ?? null }
+  }, [q.data, xp.data, teams.data])
 }
 
 /** The league table and each club's last five, from finished fixtures.
