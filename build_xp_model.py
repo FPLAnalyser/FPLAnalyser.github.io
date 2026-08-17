@@ -254,10 +254,20 @@ agg["ppl"] = played.groupby("element")["round"].nunique().reindex(agg.index).fil
 agg["pen_n"] = agg["code"].map(lambda c: pen_taken.get(int(c), 0) if pd.notna(c) else 0).astype(float)
 agg["npxg"] = (agg["xg"] - agg["pen_n"] * PEN_XG).clip(lower=0.0)
 
+# REPLACEMENT LEVEL, NOT THE AVERAGE STARTER. The prior a thin record is
+# pulled toward was the position mean weighted by minutes, which is dominated
+# by the players who play the most — so a squad player with no record was being
+# assumed as productive per 90 as an average STARTER. It barely shows while he
+# has no minutes to multiply it by, and it shows badly the moment an injury
+# hands him a shirt, which is exactly the case this whole change exists to get
+# right. The prior is now the rate among the bottom half of the position by
+# minutes: what a fringe player actually does, which is what a fringe player
+# should be assumed to do.
 M = 600.0
+below = agg.groupby("pos")["mins"].transform(lambda x: x <= x.median())
 for col, name in [("xg", "xg90"), ("npxg", "npxg90"), ("xa", "xa90"), ("saves", "sv90")]:
-    pos_rate = agg.groupby("pos")[col].sum() / agg.groupby("pos")["mins"].sum() * 90
-    prior = agg["pos"].map(pos_rate)
+    fringe = agg[below].groupby("pos")[col].sum() / agg[below].groupby("pos")["mins"].sum() * 90
+    prior = agg["pos"].map(fringe).fillna(0.0)
     agg[name] = (agg[col] / agg["mins"].clip(lower=1) * 90 * agg["mins"] + prior * M) / (agg["mins"] + M)
 
 players = []
@@ -299,7 +309,32 @@ shirts = {pos: {"start": round(float(_starts.get(pos, pd.Series(dtype=float)).su
           for pos in ["GKP", "DEF", "MID", "FWD"]}
 print("  shirts per team-game: " + ", ".join(f"{k} {v['start']}" for k, v in shirts.items()))
 
+# ── what an appearance is actually worth, in minutes ──────────────────────
+#
+# The engine multiplies a PER-90 rate by a count of APPEARANCES, which credits
+# every 60-plus outing as a full ninety. It is not: a midfielder who reaches 60
+# averages 83 minutes and a forward 81, so their goals and assists were being
+# paid 8-10% over. A cameo is worse — the engine values it at half a game and
+# the real figure is a quarter, 22 minutes.
+#
+#   position   mean minutes when 60+ reached   mean cameo
+#   GKP                 89.9                      22.2
+#   DEF                 87.5
+#   MID                 83.2
+#   FWD                 81.1
+#
+# Emitted per position so lib/xp can convert appearances into minutes. Only the
+# rate-per-90 sources need it — appearance points and clean sheets are
+# threshold questions and stay counted in appearances.
+_st = played[played["minutes"] >= 60]
+_cam = played[(played["minutes"] > 0) & (played["minutes"] < 60)]
+mins_per = {pos: {"start": round(float(_st[_st["position"] == pos]["minutes"].mean() or 90), 1),
+                  "cameo": round(float(_cam[_cam["position"] == pos]["minutes"].mean() or 20), 1)}
+            for pos in ["GKP", "DEF", "MID", "FWD"]}
+print("  minutes per appearance: " + ", ".join(f"{k} {v['start']}/{v['cameo']}" for k, v in mins_per.items()))
+
 payload = {
+    "mins": mins_per,
     "shirts": shirts,
     # What one penalty is worth, and how often a team gets one — measured off
     # the same shot file, so lib/xp does not carry a hardcoded guess.

@@ -46,6 +46,9 @@ interface XpModelFile {
   /** What one penalty is worth and how often a team wins one, both measured in
    *  the pipeline off the published shot data rather than guessed at here. */
   pen?: { xg: number; perGame: number }
+  /** How many minutes an appearance is actually worth, per position — a
+   *  60-plus outing and a cameo. Measured, not assumed. */
+  mins?: Record<string, { start: number; cameo: number }>
   league: { att: number; def: number; hAtt: number }
   teams: Record<string, { att: number; def: number; prior?: boolean }>
   dcCurve: Record<string, Record<string, number>>
@@ -62,7 +65,16 @@ export function useXpModel(): XpModel | null {
     if (!d || !Array.isArray(d.players) || !d.league || !d.teams) return null
     const byCode = new Map<number, XpPlayer>()
     for (const p of d.players) byCode.set(p.code, p)
-    return { league: d.league, teams: d.teams, dcCurve: d.dcCurve ?? {}, byCode }
+    /* SPREAD, don't relist. Written as an explicit `{ league, teams, dcCurve,
+       byCode }` this silently dropped every field added to the file after it
+       was written — `pen` and `mins` were both in the JSON, both read by
+       componentXp, and both undefined by the time it ran. TypeScript could not
+       catch it: they are optional on XpModelFile, so omitting them type-checks
+       clean. A probe that builds the model straight from the JSON cannot catch
+       it either, which is how the penalty term measured as working and shipped
+       inert. Anything the pipeline emits now arrives. */
+    const { players: _drop, ...rest } = d
+    return { ...rest, dcCurve: d.dcCurve ?? {}, byCode }
   }, [q.data])
 }
 
@@ -268,7 +280,21 @@ function componentXp(
   const svScale = (mkt && base ? mkt.against / Math.max(base.def, 0.2)
     : (o ? o.att / lg.att : 1) * (home ? 1 / hA : hA)) * mineAgainst
 
-  const emf = p.p60 + 0.5 * Math.max(p.ppl - p.p60, 0)
+  /* MINUTES, NOT APPEARANCES, for anything measured per 90.
+     This was `p60 + 0.5 * cameo share`: a count of outings, used to multiply a
+     per-90 rate as though every one of them lasted ninety minutes. Measured,
+     a midfielder who reaches 60 averages 83 and a forward 81, so their goals
+     and assists were paid 8-10% over; a cameo averages 22 minutes and was
+     being valued at half a game, which is double.
+
+     Appearance points and clean sheets are untouched below — those are
+     threshold questions, earned at the 60th minute whether he plays 61 or 90,
+     and they are correctly counted in appearances. */
+  const cameo = Math.max(p.ppl - p.p60, 0)
+  const mm = model.mins?.[pos]
+  const emf = mm
+    ? (p.p60 * mm.start + cameo * mm.cameo) / 90
+    : p.p60 + 0.5 * cameo
 
   /* Def-con responds to how much defending there is to do, so it scales on the
      attacking pressure the team faces relative to the league — the same

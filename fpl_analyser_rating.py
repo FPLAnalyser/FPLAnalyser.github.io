@@ -328,6 +328,31 @@ else:
 print("Calculating player scores...")
 results = []
 
+# ── how much season there is, and what that means for the floor ───────────
+#
+# The floor exists to stop a rating being built on noise, and 900 minutes with
+# 10 starts is the right bar over a full season. Applied to a season in
+# progress it is not a bar, it is a wall: measured against last season's data,
+# running this pipeline after one gameweek keeps ZERO players, after two
+# gameweeks ZERO, and the site would show no ratings at all on the weekend
+# most people visit it.
+#
+#   gameweeks played    1     2     3     4     6    10    12
+#   players kept        0     0   159   187   190   196   200
+#
+# The 3-starts-in-4 path cannot fire before GW3 and the season path needs
+# roughly ten games, so between them they leave the opening fortnight empty.
+#
+# So the bar scales with the season and reaches its full height once there is a
+# full season to measure: 60% of the games played, in both minutes and starts.
+# The PROPORTION a player must clear is unchanged — what changes is that it is
+# taken against the season so far rather than against a season that has not
+# happened yet.
+GWS_PLAYED = int(gw["round"].nunique())
+MIN_MINS = min(900, max(90, int(GWS_PLAYED * 90 * 0.60)))
+MIN_STARTS = min(10, max(1, int(round(GWS_PLAYED * 0.60))))
+print(f"  floor for {GWS_PLAYED} gameweeks played: {MIN_MINS} minutes and {MIN_STARTS} starts")
+
 for element, group in gw.groupby("element"):
     group = group.sort_values("gw_from_fixture").reset_index(drop=True)
 
@@ -343,8 +368,10 @@ for element, group in gw.groupby("element"):
     last4_starts = int(last4["starts"].sum())
     last4_mins = int(last4["minutes"].sum())
 
-    season_ok = total_mins >= 900 and total_starts >= 10
-    gw4_ok = last4_starts >= 3 and last4_mins > 0
+    season_ok = total_mins >= MIN_MINS and total_starts >= MIN_STARTS
+    # The recent-form path keeps its own shape but cannot demand more starts
+    # than there have been gameweeks — at GW1 and GW2 it was asking for three.
+    gw4_ok = last4_starts >= min(3, max(1, GWS_PLAYED)) and last4_mins > 0
 
     if not season_ok and not gw4_ok:
         continue
