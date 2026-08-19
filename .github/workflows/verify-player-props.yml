@@ -50,6 +50,10 @@ jobs:
       # committed. It is what the blend has to be tested against: made-up props
       # would prove the arithmetic runs, not that it produces sane numbers for
       # the players people actually look at.
+      # Also printed, because the artifact blob host is unreachable from the
+      # sandbox that reads these logs — an artifact nobody can fetch is not a
+      # verification step.
+      - run: cat site_data/*/player_props.json
       - uses: actions/upload-artifact@v4
         with:
           name: player-props
