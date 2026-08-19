@@ -20,3 +20,6 @@ dev-dist/
 _verify.mjs
 _share_test.mjs
 _*.mjs
+
+# Seeded design canvases — 2MB+ each, regenerable from mockups/<name>/*.dc.html
+expected-xi.html

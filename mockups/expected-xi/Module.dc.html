@@ -1,0 +1,117 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;800&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+           background: #000; color: #edeff3; -webkit-font-smoothing: antialiased; }
+    a { color: #c9a227; text-decoration: none; } a:hover { color: #ead188; }
+    .cond { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; }
+  </style>
+</helmet>
+
+<!-- OPTION D — not a page at all.
+     A card that drops into the existing Teams route beside the other panels.
+     It argues the expected XI is a fact about a club rather than a
+     destination, and it is the only option that reaches a reader who would
+     never go looking for a lineup page. Phone width, because that is where
+     it has to survive. -->
+<div style="width: 420px; background: #000; padding: 18px; box-sizing: border-box">
+  <div style="border: 1px solid rgba(255,255,255,0.07); background: #121316; border-radius: 20px; overflow: hidden">
+
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 15px 11px">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 9px; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; color: #828386">Expected XI</span>
+        <span style="font-size: 15px; font-weight: 700; color: #edeff3">Arsenal v Coventry</span>
+      </div>
+      <div style="border: 1px solid rgba(255,255,255,0.12); background: #1b1c1f; border-radius: 999px; padding: 4px 10px">
+        <span class="cond" style="font-size: 12px; font-weight: 800; letter-spacing: 0.06em; color: #aaacb0">4-3-3</span>
+      </div>
+    </div>
+
+    <!-- The pitch, shrunk to a glance. Names only — at this size an xP on
+         every card is noise, and the numbers live in the list below. -->
+    <div style="position: relative; margin: 0 12px; border-radius: 14px; overflow: hidden; padding: 13px 8px;
+                background: repeating-linear-gradient(180deg, rgba(255,255,255,.04) 0 7.14%, rgba(0,0,0,.05) 7.14% 14.28%),
+                            radial-gradient(120% 70% at 50% 0%, rgba(255,255,255,.09), transparent 62%),
+                            linear-gradient(180deg,#1b7a3a 0%,#15682f 45%,#125c29 100%)">
+      <svg viewBox="0 0 300 406" preserveAspectRatio="none" style="pointer-events: none; position: absolute; inset: 0; height: 100%; width: 100%" aria-hidden="true">
+        <g fill="none" stroke="rgba(255,255,255,.4)" stroke-width="2">
+          <rect x="6" y="6" width="288" height="394" rx="2"></rect>
+          <line x1="6" y1="203" x2="294" y2="203"></line>
+          <ellipse cx="150" cy="203" rx="46" ry="46"></ellipse>
+          <rect x="60" y="6" width="180" height="62"></rect>
+          <rect x="60" y="338" width="180" height="62"></rect>
+        </g>
+      </svg>
+      <div style="position: relative; display: flex; flex-direction: column; gap: 11px; z-index: 1">
+        <sc-for list="{{rows}}" as="row" hint-placeholder-count="4">
+          <div style="display: flex; justify-content: center; gap: 6px">
+            <sc-for list="{{row}}" as="m" hint-placeholder-count="4">
+              <div style="flex: 1; min-width: 0; border-radius: 8px; border: 1px solid {{m.edge}}; background: rgba(0,0,0,.46); padding: 4px 5px; text-align: center">
+                <div style="font-size: 10.5px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.name}}</div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- The changes, spelled out. This is the part a reader acts on. -->
+    <div style="display: flex; flex-direction: column; gap: 0; margin-top: 12px">
+      <div style="padding: 0 15px 7px">
+        <span style="font-size: 9px; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; color: #828386">Changes from the projected XI</span>
+      </div>
+      <sc-for list="{{changes}}" as="c" hint-placeholder-count="2">
+        <div style="display: flex; align-items: center; gap: 9px; padding: 9px 15px; border-top: 1px solid rgba(255,255,255,0.07)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f0736f" stroke-width="2.6" stroke-linecap="round" style="flex: none">
+            <circle cx="12" cy="12" r="9"></circle><path d="M9 9l6 6M15 9l-6 6"></path>
+          </svg>
+          <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1">
+            <div style="display: flex; align-items: baseline; gap: 5px">
+              <span style="font-size: 12.5px; font-weight: 600; color: #828386; text-decoration: line-through">{{c.out}}</span>
+              <span style="font-size: 11px; color: #828386">→</span>
+              <span style="font-size: 13px; font-weight: 700; color: #edeff3">{{c.in}}</span>
+            </div>
+            <span style="font-size: 10.5px; color: #828386">{{c.reason}}</span>
+          </div>
+          <span style="font-size: 12.5px; font-weight: 800; color: #3ddc7a; flex: none">{{c.gain}}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 15px 13px; border-top: 1px solid rgba(255,255,255,0.07)">
+      <span style="font-size: 10.5px; color: #828386">Lineup captured 17 Aug</span>
+      <a href="#" style="font-size: 12px; font-weight: 700">Full depth chart</a>
+    </div>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() {
+    const m = (name, up) => ({ name, edge: up ? 'rgba(201,162,39,.6)' : 'rgba(255,255,255,.15)' });
+    return {
+      rows: [
+        [m('Raya')],
+        [m('Calafiori'), m('Gabriel'), m('Mosquera', true), m('White', true)],
+        [m('Rice'), m('Bruno G.'), m('Ødegaard')],
+        [m('Eze'), m('Gyökeres'), m('Saka')],
+      ],
+      changes: [
+        { out: 'Saliba', in: 'Mosquera', reason: 'Back injury — no return date', gain: '+4.1' },
+        { out: 'J.Timber', in: 'White', reason: 'Groin injury — no return date', gain: '+4.0' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

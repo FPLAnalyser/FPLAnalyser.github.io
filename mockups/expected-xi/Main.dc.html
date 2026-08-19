@@ -1,0 +1,178 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;800&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+           background: #000; color: #edeff3; -webkit-font-smoothing: antialiased; }
+    a { color: #c9a227; text-decoration: none; } a:hover { color: #ead188; }
+    .cond { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; }
+  </style>
+</helmet>
+
+<div style="width: 900px; background: #000; padding: 28px 24px 32px; box-sizing: border-box">
+
+  <!-- Page header, same anatomy as PageHeader on every other route -->
+  <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 6px">
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <div style="font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #828386">
+        Home / Teams / Arsenal
+      </div>
+      <div style="font-size: 30px; font-weight: 800; letter-spacing: -0.02em; color: #edeff3">Expected XI</div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px">
+      <div style="display: flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.12); background: #1b1c1f; border-radius: 999px; padding: 5px 12px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#828386" stroke-width="2" stroke-linecap="round">
+          <rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path>
+        </svg>
+        <span style="font-size: 12px; font-weight: 700; color: #edeff3">GW1 · v COV (H)</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 5px; border: 1px solid rgba(255,255,255,0.12); background: #1b1c1f; border-radius: 999px; padding: 5px 11px">
+        <span style="font-size: 11.5px; font-weight: 700; color: #aaacb0">4-3-3</span>
+      </div>
+    </div>
+  </div>
+  <div style="font-size: 13.5px; color: #aaacb0; margin-bottom: 18px">
+    Who starts, by position on the pitch — and who inherits the shirt when the first choice is out.
+  </div>
+
+  <!-- Summary strip: the three numbers that justify the page -->
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px">
+    <sc-for list="{{tiles}}" as="t" hint-placeholder-count="3">
+      <div style="border: 1px solid rgba(255,255,255,0.07); background: #121316; border-radius: 14px; padding: 11px 14px; display: flex; flex-direction: column; gap: 3px">
+        <div style="font-size: 9px; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; color: #828386">{{t.label}}</div>
+        <div style="display: flex; align-items: baseline; gap: 7px">
+          <div style="font-size: 21px; font-weight: 800; letter-spacing: -0.01em; color: {{t.tone}}">{{t.value}}</div>
+          <div style="font-size: 11.5px; color: #aaacb0">{{t.note}}</div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- The pitch. Geometry lifted from components/Pitch.tsx unchanged. -->
+  <div style="position: relative; display: grid; overflow: hidden; border-radius: 20px; border: 1px solid rgba(255,255,255,0.07); padding: 22px 18px 18px;
+              background: repeating-linear-gradient(180deg, rgba(255,255,255,.045) 0 7.14%, rgba(0,0,0,.05) 7.14% 14.28%),
+                          radial-gradient(120% 70% at 50% 0%, rgba(255,255,255,.10), transparent 62%),
+                          linear-gradient(180deg,#1b7a3a 0%,#15682f 45%,#125c29 100%)">
+    <svg viewBox="0 0 300 406" preserveAspectRatio="none" style="pointer-events: none; position: absolute; inset: 0; height: 100%; width: 100%" aria-hidden="true">
+      <g fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.6">
+        <rect x="6" y="6" width="288" height="394" rx="2"></rect>
+        <line x1="6" y1="203" x2="294" y2="203"></line>
+        <ellipse cx="150" cy="203" rx="46" ry="46"></ellipse>
+        <rect x="60" y="6" width="180" height="62"></rect>
+        <rect x="112" y="6" width="76" height="26"></rect>
+        <path d="M108 68 A 46 46 0 0 0 192 68"></path>
+        <rect x="60" y="338" width="180" height="62"></rect>
+        <rect x="112" y="374" width="76" height="26"></rect>
+        <path d="M108 338 A 46 46 0 0 1 192 338"></path>
+        <path d="M6 16 A 10 10 0 0 0 16 6"></path>
+        <path d="M284 6 A 10 10 0 0 0 294 16"></path>
+        <path d="M6 390 A 10 10 0 0 1 16 400"></path>
+        <path d="M294 390 A 10 10 0 0 0 284 400"></path>
+      </g>
+      <g fill="rgba(255,255,255,.5)">
+        <circle cx="150" cy="203" r="2.4"></circle>
+        <circle cx="150" cy="46" r="2.4"></circle>
+        <circle cx="150" cy="360" r="2.4"></circle>
+      </g>
+    </svg>
+
+    <div style="position: relative; display: flex; flex-direction: column; gap: 26px; z-index: 1">
+      <sc-for list="{{rows}}" as="row" hint-placeholder-count="4">
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; justify-content: center; gap: 14px">
+            <sc-for list="{{row.men}}" as="m" hint-placeholder-count="4">
+              <div style="width: 158px; border-radius: 12px; border: 1px solid {{m.edge}}; background: rgba(0,0,0,.42); backdrop-filter: blur(5px); padding: 8px 10px 9px; display: flex; flex-direction: column; gap: 5px">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px">
+                  <span class="cond" style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; color: {{m.slotTone}}">{{m.slot}}</span>
+                  <sc-if value="{{m.stepUp}}" hint-placeholder-val="{{true}}">
+                    <span style="display: inline-flex; align-items: center; gap: 3px; border-radius: 999px; background: rgba(201,162,39,.16); border: 1px solid rgba(201,162,39,.5); padding: 1px 6px">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#ead188" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"></path></svg>
+                      <span style="font-size: 8.5px; font-weight: 800; letter-spacing: 0.06em; color: #ead188">IN</span>
+                    </span>
+                  </sc-if>
+                </div>
+                <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px">
+                  <span style="font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.name}}</span>
+                  <sc-if value="{{xpOnCards}}" hint-placeholder-val="{{true}}">
+                    <span style="font-size: 14px; font-weight: 800; color: #ead188">{{m.xp}}</span>
+                  </sc-if>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px">
+                  <div style="position: relative; height: 3px; flex: 1; border-radius: 999px; background: rgba(255,255,255,.16)">
+                    <div style="position: absolute; top: 0; bottom: 0; left: 0; border-radius: 999px; background: {{m.barTone}}; width: {{m.pct}}%"></div>
+                  </div>
+                  <span style="font-size: 10px; font-weight: 700; color: #d7dae0">{{m.pct}}%</span>
+                </div>
+                <sc-if value="{{m.replaces}}" hint-placeholder-val="{{true}}">
+                  <div style="font-size: 10px; color: rgba(255,255,255,.62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">for {{m.replaces}}</div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- Provenance. The one line that stops a dated forecast passing as live. -->
+  <div style="display: flex; align-items: center; gap: 7px; margin-top: 12px">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#828386" stroke-width="2" stroke-linecap="round">
+      <circle cx="12" cy="12" r="9"></circle><path d="M12 8h.01M11 12h1v4h1"></path>
+    </svg>
+    <span style="font-size: 11.5px; color: #828386">
+      Projected lineup captured 17 Aug. Availability is live — injuries and suspensions are applied on top.
+    </span>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"xpOnCards":{"editor":"boolean","default":true,"section":"Cards"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const GOLD = '#c9a227', WHITE = 'rgba(255,255,255,.9)';
+    const man = (slot, name, pct, xp, replaces) => ({
+      slot, name, pct, xp: xp.toFixed(1), replaces: replaces || '',
+      stepUp: !!replaces,
+      edge: replaces ? 'rgba(201,162,39,.55)' : 'rgba(255,255,255,.16)',
+      slotTone: replaces ? '#ead188' : 'rgba(255,255,255,.66)',
+      barTone: replaces ? GOLD : WHITE,
+    });
+    return {
+      xpOnCards: this.props.xpOnCards ?? true,
+      tiles: [
+        { label: 'Projected XI xP', value: '48.2', note: 'this gameweek', tone: '#edeff3' },
+        { label: 'Forced changes', value: '2', note: 'Timber, Saliba out', tone: '#e8b04a' },
+        { label: 'Biggest gainer', value: 'Mosquera', note: '+4.1 xP with Saliba out', tone: '#3ddc7a' },
+      ],
+      rows: [
+        { men: [man('GK', 'Raya', 94, 4.3)] },
+        { men: [
+          man('LB', 'Calafiori', 93, 5.3),
+          man('LCB', 'Gabriel', 94, 6.1),
+          man('RCB', 'Mosquera', 94, 4.6, 'Saliba'),
+          man('RB', 'White', 83, 4.5, 'Timber'),
+        ] },
+        { men: [
+          man('LCM', 'Rice', 56, 3.9),
+          man('DM', 'Bruno G.', 52, 3.6),
+          man('RCM', 'Ødegaard', 47, 2.9),
+        ] },
+        { men: [
+          man('LW', 'Eze', 48, 3.1),
+          man('ST', 'Gyökeres', 51, 3.4),
+          man('RW', 'Saka', 72, 6.4),
+        ] },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

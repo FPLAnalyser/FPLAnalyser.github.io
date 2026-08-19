@@ -1,0 +1,134 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;800&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+           background: #000; color: #edeff3; -webkit-font-smoothing: antialiased; }
+    a { color: #c9a227; text-decoration: none; } a:hover { color: #ead188; }
+    .cond { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; }
+  </style>
+</helmet>
+
+<!-- OPTION C — no pitch at all.
+     Every slot with its full depth, as rows. It loses the spatial read a
+     pitch gives you for free, and it gains everything a pitch cannot do:
+     the players behind the starter, the exact split when two men share a
+     slot, and a layout that survives a phone without redrawing. -->
+<div style="width: 860px; background: #000; padding: 26px 24px 30px; box-sizing: border-box">
+
+  <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 6px">
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <div style="font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #828386">
+        Home / Teams / Arsenal
+      </div>
+      <div style="font-size: 30px; font-weight: 800; letter-spacing: -0.02em; color: #edeff3">Depth chart</div>
+    </div>
+    <div style="display: flex; gap: 6px; border: 1px solid rgba(255,255,255,0.12); background: #1b1c1f; border-radius: 999px; padding: 3px">
+      <sc-for list="{{filters}}" as="f" hint-placeholder-count="2">
+        <div style="border-radius: 999px; padding: 4px 11px; font-size: 11.5px; font-weight: 700; background: {{f.bg}}; color: {{f.fg}}">{{f.label}}</div>
+      </sc-for>
+    </div>
+  </div>
+  <div style="font-size: 13.5px; color: #aaacb0; margin-bottom: 16px">
+    Each position on the pitch, and everyone in contention for it.
+  </div>
+
+  <div style="border: 1px solid rgba(255,255,255,0.07); background: #121316; border-radius: 14px; overflow: hidden">
+    <!-- Column heads -->
+    <div style="display: grid; grid-template-columns: 74px minmax(0, 1fr) 96px 62px 54px; gap: 12px; padding: 9px 16px; border-bottom: 1px solid rgba(255,255,255,0.07); background: #1b1c1f">
+      <sc-for list="{{heads}}" as="h" hint-placeholder-count="5">
+        <div style="font-size: 9px; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; color: #828386; text-align: {{h.align}}">{{h.label}}</div>
+      </sc-for>
+    </div>
+
+    <sc-for list="{{slots}}" as="s" hint-placeholder-count="6">
+      <div style="border-bottom: 1px solid rgba(255,255,255,0.07)">
+        <sc-for list="{{s.men}}" as="m" hint-placeholder-count="2">
+          <div style="display: grid; grid-template-columns: 74px minmax(0, 1fr) 96px 62px 54px; gap: 12px; align-items: center; padding: 8px 16px; background: {{m.rowBg}}">
+            <span class="cond" style="font-size: 12px; font-weight: 800; letter-spacing: 0.07em; color: {{m.slotTone}}">{{m.slotLabel}}</span>
+
+            <div style="display: flex; align-items: center; gap: 8px; min-width: 0">
+              <span style="font-size: 13.5px; font-weight: 600; color: {{m.nameTone}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: {{m.strike}}">{{m.name}}</span>
+              <sc-if value="{{m.tag}}" hint-placeholder-val="{{true}}">
+                <span style="flex: none; border-radius: 999px; border: 1px solid {{m.tagEdge}}; background: {{m.tagBg}}; padding: 1px 6px; font-size: 8.5px; font-weight: 800; letter-spacing: 0.06em; color: {{m.tagFg}}">{{m.tag}}</span>
+              </sc-if>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 7px">
+              <div style="position: relative; height: 4px; flex: 1; border-radius: 999px; background: rgba(255,255,255,.09)">
+                <div style="position: absolute; top: 0; bottom: 0; left: 0; border-radius: 999px; background: {{m.barTone}}; width: {{m.pct}}%"></div>
+              </div>
+              <span style="font-size: 10.5px; font-weight: 700; color: #aaacb0; width: 26px; text-align: right">{{m.pct}}%</span>
+            </div>
+
+            <span style="font-size: 13px; font-weight: 800; color: {{m.xpTone}}; text-align: right">{{m.xp}}</span>
+            <span style="font-size: 11.5px; color: #828386; text-align: right">{{m.price}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px">
+    <div style="display: flex; align-items: center; gap: 7px">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#828386" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="9"></circle><path d="M12 8h.01M11 12h1v4h1"></path>
+      </svg>
+      <span style="font-size: 11.5px; color: #828386">Share is of Arsenal's league games. Captured 17 Aug; availability live.</span>
+    </div>
+    <a href="#" style="font-size: 12px; font-weight: 700">See it on the pitch</a>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() {
+    const GOLD = '#c9a227';
+    const row = (slotLabel, name, pct, xp, price, kind) => {
+      const out = kind === 'out', up = kind === 'in';
+      return {
+        slotLabel, name, pct, xp: out ? '—' : xp.toFixed(1), price,
+        slotTone: slotLabel ? 'rgba(255,255,255,.72)' : 'transparent',
+        nameTone: out ? '#828386' : '#edeff3',
+        strike: out ? 'line-through' : 'none',
+        rowBg: up ? 'rgba(201,162,39,.06)' : 'transparent',
+        barTone: out ? '#3a3b3e' : (up ? GOLD : 'rgba(255,255,255,.55)'),
+        xpTone: out ? '#828386' : '#edeff3',
+        tag: out ? 'OUT' : (up ? 'STEPS UP' : ''),
+        tagFg: out ? '#f0736f' : '#ead188',
+        tagBg: out ? 'rgba(240,115,111,.12)' : 'rgba(201,162,39,.14)',
+        tagEdge: out ? 'rgba(240,115,111,.45)' : 'rgba(201,162,39,.5)',
+      };
+    };
+    return {
+      filters: [
+        { label: 'All slots', bg: '#c9a227', fg: '#14100a' },
+        { label: 'Changes only', bg: 'transparent', fg: '#828386' },
+      ],
+      heads: [
+        { label: 'Slot', align: 'left' }, { label: 'Player', align: 'left' },
+        { label: 'Share of games', align: 'left' }, { label: 'xP', align: 'right' },
+        { label: 'Price', align: 'right' },
+      ],
+      slots: [
+        { men: [row('GK', 'Raya', 94, 4.3, '£6.0m')] },
+        { men: [row('LB', 'Calafiori', 93, 5.3, '£5.5m'), row('', 'Hincapie', 40, 2.2, '£5.5m')] },
+        { men: [row('LCB', 'Gabriel', 94, 6.1, '£8.0m')] },
+        { men: [row('RCB', 'Saliba', 0, 0, '£6.0m', 'out'), row('', 'Mosquera', 94, 4.6, '£5.5m', 'in')] },
+        { men: [row('RB', 'J.Timber', 0, 0, '£6.5m', 'out'), row('', 'White', 83, 4.5, '£5.5m', 'in')] },
+        { men: [row('DM', 'Bruno G.', 52, 3.6, '£6.5m'), row('', 'Zubimendi', 38, 1.9, '£5.5m'), row('', 'Lewis-Skelly', 35, 1.3, '£5.5m')] },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

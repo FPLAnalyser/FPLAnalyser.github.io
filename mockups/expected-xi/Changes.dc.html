@@ -1,0 +1,148 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;800&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+           background: #000; color: #edeff3; -webkit-font-smoothing: antialiased; }
+    a { color: #c9a227; text-decoration: none; } a:hover { color: #ead188; }
+    .cond { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; }
+  </style>
+</helmet>
+
+<!-- OPTION B — the DIFF is the subject.
+     Same pitch, but every slot whose first choice is unavailable shows both
+     men: the forecast starter struck through, the replacement beneath. The
+     page is answering "what changed and who benefits", not "who plays". -->
+<div style="width: 900px; background: #000; padding: 28px 24px 32px; box-sizing: border-box">
+
+  <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 6px">
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <div style="font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #828386">
+        Home / Teams / Arsenal
+      </div>
+      <div style="font-size: 30px; font-weight: 800; letter-spacing: -0.02em; color: #edeff3">Who steps up</div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px">
+      <div style="border: 1px solid rgba(232,176,74,.45); background: rgba(255,255,255,.05); border-radius: 999px; padding: 5px 12px">
+        <span style="font-size: 12px; font-weight: 700; color: #e8b04a">2 changes v the projected XI</span>
+      </div>
+    </div>
+  </div>
+  <div style="font-size: 13.5px; color: #aaacb0; margin-bottom: 18px">
+    Arsenal's projected eleven, with the shirts that have moved because someone is unavailable.
+  </div>
+
+  <div style="position: relative; display: grid; overflow: hidden; border-radius: 20px; border: 1px solid rgba(255,255,255,0.07); padding: 22px 18px 18px;
+              background: repeating-linear-gradient(180deg, rgba(255,255,255,.045) 0 7.14%, rgba(0,0,0,.05) 7.14% 14.28%),
+                          radial-gradient(120% 70% at 50% 0%, rgba(255,255,255,.10), transparent 62%),
+                          linear-gradient(180deg,#1b7a3a 0%,#15682f 45%,#125c29 100%)">
+    <svg viewBox="0 0 300 406" preserveAspectRatio="none" style="pointer-events: none; position: absolute; inset: 0; height: 100%; width: 100%" aria-hidden="true">
+      <g fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.6">
+        <rect x="6" y="6" width="288" height="394" rx="2"></rect>
+        <line x1="6" y1="203" x2="294" y2="203"></line>
+        <ellipse cx="150" cy="203" rx="46" ry="46"></ellipse>
+        <rect x="60" y="6" width="180" height="62"></rect>
+        <rect x="112" y="6" width="76" height="26"></rect>
+        <path d="M108 68 A 46 46 0 0 0 192 68"></path>
+        <rect x="60" y="338" width="180" height="62"></rect>
+        <rect x="112" y="374" width="76" height="26"></rect>
+        <path d="M108 338 A 46 46 0 0 1 192 338"></path>
+        <path d="M6 16 A 10 10 0 0 0 16 6"></path>
+        <path d="M284 6 A 10 10 0 0 0 294 16"></path>
+        <path d="M6 390 A 10 10 0 0 1 16 400"></path>
+        <path d="M294 390 A 10 10 0 0 0 284 400"></path>
+      </g>
+      <g fill="rgba(255,255,255,.5)">
+        <circle cx="150" cy="203" r="2.4"></circle>
+        <circle cx="150" cy="46" r="2.4"></circle>
+        <circle cx="150" cy="360" r="2.4"></circle>
+      </g>
+    </svg>
+
+    <div style="position: relative; display: flex; flex-direction: column; gap: 24px; z-index: 1">
+      <sc-for list="{{rows}}" as="row" hint-placeholder-count="4">
+        <div style="display: flex; justify-content: center; gap: 14px">
+          <sc-for list="{{row.men}}" as="m" hint-placeholder-count="4">
+            <div style="width: 162px; border-radius: 12px; border: 1px solid {{m.edge}}; background: rgba(0,0,0,.44); backdrop-filter: blur(5px); padding: 8px 10px 9px; display: flex; flex-direction: column; gap: 5px">
+              <span class="cond" style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; color: rgba(255,255,255,.66)">{{m.slot}}</span>
+
+              <sc-if value="{{m.out}}" hint-placeholder-val="{{true}}">
+                <div style="display: flex; align-items: center; gap: 6px">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f0736f" stroke-width="2.6" stroke-linecap="round">
+                    <circle cx="12" cy="12" r="9"></circle><path d="M9 9l6 6M15 9l-6 6"></path>
+                  </svg>
+                  <span style="font-size: 13px; font-weight: 600; color: rgba(255,255,255,.5); text-decoration: line-through">{{m.out}}</span>
+                </div>
+                <div style="font-size: 9.5px; color: #f0736f; letter-spacing: 0.02em">{{m.reason}}</div>
+              </sc-if>
+
+              <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px">
+                <span style="font-size: 15px; font-weight: 700; letter-spacing: -0.01em; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.name}}</span>
+                <span style="font-size: 14px; font-weight: 800; color: #ead188">{{m.xp}}</span>
+              </div>
+
+              <sc-if value="{{m.out}}" hint-placeholder-val="{{true}}">
+                <div style="display: flex; align-items: center; gap: 5px">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#3ddc7a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"></path></svg>
+                  <span style="font-size: 10px; font-weight: 700; color: #3ddc7a">{{m.gain}} xP on the shirt</span>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 7px; margin-top: 12px">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#828386" stroke-width="2" stroke-linecap="round">
+      <circle cx="12" cy="12" r="9"></circle><path d="M12 8h.01M11 12h1v4h1"></path>
+    </svg>
+    <span style="font-size: 11.5px; color: #828386">
+      Projected lineup captured 17 Aug. Availability is live — injuries and suspensions are applied on top.
+    </span>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() {
+    const man = (slot, name, xp, out, reason, gain) => ({
+      slot, name, xp: xp.toFixed(1),
+      out: out || '', reason: reason || '', gain: gain || '',
+      edge: out ? 'rgba(201,162,39,.55)' : 'rgba(255,255,255,.16)',
+    });
+    return {
+      rows: [
+        { men: [man('GK', 'Raya', 4.3)] },
+        { men: [
+          man('LB', 'Calafiori', 5.3),
+          man('LCB', 'Gabriel', 6.1),
+          man('RCB', 'Mosquera', 4.6, 'Saliba', 'Back injury — no return date', '+4.1'),
+          man('RB', 'White', 4.5, 'J.Timber', 'Groin injury — no return date', '+4.0'),
+        ] },
+        { men: [
+          man('LCM', 'Rice', 3.9),
+          man('DM', 'Bruno G.', 3.6),
+          man('RCM', 'Ødegaard', 2.9),
+        ] },
+        { men: [
+          man('LW', 'Eze', 3.1),
+          man('ST', 'Gyökeres', 3.4),
+          man('RW', 'Saka', 6.4),
+        ] },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>
