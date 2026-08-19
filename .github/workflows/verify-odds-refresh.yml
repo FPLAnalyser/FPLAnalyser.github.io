@@ -1,4 +1,4 @@
-name: Verify odds refresh
+name: Verify odds pipelines
 
 # Runs refresh_odds.py against live odds and prints what it would write,
 # without writing it. Nothing is committed and site_data is not touched.
@@ -17,10 +17,15 @@ on:
         description: 'Fixtures to enrich (4 credits each; 0 = all)'
         type: string
         default: '3'
+      props_limit:
+        description: 'Fixtures to pull player props for (2 credits each; 0 = all)'
+        type: string
+        default: '3'
   push:
     branches-ignore: [main]
     paths:
       - 'refresh_odds.py'
+      - 'refresh_player_props.py'
       - '.github/workflows/verify-odds-refresh.yml'
 
 permissions:
@@ -43,3 +48,19 @@ jobs:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           ENRICH: '1'
           ENRICH_LIMIT: ${{ inputs.enrich_limit || '3' }}
+
+  props:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # The number this run exists to produce is the match rate: how many
+      # quoted names find an FPL id. A pipeline that silently matches 60% of a
+      # squad is worse than none, because the gaps look like players who are
+      # not expected to score.
+      - run: python refresh_player_props.py --dry-run
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          PROPS_LIMIT: ${{ inputs.props_limit || '3' }}
