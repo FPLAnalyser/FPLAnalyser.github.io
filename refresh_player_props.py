@@ -136,6 +136,29 @@ def to_prob(prices):
     return 1.0 / ro.median(prices)
 
 
+def xg_total(probs, k):
+    """Expected goals implied by a set of anytime prices raised to k."""
+    return sum(-math.log(1 - min(p ** k, 0.999)) for p in probs)
+
+
+def solve_exponent(probs, target, lo=0.2, hi=8.0):
+    """k such that the calibrated probabilities imply exactly the team lambda.
+       Monotonic in k for probabilities below 1, so bisection is enough and
+       stays dependency-free. None when the target is unreachable — better to
+       ship raw numbers flagged as raw than a silently mangled exponent."""
+    if not probs or not target:
+        return None
+    if not (xg_total(probs, hi) <= target <= xg_total(probs, lo)):
+        return None
+    for _ in range(60):
+        mid = (lo + hi) / 2
+        if xg_total(probs, mid) > target:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2
+
+
 if __name__ == "__main__":
     key = os.environ.get("ODDS_API_KEY", "").strip()
     if not key:
@@ -205,23 +228,37 @@ if __name__ == "__main__":
 
         # ── calibration: the parts against the whole ────────────────────────
         # Expected goals implied by each player, summed per club, against the
-        # lambda the fixture is priced at. Recorded, not silently applied.
+        # lambda the fixture is priced at. The sums come in at roughly twice
+        # the lambda, and a flat multiplier is the wrong correction: the excess
+        # is not spread evenly. A 1.7 on the centre forward is a keen price; a
+        # 9.0 on the third-choice full back is not, and the longer the price
+        # the larger the share of it that is margin — favourite-longshot bias,
+        # which is the oldest documented bias in betting markets.
+        #
+        # So calibrate with an exponent rather than a factor: find k such that
+        # the p^k sum to the lambda. Raising a probability to a power above one
+        # shrinks a 0.15 far harder than a 0.50, which is the shape of the bias
+        # rather than merely its total.
         team_of = {p["id"]: p["team"] for p in players}
         for side, team_id, lam_i in (("h", h, 0), ("a", a, 1)):
             ids = [pid for pid in rows if team_of.get(pid) == team_id and "p_raw" in rows[pid]]
             if not ids or (h, a) not in lam:
                 continue
-            total = sum(-math.log(1 - min(rows[pid]["p_raw"], 0.99)) for pid in ids)
+            raw = [rows[pid]["p_raw"] for pid in ids]
             target = lam[(h, a)][lam_i]
-            scale = round(target / total, 3) if total else None
+            k = solve_exponent(raw, target)
+            club = ev["home_team"] if side == "h" else ev["away_team"]
+            if k is None:
+                print(f"  {club}: {len(ids)} priced, sum xg {xg_total(raw, 1.0):.2f} vs "
+                      f"lambda {target:.2f} — no exponent fits, leaving raw")
+                continue
             for pid in ids:
-                rows[pid]["scale"] = scale
-                if scale:
-                    xg = -math.log(1 - min(rows[pid]["p_raw"], 0.99)) * scale
-                    rows[pid]["xg"] = round(xg, 4)
-            print(f"  {ev['home_team'] if side == 'h' else ev['away_team']}: "
-                  f"{len(ids)} players priced, sum xg {total:.2f} vs lambda {target:.2f} "
-                  f"-> scale {scale}")
+                pc = rows[pid]["p_raw"] ** k
+                rows[pid]["p"] = round(pc, 4)
+                rows[pid]["xg"] = round(-math.log(1 - min(pc, 0.999)), 4)
+                rows[pid]["k"] = round(k, 3)
+            print(f"  {club}: {len(ids)} priced, sum xg {xg_total(raw, 1.0):.2f} -> "
+                  f"{xg_total(raw, k):.2f} vs lambda {target:.2f} (k={k:.2f})")
         out.update({str(k): v for k, v in rows.items()})
         if clashes:
             print(f"  ambiguous names dropped for this fixture: {sorted(clashes)[:4]}")
