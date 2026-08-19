@@ -51,6 +51,33 @@
     font: 800 10px/1 system-ui, sans-serif; letter-spacing: .16em; text-transform: uppercase;
     color: #F7E3A6;
   }
+  .costbtn {
+    appearance: none; cursor: pointer; margin-left: auto;
+    border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.05);
+    color: #9fadbd; font: 700 11px/1 system-ui, sans-serif; letter-spacing: .08em;
+    text-transform: uppercase; padding: 7px 11px; border-radius: 999px;
+  }
+  .costbtn:hover { color: #e7ecf2; background: rgba(255,255,255,.1); }
+
+  #cost[hidden] { display: none; }
+  #cost {
+    border: 1px solid rgba(255,255,255,.14); border-radius: 14px;
+    background: rgba(16,20,26,.94); padding: 13px 15px;
+    display: grid; gap: 9px; max-width: 62ch;
+  }
+  #cost h2 {
+    margin: 0; font: 800 10px/1 system-ui, sans-serif;
+    letter-spacing: .18em; text-transform: uppercase; color: #F7E3A6;
+  }
+  #cost dl {
+    margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px;
+    font-size: 12.5px;
+  }
+  #cost dt { color: #8494a6; }
+  #cost dd { margin: 0; color: #e7ecf2; font-variant-numeric: tabular-nums; }
+  #cost .caveat { margin: 0; font-size: 12px; color: #8494a6; }
+  #cost .caveat strong { color: #cfd8e3; font-weight: 700; }
+
   #loading {
     position: fixed; inset: 0; z-index: 9; display: grid; place-items: center;
     background: #080a0d; color: #5d6b7c; font-size: 13px; letter-spacing: .06em;
@@ -70,11 +97,27 @@
   </div>
   <h1 id="v-title"></h1>
   <p id="v-blurb"></p>
+  <div id="cost" hidden>
+    <h2>What it costs</h2>
+    <dl>
+      <dt>three.js, as this scene uses it</dt><dd data-fill="three"></dd>
+      <dt>this scene’s own code</dt><dd data-fill="ours"></dd>
+      <dt>per frame</dt><dd data-fill="frame"></dd>
+    </dl>
+    <p class="caveat">
+      For scale, the whole site’s JavaScript is 410 KB gzipped across every route,
+      and all of Squad Builder is 90 KB — so this would be the heaviest thing on
+      the site by some way. <strong>The frame time above is your device’s, measured
+      live.</strong> The build container has no GPU, so nothing about phone
+      performance was established before you opened this.
+    </p>
+  </div>
   <div class="row">
     <label><input id="spin" type="checkbox" checked /> auto-rotate</label>
     <label><input id="shadows" type="checkbox" checked /> shadows</label>
     <span id="fps">—</span>
     <span>drag to orbit · pinch or scroll to zoom</span>
+    <button id="costbtn" class="costbtn" aria-expanded="false">Cost</button>
   </div>
 </div>
 

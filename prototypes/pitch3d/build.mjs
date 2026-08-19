@@ -32,6 +32,10 @@ for (const p of squad) {
   photos[p.code] = `data:image/webp;base64,${buf.toString('base64')}`
 }
 
+const kbOf = (n) => (n / 1024).toFixed(1) + ' KB'
+const kb = (n) => kbOf(n).padStart(10)
+const gz = (s) => gzipSync(Buffer.from(s)).length
+
 const bundle = await build({
   entryPoints: [resolve(HERE, 'main.ts')],
   bundle: true,
@@ -66,16 +70,39 @@ const oursJs = ours.outputFiles[0].text
 // the <script> tag into the middle of the WebGL renderer and the page died on
 // `Unexpected token '<'`.
 const inline = `<script>window.__PHOTOS=${JSON.stringify(photos)}<\/script>\n<script>${js}<\/script>`
-const html = readFileSync(resolve(HERE, 'index.html'), 'utf8').replace(
+let html = readFileSync(resolve(HERE, 'index.html'), 'utf8').replace(
   '<script type="module" src="./main.ts"></script>',
   () => inline,
 )
 
+// The cost panel is filled from THIS build rather than typed into the markup,
+// so the figures on screen can never drift from the bundle they describe —
+// which they already did once, between adding the value-column scale and
+// updating the write-up.
+const FILL = {
+  three: `${kbOf(js.length - oursJs.length)} raw · ${kbOf(gz(js) - gz(oursJs))} gzipped`,
+  ours: `${kbOf(oursJs.length)} raw · ${kbOf(gz(oursJs))} gzipped`,
+  frame: '50 draw calls · ~1,400 triangles · 15 textures',
+}
+for (const [k, v] of Object.entries(FILL)) {
+  html = html.replace(`<dd data-fill="${k}"></dd>`, () => `<dd data-fill="${k}">${v}</dd>`)
+}
+
 mkdirSync(OUT, { recursive: true })
 writeFileSync(resolve(OUT, 'pitch3d.html'), html)
 
-const kb = (n) => (n / 1024).toFixed(1).padStart(7) + ' KB'
-const gz = (s) => gzipSync(Buffer.from(s)).length
+// A second copy shaped for publishing as an Artifact, where the host supplies
+// <!doctype>, <html>, <head> and <body> and wraps whatever the file contains.
+// Same page, wrapper removed, and the <title> stays near the top because only
+// the first 8KB is scanned for it.
+const artifact = html
+  .replace(/^[\s\S]*?<title>/, '<title>')
+  .replace(/<\/head>\s*<body>/, '')
+  .replace(/<\/body>\s*<\/html>\s*$/, '')
+  .replace('<title>3D pitch — prototype</title>', '<title>Pitch, Three Ways</title>')
+  .replace('<style>', '<style>\n  /* The host paints its own ground behind the page, so every colour here\n     is explicit. This one commits to a single dark world on purpose — it is\n     a floodlit pitch at night, and a light version of that is not a thing. */')
+writeFileSync(resolve(OUT, 'pitch3d.artifact.html'), artifact)
+
 console.log(`
   whole prototype bundle      ${kb(js.length)} raw  ${kb(gz(js))} gzipped
   our scene code + squad JSON ${kb(oursJs.length)} raw  ${kb(gz(oursJs))} gzipped

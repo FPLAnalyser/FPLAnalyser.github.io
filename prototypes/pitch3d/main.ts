@@ -93,6 +93,14 @@ async function boot() {
   spin.addEventListener('change', () => scene.setAutoRotate(spin.checked))
   scene.setAutoRotate(spin.checked)
 
+  const cost = document.getElementById('cost') as HTMLElement
+  const costbtn = document.getElementById('costbtn') as HTMLButtonElement
+  costbtn.addEventListener('click', () => {
+    cost.hidden = !cost.hidden
+    costbtn.setAttribute('aria-expanded', String(!cost.hidden))
+    syncSafeArea()
+  })
+
   setInterval(() => {
     const ms = scene.frameTime()
     if (ms > 0) fps.textContent = `${ms.toFixed(1)} ms · ${Math.round(1000 / ms)} fps`
