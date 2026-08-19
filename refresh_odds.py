@@ -298,10 +298,14 @@ def from_odds_api(key, enrich):
     # costs a credit per market per region — four, as configured — so this is
     # the difference between a 40-credit round and a 12-credit trial run.
     limit = int(os.environ.get("ENRICH_LIMIT", "0") or 0)
-    enriched = 0
+    paid = enriched = 0          # fixtures called for, and fixtures that answered
     for ev in events:
         home, away = ev["home_team"], ev["away_team"]
-        if can_enrich and (not limit or enriched < limit):
+        if can_enrich and (not limit or paid < limit):
+            # The cap counts calls, not successes. Counting successes would let
+            # a fixture nobody prices go unbilled in the tally and still cost
+            # its credits, so a limit of 3 could quietly buy 10.
+            paid += 1
             extra = []
             for region, markets in EVENT_MARKETS:
                 full, left = event_markets(key, ev["id"], region, markets)
@@ -317,7 +321,7 @@ def from_odds_api(key, enrich):
         kick = datetime.datetime.fromisoformat(ev["commence_time"].replace("Z", "+00:00"))
         out.append((home, away, kick, cons, "+".join(used)))
     if can_enrich:
-        print(f"enriched {enriched} fixtures with {len(EVENT_MARKETS)} per-event pulls each "
+        print(f"per-event pulls for {paid} fixtures, {enriched} came back with markets "
               f"| credits remaining: {remaining}")
     return out, "the-odds-api", enriched
 
