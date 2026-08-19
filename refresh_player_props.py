@@ -47,10 +47,17 @@ MARKETS = os.environ.get("PROPS_MARKETS",
 REGIONS = [r.strip() for r in os.environ.get("PROPS_REGIONS", "us").split(",") if r.strip()]
 
 
+# Letters that decomposition will not touch, because they are letters in their
+# own right rather than a base plus a mark. Odegaard cost a match to this.
+TRANSLIT = str.maketrans({"ø": "o", "Ø": "o", "æ": "ae", "Æ": "ae", "å": "a", "Å": "a",
+                          "ß": "ss", "đ": "d", "Đ": "d", "ł": "l", "Ł": "l",
+                          "ı": "i", "ð": "d", "Ð": "d", "þ": "th", "œ": "oe"})
+
+
 def fold(name):
     """Strip accents, punctuation and case. 'Gabriel Jesus' and 'Gabriel Jesús'
        have to land on the same key, and 'O'Riley' must not lose the O."""
-    s = unicodedata.normalize("NFKD", str(name))
+    s = unicodedata.normalize("NFKD", str(name).translate(TRANSLIT))
     s = "".join(c for c in s if not unicodedata.combining(c)).lower()
     s = re.sub(r"[^a-z0-9 ]", " ", s)
     return re.sub(r"\s+", " ", s).strip()
@@ -74,6 +81,7 @@ def name_keys(p):
         keys.add(" ".join(parts))                      # surname without particles
         keys.add(f"{fold(first)} {parts[-1]}".strip())  # first + surname
         keys.add(f"{fold(first)} {parts[0]}".strip())   # ...and the first of several
+        keys.add(f"{parts[-1]} {fold(first)}".strip())  # "Magalhaes Gabriel", surname first
     return {k for k in keys if k}
 
 
@@ -105,7 +113,17 @@ def prices_for(event, markets_wanted):
                 who = o.get("description")
                 if not who or o.get("price") in (None, 0):
                     continue
+                if fold(who) in ("no scorer", "no goalscorer", "none", "no player"):
+                    continue          # a real outcome, but not a player
                 key = mk["key"]
+                if key == "player_goal_scorer_anytime":
+                    # Books that quote both sides put the No price in the same
+                    # market. Taking a median across a mixed bag of Yes and No
+                    # prices reads a 1.4 No as a 71% chance of scoring, which
+                    # is how a squad came to imply 5.63 goals against a lambda
+                    # of 2.19.
+                    if str(o.get("name", "")).lower() != "yes":
+                        continue
                 if key == "player_shots_on_target":
                     # a ladder: keep the 0.5 line, the one that means "had a shot on target"
                     if o.get("point") != 0.5 or str(o.get("name", "")).lower() != "over":
@@ -161,10 +179,20 @@ if __name__ == "__main__":
             continue
 
         idx, clashes = squad_index(players, {h, a})
+        # Last resort: the quoted surname alone, when exactly one player in the
+        # fixture answers to it. "Ben White" is "Benjamin White" in FPL, and no
+        # amount of key-building on the record side produces the short form.
+        surnames = {}
+        for pl in players:
+            if pl["team"] in (h, a):
+                sn = [t for t in fold(pl["second_name"]).split() if t not in PARTICLES]
+                if sn:
+                    surnames.setdefault(sn[-1], []).append(pl["id"])
+        surnames = {k: v[0] for k, v in surnames.items() if len(v) == 1}
         rows = {}
         for market, by_name in quotes.items():
             for who, prices in by_name.items():
-                pid = idx.get(fold(who))
+                pid = idx.get(fold(who)) or surnames.get(fold(who).split()[-1])
                 if pid is None:
                     unmatched.append(f"{who} ({ev['home_team']} v {ev['away_team']})")
                     continue
@@ -209,7 +237,8 @@ if __name__ == "__main__":
     print(f"{matched} players matched, {len(unmatched)} names unmatched "
           f"| credits remaining: {remaining}")
     if unmatched:
-        print("unmatched: " + ", ".join(unmatched[:12]))
+        seen = sorted(set(unmatched))
+        print(f"unmatched ({len(seen)} distinct): " + ", ".join(seen[:14]))
 
     if "--dry-run" in sys.argv:
         print("dry run — not writing " + out_path)

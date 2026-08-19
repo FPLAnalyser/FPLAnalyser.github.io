@@ -1,0 +1,48 @@
+name: Verify player props
+
+# Runs refresh_player_props.py against live prices and prints what it would
+# write, without writing it. Nothing is committed.
+#
+# The number this exists to produce is the match rate: how many quoted names
+# find an FPL id. A pipeline that quietly matches 80% of a squad is worse than
+# none, because the missing fifth looks like players the market expects not to
+# score. Read the unmatched list on every run — it is the test.
+#
+# 2 credits per fixture. PROPS_LIMIT keeps a trial at three.
+on:
+  workflow_dispatch:
+    inputs:
+      props_limit:
+        description: 'Fixtures to pull (2 credits each; 0 = all)'
+        type: string
+        default: '3'
+      regions:
+        description: 'Bookmaker regions (cost is per region, per fixture)'
+        type: string
+        default: 'us'
+  push:
+    branches-ignore: [main]
+    paths:
+      - 'refresh_player_props.py'
+      - '.github/workflows/verify-player-props.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-player-props
+  cancel-in-progress: true
+
+jobs:
+  props:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python refresh_player_props.py --dry-run
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          PROPS_LIMIT: ${{ inputs.props_limit || '3' }}
+          PROPS_REGIONS: ${{ inputs.regions || 'us' }}
