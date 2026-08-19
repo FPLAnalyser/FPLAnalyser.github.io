@@ -1,0 +1,48 @@
+name: Probe odds markets
+
+# Diagnostic only. Asks The Odds API which market keys UK (and US) bookmakers
+# actually have open for the next Premier League fixture, and prints what every
+# call cost against the monthly quota. Commits nothing.
+#
+# refresh_odds.py requests h2h + spreads + totals, and team totals per event.
+# What *else* is quoted has only ever been answered from the published market
+# list, which says what the API supports rather than what is open for Saturday's
+# game. api.the-odds-api.com is unreachable from the dev sandbox and the key is
+# an Actions secret, so a runner is the only place the question can be asked.
+#
+# Runs on push while it lives on a branch — a workflow_dispatch workflow cannot
+# be triggered at all until it is on the default branch, and the whole point is
+# to get an answer before deciding whether any of this is worth merging. On main
+# it is dispatch-only, so a merge does not spend credits re-answering.
+on:
+  workflow_dispatch:
+    inputs:
+      regions:
+        description: 'Regions to probe (1 credit each, roughly)'
+        type: string
+        default: 'uk,us'
+  push:
+    branches-ignore: [main]
+    paths:
+      - '.github/workflows/probe-odds-markets.yml'
+      - 'odds_market_probe.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: probe-odds-markets
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python odds_market_probe.py
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          PROBE_REGIONS: ${{ inputs.regions || 'uk,us' }}
