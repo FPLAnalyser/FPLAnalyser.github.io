@@ -173,9 +173,10 @@ if __name__ == "__main__":
     players = boot["elements"]
 
     # Team lambdas already solved by refresh_odds, for the calibration check.
-    lam = {}
+    lam, gw_of = {}, {}
     for m in ro.read_existing(os.path.join(ro.ROOT, season, "odds.json")).get("matches", []):
         lam[(m["h"], m["a"])] = (m["lh"], m["la"])
+        gw_of[(m["h"], m["a"])] = m["gw"]
 
     events, _ = ro.get(f"{ro.ODDS_HOST}/events?apiKey={key}")     # free
     limit = int(os.environ.get("PROPS_LIMIT", "0") or 0)
@@ -219,7 +220,7 @@ if __name__ == "__main__":
                 if pid is None:
                     unmatched.append(f"{who} ({ev['home_team']} v {ev['away_team']})")
                     continue
-                row = rows.setdefault(pid, {"fx": [h, a], "books": 0})
+                row = rows.setdefault(pid, {"books": 0})
                 if market == "player_goal_scorer_anytime":
                     row["p_raw"] = round(to_prob(prices), 4)
                     row["books"] = len(prices)
@@ -259,6 +260,12 @@ if __name__ == "__main__":
                 rows[pid]["k"] = round(k, 3)
             print(f"  {club}: {len(ids)} priced, sum xg {xg_total(raw, 1.0):.2f} -> "
                   f"{xg_total(raw, k):.2f} vs lambda {target:.2f} (k={k:.2f})")
+        team_of_all = {pl["id"]: pl["team"] for pl in players}
+        for pid, row in rows.items():
+            mine = team_of_all.get(pid)
+            row["team"], row["opp"] = mine, (a if mine == h else h)
+            if (h, a) in gw_of:
+                row["gw"] = gw_of[(h, a)]
         out.update({str(k): v for k, v in rows.items()})
         if clashes:
             print(f"  ambiguous names dropped for this fixture: {sorted(clashes)[:4]}")
