@@ -79,12 +79,25 @@ async function fetchTable<T>(name: string): Promise<T> {
     const seg = seasonSeg()
     const local = `site_data/${seg}/${name}.json`
     const remote = `${BASE}site_data/${seg}/${name}.json`
-    for (const url of IS_NATIVE ? [remote, local] : [local, remote]) {
+    // De-duplicated: with an empty BASE the two are the same string, and the
+    // absent-table path was asking for the identical URL twice per attempt.
+    const urls = [...new Set(IS_NATIVE ? [remote, local] : [local, remote])]
+    let missing = 0
+    for (const url of urls) {
       try {
         // Default HTTP caching: the service worker (stale-while-revalidate)
         // owns freshness; forcing revalidation here made mobile loads crawl.
         const r = await fetch(url)
-        if (!r.ok) continue
+        if (!r.ok) {
+          // A static host that says 404 has answered the question. Only the
+          // 200-with-HTML case below was being treated as an answer, so on a
+          // host that returns an honest 404 — which is what GitHub Pages does
+          // — an absent table still cost six requests and a second of retry
+          // sleeps, on every page load, for every season that does not publish
+          // it. Archive seasons never will.
+          if (r.status === 404 || r.status === 410) missing++
+          continue
+        }
         try {
           return (await r.json()) as T
         } catch {
@@ -103,6 +116,7 @@ async function fetchTable<T>(name: string): Promise<T> {
         lastErr = e
       }
     }
+    if (missing === urls.length) throw new TableAbsent(name)
     if (attempt < 2) await new Promise((res) => setTimeout(res, 350 * (attempt + 1)))
   }
   throw lastErr ?? new TableAbsent(name)
@@ -116,7 +130,14 @@ export function loadTable<T = Row[]>(name: string): Promise<T> {
   cache.set(name, promise)
   // On failure, evict so the next caller retries instead of reusing a rejected
   // promise (which previously left the page stuck until a full page reload).
-  promise.catch(() => {
+  //
+  // Except when the table simply is not published. That is a permanent answer
+  // for this season, and evicting it means every component that asks fetches
+  // its own 404: useMarketOdds alone is called from twenty of them, and the
+  // home page fired three requests for one absent file. Keep the rejection so
+  // the answer is given once.
+  promise.catch((e) => {
+    if (e instanceof TableAbsent) return
     if (cache.get(name) === promise) cache.delete(name)
   })
   return promise
