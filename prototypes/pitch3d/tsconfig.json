@@ -1,0 +1,24 @@
+{
+  // Standalone on purpose. The root tsconfig is `"files": []` plus references
+  // to tsconfig.app.json (which includes only `src`) and tsconfig.node.json, so
+  // the prototype is outside the site's build entirely — `npm run typecheck`
+  // and `npm run build` neither check it nor ship it. Check it with:
+  //   npx tsc -b prototypes/pitch3d
+  // and not with bare `npx tsc --noEmit`, which resolves the root config, finds
+  // no files and exits 0 over anything.
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "composite": true
+  },
+  "include": ["*.ts"]
+}
