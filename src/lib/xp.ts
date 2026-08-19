@@ -140,11 +140,26 @@ export interface MarketOdds {
    *  strengths. Applied inside componentXp instead, one place, so a priced
    *  fixture and an unpriced one are adjusted identically. */
   tweak?: Record<string, { att: number; def: number }>
+  /** Market-implied expected goals for one player in one fixture, keyed
+   *  `${element}:${gw}:${opponent}` for the same reason `byKey` is — a double
+   *  gameweek gives a player two fixtures, priced differently.
+   *
+   *  Carried here rather than passed separately because componentXp already
+   *  receives `market`: a seventh argument to xpForGw is how four call sites
+   *  came to be silently dropping shot profiles. */
+  props?: Map<string, { xg: number; books: number }>
+}
+
+interface PropsFile {
+  players?: Record<string, {
+    xg?: number; books?: number; team?: number; opp?: number; gw?: number
+  }>
 }
 
 export function useMarketOdds(): MarketOdds | null {
   const odds = useLazyTable<OddsFile>('odds')
   const teams = useLazyTable<TeamRow[]>('teams')
+  const propsFile = useLazyTable<PropsFile>('player_props')
   const base = useMemo(() => {
     const o = odds.data
     const t = teams.data
@@ -159,8 +174,14 @@ export function useMarketOdds(): MarketOdds | null {
       byKey.set(`${hs}:${m.gw}:${as}`, { for: m.lh, against: m.la })
       byKey.set(`${as}:${m.gw}:${hs}`, { for: m.la, against: m.lh })
     }
-    return { byKey, strength: o.strength ?? {} }
-  }, [odds.data, teams.data])
+    const props = new Map<string, { xg: number; books: number }>()
+    for (const [id, v] of Object.entries(propsFile.data?.players ?? {})) {
+      const opp = v.opp != null ? shortOf(v.opp) : undefined
+      if (v.xg == null || v.gw == null || !opp) continue
+      props.set(`${id}:${v.gw}:${opp}`, { xg: v.xg, books: v.books ?? 1 })
+    }
+    return { byKey, strength: o.strength ?? {}, props }
+  }, [odds.data, teams.data, propsFile.data])
   /* YOUR RATINGS, APPLIED AT THE SOURCE. Every projection on this site is a
      function of these lambdas, so adjusting them here is the only edit that
      cannot leave two parts of a page disagreeing — xP, clean sheets,
@@ -241,6 +262,15 @@ const ZERO_PARTS = (): XpParts => ({
   lamGoal: 0, lamAssist: 0, lamAgainst: 0, p60: 0, matchup: 1,
 })
 
+/** Below this expected-minutes fraction a market price cannot be turned into a
+ *  per-90 rate — the divisor is noise. */
+const MARKET_MINUTES_FLOOR = 0.2
+/** No player's open-play rate is two goals a game; a price that implies one is
+ *  a mis-parse or a name matched to the wrong man. */
+const MARKET_PER90_CAP = 1.6
+/** One bookmaker should never own a player's page outright. */
+const MARKET_WEIGHT_CAP = 0.75
+
 function componentXp(
   p: XpPlayer,
   pos: string,
@@ -252,6 +282,10 @@ function componentXp(
   /** Whether he takes his club's penalties NOW — first choice only, from the
    *  live feed where there is one and the squad list otherwise. */
   penTaker = false,
+  /** This fixture's market price for him scoring, if the books quoted one. */
+  prop: { xg: number; books: number } | null = null,
+  /** Shots behind his profile — how much the model's own rate is worth. */
+  shots = 0,
 ): XpParts {
   const lg = model.league
   const t = strengthOf(fix.team, model, market)
@@ -330,7 +364,38 @@ function componentXp(
   const pen = model.pen
   const penFor = penTaker && pen ? pen.xg * pen.perGame * (base && lg.att > 0 ? base.att / lg.att : 1) : 0
   const openXg = p.npxg90 ?? p.xg90
-  const lamGoal = (openXg * matchup + penFor) * attScale * emf
+
+  /* WHAT THE MARKET SAYS THIS PLAYER WILL SCORE, AGAINST WHAT WE INFER.
+     Everything above reaches a player's goal rate by decomposition: the club's
+     lambda, his share of its shots, the quality of those shots. Bookmakers
+     quote the answer directly, and the two disagree in ways worth splitting
+     the difference on — the market is sharper on a striker five books have
+     priced, the model on a player with two hundred shots behind him and one
+     bookmaker interested.
+
+     MINUTES ARE THE TRAP. An anytime-scorer price is unconditional: a squad
+     player is long partly BECAUSE he might not start, so the price already
+     carries the minutes risk that `emf` is about to apply again. Blending the
+     quoted number straight in charges him for it twice and quietly overrules
+     the minutes model the rest of this file is careful about. So divide it
+     out first, blend two per-90 rates, and let `emf` do its job once, below.
+
+     Below the floor there is nothing to divide by safely: a player we expect
+     to play ten minutes has an emf near zero, and 0.05 expected goals over it
+     is not a per-90 rate, it is a division by noise. He keeps the model. */
+  const modelPer90 = openXg * matchup + penFor
+  let goalPer90 = modelPer90
+  if (prop && prop.xg > 0 && emf > MARKET_MINUTES_FLOOR && attScale > 0) {
+    // Back out the per-90 open-play-plus-penalties rate the price implies.
+    // attScale is already in the quoted number — it is a price for THIS
+    // fixture — so it comes out here and goes back on with the model's.
+    const marketPer90 = Math.min(prop.xg / emf / attScale, MARKET_PER90_CAP)
+    const mktPrec = prop.books / (prop.books + 2)      // 1 book 0.33, 5 books 0.71
+    const modelPrec = shots / (shots + 30)             // 27 shots 0.47, 200 0.87
+    const w = Math.min(mktPrec / (mktPrec + modelPrec), MARKET_WEIGHT_CAP)
+    goalPer90 = w * marketPer90 + (1 - w) * modelPer90
+  }
+  const lamGoal = goalPer90 * attScale * emf
   const lamAssist = p.xa90 * attScale * emf
   const bScale = pos === 'MID' || pos === 'FWD' ? Math.min(attScale, 1.3) : 1
   return {
@@ -400,7 +465,10 @@ export function xpPartsForGw(
     for (const f of fixes) {
       const mkt = market?.byKey.get(`${f.team}:${gw}:${f.opponent}`) ?? null
       const m = matchupMult(element, f.opponent, profiles ?? null)
-      const part = componentXp(p, String(r.position), f, model, mkt, market ?? null, m, penTaker)
+      const prop = market?.props?.get(`${element}:${gw}:${f.opponent}`) ?? null
+      const shots = profiles?.players?.[String(element)]?.n ?? 0
+      const part = componentXp(p, String(r.position), f, model, mkt, market ?? null, m, penTaker,
+        prop, shots)
       for (const k of Object.keys(out) as (keyof XpParts)[]) out[k] += part[k]
       out.matchup = m
     }

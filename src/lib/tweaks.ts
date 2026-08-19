@@ -209,7 +209,7 @@ export function adjustMarket(market: MarketOdds | null, tweaks: Tweaks, house: M
   if (!market || !Object.keys(tweaks).length || house.size < 8) return market
   const tweak = tweakMultipliers(house, tweaks)
   if (!Object.keys(tweak).length) return market
-  return { byKey: market.byKey, strength: market.strength, tweak }
+  return { byKey: market.byKey, strength: market.strength, props: market.props, tweak }
 }
 
 /**

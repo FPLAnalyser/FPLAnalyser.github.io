@@ -11,6 +11,7 @@
     "app:sync": "npm run build && npx cap sync",
     "app:ios": "npm run build && npx cap sync ios && npx cap open ios",
     "app:android": "npm run build && npx cap sync android && npx cap open android",
+    "probe:blend": "esbuild tools/blend-probe.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/blend-probe.mjs --log-level=error && node node_modules/.cache/blend-probe.mjs",
     "probe:captaincy": "esbuild tools/captaincy-probe.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/captaincy-probe.mjs --log-level=error && node node_modules/.cache/captaincy-probe.mjs"
   },
   "dependencies": {
