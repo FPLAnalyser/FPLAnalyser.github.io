@@ -2,16 +2,25 @@ name: Refresh odds data
 
 # Solves per-fixture goal expectancies (lambdas) from bookmaker odds into
 # site_data/<season>/odds.json. Uses The Odds API when the ODDS_API_KEY repo
-# secret is set — one daily pull costs 2 credits (2 markets x 1 UK region),
-# ~62/month against the 500/month free tier — and falls back to the free
-# football-data.co.uk fixtures file when no key is configured.
+# secret is set, and falls back to the free football-data.co.uk fixtures file
+# when no key is configured.
+#
+# Against the 500/month free tier, measured rather than assumed:
+#   · daily bulk pull        2 credits (h2h + totals x 1 UK region) = ~62/month
+#   · enrichment, per round  4 credits per fixture — btts and alternate totals
+#                            from UK books, team totals from US ones — fired
+#                            once per gameweek inside the deadline window, so
+#                            ~40 a round and ~170/month
+# The old comment here said 2 credits and meant 3: it counted the markets
+# wrong, and nothing checked it against the x-requests-last header the script
+# has always printed.
 on:
   schedule:
     - cron: '20 6 * * *'   # daily, after the availability refresh
   workflow_dispatch:
     inputs:
       enrich:
-        description: 'Also pull team totals per fixture (~1 credit each)'
+        description: 'Force the per-event pulls (4 credits per fixture)'
         type: boolean
         default: false
       regions:

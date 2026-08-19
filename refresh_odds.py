@@ -6,20 +6,40 @@ Poisson model to every market we hold for it, by weighted least squares:
 
   · match result (1X2)      — splits the goals between the teams
   · over/under 2.5          — pins the total
-  · Asian handicap          — sharpens the split (same bulk request, +1 credit)
-  · team totals             — direct quote per team (per-event calls, ~1
-                              credit per fixture, so only fetched near a
-                              deadline or when forced)
+  · alternate totals        — the rest of the totals ladder, so the total is
+                              pinned by nine bookmakers' worth of lines
+                              instead of one line from five
+  · both teams to score     — the only market here that says anything about
+                              the two teams jointly rather than through their
+                              sum; a Poisson fit with independent teams
+                              implies a BTTS price, so the quoted one is
+                              information the other markets cannot supply
+  · team totals             — direct quote per team
 
 Clean sheets, save volume and attacking upside all derive from the lambdas,
 so the site ships those two numbers per fixture — never the odds themselves.
 
+Which endpoint serves a market decides what it costs, and the two are not the
+same bill. The bulk /odds endpoint prices every fixture at once for
+[markets x regions] credits. Everything beyond h2h/spreads/totals is refused
+there — "Markets not supported by this endpoint", measured, not assumed — and
+has to be fetched from /events/{id}/odds, which charges [markets x regions]
+*per fixture*. So btts and alternate totals cost 2 credits a day if you believe
+the market list, and 20 credits a round in reality.
+
+That is why enrichment runs once per gameweek rather than on every daily pull:
+the fixture-level markets are worth having, but not four times over for the
+same round. `enriched_gw` in the output records which gameweek has been done.
+
 Sources:
-  1. The Odds API (ODDS_API_KEY env).  Bulk pull = 3 credits (h2h, spreads,
-     totals x 1 UK region).  Team-totals enrichment adds ~1 credit per
-     fixture and runs only when the next deadline is within ENRICH_DAYS
-     (default 3) or ENRICH=1 is set — and never when the remaining credit
-     balance is under 150.
+  1. The Odds API (ODDS_API_KEY env).
+     · daily bulk    = 2 credits (h2h + totals x 1 UK region)
+     · enrichment    = 4 credits per fixture — btts + alternate_totals from
+       the UK books, team totals from the US ones (no UK bookmaker quotes a
+       team total; asking uk for it, as this did until it was measured,
+       returns nothing). Runs when the next deadline is within ENRICH_DAYS
+       (default 3) and that gameweek has not been enriched yet, or when
+       ENRICH=1 forces it — never below ENRICH_MIN_CREDITS remaining.
   2. football-data.co.uk fixtures.csv (free, keyless) as fallback.
 
 Output: site_data/<newest season>/odds.json
@@ -27,7 +47,7 @@ Output: site_data/<newest season>/odds.json
     matches:  [{gw, h, a, lh, la, src}],
     strength: {SHORT: {att, def, n}} }
 with h/a as FPL team ids and src listing the markets that constrained the
-fit (e.g. "1x2+ou+ah+tt").
+fit (e.g. "1x2+ou+btts+tt").
 
 `matches` ACCUMULATES. Bookmakers price roughly a round at a time, so any one
 pull sees a single gameweek; keeping what is already banked is what turns 38
@@ -57,6 +77,17 @@ ODDS_HOST = "https://api.the-odds-api.com/v4/sports/soccer_epl"
 LEAGUE_TOTAL_PRIOR = 2.8   # avg PL goals/game — seed when no totals line
 MAX_G = 12                 # Poisson truncation
 ENRICH_MIN_CREDITS = 150
+
+# The bulk endpoint accepts only these. Asian handicap used to be in here; one
+# UK bookmaker of twenty-one quoted it, so the "median consensus" handicap was
+# a single price, and it cost a credit a day to fetch.
+BULK_MARKETS = "h2h,totals"
+
+# Per-event, per region, 1 credit per market per fixture. Split by region
+# because the books differ: UK quotes btts (11 of 21) and alternate totals
+# (9), US quotes the team totals no UK book offers.
+EVENT_MARKETS = (("uk", "btts,alternate_totals"),
+                 ("us", "team_totals,alternate_team_totals"))
 
 
 def get(url, as_json=True):
@@ -98,9 +129,8 @@ def implied(kind, arg, lh, la, ph, pa):
         cut = int(math.floor(arg))
         t = lh + la
         return 1 - sum(math.exp(-t) * t ** k / math.factorial(k) for k in range(cut + 1))
-    if kind == "ah":            # arg: home half-integer handicap L; covers iff H-A > -L
-        need = -arg             # H - A strictly greater than this
-        return sum(ph[i] * sum(pa[j] for j in range(MAX_G) if i - j > need) for i in range(MAX_G))
+    if kind == "btts":          # both teams score at least once
+        return (1 - ph[0]) * (1 - pa[0])
     if kind == "tt_home":       # arg: half-integer team line, P(H > line)
         return 1 - sum(ph[: int(math.floor(arg)) + 1])
     if kind == "tt_away":
@@ -153,11 +183,11 @@ def is_half(x):
 
 # ── The Odds API ────────────────────────────────────────────────────────────
 def bulk_markets(key):
-    """One request: every priced PL fixture with h2h + spreads + totals.
+    """One request: every priced PL fixture with h2h + totals.
        ODDS_REGIONS widens the bookmaker pool (cost = markets x regions)."""
     regions = os.environ.get("ODDS_REGIONS", "uk").strip() or "uk"
     url = (f"{ODDS_HOST}/odds/?apiKey={key}&regions={regions}"
-           f"&markets=h2h,spreads,totals&oddsFormat=decimal")
+           f"&markets={BULK_MARKETS}&oddsFormat=decimal")
     events, headers = get(url)
     remaining = headers.get("x-requests-remaining", "?")
     print(f"The Odds API bulk ({regions}): {len(events)} priced fixtures | cost "
@@ -165,43 +195,51 @@ def bulk_markets(key):
     return events, remaining
 
 
-def team_totals_for(key, event_id):
-    url = (f"{ODDS_HOST}/events/{event_id}/odds?apiKey={key}&regions=uk"
-           f"&markets=team_totals&oddsFormat=decimal")
+def event_markets(key, event_id, region, markets):
+    """One per-event pull. Costs one credit per market, so the caller decides
+       how often this is worth doing — see the enrichment gate in __main__."""
+    url = (f"{ODDS_HOST}/events/{event_id}/odds?apiKey={key}&regions={region}"
+           f"&markets={markets}&oddsFormat=decimal")
     try:
         ev, headers = get(url)
         return ev, headers.get("x-requests-remaining", "?")
     except Exception as e:   # market not offered / event gone — degrade, don't die
-        print(f"  team_totals unavailable for {event_id}: {e}")
+        print(f"  {markets} unavailable for {event_id} ({region}): {e}")
         return None, None
 
 
 def constraints_from_event(ev, home, away):
-    """Median consensus across bookmakers → de-margined constraint list."""
+    """Median consensus across bookmakers → de-margined constraint list.
+
+       Weights are budgeted per market family rather than per line. The
+       alternate-totals ladder arrives as a dozen lines from nine books; giving
+       each one the weight the single 2.5 line used to carry would let the
+       total outvote the result market ten to one and drag every fit toward
+       the league average. So the ladder shares a budget: the line nearest 2.5
+       keeps full weight, the rest split one unit between them, and the shape
+       of the ladder informs the fit without dominating it."""
     h2h_h, h2h_d, h2h_a = [], [], []
-    over, under = [], []
-    ah = {}       # home line -> ([home odds], [away odds])
+    tot = {}      # total line -> ([over odds], [under odds])
+    btts_y, btts_n = [], []
     tt = {}       # (side, line) -> ([over], [under])
     for bk in ev.get("bookmakers", []):
         for mk in bk.get("markets", []):
-            if mk["key"] == "h2h":
+            key = mk.get("key")
+            if key == "h2h":
                 prices = {o["name"]: o["price"] for o in mk["outcomes"]}
                 if home in prices and away in prices and "Draw" in prices:
                     h2h_h.append(prices[home]); h2h_d.append(prices["Draw"]); h2h_a.append(prices[away])
-            elif mk["key"] == "totals":
+            elif key in ("totals", "alternate_totals"):
                 for o in mk["outcomes"]:
-                    if o.get("point") == 2.5:
-                        (over if o["name"] == "Over" else under).append(o["price"])
-            elif mk["key"] == "spreads":
-                sides = {}
+                    point = o.get("point")
+                    if not is_half(point):
+                        continue
+                    tot.setdefault(point, ([], []))
+                    (tot[point][0] if o["name"] == "Over" else tot[point][1]).append(o["price"])
+            elif key == "btts":
                 for o in mk["outcomes"]:
-                    if o.get("point") is not None:
-                        sides[o["name"]] = (o["point"], o["price"])
-                if home in sides and away in sides and is_half(sides[home][0]):
-                    line = sides[home][0]
-                    ah.setdefault(line, ([], []))
-                    ah[line][0].append(sides[home][1]); ah[line][1].append(sides[away][1])
-            elif mk["key"] == "team_totals":
+                    (btts_y if str(o["name"]).lower() == "yes" else btts_n).append(o["price"])
+            elif key in ("team_totals", "alternate_team_totals"):
                 for o in mk["outcomes"]:
                     team = o.get("description") or ""
                     point = o.get("point")
@@ -218,17 +256,30 @@ def constraints_from_event(ev, home, away):
     if h2h_h:
         p_home, _, _ = demargin(median(h2h_h), median(h2h_d), median(h2h_a))
         cons.append(("home_win", None, p_home, 1.0)); used.append("1x2")
-    if over and under:
-        cons.append(("over", 2.5, demargin(median(over), median(under))[0], 1.0)); used.append("ou")
-    if ah:
-        line = max(ah, key=lambda ln: len(ah[ln][0]))     # most-quoted half line
-        hs, as_ = ah[line]
-        cons.append(("ah", line, demargin(median(hs), median(as_))[0], 0.7)); used.append("ah")
-    for (side, point), (ov, un) in sorted(tt.items()):
-        if ov and un:
-            cons.append((f"tt_{side}", point, demargin(median(ov), median(un))[0], 0.5))
-            if "tt" not in used:
-                used.append("tt")
+
+    lines = {ln: v for ln, v in tot.items() if v[0] and v[1]}
+    if lines:
+        anchor = min(lines, key=lambda ln: (abs(ln - 2.5), ln))
+        others = [ln for ln in lines if ln != anchor]
+        w_other = 1.0 / len(others) if others else 0.0
+        for ln, (ov, un) in sorted(lines.items()):
+            p_over = demargin(median(ov), median(un))[0]
+            cons.append(("over", ln, p_over, 1.0 if ln == anchor else w_other))
+        used.append("ou" if not others else "ou+aou")
+
+    if btts_y and btts_n:
+        cons.append(("btts", None, demargin(median(btts_y), median(btts_n))[0], 0.8))
+        used.append("btts")
+
+    for side in ("home", "away"):
+        rows = {ln: v for (s, ln), v in tt.items() if s == side and v[0] and v[1]}
+        if not rows:
+            continue
+        w = 0.5 / len(rows)
+        for ln, (ov, un) in sorted(rows.items()):
+            cons.append((f"tt_{side}", ln, demargin(median(ov), median(un))[0], w))
+        if "tt" not in used:
+            used.append("tt")
     return cons, used
 
 
@@ -242,20 +293,33 @@ def from_odds_api(key, enrich):
             print(f"enrichment skipped: only {remaining} credits left (< {ENRICH_MIN_CREDITS})")
     except (TypeError, ValueError):
         pass
+
+    # ENRICH_LIMIT caps how many fixtures get the per-event treatment. Each one
+    # costs a credit per market per region — four, as configured — so this is
+    # the difference between a 40-credit round and a 12-credit trial run.
+    limit = int(os.environ.get("ENRICH_LIMIT", "0") or 0)
+    enriched = 0
     for ev in events:
         home, away = ev["home_team"], ev["away_team"]
-        if can_enrich:
-            full, remaining = team_totals_for(key, ev["id"])
-            if full is not None:
-                ev = {**ev, "bookmakers": ev.get("bookmakers", []) + full.get("bookmakers", [])}
+        if can_enrich and (not limit or enriched < limit):
+            extra = []
+            for region, markets in EVENT_MARKETS:
+                full, left = event_markets(key, ev["id"], region, markets)
+                if full is not None:
+                    extra += full.get("bookmakers", [])
+                    remaining = left or remaining
+            if extra:
+                ev = {**ev, "bookmakers": ev.get("bookmakers", []) + extra}
+                enriched += 1
         cons, used = constraints_from_event(ev, home, away)
         if not cons:
             continue
         kick = datetime.datetime.fromisoformat(ev["commence_time"].replace("Z", "+00:00"))
         out.append((home, away, kick, cons, "+".join(used)))
     if can_enrich:
-        print(f"after team-totals enrichment | credits remaining: {remaining}")
-    return out, "the-odds-api"
+        print(f"enriched {enriched} fixtures with {len(EVENT_MARKETS)} per-event pulls each "
+              f"| credits remaining: {remaining}")
+    return out, "the-odds-api", enriched
 
 
 # ── the banked market record ────────────────────────────────────────────────
@@ -397,7 +461,7 @@ def from_football_data():
         kick = datetime.datetime.strptime(row["Date"], "%d/%m/%Y").replace(tzinfo=datetime.timezone.utc)
         out.append((row["HomeTeam"], row["AwayTeam"], kick, cons, "+".join(used)))
     print(f"football-data.co.uk: {len(out)} priced PL fixtures")
-    return out, "football-data"
+    return out, "football-data", 0
 
 
 # ── main ────────────────────────────────────────────────────────────────────
@@ -428,20 +492,34 @@ if __name__ == "__main__":
     by_norm = {norm(t["name"]): t["id"] for t in boot["teams"]}
     fixtures, _ = get(f"{FPL}/fixtures/")
 
-    # Enrich (team totals) near a deadline, or when forced via ENRICH=1.
-    enrich = os.environ.get("ENRICH", "").strip() in ("1", "true", "yes")
-    if not enrich:
-        now = datetime.datetime.now(datetime.timezone.utc)
-        days = float(os.environ.get("ENRICH_DAYS", "3"))
-        for e in boot["events"]:
-            dl = datetime.datetime.fromisoformat(e["deadline_time"].replace("Z", "+00:00"))
-            if not e["finished"] and now <= dl <= now + datetime.timedelta(days=days):
-                enrich = True
-                print(f"deadline for GW{e['id']} within {days:g} days — enriching with team totals")
-                break
+    out_path = os.path.join(ROOT, season, "odds.json")
+    banked = read_existing(out_path)
+
+    # ── when to spend on per-event markets ──────────────────────────────────
+    # Four credits a fixture, forty a round. The daily schedule would happily
+    # pay that three days running for the same gameweek and get three copies of
+    # one answer, so the gate is: inside the window, and this gameweek has not
+    # been done. ENRICH=1 overrides both, which is what the workflow's manual
+    # switch sets.
+    forced = os.environ.get("ENRICH", "").strip() in ("1", "true", "yes")
+    enrich, target_gw = forced, None
+    now = datetime.datetime.now(datetime.timezone.utc)
+    days = float(os.environ.get("ENRICH_DAYS", "3"))
+    for e in sorted(boot["events"], key=lambda e: e["deadline_time"]):
+        dl = datetime.datetime.fromisoformat(e["deadline_time"].replace("Z", "+00:00"))
+        if not e["finished"] and dl >= now:
+            target_gw = e["id"]
+            if now <= dl <= now + datetime.timedelta(days=days):
+                if banked.get("enriched_gw") == target_gw and not forced:
+                    print(f"GW{target_gw} already enriched — skipping the per-event pulls")
+                else:
+                    enrich = True
+                    print(f"deadline for GW{target_gw} within {days:g} days — "
+                          f"enriching with per-event markets")
+            break
 
     key = os.environ.get("ODDS_API_KEY", "").strip()
-    events, source = (from_odds_api(key, enrich) if key else from_football_data())
+    events, source, enriched = (from_odds_api(key, enrich) if key else from_football_data())
 
     matches, unmatched = [], []
     for home, away, kick, cons, used in events:
@@ -462,8 +540,6 @@ if __name__ == "__main__":
         lh, la = solve(cons)
         matches.append({"gw": gw, "h": h, "a": a, "lh": lh, "la": la, "src": used})
 
-    out_path = os.path.join(ROOT, season, "odds.json")
-
     # ── accumulate, rather than replace ──────────────────────────────────────
     # Bookmakers price about a round at a time, so any single pull sees one
     # gameweek. Keeping the ones already banked turns 38 one-round snapshots
@@ -471,7 +547,7 @@ if __name__ == "__main__":
     # below able to generalise at all — see the note there. Keyed by the
     # fixture, so a re-priced game overwrites rather than double-counts, and
     # so a postponement that moves a game between gameweeks is picked up.
-    matches = merge_matches(read_existing(out_path).get("matches", []), matches)
+    matches = merge_matches(banked.get("matches", []), matches)
 
     strength = fit_strength(matches, season,
                             {t["id"]: t["short_name"] for t in boot["teams"]})
@@ -482,6 +558,19 @@ if __name__ == "__main__":
         "matches": sorted(matches, key=lambda m: (m["gw"], m["h"])),
         "strength": strength,
     }
+    # Carry the marker forward, and only move it when fixtures were actually
+    # enriched — a pull that asked and got nothing back must not count as done.
+    enriched_gw = target_gw if enriched else banked.get("enriched_gw")
+    if enriched_gw is not None:
+        payload["enriched_gw"] = enriched_gw
+
+    if "--dry-run" in sys.argv:
+        print("dry run — not writing " + out_path)
+        for m in sorted(payload["matches"], key=lambda m: (m["gw"], m["h"]))[:12]:
+            print(f"  GW{m['gw']} {m['h']:>2} v {m['a']:<2}  "
+                  f"lh {m['lh']:.2f}  la {m['la']:.2f}  [{m['src']}]")
+        sys.exit(0)
+
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
 

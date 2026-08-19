@@ -1,0 +1,45 @@
+name: Verify odds refresh
+
+# Runs refresh_odds.py against live odds and prints what it would write,
+# without writing it. Nothing is committed and site_data is not touched.
+#
+# The model changes here move numbers the whole site leans on — clean sheets
+# and expected points come off these lambdas — and the only honest way to check
+# a change is to price real fixtures with it and read the output. The dev
+# sandbox cannot reach the odds host, so that has to happen on a runner.
+#
+# ENRICH_LIMIT keeps the bill down: enrichment costs 4 credits a fixture, so a
+# full round is 40 and this trial is 12 on top of the 2-credit bulk pull.
+on:
+  workflow_dispatch:
+    inputs:
+      enrich_limit:
+        description: 'Fixtures to enrich (4 credits each; 0 = all)'
+        type: string
+        default: '3'
+  push:
+    branches-ignore: [main]
+    paths:
+      - 'refresh_odds.py'
+      - '.github/workflows/verify-odds-refresh.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-odds-refresh
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python refresh_odds.py --dry-run
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          ENRICH: '1'
+          ENRICH_LIMIT: ${{ inputs.enrich_limit || '3' }}
