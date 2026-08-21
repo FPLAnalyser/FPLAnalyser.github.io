@@ -20,8 +20,8 @@ import { buildContext, runRules, SEVERITY_META } from '../lib/insights/engine'
 import { RULES } from '../lib/insights/rules'
 import type { CoreData, FixtureEaseRow, RatingRow, Row } from '../lib/types'
 import { useAvailability, availBadge, availFor } from '../lib/availability'
+import { readTeamId, saveTeamId } from '../lib/teamId'
 
-const TEAM_ID_KEY = 'fpl_team_id'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 interface LoadedTeam { picksData: any; gw: number; historyData: any; entryData: any; teamId: string }
@@ -30,7 +30,7 @@ export default function MyTeam() {
   const { data } = useCore()
   const { info } = useSeason()
   const preseason = Boolean(info?.provisional)
-  const [teamId, setTeamId] = useState(() => { try { return localStorage.getItem(TEAM_ID_KEY) ?? '' } catch { return '' } })
+  const [teamId, setTeamId] = useState(readTeamId)
   const [state, setState] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle')
   const [error, setError] = useState('')
   const [loaded, setLoaded] = useState<LoadedTeam | null>(null)
@@ -47,7 +47,7 @@ export default function MyTeam() {
         fetchEntryHistory(id),
       ])
       const picksData = await picksRes.json()
-      try { localStorage.setItem(TEAM_ID_KEY, id) } catch { /* ignore */ }
+      saveTeamId(id)
       setLoaded({ picksData, gw, historyData, entryData, teamId: id })
       setState('loaded')
     } catch (e) {
@@ -61,7 +61,7 @@ export default function MyTeam() {
   useEffect(() => {
     if (autoTried.current || preseason) return
     autoTried.current = true
-    const saved = (() => { try { return localStorage.getItem(TEAM_ID_KEY) } catch { return null } })()
+    const saved = readTeamId()
     if (saved) load(saved)
   }, [preseason])
 

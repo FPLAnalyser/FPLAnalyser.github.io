@@ -1,10 +1,11 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from './Icon'
 import { TeamBadge } from './badges'
 import { useCore } from '../lib/useData'
 import { useSeason } from '../lib/season'
 import { useAvailability } from '../lib/availability'
+import { isTeamId, saveTeamId } from '../lib/teamId'
 import { num } from '../lib/rows'
 import { xpForGw, useXpModel, useMarketOdds, useShotProfiles } from '../lib/xp'
 import { pointsHit } from '../lib/planner'
@@ -37,6 +38,44 @@ import type { FixtureEaseRow, RatingRow } from '../lib/types'
  */
 
 const STORE_KEY = 'fpl_squad_build'
+
+/**
+ * The Team ID, taken where the reader already is.
+ *
+ * Numeric only, because FPL ids are, and an early "that is not an id" beats
+ * navigating to a page that then says the fetch failed. Enter submits, so it
+ * works the way every other single-field form does.
+ */
+function IdForm({ onGo }: { onGo: (id: string) => void }) {
+  const [v, setV] = useState('')
+  const clean = v.trim()
+  const ok = isTeamId(clean)
+  const go = () => { if (ok) onGo(clean) }
+  return (
+    <form
+      className="flex shrink-0 gap-2"
+      onSubmit={(e) => { e.preventDefault(); go() }}
+    >
+      <input
+        type="text"
+        inputMode="numeric"
+        value={v}
+        onChange={(e) => setV(e.target.value)}
+        placeholder="Your FPL Team ID"
+        aria-label="Your FPL Team ID"
+        className="min-h-11 w-full min-w-0 rounded-xl border border-line-mid bg-surface-1 px-3.5 text-[13.5px] text-ink outline-none placeholder:text-ink-3 focus:border-accent md:w-[190px]"
+      />
+      <button
+        type="submit"
+        disabled={!ok}
+        className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-accent bg-accent-soft px-4
+                   text-[13.5px] font-bold text-accent transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
+      >
+        <Icon name="users" size={15} /> Load
+      </button>
+    </form>
+  )
+}
 
 const ovOf = (r: RatingRow): number | null => {
   const s = num(r, 'season_overall_score')
@@ -153,38 +192,39 @@ export function SquadStrip() {
                 : 'Your FPL Team ID pulls in the fifteen you actually own — ratings, projections and what to do next.'}
             </p>
           </div>
-          <div className="flex shrink-0 gap-2">
-            {/* PRE-SEASON ONLY, THE SCREENSHOT. It is the only way to rate a
-                fifteen that exists nowhere but in your head, which is exactly
-                the pre-season problem — and it is the wrong front door the
-                moment the season starts, because from then on the team is
-                real, it lives at an FPL id, and reading it is one field rather
-                than a photograph and eight seconds of OCR. Same flag that
-                opens My Team, inverted; the importer stays on the Squad
-                Builder is gated on the same flag, so the whole feature
-                goes away together and comes back on its own next July. */}
-            {preseason ? (
+          {preseason ? (
+            /* PRE-SEASON: the screenshot, and a way to start from nothing.
+               The importer is the only way to rate a fifteen that exists
+               nowhere but in your head, which is exactly the pre-season
+               problem — and it is the wrong front door the moment the season
+               starts, because from then on the team is real and lives at an
+               FPL id. The Squad Builder's own copy is gated on the same flag,
+               so the whole feature goes away together and comes back next
+               July with nobody having to remember. */
+            <div className="flex shrink-0 gap-2">
               <button
                 onClick={() => navigate('/squad', { state: { openImport: true } })}
                 className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-accent bg-accent-soft px-4 text-[13.5px] font-bold text-accent transition-colors hover:brightness-110 md:flex-none"
               >
                 <Icon name="camera" size={15} /> Import a screenshot
               </button>
-            ) : (
               <button
-                onClick={() => navigate('/loadteam')}
-                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-accent bg-accent-soft px-4 text-[13.5px] font-bold text-accent transition-colors hover:brightness-110 md:flex-none"
+                onClick={() => navigate('/squad')}
+                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-line-mid px-4 text-[13.5px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink md:flex-none"
               >
-                <Icon name="users" size={15} /> Enter your Team ID
+                Build a fifteen
               </button>
-            )}
-            <button
-              onClick={() => navigate('/squad')}
-              className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-line-mid px-4 text-[13.5px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink md:flex-none"
-            >
-              Build a fifteen
-            </button>
-          </div>
+            </div>
+          ) : (
+            /* IN-SEASON: the field itself, not a button that leads to one.
+               Everyone who is going to draft a fifteen has drafted it — the
+               job now is reading the team they actually own, and that is one
+               number. Sending them to My Team to find the same box they are
+               already looking at is a tap of nothing, so the ID is taken here
+               and My Team picks it up: it reads the same stored key on mount
+               and loads without being asked twice. */
+            <IdForm onGo={(id) => { saveTeamId(id); navigate('/loadteam') }} />
+          )}
         </div>
       </div>
     )
