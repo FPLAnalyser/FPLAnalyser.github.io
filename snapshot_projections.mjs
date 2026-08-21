@@ -19,6 +19,13 @@
    the difference between "we were wrong about Haaland" and "we were wrong
    about clean sheets", and only the second of those is worth publishing.
 
+   ONE WART, AND IT CANNOT BE FIXED. gw1.json carries `market_priced: true`,
+   a boolean, from the first version of this script; every file after it
+   carries a count of fixtures the bookmakers had priced. GW1 cannot be
+   regenerated — its gameweek has been trimmed out of fixture_ease.json and
+   the projection no longer exists to recompute — so anything reading these
+   files has to accept `true` as "all of them" for GW1 alone.
+
    Run:  node snapshot_projections.mjs <gw> [--data DIR] [--out DIR]
 */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
@@ -142,11 +149,17 @@ const payload = {
   season: SEASON,
   captured: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
   data_generated: meta.generated_at ?? null,
-  market_priced: [...new Set((rd('odds').matches ?? []).filter((m) => m.gw === gw).map((m) => m.gw))].length > 0,
+  // How much of the gameweek the bookmakers had actually priced when this was
+  // taken, as a count rather than a flag. A boolean said `true` for GW2 with
+  // one match of ten priced, which is exactly the case a later review needs to
+  // be able to tell apart: a projection built on the market and a projection
+  // built on baselines miss in different ways and should not be scored as one.
+  market_priced: (rd('odds').matches ?? []).filter((m) => m.gw === gw).length,
+  fixtures: [...new Set(fe.filter((f) => f.gw === gw).map((f) => f.team))].length / 2,
   players: out,
 }
 writeFileSync(dest, JSON.stringify(payload, null, 0))
 const top = out.slice(0, 5).map((p) => `${p.name} ${p.xp}`).join(', ')
 console.log(`${dest} — GW${gw}, ${out.length} players projected`)
-console.log(`  market priced this gameweek: ${payload.market_priced}`)
+console.log(`  bookmakers had priced ${payload.market_priced} of ${payload.fixtures} fixtures`)
 console.log(`  top: ${top}`)
