@@ -138,6 +138,13 @@ def implied(kind, arg, lh, la, ph, pa):
     raise ValueError(kind)
 
 
+# What a Premier League fixture can plausibly be worth, as market goal
+# expectancies. Wide on purpose — see the rejection note where these are used.
+LAM_TOTAL_MIN = 1.4
+LAM_TOTAL_MAX = 5.5
+LAM_SIDE_MAX = 4.0
+
+
 def solve(constraints):
     """Weighted least-squares fit of (lam_h, lam_a) to market constraints:
        [(kind, arg, prob, weight), ...].  Coarse grid then two refinements."""
@@ -525,7 +532,7 @@ if __name__ == "__main__":
     key = os.environ.get("ODDS_API_KEY", "").strip()
     events, source, enriched = (from_odds_api(key, enrich) if key else from_football_data())
 
-    matches, unmatched = [], []
+    matches, unmatched, rejected = [], [], []
     for home, away, kick, cons, used in events:
         h, a = by_norm.get(norm(home)), by_norm.get(norm(away))
         if h is None or a is None:
@@ -542,6 +549,31 @@ if __name__ == "__main__":
             unmatched.append(f"{home} v {away} (no fixture within 3 days)")
             continue
         lh, la = solve(cons)
+        # ── DOES THE FIT DESCRIBE A FOOTBALL MATCH? ───────────────────────
+        #
+        # Nothing checked, and a bad solve is not a small error: the pull that
+        # first priced GW2 returned Bournemouth v Everton at 4.61 and 3.86,
+        # eight and a half goals in one game, alongside Leeds v Brentford at
+        # 8.01 and Spurs v Newcastle at 6.97. Every GW1 fixture in the same
+        # file sat between 2.14 and 3.00, which is what a Premier League match
+        # actually looks like. The numbers went straight to the GW Preview,
+        # the fixture grid, the clean-sheet odds and every xP built on them.
+        #
+        # The solver searches lh and la up to 4.5 and its refinement passes can
+        # step past that, so a fit that runs out of constraints — a thin market,
+        # a book quoting a handful of lines — drifts to the top of the range
+        # instead of failing. It has to be able to fail.
+        #
+        # The band is deliberately wide: a real fixture between the best attack
+        # and a promoted defence prices near 4.5 total, and nothing in the
+        # Premier League era has been quoted at 6. A fixture rejected here is
+        # not lost, it is simply not priced — the projection falls back to the
+        # model's own strengths, which is the same path every unpriced gameweek
+        # already takes.
+        total = lh + la
+        if not (LAM_TOTAL_MIN <= total <= LAM_TOTAL_MAX) or max(lh, la) > LAM_SIDE_MAX:
+            rejected.append(f"{h}v{a} gw{gw} lh={lh} la={la} total={total:.2f}")
+            continue
         matches.append({"gw": gw, "h": h, "a": a, "lh": lh, "la": la, "src": used})
 
     # ── accumulate, rather than replace ──────────────────────────────────────
@@ -551,6 +583,12 @@ if __name__ == "__main__":
     # below able to generalise at all — see the note there. Keyed by the
     # fixture, so a re-priced game overwrites rather than double-counts, and
     # so a postponement that moves a game between gameweeks is picked up.
+    if rejected:
+        print(f"  REJECTED {len(rejected)} fixture(s) whose fit was not a football match:")
+        for r in rejected:
+            print(f"    {r}")
+        print("    (left unpriced — the projection falls back to the model's own strengths)")
+
     matches = merge_matches(banked.get("matches", []), matches)
 
     strength = fit_strength(matches, season,
