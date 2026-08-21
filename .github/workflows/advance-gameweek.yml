@@ -1,0 +1,86 @@
+name: Advance the gameweek
+
+# Moves the site on to the next gameweek shortly after the current one locks,
+# so people can start planning the next one straight away instead of waiting
+# for Monday's final whistle.
+#
+# WHY IT POLLS. GitHub cron is a fixed UTC schedule and FPL deadlines are not:
+# they move between Friday and Saturday, shift for cup weeks and midweek
+# rounds, and get rewritten outright when a fixture is postponed. There is no
+# way to schedule "thirty minutes after the deadline", and hard-coding the
+# times would need a commit every time one moved — the failure mode being a
+# silent no-show on exactly the weeks the schedule is unusual.
+#
+# So it runs on a quarter-hour and the work is decided by the DATA. Nearly
+# every run is a checkout plus one unauthenticated API call — about twenty
+# seconds — and exits saying there was nothing to do. advance_gameweek.py is
+# idempotent and computes its answer from the deadlines rather than from what
+# it last did, so a duplicate run, a run GitHub delayed, or a run missed
+# entirely all end up in the same place.
+#
+# The window is 10:00–20:45 UTC. FPL deadlines have sat between roughly 11:00
+# and 18:30 UTC for years, and the job needs to still be awake thirty minutes
+# after the latest of them. Outside that window nothing fires. If FPL ever set
+# one earlier or later, widen this — the job would be late rather than wrong,
+# and the daily jobs would catch it the next morning either way.
+#
+# IT DOES NOT REFRESH ANYTHING ELSE. Injuries, prices, odds and ratings all
+# have their own jobs and their own reasons to run at their own times. This one
+# advances the pointer and trims the fixture grid, which is the part that
+# cannot wait a day.
+on:
+  schedule:
+    - cron: '0,15,30,45 10-20 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Report what would change without writing anything'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: advance-gameweek
+  cancel-in-progress: false
+
+jobs:
+  advance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      # A re-run replays an old commit; sync to the tip so the push below is
+      # always a fast-forward.
+      - run: git fetch origin main && git reset --hard origin/main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Advance to the next unlocked gameweek
+        run: python advance_gameweek.py ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: Commit if the gameweek moved
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git add -A site_data
+          if git diff --cached --quiet; then
+            echo "Nothing moved."
+            exit 0
+          fi
+          NEXT=$(python -c "import json;print(json.load(open('site_data/2026-27/meta.json')).get('next_gw'))")
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Move the site on to GW${NEXT}"
+          # Same retry as the daily refreshes: these commits touch only
+          # generated files nobody edits by hand, so a branch that has moved
+          # under us rebases cleanly and the history stays linear.
+          for attempt in 1 2 3 4 5; do
+            if git push; then exit 0; fi
+            echo "push rejected (attempt $attempt) — rebasing onto the branch tip"
+            git pull --rebase origin main || exit 1
+          done
+          echo "still could not push after 5 attempts"
+          exit 1

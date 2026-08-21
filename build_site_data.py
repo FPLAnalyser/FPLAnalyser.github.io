@@ -30,7 +30,7 @@ Output:  site_data/*.json
 import json
 import math
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import numpy as np
 import pandas as pd
@@ -298,7 +298,59 @@ for team, sub in tm.groupby("team"):
 league_xgc = np.nanmean([v["xgc_pg"] for v in strength.values()])
 league_xg = np.nanmean([v["xg_pg"] for v in strength.values()])
 
-upcoming = fixtures[fixtures["finished"].astype(str) != "True"].sort_values("gw")
+# ── WHICH GAMEWEEK CAN STILL BE PLANNED FOR ───────────────────────────────
+#
+# "Next" used to mean the first gameweek not FINISHED, which is the wrong
+# question by about three days. A gameweek locks at its deadline: from that
+# moment the teams are set, no transfer can be made, and nobody can act on
+# anything the site says about it. But its fixtures are not finished until the
+# last whistle on Monday — so the whole weekend, the Preview page, the Squad
+# Builder and the fixture grid all sat on a gameweek the reader could no longer
+# change, and only moved on once the results were in.
+#
+# It is now the deadline that moves the site forward. Two sources, in order:
+# the deadlines FPL publishes (kept current in availability.json by the 06:00
+# refresh, and exact), and failing that the first kickoff of the gameweek less
+# ninety minutes, which is the rule FPL sets them by.
+#
+# `current_gw` becomes the gameweek in play or most recently locked, which is
+# what a look-back wants. Nothing in the frontend reads it — My Team asks the
+# live API — so the change is confined to `next_gw` and the fixture grid.
+NOW = datetime.now(timezone.utc)
+_deadlines: dict[int, datetime] = {}
+_avail_path = os.path.join(OUTPUT_DIR, "availability.json")
+if os.path.exists(_avail_path):
+    with open(_avail_path, encoding="utf-8") as f:
+        for e in (json.load(f).get("events") or []):
+            try:
+                _deadlines[int(e["gw"])] = datetime.fromisoformat(
+                    str(e["deadline"]).replace("Z", "+00:00"))
+            except (KeyError, TypeError, ValueError):
+                continue
+if not _deadlines:
+    ko = fixtures.dropna(subset=["kickoff_time"]).copy()
+    ko["_k"] = pd.to_datetime(ko["kickoff_time"], utc=True, errors="coerce")
+    for gw, first in ko.groupby("gw")["_k"].min().items():
+        if pd.notna(first):
+            _deadlines[int(gw)] = first.to_pydatetime() - timedelta(minutes=90)
+    print(f"  deadlines: derived from first kickoff − 90min ({len(_deadlines)} gameweeks)")
+else:
+    print(f"  deadlines: read from availability.json ({len(_deadlines)} gameweeks)")
+
+locked = {gw for gw, d in _deadlines.items() if d <= NOW}
+# NaN-safe: a postponed fixture carries no gameweek at all (FPL leaves `event`
+# null), and `.astype(int)` on that column takes the whole pipeline down. Those
+# rows count as unlocked, which is what the finished-based test did with them.
+_gw = pd.to_numeric(fixtures["gw"], errors="coerce")
+# No deadlines at all — fall back to the old test, so a missing or unreadable
+# availability.json can never empty the fixture grid.
+upcoming = fixtures[
+    ~_gw.isin(locked) if _deadlines else fixtures["finished"].astype(str) != "True"
+].sort_values("gw")
+_next = pd.to_numeric(upcoming["gw"], errors="coerce").min() if len(upcoming) else None
+if locked:
+    print(f"  locked (deadline passed): GW{min(locked)}–GW{max(locked)}; "
+          f"planning from GW{int(_next) if pd.notna(_next) else '—'}")
 ease_rows = []
 if not upcoming.empty:
     next_gws = sorted(upcoming["gw"].unique())[:6]
@@ -523,11 +575,11 @@ except FileNotFoundError:
     row_counts["gameweek_stats"] = write_json("gameweek_stats", [])
 
 # ── Meta manifest ─────────────────────────────────────────────────────────────
-finished = fixtures[fixtures["finished"].astype(str) == "True"]
+# The gameweek in play or most recently locked — see the deadline block above.
 meta = {
     "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-    "current_gw": int(finished["gw"].max()) if len(finished) else None,
-    "next_gw": int(upcoming["gw"].min()) if len(upcoming) else None,
+    "current_gw": max(locked) if locked else None,
+    "next_gw": int(_next) if _next is not None and pd.notna(_next) else None,
     "tables": row_counts,
 }
 write_json("meta", meta)
