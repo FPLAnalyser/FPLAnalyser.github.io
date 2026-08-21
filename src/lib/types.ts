@@ -75,6 +75,9 @@ export interface Meta {
   current_gw: number | null
   next_gw: number | null
   tables: Record<string, number>
+  /** Set while the site is showing LAST season's numbers carried forward, and
+   *  absent once a full pipeline run has built this season's own. */
+  ratings_season?: string
 }
 
 export interface ShotEvent extends Row {

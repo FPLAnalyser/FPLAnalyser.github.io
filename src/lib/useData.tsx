@@ -165,7 +165,8 @@ export function useCore() {
   return useMemo(() => {
     if (!withLive.data || !Object.keys(tweaks).length) return withLive
     const d = withLive.data
-    const house = houseBaselines(d.teamMetrics, d.meta?.next_gw != null ? Number(d.meta.next_gw) : null, undefined)
+    const house = houseBaselines(d.teamMetrics, d.meta?.next_gw != null ? Number(d.meta.next_gw) : null,
+      undefined, d.meta?.ratings_season != null)
     const adjusted = adjustFixtureEase(d.fixtureEase, tweaks, house)
     return adjusted === d.fixtureEase ? withLive : { ...withLive, data: { ...d, fixtureEase: adjusted } }
   }, [withLive, tweaks])

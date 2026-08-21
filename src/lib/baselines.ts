@@ -20,13 +20,24 @@ export interface TeamBase { xg: number; xgc: number }
 
 /** How many games a metrics window covers, so a window TOTAL can be turned
  *  into a per-game rate. Never show a total as a rate. */
-export function gamesInWindow(metrics: Row | null, nextGw: number | null): number {
+export function gamesInWindow(metrics: Row | null, nextGw: number | null, carried?: boolean): number {
   if (!metrics) return 1
   const g = num(metrics, 'games')
   if (g != null && g > 0) return g
   const w = str(metrics, 'window')
   if (w === '4gw') return 4
   if (w === '6gw') return 6
+  /* CARRIED-OVER METRICS DESCRIBE A WHOLE SEASON, whatever gameweek it is now.
+     The season window holds a TOTAL, so it has to be divided by the games that
+     total was accumulated over. `nextGw - 1` is that count once the pipeline is
+     building this season's numbers week by week — and it is nonsense while the
+     site is still showing last season's carried forward, which is every day
+     between the new fixture list landing and the first full pipeline run.
+     Measured the moment the site moved to GW2: Arsenal's 66.98 season xG was
+     divided by ONE rather than 38, so every baseline on the site came out
+     thirty-eight times too big and the goals and clean-sheet columns went to
+     pieces. `ratings_season` on meta is what says the numbers were carried. */
+  if (carried) return 38
   return nextGw != null && !isNaN(nextGw) && nextGw > 1 ? Math.min(38, nextGw - 1) : 38
 }
 
@@ -44,11 +55,14 @@ export function houseBaselines(
   teamMetrics: Row[] | undefined,
   nextGw: number | null,
   oddsStrength: Record<string, { att: number; def: number }> | undefined,
+  /** True when these metrics are last season's, carried forward — see
+   *  gamesInWindow, where getting this wrong scaled the whole site by 38. */
+  carried?: boolean,
 ): Map<string, TeamBase> {
   const out = new Map<string, TeamBase>()
   for (const t of teamMetrics ?? []) {
     if (str(t, 'window') !== 'season') continue
-    const g = gamesInWindow(t, nextGw)
+    const g = gamesInWindow(t, nextGw, carried)
     const xg = num(t, 'team_xg')
     const xgc = num(t, 'team_xgc')
     if (xg != null && xgc != null && g > 0) out.set(String(t.team), { xg: xg / g, xgc: xgc / g })

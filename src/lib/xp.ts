@@ -171,12 +171,13 @@ export function useMarketOdds(): MarketOdds | null {
      has to be read here rather than passed in because useMarketOdds is called
      from twenty components, most of which have no CoreData to hand. */
   const metrics = useLazyTable<Row[]>('team_metrics')
-  const meta = useLazyTable<{ next_gw?: number }>('meta')
+  const meta = useLazyTable<{ next_gw?: number; ratings_season?: string }>('meta')
   return useMemo(() => {
     const house = houseBaselines(
       metrics.data ?? undefined,
       meta.data?.next_gw != null ? Number(meta.data.next_gw) : null,
       base?.strength,
+      meta.data?.ratings_season != null,
     )
     return adjustMarket(base, tweaks, house)
   }, [base, tweaks, metrics.data, meta.data])

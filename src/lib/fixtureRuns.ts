@@ -10,7 +10,8 @@ export type { TeamBase } from './baselines'
 /** How many games a metrics window covers, so a window TOTAL can be turned
  *  into a per-game rate. Never show a total as a rate. */
 export function windowGames(metrics: Row | null, data: CoreData): number {
-  return gamesInWindow(metrics, data.meta?.next_gw != null ? Number(data.meta.next_gw) : null)
+  return gamesInWindow(metrics, data.meta?.next_gw != null ? Number(data.meta.next_gw) : null,
+    data.meta?.ratings_season != null)
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -180,6 +181,7 @@ export function useTeamBaselines(data: CoreData | null): { baselines: Map<string
       data?.teamMetrics,
       data?.meta?.next_gw != null ? Number(data.meta.next_gw) : null,
       market?.strength,
+      data?.meta?.ratings_season != null,
     )
     /* The league average stays on house numbers for the same reason the
        difficulty scale's spread does: one club's dial should not silently
