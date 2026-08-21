@@ -22,6 +22,12 @@ slow but unattended.
       `python3 pull_fpl_gw.py --reset` archives last season's copy and
       starts the new one. It refuses to append across seasons on its own,
       because FPL reissues element ids every summer.
+      **Not on day one.** This file is what every rating is derived from, so
+      until the new season has a real body of gameweeks behind it, last
+      season's thirty-eight are the better evidence and it should be left
+      alone. The review data does not wait on this: `--actuals` writes
+      `site_data/<season>/actuals/`, which nothing upstream of ratings reads,
+      and the nightly job has been doing that since GW1.
 
 **Check:** `season_summary.csv` has ~700 rows and the promoted teams appear;
 `fixtures_enriched.csv` has 380 rows, all `finished=False`.

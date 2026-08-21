@@ -1,0 +1,98 @@
+name: Pull the actual points
+
+# The other half of the record. advance-gameweek.yml freezes what the site
+# PROJECTED at each deadline; this stores what actually happened, so the two
+# can be put side by side. Until both existed the site could promise a review
+# of where the model missed and never show one — the projection was recomputed
+# in the browser every render and gone the moment odds refreshed, and nothing
+# here fetched the results at all.
+#
+# WHAT IT WRITES, AND WHAT IT POINTEDLY DOES NOT. It writes
+# site_data/<season>/actuals/gw<N>.json — the mirror of projections/gw<N>.json,
+# same grain, joinable on `code`. Nothing the ratings are built from reads it.
+#
+# It does NOT touch player_gw_history.csv. That file is the ratings input, and
+# in August it should still hold last season: thirty-eight gameweeks of
+# evidence beats one afternoon. Starting it over now would rebuild every number
+# on the site from GW1 alone. When the new season has enough behind it that is
+# a deliberate call for the owner to make, with `pull_fpl_gw.py --reset`, not
+# something a nightly job should drift into.
+#
+# WHY NIGHTLY. Provisional points appear within minutes of a whistle but bonus
+# does not settle until FPL marks the gameweek finished, an hour or so after
+# the last match — and a gameweek can be reopened days later when a score is
+# corrected. So it re-pulls every finished gameweek every night and writes only
+# when the numbers actually differ, which after the Monday of each gameweek
+# means it writes nothing at all.
+on:
+  schedule:
+    - cron: '30 22 * * *'
+  workflow_dispatch:
+    inputs:
+      gw:
+        description: 'One gameweek (blank = every finished one)'
+        type: string
+        default: ''
+      live:
+        description: 'Include the gameweek in progress (provisional)'
+        type: boolean
+        default: false
+      dry_run:
+        description: 'Fetch and report, write nothing'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pull-gw
+  cancel-in-progress: false
+
+jobs:
+  pull:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - run: git fetch origin main && git reset --hard origin/main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # GW comes through the environment rather than ${{ }}, so a dispatch
+      # input lands in a variable instead of being pasted into the command
+      # line, and it has to look like a gameweek before it is used at all.
+      - name: Fetch what happened
+        env:
+          GW: ${{ inputs.gw }}
+        run: |
+          if [ -n "$GW" ] && ! echo "$GW" | grep -qE '^[1-9][0-9]?$'; then
+            echo "gw must be a number 1-38, got: $GW"
+            exit 1
+          fi
+          python pull_fpl_gw.py --actuals ${GW:+"$GW"} \
+            ${{ inputs.live && '--live' || '' }} \
+            ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: Commit anything new
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git add -A site_data
+          if git diff --cached --quiet; then
+            echo "No gameweek's numbers moved."
+            exit 0
+          fi
+          GWS=$(git diff --cached --name-only \
+                | sed -n 's#.*/actuals/gw\([0-9]*\)\.json#\1#p' | paste -sd, -)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Store what actually happened in GW${GWS}"
+          for attempt in 1 2 3 4 5; do
+            if git push; then exit 0; fi
+            echo "push rejected (attempt $attempt) — rebasing onto the branch tip"
+            git pull --rebase origin main || exit 1
+          done
+          echo "still could not push after 5 attempts"
+          exit 1

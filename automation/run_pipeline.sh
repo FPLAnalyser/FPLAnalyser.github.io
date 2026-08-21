@@ -43,18 +43,20 @@ echo "data: ${FPL_DATA_DIR:-<script defaults>}"
 
 run_step() {
   echo ""
-  echo "── $1 ──────────────────────────────────────────"
+  echo "── $* ──────────────────────────────────────────"
   local start=$SECONDS
-  $PYTHON "$1"
+  $PYTHON "$@"
   echo "── $1 done in $((SECONDS - start))s"
 }
 
 if [ "$DO_PULL" -eq 1 ]; then
-  # FPL's own per-gameweek record first: it is the file every other step joins
-  # onto, and until this existed it was the one input nothing here could
-  # refresh. Cheap — one call per unstored gameweek — and it no-ops when there
-  # is nothing new to fetch.
-  run_step pull_fpl_gw.py
+  # FPL's own per-gameweek record. --actuals, deliberately: the bare form
+  # writes player_gw_history.csv, which is the ratings input and still holds
+  # last season — so it would hit the season guard, exit 2, and take the whole
+  # pipeline down with it under `set -e`. Rebasing that file onto the new
+  # season is a call for the owner to make with --reset once there is enough
+  # of it to rate players on, not something a weekly run should decide.
+  run_step pull_fpl_gw.py --actuals
   run_step pull_understat_data.py
   run_step pull_pl_stats.py
 fi

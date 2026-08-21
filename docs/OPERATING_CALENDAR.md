@@ -65,7 +65,7 @@ throws up ambiguous name joins that have to be resolved by eye.
 
 | When | Job |
 |---|---|
-| Monday or Tuesday after the last match | `./automation/run_pipeline.sh`. Roughly two minutes of compute plus the Understat and PL pulls. The first step, `pull_fpl_gw.py`, brings in the gameweek's actual points from FPL — it can also be run on its own the moment the last match finishes, which is what makes projected-versus-actual possible the same evening. |
+| Monday or Tuesday after the last match | `./automation/run_pipeline.sh`. Roughly two minutes of compute plus the Understat and PL pulls. The first step, `pull_fpl_gw.py --actuals`, brings in the gameweek's actual points from FPL — but you should not need it: *Pull the actual points* runs nightly and stores the same thing, which is what makes projected-versus-actual possible without waiting for you. |
 | Anything else | Nothing. Injuries, prices, ownership, odds and deadlines all refresh daily on their own, and the site moves to the next gameweek half an hour after each deadline. |
 
 `join_uncertain.csv` will have the odd new row after a January transfer window;

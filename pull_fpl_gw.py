@@ -21,14 +21,31 @@ now holds what the site PROJECTED before each deadline. This is the other half:
 what actually happened. The two joined are the GW Review's "where the model
 missed", which the site promises in two places and has never been able to show.
 
-  python3 pull_fpl_gw.py            # every finished gameweek not yet stored
-  python3 pull_fpl_gw.py 1          # just this one, even if already stored
-  python3 pull_fpl_gw.py --live     # include the gameweek in progress
-  python3 pull_fpl_gw.py --reset    # start a new season's file (archives the old)
-  python3 pull_fpl_gw.py --dry-run  # fetch and report, write nothing
+TWO OUTPUTS, AND THEY ARE FOR DIFFERENT THINGS.
+
+  player_gw_history.csv is the RATINGS INPUT. Every rating on the site is
+  built from it, and in August that means it should still hold last season —
+  38 gameweeks of evidence beats one. Starting it over on GW1 would rebuild
+  every rating from a single afternoon. So it is only ever touched
+  deliberately, with --reset, when the owner decides the new season has enough
+  behind it.
+
+  site_data/<season>/actuals/gw<N>.json is the REVIEW INPUT, written by
+  --actuals. It is the exact mirror of projections/gw<N>.json: what happened,
+  next to what was projected. Nothing downstream of ratings reads it, so it is
+  safe to write from the first gameweek of the season and every week after.
+
+  python3 pull_fpl_gw.py --actuals     # every finished gameweek, to site_data
+  python3 pull_fpl_gw.py 1 --actuals   # just this one
+  python3 pull_fpl_gw.py               # every finished gameweek, to the CSV
+  python3 pull_fpl_gw.py --live        # include the gameweek in progress
+  python3 pull_fpl_gw.py --reset       # start a new season's CSV (archives the old)
+  python3 pull_fpl_gw.py --dry-run     # fetch and report, write nothing
 
 Rows for a gameweek REPLACE any already held for it, so re-running is safe and
-a provisional pull is corrected by a later one.
+a provisional pull is corrected by a later one. That applies to the actuals
+too — unlike a projection, which is only true at its deadline and is therefore
+written once, what happened is worth re-pulling until bonus settles.
 """
 import argparse
 import csv
@@ -85,11 +102,138 @@ def read_existing():
         return list(csv.DictReader(f))
 
 
+# What a review actually needs, and no more. Points and minutes to score the
+# projection; the scoring events to say WHICH part of it missed; FPL's own xG
+# and xA to separate a bad process from a bad afternoon.
+ACTUAL_KEYS = [
+    "total_points", "minutes", "starts", "goals_scored", "assists",
+    "clean_sheets", "goals_conceded", "own_goals", "penalties_saved",
+    "penalties_missed", "yellow_cards", "red_cards", "saves", "bonus", "bps",
+    "defensive_contribution", "expected_goals", "expected_assists",
+    "expected_goals_conceded",
+]
+
+
+def actuals(args, boot, elements, teams, fx, events):
+    """Write what happened, next to where the projection for it already lives.
+
+    Deliberately separate from the CSV path above: this touches nothing the
+    ratings are built from, so it can run from GW1 without rewriting the
+    evidence base underneath every number on the site.
+    """
+    with open(os.path.join(ROOT, "site_data", "seasons.json"), encoding="utf-8") as f:
+        season = json.load(f)["seasons"][0]["id"]
+    out_dir = os.path.join(ROOT, "site_data", season, "actuals")
+
+    if args.gw:
+        wanted = [args.gw]
+    else:
+        wanted = sorted(e["id"] for e in boot["events"]
+                        if e.get("finished") or (args.live and e.get("is_current")))
+    if not wanted:
+        print("No gameweek has finished yet — nothing to pull.")
+        return 0
+
+    written = 0
+    for gw in wanted:
+        ev = events.get(gw, {})
+        try:
+            live = get(f"{API}/event/{gw}/live/")
+        except urllib.error.HTTPError as exc:
+            print(f"  GW{gw}: {exc.code} from the live endpoint — skipped")
+            continue
+        provisional = not ev.get("finished")
+
+        players, played = [], 0
+        for el in live.get("elements", []):
+            meta = elements.get(el.get("id"))
+            if not meta:
+                continue
+            stats = el.get("stats", {}) or {}
+            # `stats` is already the whole gameweek for this player, both legs
+            # of a double included, which is the right grain: the projection it
+            # is being compared against was also one number for the week.
+            opps = []
+            for x in (el.get("explain") or []):
+                f = fx.get(x.get("fixture"))
+                if not f:
+                    continue
+                home = f.get("team_h") == meta["team"]
+                opp = teams.get(f.get("team_a") if home else f.get("team_h"), "")
+                if opp:
+                    opps.append(f"{opp}{'(H)' if home else '(A)'}")
+            row = {
+                "code": meta.get("code"), "element": meta.get("id"),
+                "name": meta.get("web_name", ""),
+                "team": teams.get(meta.get("team"), ""),
+                "pos": POS.get(meta.get("element_type"), ""),
+                "opp": opps,
+            }
+            for k in ACTUAL_KEYS:
+                v = stats.get(k, 0)
+                try:
+                    v = float(v)
+                    v = int(v) if v == int(v) else round(v, 3)
+                except (TypeError, ValueError):
+                    v = 0
+                row[k] = v
+            players.append(row)
+            if row["minutes"]:
+                played += 1
+
+        if not players:
+            print(f"  GW{gw}: the live endpoint returned nobody — skipped")
+            continue
+
+        players.sort(key=lambda r: (-r["total_points"], r["name"]))
+        payload = {
+            "gw": gw, "season": season,
+            "pulled": datetime.datetime.now(datetime.timezone.utc)
+                .strftime("%Y-%m-%dT%H:%M:%SZ"),
+            # Bonus is not final until FPL says the gameweek is, so a review
+            # built on a provisional pull has to be able to say so.
+            "provisional": provisional,
+            "players": players,
+        }
+        top = ", ".join(f"{p['name']} {p['total_points']}" for p in players[:5])
+        print(f"  GW{gw}: {len(players)} players, {played} with minutes"
+              f"{'  (PROVISIONAL — bonus may still move)' if provisional else ''}")
+        print(f"    top: {top}")
+        if args.dry_run:
+            continue
+        dest = os.path.join(out_dir, f"gw{gw}.json")
+        # A finished gameweek returns the same numbers for ever. Rewriting the
+        # file anyway would change only `pulled`, and the scheduled job would
+        # commit that difference every night from now until May. Compare what
+        # is actually being said, and leave the file alone if it has not moved.
+        if os.path.exists(dest):
+            try:
+                with open(dest, encoding="utf-8") as f:
+                    was = json.load(f)
+                if was.get("players") == players and was.get("provisional") == provisional:
+                    print("    unchanged since the last pull — left alone")
+                    continue
+            except (json.JSONDecodeError, OSError):
+                pass  # unreadable, so rewrite it
+        os.makedirs(out_dir, exist_ok=True)
+        with open(dest, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
+        written += 1
+
+    if args.dry_run:
+        print(f"\nwould write up to {len(wanted)} gameweek(s) to site_data/{season}/actuals/")
+    else:
+        print(f"\nwrote {written} gameweek(s) to site_data/{season}/actuals/")
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("gw", nargs="?", type=int, help="one gameweek; default is every finished one not stored")
     ap.add_argument("--live", action="store_true", help="also pull the gameweek in progress")
     ap.add_argument("--reset", action="store_true", help="start a new season's file, archiving the old")
+    ap.add_argument("--actuals", action="store_true",
+                    help="write site_data/<season>/actuals/gw<N>.json instead of the ratings CSV")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
@@ -99,6 +243,9 @@ def main():
     teams = {t["id"]: t["short_name"] for t in boot["teams"]}
     fx = {f["id"]: f for f in fixtures}
     events = {e["id"]: e for e in boot["events"]}
+
+    if args.actuals:
+        return actuals(args, boot, elements, teams, fx, events)
 
     rows = read_existing()
 
