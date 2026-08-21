@@ -50,6 +50,11 @@ run_step() {
 }
 
 if [ "$DO_PULL" -eq 1 ]; then
+  # FPL's own per-gameweek record first: it is the file every other step joins
+  # onto, and until this existed it was the one input nothing here could
+  # refresh. Cheap — one call per unstored gameweek — and it no-ops when there
+  # is nothing new to fetch.
+  run_step pull_fpl_gw.py
   run_step pull_understat_data.py
   run_step pull_pl_stats.py
 fi

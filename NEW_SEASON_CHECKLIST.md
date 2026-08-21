@@ -18,7 +18,10 @@ slow but unattended.
 - [ ] Pull the new `season_summary.csv` (bootstrap-static: new player IDs,
       prices, teams — **player `element` IDs reset every season**)
 - [ ] Pull the new `fixtures_enriched.csv` (new fixture list with FDR)
-- [ ] `player_gw_history.csv` starts empty and grows each GW
+- [ ] `player_gw_history.csv` starts empty and grows each GW —
+      `python3 pull_fpl_gw.py --reset` archives last season's copy and
+      starts the new one. It refuses to append across seasons on its own,
+      because FPL reissues element ids every summer.
 
 **Check:** `season_summary.csv` has ~700 rows and the promoted teams appear;
 `fixtures_enriched.csv` has 380 rows, all `finished=False`.
