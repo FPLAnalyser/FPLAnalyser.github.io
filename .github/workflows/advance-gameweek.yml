@@ -45,6 +45,10 @@ on:
         description: 'Report what would change without writing anything'
         type: boolean
         default: false
+      snapshot_gw:
+        description: 'Capture this gameweek''s projection now (recovery — normally left blank)'
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -89,13 +93,19 @@ jobs:
       # on the locked gameweek until the next quarter-hour, which retries.
       # That is the intended trade: being fifteen minutes late is recoverable,
       # and a projection missed at the deadline is not.
+      #
+      # `snapshot_gw` is the way back if one is missed anyway — it runs this
+      # part on a named gameweek without waiting for a deadline. It is also how
+      # this half gets exercised: pointed at a gameweek already stored, the
+      # script says so and exits 0 without writing, which proves npm, esbuild
+      # and the TypeScript imports all work here on a week when nothing moves.
       - uses: actions/setup-node@v4
-        if: ${{ !inputs.dry_run && steps.check.outputs.changed == 'true' && steps.check.outputs.locked_gw != '' }}
+        if: ${{ !inputs.dry_run && (inputs.snapshot_gw != '' || (steps.check.outputs.changed == 'true' && steps.check.outputs.locked_gw != '')) }}
         with:
           node-version: '20'
           cache: npm
-      - name: Freeze what the site projected for GW${{ steps.check.outputs.locked_gw }}
-        if: ${{ !inputs.dry_run && steps.check.outputs.changed == 'true' && steps.check.outputs.locked_gw != '' }}
+      - name: Freeze what the site projected for GW${{ inputs.snapshot_gw || steps.check.outputs.locked_gw }}
+        if: ${{ !inputs.dry_run && (inputs.snapshot_gw != '' || (steps.check.outputs.changed == 'true' && steps.check.outputs.locked_gw != '')) }}
         run: |
           npm ci
           # The script imports the site's own TypeScript — the same minutes and
@@ -104,7 +114,7 @@ jobs:
           ./node_modules/.bin/esbuild snapshot_projections.mjs \
             --bundle --platform=node --format=esm \
             --outfile=_snapshot.build.mjs --external:react
-          node _snapshot.build.mjs ${{ steps.check.outputs.locked_gw }}
+          node _snapshot.build.mjs ${{ inputs.snapshot_gw || steps.check.outputs.locked_gw }}
           rm -f _snapshot.build.mjs
 
       - name: Advance to the next unlocked gameweek

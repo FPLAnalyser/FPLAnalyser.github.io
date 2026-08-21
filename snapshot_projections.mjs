@@ -109,6 +109,18 @@ for (const r of ratings) {
 }
 out.sort((a, b) => b.xp - a.xp)
 
+const dest = join(OUT, `gw${gw}.json`)
+// Asked before anything else is judged: if the gameweek is already captured
+// there is nothing to decide. A projection is only final once, so this file is
+// written once and never rewritten — and checking it first means a re-run, or
+// a recovery dispatch aimed at a gameweek already safely stored, costs nothing
+// and cannot trip the guard below on data that has since moved on.
+if (existsSync(dest) && !args.includes('--force')) {
+  console.log(`${dest} already exists — a projection is only final once, so it is never rewritten.`)
+  console.log('Pass --force if you genuinely mean to replace it.')
+  process.exit(0)
+}
+
 // AN EMPTY SNAPSHOT IS WORSE THAN NO SNAPSHOT. A projection is only final
 // once, so this file is never rewritten (see below) — an empty one would sit
 // there permanently and there is no way to go back and recompute it. The way
@@ -125,12 +137,6 @@ if (!out.length) {
 }
 
 mkdirSync(OUT, { recursive: true })
-const dest = join(OUT, `gw${gw}.json`)
-if (existsSync(dest) && !args.includes('--force')) {
-  console.log(`${dest} already exists — a projection is only final once, so it is never rewritten.`)
-  console.log('Pass --force if you genuinely mean to replace it.')
-  process.exit(0)
-}
 const payload = {
   gw,
   season: SEASON,
