@@ -1,0 +1,965 @@
+<title>My Team Area</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700;800&display=swap">
+<style>
+/* Tokens are src/index.css as it stands. This is a mockup of a page inside an
+   existing product, so nothing here invents a palette — the job is to show
+   what the My Team area could be, in the clothes the site already wears. */
+:root{
+  --bg0:#000; --bg1:#050609; --s1:#121316; --s2:#1b1c1f; --s3:#232427;
+  --ink:#edeff3; --ink2:#aaacb0; --ink3:#828386;
+  --line:rgba(255,255,255,.07); --line-mid:rgba(255,255,255,.12); --line-strong:rgba(255,255,255,.2);
+  --acc:#c9a227; --acc2:#ead188; --acc-soft:rgba(201,162,39,.10);
+  --good:#3ddc7a; --warn:#e8b04a; --bad:#f0736f; --info:#6ea8ff;
+  --r-sm:6px; --r-md:10px; --r-lg:14px; --r-xl:20px;
+  --gap:14px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg0);color:var(--ink);
+     font:15px/1.55 'Manrope',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+.cond{font-family:'Barlow Condensed','Arial Narrow',sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:26px 18px 100px}
+a{color:var(--acc);text-decoration:none}
+:focus-visible{outline:2px solid var(--acc2);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ── page furniture ─────────────────────────────────────────────────── */
+h1{font-size:27px;margin:0 0 6px;letter-spacing:-.025em;font-weight:800;text-wrap:balance}
+h2{font-size:19px;margin:0 0 4px;letter-spacing:-.015em;font-weight:800;text-wrap:balance}
+h3{font-size:14.5px;margin:0;font-weight:800;letter-spacing:-.01em}
+.lede{color:var(--ink2);font-size:14px;margin:0;max-width:70ch}
+.kicker{font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.muted{color:var(--ink2);font-size:13px}
+.rule{height:1px;background:var(--line);margin:34px 0 24px;border:0}
+.note{background:var(--s1);border:1px solid var(--line);border-left:2px solid var(--line-strong);
+  border-radius:0 var(--r-md) var(--r-md) 0;padding:11px 14px;font-size:13px;color:var(--ink2);max-width:80ch}
+.note b{color:var(--ink)}
+/* Green means GOOD, never "real". Real is the default; unreal is stamped
+   .wip. Colouring real numbers green made green mean two things at once. */
+.good{color:var(--good)} .bad{color:var(--bad)}
+
+/* Anything whose number is not yet knowable is stamped, every time. GW1's
+   matches kick off tonight; nobody has an actual point yet, mine included. */
+.wip{border-bottom:1px dashed var(--warn);cursor:help}
+
+/* ── the week dial: the tab bar, but it knows what day it is ─────────── */
+.dial{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:4px;display:flex;gap:3px;margin:18px 0 6px;overflow-x:auto}
+.dial button{flex:1;min-width:118px;font:inherit;cursor:pointer;background:none;border:0;
+  border-radius:var(--r-md);padding:9px 12px 8px;text-align:left;color:var(--ink3);
+  transition:background .14s,color .14s}
+.dial button:hover{background:var(--s2);color:var(--ink2)}
+.dial button[aria-selected=true]{background:var(--s3);color:var(--ink)}
+.dial button[aria-selected=true] .dt{color:var(--acc)}
+.dial .dn{display:block;font-size:14px;font-weight:800;letter-spacing:-.01em}
+.dial .dt{display:block;font-size:10.5px;font-weight:700;color:var(--ink3);margin-top:1px}
+section[hidden]{display:none}
+
+/* ── shared design bits ─────────────────────────────────────────────── */
+.card{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 16px}
+.grid{display:grid;gap:var(--gap)}
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.tile{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg);padding:11px 14px}
+.tile .big{font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.15;font-variant-numeric:tabular-nums}
+.tile .sub{font-size:11.5px;color:var(--ink2);margin-top:1px}
+.pill{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 8px;
+  font-size:10.5px;font-weight:800;letter-spacing:.02em;white-space:nowrap}
+.pill.g{background:rgba(61,220,122,.13);color:var(--good);border:1px solid rgba(61,220,122,.38)}
+.pill.b{background:rgba(240,115,111,.12);color:var(--bad);border:1px solid rgba(240,115,111,.4)}
+.pill.w{background:rgba(232,176,74,.12);color:var(--warn);border:1px solid rgba(232,176,74,.4)}
+.pill.i{background:rgba(110,168,255,.11);color:var(--info);border:1px solid rgba(110,168,255,.36)}
+.pill.n{background:var(--s2);color:var(--ink3);border:1px solid var(--line-mid)}
+table{width:100%;border-collapse:collapse}
+.scroll{overflow-x:auto}
+th{font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);
+   padding:8px 9px;text-align:right;background:var(--s2);white-space:nowrap;font-weight:800}
+th:first-child,td:first-child{text-align:left}
+td{padding:7px 9px;border-top:1px solid var(--line);font-size:13px}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+
+/* ── pitch ──────────────────────────────────────────────────────────── */
+.pitch{position:relative;border-radius:var(--r-xl);border:1px solid var(--line);overflow:hidden;
+  padding:18px 12px 14px;
+  background:repeating-linear-gradient(180deg,rgba(255,255,255,.045) 0 7.14%,rgba(0,0,0,.05) 7.14% 14.28%),
+             radial-gradient(120% 70% at 50% 0%,rgba(255,255,255,.10),transparent 62%),
+             linear-gradient(180deg,#1b7a3a 0%,#15682f 45%,#125c29 100%)}
+.pitch svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.rows{position:relative;z-index:1;display:flex;flex-direction:column;gap:16px}
+.row{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.p{width:122px;border-radius:11px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.46);
+   backdrop-filter:blur(5px);padding:6px 8px 7px;display:flex;flex-direction:column;gap:3px;position:relative}
+.p.cap{border-color:rgba(201,162,39,.7);box-shadow:0 0 0 1px rgba(201,162,39,.25)}
+.p.done{opacity:.62}
+.p.risk{border-color:rgba(240,115,111,.6)}
+.p .nm{font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p .meta{display:flex;justify-content:space-between;align-items:baseline;gap:5px}
+.p .xp{font-size:13px;font-weight:800;color:var(--acc2);font-variant-numeric:tabular-nums}
+.p .sub{font-size:9.5px;color:rgba(255,255,255,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.arm{position:absolute;top:-6px;right:-6px;width:19px;height:19px;border-radius:999px;background:var(--acc);
+  color:#14100a;font-size:9.5px;font-weight:800;display:grid;place-items:center;border:2px solid rgba(0,0,0,.55)}
+.bench{display:flex;gap:8px;margin-top:10px;padding:9px;background:var(--s1);
+  border:1px solid var(--line);border-radius:var(--r-lg);align-items:stretch;overflow-x:auto}
+.bench .lbl{writing-mode:vertical-rl;transform:rotate(180deg);font-size:9px;font-weight:800;
+  letter-spacing:.11em;color:var(--ink3);text-transform:uppercase;display:grid;place-items:center}
+.bp{flex:1;min-width:104px;border:1px solid var(--line-mid);border-radius:var(--r-md);padding:6px 8px;background:var(--s2)}
+.bp .nm{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bp .xp{font-size:11px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.bp.up{border-color:rgba(61,220,122,.45);background:rgba(61,220,122,.06)}
+
+/* ── action list ────────────────────────────────────────────────────── */
+.act{display:flex;gap:11px;align-items:center;padding:11px 14px;border-top:1px solid var(--line)}
+.act:first-child{border-top:0}
+.act .ic{width:26px;height:26px;flex:none;border-radius:8px;background:var(--s3);display:grid;
+  place-items:center;font-size:12px;font-weight:800;color:var(--ink2)}
+.act .t{font-size:13.5px;font-weight:700}
+.act .d{font-size:11.5px;color:var(--ink2);margin-top:1px}
+.act .v{margin-left:auto;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.act.hot .ic{background:rgba(61,220,122,.14);color:var(--good)}
+.act.warn .ic{background:rgba(240,115,111,.13);color:var(--bad)}
+
+/* ── bars, dials, sparks ────────────────────────────────────────────── */
+.bar{height:7px;border-radius:99px;background:var(--s3);overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.stack{display:flex;flex-direction:column;gap:9px}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--ink2)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.dot{width:8px;height:8px;border-radius:2px;display:inline-block}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
+.third{display:grid;grid-template-columns:1.15fr .85fr;gap:var(--gap)}
+@media(max-width:760px){.split,.third{grid-template-columns:1fr}}
+
+/* ── the idea cards at the foot ─────────────────────────────────────── */
+.idea{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.idea>header{padding:12px 15px 10px;border-bottom:1px solid var(--line);
+  display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.idea>header .n{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;
+  color:var(--acc);line-height:1;letter-spacing:.02em}
+.idea>header p{margin:4px 0 0;flex-basis:100%;font-size:12.5px;color:var(--ink2)}
+.idea .demo{padding:14px 15px}
+.ideas{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:var(--gap)}
+
+/* the still-to-play meter */
+.meter{display:flex;height:34px;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--line-mid)}
+.meter div{display:grid;place-items:center;font-size:11.5px;font-weight:800;letter-spacing:.01em}
+.meter .banked{background:rgba(61,220,122,.2);color:var(--good)}
+.meter .live{background:rgba(232,176,74,.2);color:var(--warn)}
+.meter .todo{background:var(--s2);color:var(--ink3)}
+
+/* the concentration dial */
+.conc{display:flex;gap:3px;align-items:flex-end;height:56px}
+.conc i{flex:1;border-radius:3px 3px 0 0;background:var(--s3);display:block;position:relative}
+.conc i.hi{background:var(--bad)} .conc i.md{background:var(--warn)} .conc i.lo{background:var(--s3)}
+
+/* the ledger */
+.led{display:flex;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
+.led:first-child{border-top:0}
+.led time{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--ink3);
+  min-width:34px;letter-spacing:.03em}
+.led .v{margin-left:auto;font-weight:800;font-variant-numeric:tabular-nums}
+
+/* countdown checklist */
+.chk{display:flex;gap:9px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
+.chk:first-child{border-top:0}
+.chk .box{width:17px;height:17px;flex:none;border-radius:5px;border:1.5px solid var(--line-strong);
+  display:grid;place-items:center;font-size:10px;font-weight:800}
+.chk.done .box{background:var(--good);border-color:var(--good);color:#04140a}
+.chk.done span{color:var(--ink3);text-decoration:line-through}
+</style>
+
+<div class="wrap">
+
+<header>
+  <span class="kicker">Mockups · design exploration</span>
+  <h1>My Team, as a place you come back to</h1>
+  <p class="lede">
+    Everything below is drawn on the real projection files in
+    <code>site_data/2026-27/</code> — the same 495-player GW2 snapshot the site
+    would freeze at Friday's deadline. Where a number cannot exist yet, it is
+    <span class="wip" title="not knowable yet">underlined like this</span> and
+    labelled. GW1's first match kicks off tonight, so nobody has scored a point
+    in this season: every "actual" on this page is a shape, not a result.
+  </p>
+</header>
+
+<div class="note" style="margin-top:16px">
+  <b>The proposal is four tabs, not six.</b> You listed live gameweek, planner,
+  look back, season report, insights, and actions. Two of those are not tabs.
+  <b>Insights</b> and <b>actions</b> have no home of their own — an insight
+  about next week belongs in the planner, an insight about last week belongs in
+  the review, and an action belongs wherever the thing it acts on is. Give them
+  their own tab and every other tab becomes a place you look at numbers and
+  leave. Spread them through, and each tab answers "so what".
+  <br><br>
+  <b>And the tabs know what day it is.</b> A manager's week has a shape —
+  pick the team, watch it, count the damage, plan the next one — so the page
+  opens on the tab that matches the moment rather than making you find it. The
+  bar below shows what that looks like on the Friday of GW2, which is a week
+  from now: deadline imminent, so <b>Now</b> leads.
+</div>
+
+<div class="dial" role="tablist" aria-label="My Team sections">
+  <button role="tab" aria-selected="true"  aria-controls="t-now"    id="b-now">
+    <span class="dn">Now</span><span class="dt">deadline in 6d 18h</span></button>
+  <button role="tab" aria-selected="false" aria-controls="t-plan"   id="b-plan">
+    <span class="dn">Plan</span><span class="dt">GW2–GW6 · 1 free transfer</span></button>
+  <button role="tab" aria-selected="false" aria-controls="t-review" id="b-review">
+    <span class="dn">Review</span><span class="dt">GW1 settles Monday</span></button>
+  <button role="tab" aria-selected="false" aria-controls="t-season" id="b-season">
+    <span class="dn">Season</span><span class="dt">1 of 38 played</span></button>
+</div>
+
+<!-- ══════════════════════════ NOW ══════════════════════════ -->
+<section id="t-now" role="tabpanel" aria-labelledby="b-now">
+
+  <div class="note" style="margin:16px 0 14px">
+    <b>One tab, three faces.</b> Before the deadline it is a team sheet you can
+    act on. While the matches run it is a live score with a horizon. Once they
+    finish it is a result. Same tab — because it is always the answer to "how
+    am I doing right now", and that question has three different answers
+    depending on the hour.
+  </div>
+
+  <div class="dial" style="margin-bottom:14px" role="tablist" aria-label="Face of the Now tab">
+    <button role="tab" aria-selected="true"  aria-controls="f-before" id="fb-before" data-face>
+      <span class="dn">Before</span><span class="dt">Fri, pre-deadline</span></button>
+    <button role="tab" aria-selected="false" aria-controls="f-during" id="fb-during" data-face>
+      <span class="dn">During</span><span class="dt">Sun afternoon</span></button>
+    <button role="tab" aria-selected="false" aria-controls="f-after"  id="fb-after" data-face>
+      <span class="dn">After</span><span class="dt">Mon night</span></button>
+  </div>
+
+  <!-- ─── before ─── -->
+  <div id="f-before" role="tabpanel" aria-labelledby="fb-before">
+    <div class="strip" style="margin-bottom:var(--gap)">
+      <div class="tile"><div class="kicker">Projected</div><div class="big">50.6</div>
+        <div class="sub">XI 45.0 + Haaland armband</div></div>
+      <div class="tile"><div class="kicker">On the table</div><div class="big good">+2.5</div>
+        <div class="sub">before you spend a transfer</div></div>
+      <div class="tile"><div class="kicker">In the bank</div><div class="big">£0.0m</div>
+        <div class="sub">1 free transfer</div></div>
+      <div class="tile"><div class="kicker">Riding on Monday</div><div class="big" style="color:var(--warn)">33%</div>
+        <div class="sub">Villa v Arsenal, both sides</div></div>
+    </div>
+
+    <div class="card" style="border-color:rgba(201,162,39,.4);background:linear-gradient(180deg,rgba(201,162,39,.07),transparent 72%);padding:16px 18px;margin-bottom:var(--gap)">
+      <div class="kicker" style="color:var(--acc)">The call · GW2</div>
+      <h2 style="margin:5px 0 7px">You are playing both sides of Manchester United v Ipswich.</h2>
+      <p class="muted" style="margin:0;max-width:78ch">
+        Martinez and Maguire keep a clean sheet by keeping O'Shea's Ipswich out,
+        and O'Shea starts ahead of a Chelsea forward projected more than twice
+        his 2.01. It is the same ninety minutes paying you and charging you, and
+        the fix costs nothing: bench O'Shea, start João Pedro, go three at the
+        back.
+      </p>
+    </div>
+
+    <div class="card" style="padding:0;margin-bottom:var(--gap)">
+      <div class="act hot"><span class="ic">↑</span>
+        <div><div class="t">Start João Pedro over O'Shea</div>
+          <div class="d">4.49 against 2.01 — free, no transfer, 3-4-3</div></div>
+        <span class="v good">+2.48</span></div>
+      <div class="act hot"><span class="ic">↔</span>
+        <div><div class="t">O'Shea → van Ewijk</div>
+          <div class="d">Same £4.0m. Coventry at home to Hull, Ipswich away at United</div></div>
+        <span class="v good">+2.22</span></div>
+      <div class="act"><span class="ic">C</span>
+        <div><div class="t">Armband stays on Haaland</div>
+          <div class="d">5.61, and the next best you own is Saka at 4.87</div></div>
+        <span class="v" style="color:var(--ink3)">held</span></div>
+      <div class="act warn"><span class="ic">!</span>
+        <div><div class="t">Three of your XI do not kick off until Monday</div>
+          <div class="d">Raya, Calafiori and Saka are all Aston Villa away, 19:00 Mon 31st</div></div>
+        <span class="v" style="color:var(--ink3)">note</span></div>
+    </div>
+
+    <div class="pitch">
+      <svg viewBox="0 0 300 406" preserveAspectRatio="none" aria-hidden="true">
+        <g fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.6">
+          <rect x="6" y="6" width="288" height="394" rx="2"/><line x1="6" y1="203" x2="294" y2="203"/>
+          <ellipse cx="150" cy="203" rx="46" ry="46"/><rect x="60" y="6" width="180" height="62"/>
+          <rect x="112" y="6" width="76" height="26"/><path d="M108 68 A 46 46 0 0 0 192 68"/>
+          <rect x="60" y="338" width="180" height="62"/><rect x="112" y="374" width="76" height="26"/>
+          <path d="M108 338 A 46 46 0 0 1 192 338"/>
+        </g>
+        <g fill="rgba(255,255,255,.45)"><circle cx="150" cy="203" r="2.4"/></g>
+      </svg>
+      <div class="rows" id="pitch-before"></div>
+    </div>
+    <div class="bench"><span class="lbl">Subs</span><div id="bench-before" style="display:flex;gap:8px;flex:1"></div></div>
+    <p class="muted" style="margin:9px 2px 0;font-size:12px">
+      Numbers on the shirts are this gameweek's projection. O'Shea is outlined
+      in red because he is the starter the page wants you to drop; João Pedro is
+      outlined in green on the bench because he is the one it wants you to
+      bring in.
+    </p>
+  </div>
+
+  <!-- ─── during ─── -->
+  <div id="f-during" role="tabpanel" aria-labelledby="fb-during" hidden>
+    <div class="note" style="margin-bottom:var(--gap)">
+      <b>The number everyone shows is the wrong one.</b> Every live tracker in
+      the game shows points so far, which on a Saturday lunchtime is mostly a
+      statement about how many of your players have played. What you want to
+      know is where you are heading — so the score is shown as banked, in play,
+      and still to come, and the projection updates as fixtures settle.
+    </div>
+    <div class="strip" style="margin-bottom:var(--gap)">
+      <div class="tile"><div class="kicker">Banked</div><div class="big"><span class="wip" title="illustrative — GW2 has not been played">29</span></div>
+        <div class="sub">4 finished: Haaland, Wirtz, Ndiaye, Le Fée</div></div>
+      <div class="tile"><div class="kicker">In play</div><div class="big" style="color:var(--warn)"><span class="wip" title="illustrative">4</span></div>
+        <div class="sub">3 at Old Trafford, 61'</div></div>
+      <div class="tile"><div class="kicker">Still to come</div><div class="big" style="color:var(--ink3)">16.6</div>
+        <div class="sub">4 players, Villa v Arsenal, Monday</div></div>
+      <div class="tile"><div class="kicker">Heading for</div><div class="big"><span class="wip" title="illustrative">50</span></div>
+        <div class="sub">projected 50.6 before kick-off</div></div>
+    </div>
+    <div class="card" style="margin-bottom:var(--gap)">
+      <div class="kicker" style="margin-bottom:8px">Where the 50.6 stands</div>
+      <div class="meter">
+        <div class="banked" style="flex:29">29 banked</div>
+        <div class="live" style="flex:4">4</div>
+        <div class="todo" style="flex:17">16.6 to come</div>
+      </div>
+      <p class="muted" style="margin:9px 0 0;font-size:12px">
+        The right-hand block is not a guess about the future — it is the
+        projection for the players who have not kicked off yet, which is a
+        number the site already computes for every one of them.
+      </p>
+    </div>
+    <div class="split">
+      <div class="card">
+        <div class="kicker" style="margin-bottom:9px">Live, by player</div>
+        <div class="stack">
+          <div><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600">
+            <span>Haaland <span class="pill n">C</span></span><span class="wip">8 ×2 · Fri, full time</span></div>
+            <div class="bar" style="margin-top:5px"><i style="width:100%;background:var(--good)"></i></div></div>
+          <div><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600">
+            <span>Wirtz</span><span class="wip">6 · Sat, full time</span></div>
+            <div class="bar" style="margin-top:5px"><i style="width:75%;background:var(--good)"></i></div></div>
+          <div><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600">
+            <span>Martinez</span><span class="wip">2 · 61'</span></div>
+            <div class="bar" style="margin-top:5px"><i style="width:25%;background:var(--warn)"></i></div></div>
+          <div style="opacity:.55"><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600">
+            <span>Saka</span><span>4.87 projected · Mon 19:00</span></div>
+            <div class="bar" style="margin-top:5px"><i style="width:61%;background:var(--s3)"></i></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="kicker" style="margin-bottom:9px">What is still live for you</div>
+        <div class="stack" style="gap:11px">
+          <div><h3>Manchester United 1–0 Ipswich · 61'</h3>
+            <p class="muted" style="margin:3px 0 0;font-size:12.5px">
+              Your two United defenders are 29 minutes from a clean sheet worth
+              8 points between them. Your Ipswich defender needs the equaliser
+              he would rather not concede.</p></div>
+          <div><h3>Aston Villa v Arsenal · Monday</h3>
+            <p class="muted" style="margin:3px 0 0;font-size:12.5px">
+              Four of your XI and 16.6 of your projection — a third of the
+              whole week — are in one fixture that has not kicked off, and you
+              own both sides of that one too. Nothing to do about it now, but
+              it is why Sunday night's rank is not the one you finish on.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── after ─── -->
+  <div id="f-after" role="tabpanel" aria-labelledby="fb-after" hidden>
+    <div class="strip" style="margin-bottom:var(--gap)">
+      <div class="tile"><div class="kicker">GW2 points</div><div class="big"><span class="wip" title="illustrative">54</span></div>
+        <div class="sub">projected 50.6</div></div>
+      <div class="tile"><div class="kicker">Against the model</div><div class="big good"><span class="wip" title="illustrative">+3.4</span></div>
+        <div class="sub">you beat your own projection</div></div>
+      <div class="tile"><div class="kicker">Average</div><div class="big"><span class="wip" title="illustrative">48</span></div>
+        <div class="sub">+6 on the field</div></div>
+      <div class="tile"><div class="kicker">Rank</div><div class="big"><span class="wip" title="illustrative">318k</span></div>
+        <div class="sub">up 94k</div></div>
+    </div>
+    <div class="card" style="padding:0">
+      <div class="act hot"><span class="ic">✓</span>
+        <div><div class="t">Benching O'Shea was worth it</div>
+          <div class="d">João Pedro scored, O'Shea's Ipswich conceded three</div></div>
+        <span class="v good"><span class="wip">+7</span></span></div>
+      <div class="act warn"><span class="ic">✗</span>
+        <div><div class="t">The armband was on the wrong man</div>
+          <div class="d">Bruno Fernandes was projected 7.13 and you do not own him</div></div>
+        <span class="v" style="color:var(--bad)"><span class="wip">−6</span></span></div>
+      <div class="act"><span class="ic">→</span>
+        <div><div class="t">Carry the transfer, or spend it on Watkins</div>
+          <div class="d">Villa's run to GW6 is the third hardest the model has</div></div>
+        <span class="v" style="color:var(--ink3)">decide by Fri</span></div>
+    </div>
+    <p class="muted" style="margin:11px 2px 0;font-size:12px">
+      This face is deliberately thin. The full post-mortem is the
+      <b>Review</b> tab — this is just what you want on your phone at eleven on
+      a Monday night, which is the score, whether it was good, and whether
+      anything needs doing.
+    </p>
+  </div>
+</section>
+
+<!-- ══════════════════════════ PLAN ══════════════════════════ -->
+<section id="t-plan" role="tabpanel" aria-labelledby="b-plan" hidden>
+  <div class="note" style="margin:16px 0 14px">
+    <b>This is the Squad Builder, pointed at a squad you already own.</b> Same
+    board, same fixture strip, same transfer maths — the difference is that it
+    starts from your fifteen rather than from nothing, and every move it
+    suggests is costed in transfers and hits rather than in budget. Nothing new
+    has to be built for the middle of this tab; it is the existing planner with
+    a different starting state.
+  </div>
+
+  <div class="card" style="margin-bottom:var(--gap)">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:11px">
+      <div><div class="kicker">Your run</div>
+        <h2 style="margin:3px 0 0">GW2 to GW6, by projected points</h2></div>
+      <span class="pill n">bookmakers have priced 1 of 10 GW2 fixtures</span>
+    </div>
+    <div class="scroll"><table>
+      <thead><tr><th>Club</th><th>GW2</th><th>GW3</th><th>GW4</th><th>GW5</th><th>GW6</th><th class="n">You own</th></tr></thead>
+      <tbody id="runs"></tbody>
+    </table></div>
+    <p class="muted" style="margin:10px 2px 0;font-size:12px">
+      Fixtures are real. The shading is the site's own difficulty scale, the one
+      the Fixtures grid uses — per-game xG and xGC baselines, not FPL's FDR.
+    </p>
+  </div>
+
+  <div class="split">
+    <div class="card">
+      <div class="kicker" style="margin-bottom:4px">One transfer, ranked</div>
+      <h2 style="margin:0 0 10px">What your free move is worth</h2>
+      <div style="margin:0 -16px">
+        <div class="act hot"><span class="ic">1</span>
+          <div><div class="t">O'Shea → van Ewijk</div><div class="d">£4.0m → £4.0m · Coventry v Hull</div></div>
+          <span class="v good">+2.22</span></div>
+        <div class="act"><span class="ic">2</span>
+          <div><div class="t">Watkins → Calvert-Lewin</div><div class="d">£8.0m → £6.0m · frees £2.0m</div></div>
+          <span class="v good">+1.50</span></div>
+        <div class="act"><span class="ic">3</span>
+          <div><div class="t">Ndiaye → Palmer</div><div class="d">£6.0m → £9.5m · you cannot afford it</div></div>
+          <span class="v" style="color:var(--ink3)">£3.5m short</span></div>
+      </div>
+      <p class="muted" style="margin:11px 0 0;font-size:12px">
+        Every number here is this week's projection difference, not a season
+        forecast. A move worth +2.22 this week and −1 for the four after it is
+        a bad move, which is what the strip above is for.
+      </p>
+    </div>
+    <div class="card">
+      <div class="kicker" style="margin-bottom:4px">Held back</div>
+      <h2 style="margin:0 0 10px">Two chips and a decision</h2>
+      <div class="stack" style="gap:12px">
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <h3>Wildcard</h3><span class="pill g">unused</span></div>
+          <p class="muted" style="margin:3px 0 0;font-size:12.5px">
+            Your squad is 100% spent with £0.0m banked, and the model wants two
+            changes. That is the shape that argues for a wildcard — but not in
+            GW2, on one gameweek of evidence.</p>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <h3>Bench Boost</h3><span class="pill g">unused</span></div>
+          <p class="muted" style="margin:3px 0 0;font-size:12.5px">
+            Your bench projects <b>14.1</b> in GW2, and two of those four are
+            Ipswich defenders away at United. Hold it.</p>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <h3>Free transfer</h3><span class="pill w">expires GW3 if unused twice</span></div>
+          <p class="muted" style="margin:3px 0 0;font-size:12.5px">
+            Rolling it is worth it only if next week's best move beats this
+            week's +2.22, and the odds for GW3 are not out yet.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ REVIEW ══════════════════════════ -->
+<section id="t-review" role="tabpanel" aria-labelledby="b-review" hidden>
+  <div class="note" style="margin:16px 0 14px">
+    <b>This tab is the reason the projection is now frozen at every deadline.</b>
+    Until this week the site recomputed xP in the browser on every render, so
+    the moment odds refreshed there was no record of what it had said — nothing
+    to review against. From GW2 the deadline job stores it, and the nightly job
+    stores what actually happened. This is what those two files look like
+    side by side.
+    <br><br>
+    <b>Right now they cannot be shown for real.</b> GW1's first match kicks off
+    tonight. Every actual below is a shape.
+  </div>
+
+  <div class="split" style="margin-bottom:var(--gap)">
+    <div class="card">
+      <div class="kicker">Your GW1</div>
+      <div style="display:flex;align-items:baseline;gap:12px;margin:5px 0 2px">
+        <span style="font-size:34px;font-weight:800;letter-spacing:-.03em"><span class="wip" title="GW1 has not been played">64</span></span>
+        <span class="muted">against a projection of <b>58.3</b></span>
+      </div>
+      <p class="muted" style="margin:6px 0 0;font-size:12.5px">
+        The 58.3 is real — the sum of your eleven in
+        <code>projections/gw1.json</code>, captured today, plus the Saka
+        armband. It is the first number this site has ever been able to be held
+        to. The 64 is the table below with the armband doubled, and it only adds
+        up because I picked it; on Monday it will not be mine to pick.</p>
+    </div>
+    <div class="card">
+      <div class="kicker">The model's GW1, everyone</div>
+      <div style="display:flex;align-items:baseline;gap:12px;margin:5px 0 2px">
+        <span style="font-size:34px;font-weight:800;letter-spacing:-.03em"><span class="wip">1.42</span></span>
+        <span class="muted">mean absolute error, points per player</span>
+      </div>
+      <p class="muted" style="margin:6px 0 0;font-size:12.5px">
+        Published whether it flatters the site or not. 495 players projected,
+        every one with a breakdown, so the error can be attributed rather than
+        just reported.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:var(--gap)">
+    <div class="kicker" style="margin-bottom:4px">Where it missed</div>
+    <h2 style="margin:0 0 4px">By component, not by player</h2>
+    <p class="muted" style="margin:0 0 13px;max-width:74ch">
+      "We were wrong about Haaland" is gossip. "We were wrong about clean
+      sheets, by 0.6 a defender, in every fixture the bookmakers had not priced"
+      is a bug report. This is the only chart on the page that is about the
+      site rather than about you, and it is the one worth publishing.
+    </p>
+    <div class="stack" id="components"></div>
+    <div class="legend" style="margin-top:12px">
+      <span><i class="dot" style="background:var(--good)"></i> model under-projected</span>
+      <span><i class="dot" style="background:var(--bad)"></i> model over-projected</span>
+      <span class="wip">shape only — GW1 settles Monday</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="kicker" style="margin-bottom:4px">Your eleven</div>
+    <h2 style="margin:0 0 11px">Projected against actual</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Player</th><th class="n">Proj</th><th class="n">Got</th><th class="n">Diff</th><th style="text-align:left">Where it came from</th></tr></thead>
+      <tbody id="review"></tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ SEASON ══════════════════════════ -->
+<section id="t-season" role="tabpanel" aria-labelledby="b-season" hidden>
+  <div class="note" style="margin:16px 0 14px">
+    <b>The hard part of this tab is that for the next two months it is nearly
+    empty</b> — and an empty season report is the state it will be in when most
+    people see it for the first time. So it is designed for GW2 first and GW20
+    second, rather than the other way round. Both are below.
+  </div>
+
+  <div class="split">
+    <div>
+      <div class="kicker" style="margin-bottom:7px">What it holds today · after GW1</div>
+      <div class="card">
+        <h2 style="margin:0 0 3px">One week in.</h2>
+        <p class="muted" style="margin:0 0 13px">
+          There is no season yet, so it says so, and spends the space on the
+          only two things that are already true: what you own, and what the
+          model thinks of it.
+        </p>
+        <div class="stack" style="gap:13px">
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px">
+              <span class="kicker">Squad concentration</span><span class="pill b">3 clubs, 8 players</span></div>
+            <div class="conc" id="conc"></div>
+            <p class="muted" style="margin:7px 0 0;font-size:12px">
+              Arsenal 3, United 3, Ipswich 2. Eight of your fifteen sit in
+              three clubs, and two of those clubs play each other in GW2.
+            </p>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px">
+              <span class="kicker">Where your money is</span><span class="muted">£100.0m spent, £0.0m banked</span></div>
+            <div class="bar" style="height:11px">
+              <i style="width:15.5%;background:var(--acc)"></i>
+              <i style="width:15.5%;background:var(--info)"></i>
+              <i style="width:34.5%;background:var(--good)"></i>
+              <i style="width:34.5%;background:var(--s3)"></i>
+            </div>
+            <div class="legend" style="margin-top:7px">
+              <span><i class="dot" style="background:var(--acc)"></i> Haaland £15.5m</span>
+              <span><i class="dot" style="background:var(--info)"></i> the other two forwards £15.5m</span>
+              <span><i class="dot" style="background:var(--good)"></i> five midfielders £34.5m</span>
+              <span><i class="dot" style="background:var(--s3)"></i> seven at the back £34.5m</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="kicker" style="margin-bottom:7px">What it becomes · shape at GW20</div>
+      <div class="card">
+        <h2 style="margin:0 0 3px">Twenty weeks in.</h2>
+        <p class="muted" style="margin:0 0 13px">
+          Same tab, and nothing has been added to it — the components above
+          just have data behind them now, and two more have earned their place.
+        </p>
+        <div class="stack" style="gap:14px">
+          <div>
+            <span class="kicker">Rank, week by week</span>
+            <canvas id="rankchart" height="88" style="width:100%;display:block;margin-top:6px"></canvas>
+            <p class="muted" style="margin:5px 0 0;font-size:12px">
+              <span class="wip">Shape only.</span> The line worth drawing is
+              rank, not points — points only go up, so a points chart is a
+              picture of the calendar.
+            </p>
+          </div>
+          <div>
+            <span class="kicker">You against your own projections</span>
+            <div class="bar" style="height:11px;margin-top:6px">
+              <i style="width:58%;background:var(--good)"></i><i style="width:42%;background:var(--bad)"></i></div>
+            <p class="muted" style="margin:5px 0 0;font-size:12px">
+              <span class="wip">11 of 19 gameweeks</span> above what the site
+              projected for your eleven. Which is a statement about your
+              captaincy and your bench order, because the squad was the same
+              either way.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ══════════════════════════ IDEAS ══════════════════════════ -->
+<header style="margin-bottom:4px">
+  <span class="kicker">Further</span>
+  <h1 style="font-size:23px">Eight things the page could do that it currently does not</h1>
+  <p class="lede">
+    Some are small; two are the sort of thing people tell other people about.
+    All eight are buildable on files that now exist. Numbers are real where a
+    real number exists.
+  </p>
+</header>
+
+<div class="ideas" style="margin-top:18px">
+
+  <div class="idea">
+    <header><span class="n">01</span><h3>What it cost you</h3>
+      <p>A running total of the points your decisions gave away — not your squad's, your <em>decisions'</em>. The most-discussed number in the game and nobody keeps it for you.</p></header>
+    <div class="demo">
+      <div class="led"><time>GW1</time><span>Captained Saka over Haaland</span><span class="v" style="color:var(--bad)"><span class="wip">−4</span></span></div>
+      <div class="led"><time>GW1</time><span>Started O'Shea over João Pedro</span><span class="v" style="color:var(--bad)"><span class="wip">−7</span></span></div>
+      <div class="led"><time>GW1</time><span>Held the free transfer</span><span class="v good"><span class="wip">+2</span></span></div>
+      <div class="led" style="border-top-width:2px;border-top-color:var(--line-strong)">
+        <time></time><b>Season</b><span class="v" style="color:var(--bad)"><span class="wip">−9</span></span></div>
+      <p class="muted" style="margin:10px 0 0;font-size:12px">
+        Needs an opt-out. A ledger of your own mistakes is compelling for
+        exactly as long as it is going well.
+      </p>
+    </div>
+  </div>
+
+  <div class="idea">
+    <header><span class="n">02</span><h3>Still to play, not points so far</h3>
+      <p>Every live tracker shows the number that flatters you at noon and frightens you at five. Show the horizon instead.</p></header>
+    <div class="demo">
+      <div class="meter" style="margin-bottom:9px">
+        <div class="banked" style="flex:29">29</div>
+        <div class="live" style="flex:4">4</div>
+        <div class="todo" style="flex:17">16.6 to come</div>
+      </div>
+      <p class="muted" style="margin:0;font-size:12.5px">
+        "50 by Monday" is worth opening the app for. "29 points" is not,
+        because it does not say whether that is good. The right-hand block is
+        real — 16.6 is the projection for the four who have not kicked off.
+      </p>
+    </div>
+  </div>
+
+  <div class="idea">
+    <header><span class="n">03</span><h3>The concentration dial</h3>
+      <p>One number for how much of your week rides on one club, one fixture, one player. Real, from your squad, right now.</p></header>
+    <div class="demo">
+      <div class="stack">
+        <div><div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:600">
+          <span>Villa v Arsenal · Mon</span><span class="pill b">32.7%</span></div>
+          <div class="bar" style="margin-top:5px"><i style="width:32.7%;background:var(--bad)"></i></div></div>
+        <div><div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:600">
+          <span>Haaland, captained</span><span class="pill w">22.2%</span></div>
+          <div class="bar" style="margin-top:5px"><i style="width:22.2%;background:var(--warn)"></i></div></div>
+        <div><div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:600">
+          <span>United v Ipswich · Sun</span><span class="pill w">21.0%</span></div>
+          <div class="bar" style="margin-top:5px"><i style="width:21%;background:var(--warn)"></i></div></div>
+      </div>
+      <p class="muted" style="margin:10px 0 0;font-size:12px">
+        Real, out of a projected 50.60 with the armband. Concentration is not a
+        mistake — it is how you beat the field. It is the concentration you did
+        not know you had that is the problem, and this squad has two fixtures
+        where it owns <em>both sides</em>.
+      </p>
+    </div>
+  </div>
+
+  <div class="idea">
+    <header><span class="n">04</span><h3>The deadline empties a list</h3>
+      <p>A countdown is a nag. A countdown that is also a checklist is a tool, and it hits zero items before it hits zero hours.</p></header>
+    <div class="demo">
+      <div class="chk done"><span class="box">✓</span><span>Captain set — Haaland</span></div>
+      <div class="chk done"><span class="box">✓</span><span>No injured starters</span></div>
+      <div class="chk"><span class="box"></span><span>O'Shea projects 2.01 — bench him</span></div>
+      <div class="chk"><span class="box"></span><span>Free transfer unused</span></div>
+      <p class="muted" style="margin:10px 0 0;font-size:12px">
+        Two of four done. The badge on the tab shows <b>2</b>, not a clock.
+      </p>
+    </div>
+  </div>
+
+  <div class="idea">
+    <header><span class="n">05</span><h3>The site marks its own homework in public</h3>
+      <p>Publish the model's error next to yours, every week, whether or not it is flattering. Nobody else in this space does it.</p></header>
+    <div class="demo">
+      <div class="split" style="gap:10px">
+        <div class="tile"><div class="kicker">Model error</div>
+          <div class="big"><span class="wip">1.42</span></div><div class="sub">points per player</div></div>
+        <div class="tile"><div class="kicker">vs the field</div>
+          <div class="big good"><span class="wip">−0.31</span></div><div class="sub">better than ownership alone</div></div>
+      </div>
+      <p class="muted" style="margin:10px 0 0;font-size:12.5px">
+        This is the single strongest trust argument the site has, it costs
+        nothing to produce now the two files exist, and it is unavailable to
+        anyone who did not store their projection before the deadline.
+      </p>
+    </div>
+  </div>
+
+  <div class="idea">
+    <header><span class="n">06</span><h3>Owned by you, owned by them</h3>
+      <p>Not a mini-league table — the site has no business rebuilding that. The differential, and what it is worth this week.</p></header>
+    <div class="demo">
+      <div class="scroll"><table>
+        <thead><tr><th>They own, you don't</th><th class="n">Own%</th><th class="n">GW2 xP</th></tr></thead>
+        <tbody>
+          <tr><td>B.Fernandes <span class="muted">MUN</span></td><td class="n">50.8</td><td class="n">7.13</td></tr>
+          <tr><td>Mbeumo <span class="muted">MUN</span></td><td class="n">36.0</td><td class="n">5.45</td></tr>
+          <tr><td>Gabriel <span class="muted">ARS</span></td><td class="n">29.7</td><td class="n">5.56</td></tr>
+          <tr><td>Calvert-Lewin <span class="muted">LEE</span></td><td class="n">30.0</td><td class="n">4.82</td></tr>
+        </tbody>
+      </table></div>
+      <p class="muted" style="margin:10px 0 0;font-size:12px">
+        Real ownership, real GW2 projections. Bruno Fernandes is owned by half
+        the game, projects highest of anyone, and you do not have him — which
+        is a bigger fact about your week than anything in your own fifteen.
+      </p>
+    </div>
+  </div>
+
+  <div class="idea">
+    <header><span class="n">07</span><h3>Your season in one sentence, written weekly</h3>
+      <p>Not a paragraph of generated filler. One claim, derived, that changes when the evidence does — and is allowed to be unflattering.</p></header>
+    <div class="demo">
+      <blockquote style="margin:0;padding:0 0 0 13px;border-left:2px solid var(--acc);font-size:15.5px;line-height:1.5">
+        Your defence is the best-projected part of your squad and you keep
+        benching the wrong half of it.
+      </blockquote>
+      <p class="muted" style="margin:11px 0 0;font-size:12px">
+        Assembled from a small set of tested claims with thresholds, not free
+        text. If none of them clears its threshold, the space stays empty —
+        which is the part that makes it worth reading.
+      </p>
+    </div>
+  </div>
+
+  <div class="idea">
+    <header><span class="n">08</span><h3>The tab bar is a clock</h3>
+      <p>The structural idea underneath all of this, and the cheapest thing here to build.</p></header>
+    <div class="demo">
+      <div class="stack" style="gap:7px;font-size:12.5px">
+        <div style="display:flex;gap:9px"><span class="pill n" style="min-width:74px;justify-content:center">Tue–Fri</span>
+          <span class="muted">opens on <b>Plan</b> — the deadline is far enough away to think</span></div>
+        <div style="display:flex;gap:9px"><span class="pill w" style="min-width:74px;justify-content:center">Fri, −6h</span>
+          <span class="muted">opens on <b>Now</b> — team sheet, with the checklist</span></div>
+        <div style="display:flex;gap:9px"><span class="pill i" style="min-width:74px;justify-content:center">Sat–Mon</span>
+          <span class="muted">opens on <b>Now</b>, live face — banked, in play, to come</span></div>
+        <div style="display:flex;gap:9px"><span class="pill g" style="min-width:74px;justify-content:center">Mon, late</span>
+          <span class="muted">opens on <b>Review</b> — the actuals have landed</span></div>
+      </div>
+      <p class="muted" style="margin:11px 0 0;font-size:12px">
+        Every tab stays reachable. The page just stops asking you to pick the
+        one the calendar already implies — and the deadline it reads is the
+        same <code>availability.json</code> event the advance job uses.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="note" style="margin-top:22px">
+  <b>What is real on this page and what is not.</b> Every projection, price,
+  ownership figure, fixture and kick-off time is read from
+  <code>site_data/2026-27/</code> as it stands tonight — including the ones that
+  make the argument, like O'Shea's 2.01 against João Pedro's 4.49, and van
+  Ewijk's 4.23 at the same £4.0m. The squad is the £100.0m fifteen from the
+  earlier mockups. Everything <span class="wip">underlined</span> is a point
+  total, rank or error that cannot exist until matches are played — GW1's first
+  is at 19:00 tonight and the gameweek runs to Monday, when the nightly job
+  stores the first real actuals this site has ever had.
+</div>
+
+</div>
+
+<script>
+/* ── real data ──────────────────────────────────────────────────────────
+   Squad from the earlier My Team mockup; every xp2 and own read from the
+   GW2 projection snapshot, every fixture from availability.json. */
+const XI = [
+  {pos:'GKP',nm:'Raya',      tm:'ARS',pr:6,   xp:3.98,opp:'AVL (A) Mon'},
+  {pos:'DEF',nm:'Calafiori', tm:'ARS',pr:5.5, xp:4.40,opp:'AVL (A) Mon'},
+  {pos:'DEF',nm:'Martinez',  tm:'MUN',pr:5,   xp:4.40,opp:'IPS (H) Sun'},
+  {pos:'DEF',nm:'Maguire',   tm:'MUN',pr:5,   xp:4.22,opp:'IPS (H) Sun'},
+  {pos:'DEF',nm:"O'Shea",    tm:'IPS',pr:4,   xp:2.01,opp:'MUN (A) Sun',risk:true},
+  {pos:'MID',nm:'Saka',      tm:'ARS',pr:9.5, xp:4.87,opp:'AVL (A) Mon'},
+  {pos:'MID',nm:'Wirtz',     tm:'LIV',pr:7.5, xp:4.47,opp:'NFO (H) Sat'},
+  {pos:'MID',nm:'Ndiaye',    tm:'EVE',pr:6,   xp:3.82,opp:'BOU (A) Sat'},
+  {pos:'MID',nm:'E.Le Fée',  tm:'SUN',pr:6,   xp:3.89,opp:'FUL (H) Sun'},
+  {pos:'FWD',nm:'Haaland',   tm:'MCI',pr:15.5,xp:5.61,opp:'CRY (A) Fri',cap:true},
+  {pos:'FWD',nm:'Watkins',   tm:'AVL',pr:8,   xp:3.32,opp:'ARS (H) Mon'},
+];
+const BENCH = [
+  {pos:'GKP',nm:'Lammens',   tm:'MUN',xp:3.89},
+  {pos:'DEF',nm:'Davis',     tm:'IPS',xp:2.01},
+  {pos:'MID',nm:'Groß',      tm:'BHA',xp:3.75},
+  {pos:'FWD',nm:'João Pedro',tm:'CHE',xp:4.49,up:true},
+];
+/* GW1 projections, also real — used by the Review tab. */
+const GW1 = [
+  {nm:'Raya',      xp:4.37,got:6, why:'clean sheet 2.13 of it'},
+  {nm:'Calafiori', xp:5.30,got:9, why:'goal threat 1.12 + clean sheet 2.10'},
+  {nm:'Martinez',  xp:4.50,got:2, why:'clean sheet 1.60'},
+  {nm:'Maguire',   xp:4.25,got:1, why:'defensive contribution 0.47'},
+  {nm:"O'Shea",    xp:3.46,got:2, why:'appearance 1.93 carried it'},
+  {nm:'Saka',      xp:6.34,got:12,why:'goals 2.32 + assists 0.89 + bonus 0.77'},
+  {nm:'Wirtz',     xp:4.66,got:2, why:'goals 1.41'},
+  {nm:'Ndiaye',    xp:4.40,got:2, why:'goals 1.29'},
+  {nm:'E.Le Fée',  xp:4.10,got:5, why:'assists 0.60 + bonus 0.57'},
+  {nm:'Haaland',   xp:6.09,got:8, why:'goals 2.71 + bonus 1.32'},
+  {nm:'Watkins',   xp:4.52,got:3, why:'goals 1.82'},
+];
+/* Real GW2–GW6 fixtures for the clubs in the squad. */
+const RUNS = [
+  ['ARS',3,[['AVL','A',2],['CHE','H',3],['SUN','A',2],['BHA','A',2],['LEE','H',1]]],
+  ['MUN',3,[['IPS','H',1],['EVE','A',2],['MCI','H',3],['FUL','A',2],['TOT','H',2]]],
+  ['IPS',2,[['MUN','A',3],['LIV','H',3],['CRY','A',2],['EVE','A',2],['FUL','H',2]]],
+  ['LIV',1,[['NFO','H',1],['IPS','A',1],['FUL','H',1],['BOU','A',2],['MCI','H',3]]],
+  ['MCI',1,[['CRY','A',2],['COV','H',1],['MUN','A',3],['SUN','H',1],['LIV','A',3]]],
+  ['AVL',1,[['ARS','H',3],['HUL','A',1],['NFO','H',1],['TOT','A',2],['BRE','H',1]]],
+  ['CHE',1,[['BHA','H',1],['ARS','A',3],['HUL','H',1],['BRE','A',2],['BOU','H',1]]],
+  ['EVE',1,[['BOU','A',2],['MUN','H',3],['TOT','A',2],['IPS','H',1],['HUL','A',1]]],
+  ['SUN',1,[['FUL','H',1],['BRE','A',2],['ARS','H',3],['MCI','A',3],['BHA','H',2]]],
+  ['BHA',1,[['CHE','A',2],['LEE','H',1],['COV','A',1],['ARS','H',3],['SUN','A',2]]],
+];
+const EASE = {1:['rgba(61,220,122,.16)','var(--good)'],2:['rgba(255,255,255,.04)','var(--ink2)'],
+              3:['rgba(240,115,111,.14)','var(--bad)']};
+
+/* ── render ─────────────────────────────────────────────────────────── */
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const card = (p) => `
+  <div class="p${p.cap ? ' cap' : ''}${p.risk ? ' risk' : ''}">
+    ${p.cap ? '<span class="arm">C</span>' : ''}
+    <span class="cond" style="font-size:10px;font-weight:800;letter-spacing:.09em;color:rgba(255,255,255,.6)">${p.pos}</span>
+    <div class="meta"><span class="nm">${esc(p.nm)}</span><span class="xp">${p.xp.toFixed(2)}</span></div>
+    <span class="sub">${esc(p.opp)}</span>
+  </div>`;
+
+function drawPitch(id, benchId) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = ['GKP','DEF','MID','FWD']
+    .map((pos) => `<div class="row">${XI.filter((p) => p.pos === pos).map(card).join('')}</div>`).join('');
+  document.getElementById(benchId).innerHTML = BENCH.map((p) => `
+    <div class="bp${p.up ? ' up' : ''}">
+      <div class="nm">${esc(p.nm)}</div>
+      <div class="xp">${esc(p.tm)} · ${p.xp.toFixed(2)}</div>
+    </div>`).join('');
+}
+drawPitch('pitch-before', 'bench-before');
+
+/* fixture run strip */
+document.getElementById('runs').innerHTML = RUNS.map(([club, owned, gws]) => `
+  <tr><td style="font-weight:700">${club}</td>${gws.map(([o, ha, e]) => `
+    <td class="n" style="background:${EASE[e][0]};color:${EASE[e][1]};font-weight:700;font-size:12px">
+      ${o}<span style="opacity:.6">(${ha})</span></td>`).join('')}
+    <td class="n">${owned}</td></tr>`).join('');
+
+/* review table */
+document.getElementById('review').innerHTML = GW1.map((r) => {
+  const d = r.got - r.xp;
+  return `<tr><td style="font-weight:600">${esc(r.nm)}</td>
+    <td class="n">${r.xp.toFixed(2)}</td>
+    <td class="n"><span class="wip" title="GW1 has not been played">${r.got}</span></td>
+    <td class="n" style="color:${d >= 0 ? 'var(--good)' : 'var(--bad)'};font-weight:700">
+      <span class="wip">${d >= 0 ? '+' : ''}${d.toFixed(1)}</span></td>
+    <td class="muted" style="font-size:12px">${esc(r.why)}</td></tr>`;
+}).join('');
+
+/* component error bars */
+const COMP = [['Clean sheets', -0.61], ['Goals', 0.34], ['Bonus', -0.28],
+              ['Assists', 0.19], ['Defensive contribution', 0.11], ['Saves', -0.07]];
+const mx = Math.max(...COMP.map(([, v]) => Math.abs(v)));
+document.getElementById('components').innerHTML = COMP.map(([n, v]) => `
+  <div>
+    <div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:600">
+      <span>${n}</span><span class="wip" style="color:${v >= 0 ? 'var(--good)' : 'var(--bad)'}">
+        ${v >= 0 ? '+' : ''}${v.toFixed(2)}</span></div>
+    <div class="bar" style="margin-top:5px;justify-content:${v >= 0 ? 'flex-start' : 'flex-end'}">
+      <i style="width:${(Math.abs(v) / mx * 100).toFixed(0)}%;background:${v >= 0 ? 'var(--good)' : 'var(--bad)'}"></i>
+    </div>
+  </div>`).join('');
+
+/* concentration dial — real: 3 ARS, 3 MUN, 2 IPS, then singles */
+const CLUBS = [['ARS',3],['MUN',3],['IPS',2],['LIV',1],['MCI',1],['AVL',1],['CHE',1],['EVE',1],['SUN',1],['BHA',1]];
+document.getElementById('conc').innerHTML = CLUBS.map(([c, n]) =>
+  `<i class="${n >= 3 ? 'hi' : n === 2 ? 'md' : 'lo'}" style="height:${n / 3 * 100}%" title="${c}: ${n}"></i>`).join('');
+
+/* rank shape — explicitly illustrative, drawn rather than hand-written SVG */
+(function () {
+  const cv = document.getElementById('rankchart');
+  if (!cv) return;
+  const pts = [412, 318, 340, 271, 244, 260, 198, 176, 190, 155,
+               140, 152, 121, 133, 110, 96, 104, 88, 79, 71];
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth || 420, h = 88;
+  cv.width = w * dpr; cv.height = h * dpr;
+  const c = cv.getContext('2d'); c.scale(dpr, dpr);
+  const lo = Math.min(...pts), hi = Math.max(...pts);
+  const x = (i) => (i / (pts.length - 1)) * (w - 2) + 1;
+  const y = (v) => h - 8 - ((hi - v) / (hi - lo)) * (h - 20);
+  c.strokeStyle = 'rgba(255,255,255,.06)'; c.lineWidth = 1;
+  for (let g = 0; g < 4; g++) {
+    const gy = 8 + g * ((h - 20) / 3);
+    c.beginPath(); c.moveTo(0, gy); c.lineTo(w, gy); c.stroke();
+  }
+  const grad = c.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, 'rgba(201,162,39,.28)'); grad.addColorStop(1, 'rgba(201,162,39,0)');
+  c.beginPath(); c.moveTo(x(0), y(pts[0]));
+  pts.forEach((v, i) => c.lineTo(x(i), y(v)));
+  c.lineTo(x(pts.length - 1), h); c.lineTo(x(0), h); c.closePath();
+  c.fillStyle = grad; c.fill();
+  c.beginPath(); pts.forEach((v, i) => (i ? c.lineTo(x(i), y(v)) : c.moveTo(x(i), y(v))));
+  c.strokeStyle = '#c9a227'; c.lineWidth = 1.8; c.stroke();
+  c.beginPath(); c.arc(x(pts.length - 1), y(pts[pts.length - 1]), 3.2, 0, Math.PI * 2);
+  c.fillStyle = '#ead188'; c.fill();
+})();
+
+/* ── tabs ───────────────────────────────────────────────────────────── */
+function wire(bar) {
+  const btns = [...bar.querySelectorAll('[role=tab]')];
+  btns.forEach((b) => b.addEventListener('click', () => {
+    btns.forEach((o) => {
+      const on = o === b;
+      o.setAttribute('aria-selected', String(on));
+      const panel = document.getElementById(o.getAttribute('aria-controls'));
+      if (panel) panel.hidden = !on;
+    });
+  }));
+}
+document.querySelectorAll('.dial[role=tablist]').forEach(wire);
+</script>
