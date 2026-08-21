@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My Team — four directions</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;800&display=swap">
+<style>
+/* Tokens lifted from src/index.css as it stands — the neutral dark set, not
+   the warm palette the older mockups in this folder still carry. */
+:root{
+  --bg0:#000; --bg1:#050609; --s1:#121316; --s2:#1b1c1f; --s3:#232427;
+  --ink:#edeff3; --ink2:#aaacb0; --ink3:#828386;
+  --line:rgba(255,255,255,.07); --line-mid:rgba(255,255,255,.12); --line-strong:rgba(255,255,255,.2);
+  --acc:#c9a227; --acc2:#ead188; --acc-soft:rgba(201,162,39,.10); --acc-sel:rgba(255,255,255,.055);
+  --good:#3ddc7a; --warn:#e8b04a; --bad:#f0736f; --info:#6ea8ff;
+  --r-sm:6px; --r-md:10px; --r-lg:14px; --r-xl:20px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg0);color:var(--ink);
+     font:15px/1.5 'Manrope',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+.cond{font-family:'Barlow Condensed','Arial Narrow',sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 18px 80px}
+a{color:var(--acc);text-decoration:none} a:hover{color:var(--acc2)}
+
+/* ── mockup chrome (not part of the design) ─────────────────────────── */
+.hdr{border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:18px}
+h1{font-size:24px;margin:0 0 4px;letter-spacing:-.02em;font-weight:800}
+.lede{color:var(--ink2);font-size:13.5px;margin:0;max-width:88ch}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 4px}
+.tabs button{font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;
+  background:var(--s2);color:var(--ink2);border:1px solid var(--line-mid);
+  border-radius:999px;padding:7px 13px;min-height:36px}
+.tabs button[aria-selected=true]{background:var(--acc);color:#14100a;border-color:var(--acc)}
+.case{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:12px 15px;margin:14px 0 20px;font-size:13px;color:var(--ink2);max-width:100ch}
+.case b{color:var(--ink)} .case .for{color:var(--good)} .case .against{color:var(--bad)}
+section[hidden]{display:none}
+
+/* ── shared design bits ─────────────────────────────────────────────── */
+.kicker{font-size:9px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3)}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg)}
+.strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.tile{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg);padding:11px 14px}
+.tile .big{font-size:23px;font-weight:800;letter-spacing:-.01em;line-height:1.15}
+.tile .note{font-size:11.5px;color:var(--ink2)}
+.pitch{position:relative;border-radius:var(--r-xl);border:1px solid var(--line);overflow:hidden;
+  padding:20px 14px 16px;
+  background:repeating-linear-gradient(180deg,rgba(255,255,255,.045) 0 7.14%,rgba(0,0,0,.05) 7.14% 14.28%),
+             radial-gradient(120% 70% at 50% 0%,rgba(255,255,255,.10),transparent 62%),
+             linear-gradient(180deg,#1b7a3a 0%,#15682f 45%,#125c29 100%)}
+.pitch svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.rows{position:relative;z-index:1;display:flex;flex-direction:column;gap:20px}
+.row{display:flex;justify-content:center;gap:10px}
+.p{width:132px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.44);
+   backdrop-filter:blur(5px);padding:7px 9px 8px;display:flex;flex-direction:column;gap:4px;position:relative}
+.p.cap{border-color:rgba(201,162,39,.65)}
+.p .nm{font-size:13.5px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p .meta{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.p .xp{font-size:13.5px;font-weight:800;color:var(--acc2)}
+.p .sub{font-size:10px;color:rgba(255,255,255,.62)}
+.arm{position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:999px;background:var(--acc);
+  color:#14100a;font-size:10px;font-weight:800;display:grid;place-items:center;border:2px solid rgba(0,0,0,.5)}
+.bench{display:flex;gap:8px;margin-top:12px;padding:10px;background:var(--s1);
+  border:1px solid var(--line);border-radius:var(--r-lg);align-items:center}
+.bench .lbl{writing-mode:vertical-rl;transform:rotate(180deg);font-size:9px;font-weight:800;
+  letter-spacing:.1em;color:var(--ink3);text-transform:uppercase}
+.bp{flex:1;min-width:0;border:1px solid var(--line-mid);border-radius:var(--r-md);padding:6px 8px;background:var(--s2)}
+.bp .nm{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bp .xp{font-size:11px;color:var(--ink3)}
+table{width:100%;border-collapse:collapse}
+th{font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);
+   padding:8px 9px;text-align:right;background:var(--s2);white-space:nowrap;font-weight:800}
+th:first-child,td:first-child{text-align:left}
+td{padding:8px 9px;border-top:1px solid var(--line);font-size:13px}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 8px;
+  font-size:10.5px;font-weight:800;letter-spacing:.02em}
+.pill.g{background:rgba(61,220,122,.13);color:var(--good);border:1px solid rgba(61,220,122,.4)}
+.pill.b{background:rgba(240,115,111,.12);color:var(--bad);border:1px solid rgba(240,115,111,.42)}
+.pill.w{background:rgba(232,176,74,.12);color:var(--warn);border:1px solid rgba(232,176,74,.42)}
+.pill.n{background:var(--acc-sel);color:var(--ink2);border:1px solid var(--line-mid)}
+h2{font-size:17px;margin:26px 0 8px;font-weight:800;letter-spacing:-.01em}
+h2:first-of-type{margin-top:6px}
+.muted{color:var(--ink2);font-size:13px;margin:0 0 12px;max-width:92ch}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.act{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-top:1px solid var(--line)}
+.act:first-child{border-top:0}
+.act .ic{flex:none;width:26px;height:26px;border-radius:999px;display:grid;place-items:center;
+  background:var(--acc-soft);border:1px solid rgba(201,162,39,.4)}
+.act .t{font-size:13.5px;font-weight:700}
+.act .d{font-size:12px;color:var(--ink2)}
+.act .v{margin-left:auto;font-size:13px;font-weight:800;white-space:nowrap}
+@media(max-width:860px){.strip{grid-template-columns:repeat(2,minmax(0,1fr))}.two{grid-template-columns:1fr}
+  .p{width:104px}.row{gap:6px}}
+</style>
+
+<div class="wrap">
+  <div class="hdr">
+    <h1>My Team — four directions</h1>
+    <p class="lede">
+      The page is the old view and needs to read like the Squad Builder. Four ways it could go, on real
+      GW1 numbers from <code>site_data/2026-27/projections/gw1.json</code> and a legal £100.0m squad.
+      Not built — pick a direction and it gets built in <code>.tsx</code>.
+    </p>
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true"  data-t="a">A · The board, yours</button>
+      <button role="tab" aria-selected="false" data-t="b">B · Verdict first</button>
+      <button role="tab" aria-selected="false" data-t="c">C · Two jobs, split</button>
+      <button role="tab" aria-selected="false" data-t="d">D · Live gameweek</button>
+    </div>
+  </div>
+
+  <!-- ══════════════ A ══════════════ -->
+  <section id="a">
+    <div class="case">
+      <b>The Squad Builder board, with your real fifteen on it.</b> Same pitch, same card, same stats strip —
+      the only difference is that the players arrived from your Team ID instead of a draft.
+      <span class="for">For:</span> one visual language across the site, and everything already built for the
+      board comes free. <span class="against">Against:</span> it shows you what you already know. A page that
+      only mirrors the FPL app has not earned the visit.
+    </div>
+    <div class="strip">
+      <div class="tile"><div class="kicker">GW1 points</div><div class="big">58</div><div class="note">projected 58.3 — bang on</div></div>
+      <div class="tile"><div class="kicker">Squad rating</div><div class="big" style="color:var(--acc)">78</div><div class="note">7th percentile of the field</div></div>
+      <div class="tile"><div class="kicker">In the bank</div><div class="big">£0.0m</div><div class="note">no room to manoeuvre</div></div>
+      <div class="tile"><div class="kicker">Overall rank</div><div class="big">412k</div><div class="note">top 4% after one week</div></div>
+    </div>
+    <div class="pitch">
+      <svg viewBox="0 0 300 406" preserveAspectRatio="none" aria-hidden="true">
+        <g fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.6">
+          <rect x="6" y="6" width="288" height="394" rx="2"/><line x1="6" y1="203" x2="294" y2="203"/>
+          <ellipse cx="150" cy="203" rx="46" ry="46"/><rect x="60" y="6" width="180" height="62"/>
+          <rect x="112" y="6" width="76" height="26"/><path d="M108 68 A 46 46 0 0 0 192 68"/>
+          <rect x="60" y="338" width="180" height="62"/><rect x="112" y="374" width="76" height="26"/>
+          <path d="M108 338 A 46 46 0 0 1 192 338"/>
+        </g>
+        <g fill="rgba(255,255,255,.5)"><circle cx="150" cy="203" r="2.4"/><circle cx="150" cy="46" r="2.4"/><circle cx="150" cy="360" r="2.4"/></g>
+      </svg>
+      <div class="rows" id="pitchA"></div>
+    </div>
+    <div class="bench"><span class="lbl">Subs</span><div id="benchA" style="display:flex;gap:8px;flex:1"></div></div>
+  </section>
+
+  <!-- ══════════════ B ══════════════ -->
+  <section id="b" hidden>
+    <div class="case">
+      <b>The call first, the squad as evidence.</b> You know who you own. What you do not know is which of
+      them is quietly costing you points and what to do about it, so that leads and the board sits underneath.
+      <span class="for">For:</span> it is the only direction that answers "so what". <span class="against">Against:</span>
+      a verdict is only as good as its worst week — publish a bad one and the page loses its authority.
+    </div>
+    <div class="card" style="border-color:rgba(201,162,39,.4);background:linear-gradient(180deg,rgba(201,162,39,.07),transparent 70%);padding:16px 18px;margin-bottom:14px">
+      <div class="kicker" style="color:var(--acc)">The verdict · GW2</div>
+      <div style="font-size:19px;font-weight:800;letter-spacing:-.01em;margin:4px 0 6px">
+        Your defence is doing the work. Your third forward is not.
+      </div>
+      <p class="muted" style="margin:0">
+        Six of your eight highest projections are defenders and the two Arsenal men are the best pair in the game
+        this week. Watkins is your weakest starter at 4.5 and Bournemouth is the only fixture the bookmakers
+        have priced above three goals — you are one move from a stronger eleven, and you have no money to make it.
+      </p>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="act">
+        <span class="ic">↔</span>
+        <div><div class="t">Watkins → João Pedro</div><div class="d">Frees nothing, gains 0.4 xP a week and a kinder run to GW6</div></div>
+        <span class="v" style="color:var(--good)">+0.4</span>
+      </div>
+      <div class="act">
+        <span class="ic">C</span>
+        <div><div class="t">Captain Saka, not Haaland</div><div class="d">6.34 against 6.09, and City are away to a defence the market rates</div></div>
+        <span class="v" style="color:var(--good)">+0.25</span>
+      </div>
+      <div class="act">
+        <span class="ic">!</span>
+        <div><div class="t">O'Shea is a downgrade waiting to happen</div><div class="d">Ipswich have the second-worst run to GW7 — fine now, not in three weeks</div></div>
+        <span class="v" style="color:var(--ink3)">watch</span>
+      </div>
+    </div>
+    <div class="pitch" style="padding:16px 12px 12px">
+      <svg viewBox="0 0 300 406" preserveAspectRatio="none" aria-hidden="true">
+        <g fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.8">
+          <rect x="6" y="6" width="288" height="394" rx="2"/><line x1="6" y1="203" x2="294" y2="203"/>
+          <ellipse cx="150" cy="203" rx="46" ry="46"/><rect x="60" y="6" width="180" height="62"/>
+          <rect x="60" y="338" width="180" height="62"/>
+        </g>
+      </svg>
+      <div class="rows" id="pitchB"></div>
+    </div>
+  </section>
+
+  <!-- ══════════════ C ══════════════ -->
+  <section id="c" hidden>
+    <div class="case">
+      <b>Two jobs, and they are not the same job.</b> Looking back at the week that finished and planning the
+      week that has not started want different layouts, so the page gives each a column instead of making one
+      pretend to be both. <span class="for">For:</span> it is honest about what the page is for on a Monday
+      versus a Friday. <span class="against">Against:</span> two half-width columns is the layout that dies
+      first on a phone, and half the year one column has nothing in it.
+    </div>
+    <div class="two">
+      <div>
+        <h2 style="margin-top:0">How GW1 went</h2>
+        <p class="muted">58 points against a projection of 58.3.</p>
+        <div class="card" style="overflow:hidden">
+          <table>
+            <thead><tr><th>Player</th><th class="n">xP</th><th class="n">Got</th><th class="n">Diff</th></tr></thead>
+            <tbody id="reviewC"></tbody>
+          </table>
+        </div>
+        <div class="card" style="margin-top:12px;padding:12px 14px">
+          <div class="kicker">Where the model missed</div>
+          <p class="muted" style="margin:6px 0 0">
+            Two of the three biggest misses were clean sheets, not goals — the same component, twice.
+            Published rather than quietly forgotten.
+          </p>
+        </div>
+      </div>
+      <div>
+        <h2 style="margin-top:0">Planning GW2</h2>
+        <p class="muted">Deadline Friday 28 August, 17:30.</p>
+        <div class="card" style="overflow:hidden">
+          <table>
+            <thead><tr><th>Player</th><th>Next</th><th class="n">xP</th></tr></thead>
+            <tbody id="planC"></tbody>
+          </table>
+        </div>
+        <div class="card" style="margin-top:12px;padding:12px 14px">
+          <div class="kicker">One move</div>
+          <p class="muted" style="margin:6px 0 0">Watkins → João Pedro, +0.4 a week. No money needed.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ D ══════════════ -->
+  <section id="d" hidden>
+    <div class="case">
+      <b>Saturday afternoon, not Tuesday morning.</b> The busiest hour this page will ever have is while the
+      games are on, and none of the other three directions is designed for it: who has played, who is still to
+      come, what bonus is still pending, where the rank is going.
+      <span class="for">For:</span> it is the one version people would open more than once a week.
+      <span class="against">Against:</span> it is live-data plumbing the site does not have yet, and it is
+      dead for six days out of seven.
+    </div>
+    <div class="strip">
+      <div class="tile"><div class="kicker">Live points</div><div class="big" style="color:var(--good)">41</div><div class="note">+3 bonus pending</div></div>
+      <div class="tile"><div class="kicker">Played</div><div class="big">7<span style="font-size:14px;color:var(--ink3)"> / 11</span></div><div class="note">4 still to come</div></div>
+      <div class="tile"><div class="kicker">Rank</div><div class="big" style="color:var(--good)">↑ 88k</div><div class="note">412k → 324k</div></div>
+      <div class="tile"><div class="kicker">Captain</div><div class="big">12</div><div class="note">Saka, doubled — goal + assist</div></div>
+    </div>
+    <div class="card" style="overflow:hidden">
+      <table>
+        <thead><tr><th>Player</th><th>Status</th><th class="n">Mins</th><th class="n">Pts</th><th class="n">v xP</th></tr></thead>
+        <tbody id="liveD"></tbody>
+      </table>
+    </div>
+    <p class="muted" style="margin-top:10px">
+      Bonus is provisional until the last match of the day is finished — shown separately rather than folded in,
+      because a number that changes after you read it is worse than one that says it is not final.
+    </p>
+  </section>
+</div>
+
+<script>
+/* Real GW1 figures. XI, bench and captain from the £100.0m squad in
+   site_data/2026-27/projections/gw1.json; "got" values are illustrative
+   until GW1 finishes — marked as such wherever they appear. */
+const XI = [
+  {pos:'GKP',nm:'Raya',       tm:'ARS',pr:6,   xp:4.37,own:36.8,got:6,  min:90,st:'played'},
+  {pos:'DEF',nm:'Calafiori',  tm:'ARS',pr:5.5, xp:5.30,own:34.7,got:9,  min:90,st:'played'},
+  {pos:'DEF',nm:'Martinez',   tm:'MUN',pr:5,   xp:4.50,own:1.1, got:2,  min:90,st:'played'},
+  {pos:'DEF',nm:'Maguire',    tm:'MUN',pr:5,   xp:4.25,own:16.1,got:1,  min:64,st:'played'},
+  {pos:'DEF',nm:"O'Shea",     tm:'IPS',pr:4,   xp:3.46,own:3.3, got:null,min:null,st:'to come'},
+  {pos:'MID',nm:'Saka',       tm:'ARS',pr:9.5, xp:6.34,own:9.2, got:12, min:90,st:'played',cap:true},
+  {pos:'MID',nm:'Wirtz',      tm:'LIV',pr:7.5, xp:4.66,own:13.4,got:null,min:null,st:'to come'},
+  {pos:'MID',nm:'Ndiaye',     tm:'EVE',pr:6,   xp:4.40,own:15.9,got:2,  min:90,st:'played'},
+  {pos:'MID',nm:'E.Le Fée',   tm:'SUN',pr:6,   xp:4.10,own:11,  got:null,min:null,st:'to come'},
+  {pos:'FWD',nm:'Haaland',    tm:'MCI',pr:15.5,xp:6.09,own:69.4,got:8,  min:88,st:'played'},
+  {pos:'FWD',nm:'Watkins',    tm:'AVL',pr:8,   xp:4.52,own:11,  got:null,min:null,st:'to come'},
+];
+const BENCH = [
+  {pos:'GKP',nm:'Lammens',      tm:'MUN',xp:4.05},
+  {pos:'DEF',nm:'Davis',        tm:'IPS',xp:3.45},
+  {pos:'MID',nm:'Groß',         tm:'BHA',xp:3.84},
+  {pos:'FWD',nm:'João Pedro',   tm:'CHE',xp:4.37},
+];
+const NEXT = {Raya:'AVL (A)',Calafiori:'AVL (A)',Martinez:'IPS (H)',Maguire:'IPS (H)',"O'Shea":'MUN (A)',
+  Saka:'AVL (A)',Wirtz:'NFO (H)',Ndiaye:'BOU (A)','E.Le Fée':'BUR (H)',Haaland:'CRY (H)',Watkins:'ARS (H)'};
+
+const card = (p, opts = {}) => `
+  <div class="p${p.cap ? ' cap' : ''}">
+    ${p.cap ? '<span class="arm">C</span>' : ''}
+    <span class="cond" style="font-size:10.5px;font-weight:800;letter-spacing:.08em;color:rgba(255,255,255,.6)">${p.pos}</span>
+    <div class="meta"><span class="nm">${p.nm}</span><span class="xp">${opts.showGot && p.got != null ? p.got : p.xp.toFixed(1)}</span></div>
+    <span class="sub">${p.tm} · £${p.pr}m</span>
+  </div>`;
+
+function drawPitch(el, opts) {
+  const byPos = (x) => XI.filter((p) => p.pos === x);
+  el.innerHTML = ['GKP','DEF','MID','FWD']
+    .map((pos) => `<div class="row">${byPos(pos).map((p) => card(p, opts)).join('')}</div>`).join('');
+}
+drawPitch(document.getElementById('pitchA'), {});
+drawPitch(document.getElementById('pitchB'), {});
+document.getElementById('benchA').innerHTML = BENCH.map((b) =>
+  `<div class="bp"><div class="nm">${b.nm}</div><div class="xp">${b.pos} · ${b.tm} · ${b.xp.toFixed(1)} xP</div></div>`).join('');
+
+/* C — the look back and the look forward */
+document.getElementById('reviewC').innerHTML = XI.filter((p) => p.got != null)
+  .map((p) => {
+    const d = p.got - p.xp, cls = d > 0.8 ? 'g' : d < -1.2 ? 'b' : 'n';
+    return `<tr><td><b>${p.nm}</b> <span style="color:var(--ink3);font-size:11px">${p.tm}</span></td>
+      <td class="n">${p.xp.toFixed(1)}</td><td class="n"><b>${p.got}</b></td>
+      <td class="n"><span class="pill ${cls}">${d > 0 ? '+' : ''}${d.toFixed(1)}</span></td></tr>`;
+  }).join('');
+document.getElementById('planC').innerHTML = XI
+  .slice().sort((a, b) => b.xp - a.xp).slice(0, 8)
+  .map((p) => `<tr><td><b>${p.nm}</b></td><td style="color:var(--ink2);font-size:12px">${NEXT[p.nm] ?? '—'}</td>
+    <td class="n"><b>${p.xp.toFixed(1)}</b></td></tr>`).join('');
+
+/* D — live */
+document.getElementById('liveD').innerHTML = XI.map((p) => {
+  const done = p.got != null;
+  const d = done ? p.got - p.xp : null;
+  return `<tr>
+    <td><b>${p.nm}</b>${p.cap ? ' <span class="pill n">C</span>' : ''}
+        <span style="color:var(--ink3);font-size:11px">${p.tm}</span></td>
+    <td>${done ? '<span class="pill n">played</span>' : '<span class="pill w">to come</span>'}</td>
+    <td class="n">${done ? p.min + "'" : '—'}</td>
+    <td class="n"><b>${done ? p.got : '—'}</b></td>
+    <td class="n">${done ? `<span class="pill ${d > 0.8 ? 'g' : d < -1.2 ? 'b' : 'n'}">${d > 0 ? '+' : ''}${d.toFixed(1)}</span>` : ''}</td>
+  </tr>`;
+}).join('');
+
+/* tabs */
+const tabs = [...document.querySelectorAll('.tabs button')];
+tabs.forEach((b) => b.addEventListener('click', () => {
+  tabs.forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+  ['a','b','c','d'].forEach((id) => { document.getElementById(id).hidden = id !== b.dataset.t; });
+}));
+</script>
+</html>
