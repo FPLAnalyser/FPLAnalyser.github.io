@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Icon } from './Icon'
 import { TeamBadge } from './badges'
 import { useCore } from '../lib/useData'
+import { useSeason } from '../lib/season'
 import { useAvailability } from '../lib/availability'
 import { num } from '../lib/rows'
 import { xpForGw, useXpModel, useMarketOdds, useShotProfiles } from '../lib/xp'
@@ -12,12 +13,15 @@ import type { FixtureEaseRow, RatingRow } from '../lib/types'
 /**
  * The front page's one personal thing, in whichever of two states applies.
  *
- * **No squad — the invitation.** The strongest hook this site
- * has is that it will read a screenshot of your team in about eight seconds
- * and tell you what is wrong with it, and until now the front page never said
- * so. This is the banner that does, and it goes *above* the tiles: measured at
- * 390px it otherwise landed 2,100px down the page, below all eight of them,
- * which is not where you put the first thing a visitor should do.
+ * **No squad — the invitation**, and it changes with the calendar. Before a
+ * ball is kicked the hook is that this will read a screenshot of your team in
+ * about eight seconds and tell you what is wrong with it, because that is the
+ * only way to rate a fifteen that exists nowhere but in your head. Once the
+ * season starts the team is real and lives at an FPL id, so the front door
+ * becomes the Team ID and the screenshot importer stands down until next
+ * pre-season. Either way it goes *above* the tiles: measured at 390px it
+ * otherwise landed 2,100px down the page, below all eight of them, which is
+ * not where you put the first thing a visitor should do.
  *
  * **A squad — the summary.** Once fifteen exist the invitation is nonsense, so
  * the strip takes over — the rating, what the week projects, what is in the
@@ -41,6 +45,10 @@ const ovOf = (r: RatingRow): number | null => {
 
 export function SquadStrip() {
   const navigate = useNavigate()
+  /* Pre-season or not — the one flag that decides whether the front door is
+     a screenshot or a Team ID. Same source My Team and GW Review gate on. */
+  const { info } = useSeason()
+  const preseason = Boolean(info?.provisional)
   const { data } = useCore()
   const avail = useAvailability()
   const model = useXpModel()
@@ -134,22 +142,42 @@ export function SquadStrip() {
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
           <div className="min-w-0 flex-1">
             <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-[0.14em] text-accent uppercase">
-              <Icon name="camera" size={13} /> Start here
+              <Icon name={preseason ? 'camera' : 'users'} size={13} /> Start here
             </div>
-            <h2 className="text-lg font-extrabold tracking-[-0.01em] text-ink md:text-xl">Get your draft rated</h2>
+            <h2 className="text-lg font-extrabold tracking-[-0.01em] text-ink md:text-xl">
+              {preseason ? 'Get your draft rated' : 'Rate your real team'}
+            </h2>
             <p className="mt-1.5 max-w-[52ch] text-[13.5px] leading-relaxed text-ink-2">
-              Screenshot your team from the FPL app and get instant analysis.
+              {preseason
+                ? 'Screenshot your team from the FPL app and get instant analysis.'
+                : 'Your FPL Team ID pulls in the fifteen you actually own — ratings, projections and what to do next.'}
             </p>
           </div>
           <div className="flex shrink-0 gap-2">
-            {/* Straight to the picker, not to an empty board with the same
-                button on it. */}
-            <button
-              onClick={() => navigate('/squad', { state: { openImport: true } })}
-              className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-accent bg-accent-soft px-4 text-[13.5px] font-bold text-accent transition-colors hover:brightness-110 md:flex-none"
-            >
-              <Icon name="camera" size={15} /> Import a screenshot
-            </button>
+            {/* PRE-SEASON ONLY, THE SCREENSHOT. It is the only way to rate a
+                fifteen that exists nowhere but in your head, which is exactly
+                the pre-season problem — and it is the wrong front door the
+                moment the season starts, because from then on the team is
+                real, it lives at an FPL id, and reading it is one field rather
+                than a photograph and eight seconds of OCR. Same flag that
+                opens My Team, inverted; the importer stays on the Squad
+                Builder is gated on the same flag, so the whole feature
+                goes away together and comes back on its own next July. */}
+            {preseason ? (
+              <button
+                onClick={() => navigate('/squad', { state: { openImport: true } })}
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-accent bg-accent-soft px-4 text-[13.5px] font-bold text-accent transition-colors hover:brightness-110 md:flex-none"
+              >
+                <Icon name="camera" size={15} /> Import a screenshot
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate('/loadteam')}
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-accent bg-accent-soft px-4 text-[13.5px] font-bold text-accent transition-colors hover:brightness-110 md:flex-none"
+              >
+                <Icon name="users" size={15} /> Enter your Team ID
+              </button>
+            )}
             <button
               onClick={() => navigate('/squad')}
               className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-line-mid px-4 text-[13.5px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink md:flex-none"

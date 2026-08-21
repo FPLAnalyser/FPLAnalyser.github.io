@@ -10,8 +10,11 @@ season; `code` does not), and writes site_data/<NEW_SEASON>/ with:
   - carried-over ratings for RETURNING players (shown as last season's, labelled)
   - nothing (→ N/A on the site) for new signings and promoted-team players
 
-It marks the season "provisional" in seasons.json so the site shows a pre-season
-banner and a "'25/26" tag on carried ratings. Needs only the public FPL API and
+It marks the season "provisional" in seasons.json WHILE NO GAME HAS BEEN PLAYED,
+so the site shows the pre-season banner and a "'25/26" tag on carried ratings.
+The flag clears itself the moment FPL reports a gameweek current or finished —
+it used to be hardcoded True, which quietly kept My Team and GW Review shut
+after the season had started. Needs only the public FPL API and
 last season's site_data — no Understat, no local data directory. Run it again any time to
 refresh prices/ownership/fixtures; once real games are played, switch back to the
 full pipeline (fpl_analyser_rating.py + build_site_data.py) to replace the
@@ -64,7 +67,29 @@ teams_by_id = {t["id"]: t for t in boot["teams"]}
 events = boot["events"]
 cur_gw = next((e["id"] for e in events if e.get("is_current")), None)
 next_gw = next((e["id"] for e in events if e.get("is_next")), None)
+
+# ── IS IT STILL PRE-SEASON? ────────────────────────────────────────────────
+#
+# This was hardcoded True, which was right for exactly as long as it took the
+# season to start and then wrong for ever. The flag gates real behaviour on
+# both sides — My Team and GW Review refuse to open while it is set, and the
+# home page leads with the screenshot importer instead of the Team ID box —
+# and this script runs on a DAILY CRON, so a hand-edited flag was overwritten
+# by 05:40 the next morning. Nothing would ever have switched on.
+#
+# The honest test is whether a ball has been kicked: FPL marks an event
+# `finished` once its last fixture is done, and `is_current` from the moment
+# its deadline passes. Either means the season is under way — the first is
+# for a gameweek in the books, the second for one being played right now,
+# which is exactly the window this was stuck in when it was found (deadline
+# gone at 17:30, the day's refresh having run at 06:23).
+#
+# Conditional rather than deleted, so the script still does the right thing
+# next July with nobody having to remember anything.
+kicked_off = any(e.get("finished") for e in events) or cur_gw is not None
+provisional = not kicked_off
 print(f"  teams: {len(boot['teams'])}  players: {len(boot['elements'])}  next GW: {next_gw}")
+print(f"  season under way: {kicked_off}  →  provisional: {provisional}")
 
 # Last season ratings, indexed by permanent player code + old element id.
 prev_ratings = load("ratings") or []
@@ -197,7 +222,7 @@ for name in ("team_metrics", "scouting_meta", "benchmarks", "shots_for", "shots_
 dump("meta", {
     "generated_at": datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
     "current_gw": cur_gw, "next_gw": next_gw,
-    "season": NEW, "provisional": True, "ratings_season": PREV,
+    "season": NEW, "provisional": provisional, "ratings_season": PREV,
 })
 
 # 7. seasons.json — add NEW (provisional) and make it current.
@@ -207,11 +232,12 @@ if os.path.exists(manifest_path):
     with open(manifest_path, encoding="utf-8") as f:
         manifest = json.load(f)
 seasons = {s["id"]: s for s in manifest.get("seasons", [])}
-seasons[NEW] = {"id": NEW, "label": NEW.replace("-", "/"), "provisional": True, "ratings_season": PREV}
+seasons[NEW] = {"id": NEW, "label": NEW.replace("-", "/"), "provisional": provisional, "ratings_season": PREV}
 seasons.setdefault(PREV, {"id": PREV, "label": PREV.replace("-", "/")})
 manifest = {"current": NEW, "seasons": sorted(seasons.values(), key=lambda s: s["id"], reverse=True)}
 with open(manifest_path, "w", encoding="utf-8") as f:
     json.dump(manifest, f, ensure_ascii=False, indent=2)
 
-print(f"\nDone. Wrote {OUT_DIR} and set seasons.json current → {NEW} (provisional).")
+print(f"\nDone. Wrote {OUT_DIR} and set seasons.json current → {NEW}"
+      + (" (provisional)." if provisional else " — season under way, pre-season flag cleared."))
 print("Preview it via the season toggle, then commit & push site_data/ to go live.")

@@ -57,6 +57,14 @@ interface HomeWin {
 // Order is the layout. At lg the grid is four columns, so this array reads as
 // two rows of four: the pre-deadline jobs across the top, the browse-and-track
 // pages underneath, closing on the page that looks back.
+/* The Squad Builder's one-liner sells whichever door is open. Importing a
+   screenshot is the pre-season pitch and stops being true the day the season
+   starts, when the importer is hidden and the way in is a Team ID. Swapped at
+   render rather than written twice — see WINDOWS_FOR below. */
+const SQUAD_STAT = '@@SQUAD_STAT@@'
+const SQUAD_STAT_PRESEASON = 'Import your side, get immediate analysis'
+const SQUAD_STAT_INSEASON = 'Try a transfer before you commit it'
+
 const CAPTAINCY_WIN: HomeWin = { key: 'captaincy', photoKey: 'squad', to: '/captaincy', kicker: 'Decide', title: 'Captaincy', desc: 'Who to captain, what the bet looks like, and when the Triple Captain is worth spending.', stat: 'Priced against what the field is doing' }
 
 /* The Captaincy tile only exists where the page it opens does — a preview
@@ -64,7 +72,7 @@ const CAPTAINCY_WIN: HomeWin = { key: 'captaincy', photoKey: 'squad', to: '/capt
 const WINDOWS: HomeWin[] = [
   // Top row
   { key: 'preview', to: '/preview', kicker: 'This week', title: 'GW Preview', desc: 'The whole gameweek before the deadline — captain, chips, every fixture and who is missing.', stat: 'Getting you ready for the deadline' },
-  { key: 'squad', to: '/squad', kicker: 'Build', title: 'Squad Builder', desc: 'Draft an XI and plan the season week by week.', stat: 'Import your side, get immediate analysis' },
+  { key: 'squad', to: '/squad', kicker: 'Build', title: 'Squad Builder', desc: 'Draft an XI and plan the season week by week.', stat: SQUAD_STAT },
   ...(PREVIEW ? [CAPTAINCY_WIN] : []),
   { key: 'fixtures', to: '/fixtures', kicker: 'Plan', title: 'Fixtures', desc: 'Our own fixture rating and rotation planner.', stat: 'Rotations, Projected xG and Clean Sheets' },
   { key: 'players', to: '/players', kicker: 'Explore', title: 'Players', desc: 'Every player rated 0–100 — form, value, fixtures and the editorial player hero.', stat: 'Work out who is worth the money' },
@@ -75,6 +83,12 @@ const WINDOWS: HomeWin[] = [
     ghost: { text: '★', style: { right: '6%', top: '6%', fontSize: 'clamp(44px,6vw,84px)', WebkitTextStroke: '2px color-mix(in srgb, var(--accent) 18%, transparent)' } } },
   { key: 'review', to: '/review', kicker: 'Look back', title: 'GW Review', desc: 'What the gameweek actually did — hauls, captain calls and where the model missed.', stat: 'Key numbers from the gameweek' },
 ]
+
+/** WINDOWS with the season-dependent copy resolved. */
+function windowsFor(preseason: boolean): HomeWin[] {
+  const stat = preseason ? SQUAD_STAT_PRESEASON : SQUAD_STAT_INSEASON
+  return WINDOWS.map((w) => (w.stat === SQUAD_STAT ? { ...w, stat } : w))
+}
 
 function ArrowRight() {
   return (
@@ -150,6 +164,8 @@ function WindowCard({ w }: { w: HomeWin }) {
 }
 
 export default function Home() {
+  const { info } = useSeason()
+  const preseason = Boolean(info?.provisional)
   const rootRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   // On desktop, size the grid so the six equal windows fill the viewport with
@@ -184,7 +200,7 @@ export default function Home() {
         style={gridH ? { height: gridH } : undefined}
         className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 lg:gap-3.5"
       >
-        {WINDOWS.map((w) => <WindowCard key={w.key} w={w} />)}
+        {windowsFor(preseason).map((w) => <WindowCard key={w.key} w={w} />)}
       </div>
     </div>
   )

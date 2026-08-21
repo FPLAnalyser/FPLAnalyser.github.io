@@ -26,6 +26,7 @@ import { SquadRatingSheet } from '../components/SquadRatingSheet'
 import { SquadVerdict } from '../components/SquadVerdict'
 import { SquadImport, type ImportedSquad } from '../components/SquadImport'
 import { useCore } from '../lib/useData'
+import { useSeason } from '../lib/season'
 import { tapHaptic } from '../lib/native'
 import { rasterise } from '../lib/capture'
 import { SHARE_FORMATS, frameHeight, drawFitted, type FormatId } from '../lib/frames'
@@ -356,6 +357,9 @@ export default function SquadBuilder() {
   const [shareOpen, setShareOpen] = useState(false)
   const [ratingOpen, setRatingOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  /* The screenshot importer is a pre-season tool — see the Import button. */
+  const { info: seasonInfo } = useSeason()
+  const preseason = Boolean(seasonInfo?.provisional)
 
   /* Arriving from the home page's "Import a screenshot" opens the picker
      straight away. It used to land here on an empty board with the same
@@ -364,11 +368,12 @@ export default function SquadBuilder() {
      forward, or refreshing, doesn't reopen the sheet over a squad. */
   const location = useLocation()
   useEffect(() => {
+    if (!preseason) return
     if ((location.state as { openImport?: boolean } | null)?.openImport) {
       setImportOpen(true)
       navigate('.', { replace: true, state: null })
     }
-  }, [location.state, navigate])
+  }, [location.state, navigate, preseason])
   /* The eleven a screenshot arrived with. Held here rather than in the modal
      because the planner needs it after the modal has gone, and dropped the
      moment the squad stops matching it — see `seed` in usePlanner. */
@@ -932,11 +937,18 @@ export default function SquadBuilder() {
               >
                 <Icon name="bolt" size={13} /> Auto pick
               </button>
-              {/* Typing fifteen names in is the reason people build a fantasy
-                  squad here and then never come back with their real one. */}
-              <button onClick={() => setImportOpen(true)} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-line-mid px-3 text-[12px] font-semibold text-ink transition-colors hover:border-line-strong">
-                <Icon name="camera" size={13} /> Import
-              </button>
+              {/* PRE-SEASON ONLY. Typing fifteen names in is the reason people
+                  build a fantasy squad here and then never come back with
+                  their real one — but that argument expires the day the season
+                  starts. From then on the team is real, it lives at an FPL id,
+                  and My Team reads it from one field instead of a photograph.
+                  Gated on the same flag that opens My Team, so it comes back on
+                  its own next July rather than needing anyone to remember. */}
+              {preseason && (
+                <button onClick={() => setImportOpen(true)} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-line-mid px-3 text-[12px] font-semibold text-ink transition-colors hover:border-line-strong">
+                  <Icon name="camera" size={13} /> Import
+                </button>
+              )}
               {/* Share has gone to the board — see boardOverlayLeft above. */}
               {total > 0 && (
                 <button onClick={clear} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-line-mid px-3 text-[12px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink">
@@ -1365,7 +1377,7 @@ export default function SquadBuilder() {
         />
       )}
 
-      {importOpen && (
+      {importOpen && preseason && (
         <SquadImport
           pool={pool} fixtureEase={fixtureEase} gw={buildGw}
           onApply={(r: ImportedSquad) => {
