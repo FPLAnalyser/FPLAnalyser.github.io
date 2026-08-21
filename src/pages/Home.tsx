@@ -4,6 +4,7 @@ import { flushSync } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../components/Icon'
 import { useSeason } from '../lib/season'
+import { useCore } from '../lib/useData'
 import { SquadStrip } from '../components/SquadStrip'
 
 function Hero() {
@@ -62,6 +63,7 @@ interface HomeWin {
    starts, when the importer is hidden and the way in is a Team ID. Swapped at
    render rather than written twice — see WINDOWS_FOR below. */
 const SQUAD_STAT = '@@SQUAD_STAT@@'
+const MYTEAM_STAT = '@@MYTEAM_STAT@@'
 const SQUAD_STAT_PRESEASON = 'Import your side, get immediate analysis'
 const SQUAD_STAT_INSEASON = 'Try a transfer before you commit it'
 
@@ -79,15 +81,20 @@ const WINDOWS: HomeWin[] = [
   // Bottom row
   { key: 'scouting', to: '/scout', kicker: 'Discover', title: 'Scouting', desc: 'Filter the market for your next differential.', stat: 'Find the ones nobody owns yet' },
   { key: 'teams', to: '/teams', kicker: 'Explore', title: 'Teams', desc: 'Attack, defence and set-piece ratings for all 20 clubs, with matchup previews.', stat: 'All 20 clubs — rated and analysed' },
-  { key: 'myteam', to: '/loadteam', kicker: 'Track', title: 'My Team', desc: 'Link your side for a live rated breakdown.', stat: 'Live GW1',
+  { key: 'myteam', to: '/loadteam', kicker: 'Track', title: 'My Team', desc: 'Link your side for a live rated breakdown.', stat: MYTEAM_STAT,
     ghost: { text: '★', style: { right: '6%', top: '6%', fontSize: 'clamp(44px,6vw,84px)', WebkitTextStroke: '2px color-mix(in srgb, var(--accent) 18%, transparent)' } } },
   { key: 'review', to: '/review', kicker: 'Look back', title: 'GW Review', desc: 'What the gameweek actually did — hauls, captain calls and where the model missed.', stat: 'Key numbers from the gameweek' },
 ]
 
 /** WINDOWS with the season-dependent copy resolved. */
-function windowsFor(preseason: boolean): HomeWin[] {
-  const stat = preseason ? SQUAD_STAT_PRESEASON : SQUAD_STAT_INSEASON
-  return WINDOWS.map((w) => (w.stat === SQUAD_STAT ? { ...w, stat } : w))
+function windowsFor(preseason: boolean, gw: number | null): HomeWin[] {
+  const squad = preseason ? SQUAD_STAT_PRESEASON : SQUAD_STAT_INSEASON
+  /* "Live GW1" was a literal, so it would have said GW1 in May. */
+  const myteam = gw != null ? `Live GW${gw}` : 'Your side, rated every week'
+  return WINDOWS.map((w) =>
+    w.stat === SQUAD_STAT ? { ...w, stat: squad }
+      : w.stat === MYTEAM_STAT ? { ...w, stat: myteam }
+        : w)
 }
 
 function ArrowRight() {
@@ -166,6 +173,9 @@ function WindowCard({ w }: { w: HomeWin }) {
 export default function Home() {
   const { info } = useSeason()
   const preseason = Boolean(info?.provisional)
+  const { data } = useCore()
+  // The gameweek being played, or the one about to be — whichever exists.
+  const liveGw = data?.meta?.current_gw ?? data?.meta?.next_gw ?? null
   const rootRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   // On desktop, size the grid so the six equal windows fill the viewport with
@@ -200,7 +210,7 @@ export default function Home() {
         style={gridH ? { height: gridH } : undefined}
         className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 lg:gap-3.5"
       >
-        {windowsFor(preseason).map((w) => <WindowCard key={w.key} w={w} />)}
+        {windowsFor(preseason, liveGw).map((w) => <WindowCard key={w.key} w={w} />)}
       </div>
     </div>
   )

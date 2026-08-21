@@ -378,10 +378,20 @@ export default function Fixtures() {
     [fixtureEase],
   )
   const maxSpan = wide ? undefined : MOBILE_WINDOW_CAP
-  // Clamped where it is read rather than written back, so a span set at a desk
-  // survives a narrow screen and returns intact when there is room again.
-  const shownWin: GwWindow = maxSpan && win.to - win.from + 1 > maxSpan
-    ? { ...win, to: win.from + maxSpan - 1 } : win
+  /* Clamped where it is read rather than written back, so a span set at a desk
+     survives a narrow screen and returns intact when there is room again.
+
+     THE FLOOR MOVES WITH THE SEASON. The window starts life at GW1–GW6, which
+     stops being true the moment GW1 locks and drops out of the fixture list:
+     the picker read "GW1–GW6 · 6 weeks" over a grid of five columns starting
+     at GW2. Shifted rather than truncated, so the reader still gets the six
+     weeks the control promises. */
+  const firstGw = allGws.length ? allGws[0] : 1
+  const floored: GwWindow = win.from < firstGw
+    ? { ...win, from: firstGw, to: Math.max(firstGw, win.to + (firstGw - win.from)) }
+    : win
+  const shownWin: GwWindow = maxSpan && floored.to - floored.from + 1 > maxSpan
+    ? { ...floored, to: floored.from + maxSpan - 1 } : floored
   const gridGws = useMemo(() => gwsIn(allGws, shownWin), [allGws, shownWin])
 
   /* AFTER THE HOOKS. This used to sit above `allGws` and `gridGws`, so the
@@ -465,7 +475,7 @@ export default function Fixtures() {
             {/* The note that used to sit here — "the pipeline publishes N
                 gameweeks ahead" — could no longer fire once the slider took
                 its ceiling from the published fixtures. */}
-            <MarketNote market={marketStrength} />
+            <MarketNote market={marketStrength} shown={gridGws} />
 
             <Exportable title={`${mode === 'diff' ? 'Fixture difficulty' : mode === 'xg' ? 'Projected xG' : 'Clean sheet odds'} — ${winLabel(shownWin)}${shownWin.skip != null ? `, free hit GW${shownWin.skip}` : ''}`}>
             <FixtureGrid key={mode} fixtureEase={fixtureEase} gws={gridGws} lens={lens} mode={mode} baselines={baselines} house={house} leagueBase={leagueBase} profiles={profiles} league={league} />
@@ -1579,15 +1589,20 @@ function RotationPlanner({ ratings, fixtureEase, baselines, house, leagueBase, i
 /** Says where the numbers come from. Bookmakers price the next gameweek or
  *  two and no further, so the grid is part market, part model — and it should
  *  be obvious which, rather than implied. */
-function MarketNote({ market }: { market: MarketOdds | null }) {
+function MarketNote({ market, shown }: { market: MarketOdds | null; shown?: number[] }) {
+  /* Only the gameweeks ON SCREEN. The market keeps pricing a gameweek right
+     through the weekend it is played, so once a locked one drops out of the
+     grid this went on citing it — "Gameweek 1 use live bookmaker odds" above a
+     table that starts at GW2. */
   const gws = useMemo(() => {
+    const visible = shown?.length ? new Set(shown) : null
     const set = new Set<number>()
     for (const k of market?.byKey.keys() ?? []) {
       const gw = Number(k.split(':')[1])
-      if (Number.isFinite(gw)) set.add(gw)
+      if (Number.isFinite(gw) && (!visible || visible.has(gw))) set.add(gw)
     }
     return [...set].sort((a, b) => a - b)
-  }, [market])
+  }, [market, shown])
   if (!gws.length) return null
   const span = gws.length === 1 ? `Gameweek ${gws[0]}` : `Gameweeks ${gws[0]}–${gws[gws.length - 1]}`
   return (

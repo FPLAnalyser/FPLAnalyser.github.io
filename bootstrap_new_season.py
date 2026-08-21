@@ -125,17 +125,29 @@ for e in boot["elements"]:
 dump("ratings", new_ratings)
 print(f"  ratings.json — {len(new_ratings)} players ({carried} carried, {len(new_ratings) - carried} new/NA)")
 
-# 2. fixture_ease.json straight from the new fixtures (FPL's own difficulty).
+# 2. fixture_ease.json from the new fixtures (FPL's own difficulty), minus any
+#    gameweek that has already locked.
+#
+#    A locked gameweek in this file keeps the Squad Builder planning a team
+#    nobody can change any more — the board takes min(gw) as the week it is
+#    working on. advance_gameweek.py trims them out within the quarter hour,
+#    but this job runs at 05:40 and would have put them all back every morning
+#    until the next trim, so the two now agree on the rule.
+locked_gws = {gw for gw, d in
+              ((int(e["id"]), e.get("deadline_time")) for e in events)
+              if d and datetime.datetime.fromisoformat(str(d).replace("Z", "+00:00"))
+              <= datetime.datetime.now(datetime.timezone.utc)}
 fe = []
 for fx in fixtures:
-    if fx.get("event") is None:
+    if fx.get("event") is None or fx["event"] in locked_gws:
         continue
     h = teams_by_id[fx["team_h"]]["short_name"]
     a = teams_by_id[fx["team_a"]]["short_name"]
     fe.append({"team": h, "gw": fx["event"], "opponent": a, "venue": "H", "fdr": fx["team_h_difficulty"]})
     fe.append({"team": a, "gw": fx["event"], "opponent": h, "venue": "A", "fdr": fx["team_a_difficulty"]})
 dump("fixture_ease", fe)
-print(f"  fixture_ease.json — {len(fe)} rows")
+print(f"  fixture_ease.json — {len(fe)} rows"
+      + (f" (GW{sorted(locked_gws)} locked, left out)" if locked_gws else ""))
 
 # 2b. teams.json — short_name → permanent badge code + full name (fixes badges
 #     for promoted clubs the frontend's hardcoded map doesn't know).

@@ -55,14 +55,16 @@ season_dir = os.path.join(ROOT, season)
 meta_path = os.path.join(season_dir, "meta.json")
 ease_path = os.path.join(season_dir, "fixture_ease.json")
 
-# How long after a deadline to wait before moving the site on. Nothing
-# technical needs it — `deadline_time` is authoritative the second it passes,
-# and the pointer could move on the stroke. It is a deliberate half hour of
-# grace: teams lock at the deadline and the first thing a lot of people do is
-# open the site to look at the side they just locked in, and having the whole
-# place jump to next week under them is a worse first impression than waiting
-# out the lull. Set it to 0 for an instant switch.
-SETTLE = timedelta(minutes=30)
+# How long after a deadline to wait before moving the site on.
+#
+# ZERO, deliberately. It was half an hour on the theory that people open the
+# site straight after the deadline to look at the team they just locked in, and
+# would rather it did not move under them. The call went the other way: the
+# sooner the site is on next week, the sooner it is useful, and the gameweek
+# just locked is not somewhere anyone needs to be kept. `deadline_time` is
+# authoritative the second it passes, so nothing technical wanted the wait
+# either. Raise it if the instant switch ever feels abrupt.
+SETTLE = timedelta(minutes=0)
 
 now = datetime.now(timezone.utc) - SETTLE
 events = get(f"{API}/bootstrap-static/")["events"]
