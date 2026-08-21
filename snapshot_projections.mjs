@@ -109,6 +109,21 @@ for (const r of ratings) {
 }
 out.sort((a, b) => b.xp - a.xp)
 
+// AN EMPTY SNAPSHOT IS WORSE THAN NO SNAPSHOT. A projection is only final
+// once, so this file is never rewritten (see below) — an empty one would sit
+// there permanently and there is no way to go back and recompute it. The way
+// it happens is running this AFTER advance_gameweek.py, which trims the locked
+// gameweek out of fixture_ease.json; xpPartsForGw then matches no fixture for
+// anybody and every player returns nothing. Measured: 495 players before the
+// trim, 0 after. Fail loudly instead, so the workflow stops and the gameweek
+// is still there to be captured on the next run.
+if (!out.length) {
+  console.error(`GW${gw}: nothing projected — no player matched a fixture.`)
+  console.error('  fixture_ease.json most likely no longer holds this gameweek, which')
+  console.error('  means advance_gameweek.py has already run. Snapshot BEFORE advancing.')
+  process.exit(1)
+}
+
 mkdirSync(OUT, { recursive: true })
 const dest = join(OUT, `gw${gw}.json`)
 if (existsSync(dest) && !args.includes('--force')) {

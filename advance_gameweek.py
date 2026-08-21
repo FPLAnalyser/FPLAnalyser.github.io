@@ -141,6 +141,19 @@ if os.path.exists(ease_path):
                     with open(ease_path, "w", encoding="utf-8") as f:
                         json.dump(ease, f, ensure_ascii=False, separators=(",", ":"))
 
+# ── tell the workflow what to do next ─────────────────────────────────────
+#
+# The scheduled job runs every quarter of an hour and almost always has
+# nothing to do, so it stays Python-only and cheap. On the one run a week that
+# DOES move the site, it has to set up Node and freeze the projection first —
+# see the workflow. These two lines are how it knows which run that is, and
+# which gameweek to freeze.
+_out = os.environ.get("GITHUB_OUTPUT")
+if _out:
+    with open(_out, "a", encoding="utf-8") as f:
+        f.write(f"changed={'true' if changed else 'false'}\n")
+        f.write(f"locked_gw={current_gw if current_gw is not None else ''}\n")
+
 if not changed:
     print("  nothing to do — the site is already on the right gameweek.")
     raise SystemExit(0)

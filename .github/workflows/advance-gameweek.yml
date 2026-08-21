@@ -28,6 +28,14 @@ name: Advance the gameweek
 # have their own jobs and their own reasons to run at their own times. This one
 # advances the pointer and trims the fixture grid, which is the part that
 # cannot wait a day.
+#
+# THE ONE OTHER THING IT DOES, on the one run a week that actually moves the
+# site: it freezes that gameweek's projection first. xP is computed in the
+# browser at render time, so the moment odds or availability next refresh, what
+# the site said before the deadline is gone. The deadline is the only moment it
+# can be captured — teams set, nothing left to change it, nothing yet to
+# overwrite it. Hence the awkward shape below: a dry run to ask whether this is
+# that run, Node only if it is, snapshot, and only then advance for real.
 on:
   schedule:
     - cron: '0,15,30,45 10-20 * * *'
@@ -59,6 +67,46 @@ jobs:
         with:
           python-version: '3.12'
 
+      # Ask, without writing anything, whether this is a run that moves the
+      # site — and if so which gameweek has just locked. Both come back as step
+      # outputs; see the end of advance_gameweek.py. Nearly every run answers
+      # "no" here and everything below is skipped.
+      - name: Is this the run that moves the site?
+        id: check
+        run: python advance_gameweek.py --dry-run
+
+      # ── the once-a-week part ──────────────────────────────────────────────
+      #
+      # ORDER MATTERS AND IT IS NOT OBVIOUS. The snapshot has to happen BEFORE
+      # the advance, because advancing trims the locked gameweek out of
+      # fixture_ease.json and the projection is built by matching players to
+      # fixtures in it. Run the other way round it does not error — it writes a
+      # file with nothing in it. Measured: 495 players before the trim, 0
+      # after. snapshot_projections.mjs now refuses to write an empty file, so
+      # getting this wrong fails the job rather than losing the gameweek.
+      #
+      # If the snapshot fails, the advance below never runs and the site sits
+      # on the locked gameweek until the next quarter-hour, which retries.
+      # That is the intended trade: being fifteen minutes late is recoverable,
+      # and a projection missed at the deadline is not.
+      - uses: actions/setup-node@v4
+        if: ${{ !inputs.dry_run && steps.check.outputs.changed == 'true' && steps.check.outputs.locked_gw != '' }}
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Freeze what the site projected for GW${{ steps.check.outputs.locked_gw }}
+        if: ${{ !inputs.dry_run && steps.check.outputs.changed == 'true' && steps.check.outputs.locked_gw != '' }}
+        run: |
+          npm ci
+          # The script imports the site's own TypeScript — the same minutes and
+          # xP code the browser runs, deliberately, so the record matches what
+          # was on screen rather than a second implementation that drifts.
+          ./node_modules/.bin/esbuild snapshot_projections.mjs \
+            --bundle --platform=node --format=esm \
+            --outfile=_snapshot.build.mjs --external:react
+          node _snapshot.build.mjs ${{ steps.check.outputs.locked_gw }}
+          rm -f _snapshot.build.mjs
+
       - name: Advance to the next unlocked gameweek
         run: python advance_gameweek.py ${{ inputs.dry_run && '--dry-run' || '' }}
 
@@ -71,9 +119,13 @@ jobs:
             exit 0
           fi
           NEXT=$(python -c "import json;print(json.load(open('site_data/2026-27/meta.json')).get('next_gw'))")
+          MSG="Move the site on to GW${NEXT}"
+          if git diff --cached --name-only | grep -q 'projections/'; then
+            MSG="${MSG}, keeping GW${{ steps.check.outputs.locked_gw }}'s projection"
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Move the site on to GW${NEXT}"
+          git commit -m "$MSG"
           # Same retry as the daily refreshes: these commits touch only
           # generated files nobody edits by hand, so a branch that has moved
           # under us rebases cleanly and the history stays linear.
