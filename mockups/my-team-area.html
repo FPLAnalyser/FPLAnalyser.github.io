@@ -176,8 +176,10 @@ tbody tr:hover{background:rgba(255,255,255,.02)}
     <code>site_data/2026-27/</code> — the same 495-player GW2 snapshot the site
     would freeze at Friday's deadline. Where a number cannot exist yet, it is
     <span class="wip" title="not knowable yet">underlined like this</span> and
-    labelled. GW1's first match kicks off tonight, so nobody has scored a point
-    in this season: every "actual" on this page is a shape, not a result.
+    labelled. One GW1 fixture — Arsenal 3 Coventry 0 — has now been played and
+    pulled, so the <b>Review</b> tab is measured against what actually
+    happened. The live and season faces still carry shapes, and those are
+    stamped.
   </p>
 </header>
 
@@ -203,7 +205,7 @@ tbody tr:hover{background:rgba(255,255,255,.02)}
   <button role="tab" aria-selected="false" aria-controls="t-plan"   id="b-plan">
     <span class="dn">Plan</span><span class="dt">GW2–GW6 · 1 free transfer</span></button>
   <button role="tab" aria-selected="false" aria-controls="t-review" id="b-review">
-    <span class="dn">Review</span><span class="dt">GW1 settles Monday</span></button>
+    <span class="dn">Review</span><span class="dt">1 of 10 fixtures in</span></button>
   <button role="tab" aria-selected="false" aria-controls="t-season" id="b-season">
     <span class="dn">Season</span><span class="dt">1 of 38 played</span></button>
 </div>
@@ -487,56 +489,67 @@ tbody tr:hover{background:rgba(255,255,255,.02)}
     stores what actually happened. This is what those two files look like
     side by side.
     <br><br>
-    <b>Right now they cannot be shown for real.</b> GW1's first match kicks off
-    tonight. Every actual below is a shape.
+    <b>One fixture in, this is now real.</b> Arsenal 3 Coventry 0 finished on
+    Friday night and the actuals were pulled at 23:41 UTC. Everything on this
+    tab below the first card is measured, not illustrated — the nine remaining
+    GW1 fixtures land over the weekend and Monday.
   </div>
 
   <div class="split" style="margin-bottom:var(--gap)">
     <div class="card">
-      <div class="kicker">Your GW1</div>
+      <div class="kicker">Your GW1 · 3 of 11 played</div>
       <div style="display:flex;align-items:baseline;gap:12px;margin:5px 0 2px">
-        <span style="font-size:34px;font-weight:800;letter-spacing:-.03em"><span class="wip" title="GW1 has not been played">64</span></span>
-        <span class="muted">against a projection of <b>58.3</b></span>
+        <span style="font-size:34px;font-weight:800;letter-spacing:-.03em">33</span>
+        <span class="muted">against a projection of <b>22.4</b></span>
       </div>
       <p class="muted" style="margin:6px 0 0;font-size:12.5px">
-        The 58.3 is real — the sum of your eleven in
-        <code>projections/gw1.json</code>, captured today, plus the Saka
-        armband. It is the first number this site has ever been able to be held
-        to. The 64 is the table below with the armband doubled, and it only adds
-        up because I picked it; on Monday it will not be mine to pick.</p>
+        Raya 6, Calafiori 9, Saka 9 doubled. All three Arsenal, all three ahead
+        of projection — which is what a 3–0 and a clean sheet does, and
+        exactly why one fixture is not a verdict. The eight still to play are worth another
+        36.0 on the projection.</p>
     </div>
     <div class="card">
-      <div class="kicker">The model's GW1, everyone</div>
+      <div class="kicker">The model's Friday night</div>
       <div style="display:flex;align-items:baseline;gap:12px;margin:5px 0 2px">
-        <span style="font-size:34px;font-weight:800;letter-spacing:-.03em"><span class="wip">1.42</span></span>
+        <span style="font-size:34px;font-weight:800;letter-spacing:-.03em">1.25</span>
         <span class="muted">mean absolute error, points per player</span>
       </div>
       <p class="muted" style="margin:6px 0 0;font-size:12.5px">
-        Published whether it flatters the site or not. 495 players projected,
-        every one with a breakdown, so the error can be attributed rather than
-        just reported.</p>
+        Across all <b>55</b> players it projected for that fixture — not just
+        the 31 who featured, because a player it expected and who never came on
+        is a miss too. Mean error <b>+0.20</b>: very slightly low, on a night
+        the home side won three nil and kept a clean sheet.</p>
     </div>
   </div>
 
   <div class="card" style="margin-bottom:var(--gap)">
-    <div class="kicker" style="margin-bottom:4px">Where it missed</div>
+    <div class="kicker" style="margin-bottom:4px">Where it missed · Arsenal v Coventry</div>
     <h2 style="margin:0 0 4px">By component, not by player</h2>
     <p class="muted" style="margin:0 0 13px;max-width:74ch">
-      "We were wrong about Haaland" is gossip. "We were wrong about clean
-      sheets, by 0.6 a defender, in every fixture the bookmakers had not priced"
-      is a bug report. This is the only chart on the page that is about the
-      site rather than about you, and it is the one worth publishing.
+      "We were wrong about Ødegaard" is gossip — he scored eleven off a
+      projection of 3.25 and there is nothing to learn from it. "We projected
+      6.1 points of defensive contribution across the fixture and one player
+      cleared the threshold" is a bug report. That is the difference this chart
+      exists to draw, and it is the only one on the page about the site rather
+      than about you.
     </p>
     <div class="stack" id="components"></div>
     <div class="legend" style="margin-top:12px">
       <span><i class="dot" style="background:var(--good)"></i> model under-projected</span>
       <span><i class="dot" style="background:var(--bad)"></i> model over-projected</span>
-      <span class="wip">shape only — GW1 settles Monday</span>
+      <span>90.7 projected against 102 scored, over 55 players</span>
     </div>
+    <p class="muted" style="margin:11px 0 0;font-size:12px;max-width:74ch">
+      The clean-sheet bar is not a fault. Arsenal kept one and the model priced
+      it as a chance, so a single fixture can only ever show it as a whole
+      number against a fraction. It is the bars that stay the same colour over
+      ten fixtures that mean something — which is why this chart is worth
+      almost nothing tonight and a great deal by GW5.
+    </p>
   </div>
 
   <div class="card">
-    <div class="kicker" style="margin-bottom:4px">Your eleven</div>
+    <div class="kicker" style="margin-bottom:4px">Your eleven · 3 played, 8 to come</div>
     <h2 style="margin:0 0 11px">Projected against actual</h2>
     <div class="scroll"><table>
       <thead><tr><th>Player</th><th class="n">Proj</th><th class="n">Got</th><th class="n">Diff</th><th style="text-align:left">Where it came from</th></tr></thead>
@@ -719,15 +732,17 @@ tbody tr:hover{background:rgba(255,255,255,.02)}
       <p>Publish the model's error next to yours, every week, whether or not it is flattering. Nobody else in this space does it.</p></header>
     <div class="demo">
       <div class="split" style="gap:10px">
-        <div class="tile"><div class="kicker">Model error</div>
-          <div class="big"><span class="wip">1.42</span></div><div class="sub">points per player</div></div>
-        <div class="tile"><div class="kicker">vs the field</div>
-          <div class="big good"><span class="wip">−0.31</span></div><div class="sub">better than ownership alone</div></div>
+        <div class="tile"><div class="kicker">Mean absolute error</div>
+          <div class="big">1.25</div><div class="sub">points per player, 55 projected</div></div>
+        <div class="tile"><div class="kicker">Bias</div>
+          <div class="big">+0.20</div><div class="sub">slightly under, not over</div></div>
       </div>
       <p class="muted" style="margin:10px 0 0;font-size:12.5px">
-        This is the single strongest trust argument the site has, it costs
-        nothing to produce now the two files exist, and it is unavailable to
-        anyone who did not store their projection before the deadline.
+        Both real, from Friday night. It is the single strongest trust argument
+        the site has, it costs nothing now the two files exist, and it is
+        simply unavailable to anyone who did not store their projection before
+        the deadline. One fixture proves nothing — that is the point of running
+        it every week and publishing whichever way it goes.
       </p>
     </div>
   </div>
@@ -798,10 +813,13 @@ tbody tr:hover{background:rgba(255,255,255,.02)}
   <code>site_data/2026-27/</code> as it stands tonight — including the ones that
   make the argument, like O'Shea's 2.01 against João Pedro's 4.49, and van
   Ewijk's 4.23 at the same £4.0m. The squad is the £100.0m fifteen from the
-  earlier mockups. Everything <span class="wip">underlined</span> is a point
-  total, rank or error that cannot exist until matches are played — GW1's first
-  is at 19:00 tonight and the gameweek runs to Monday, when the nightly job
-  stores the first real actuals this site has ever had.
+  earlier mockups. The Review tab is now measured: Arsenal 3
+  Coventry 0 was pulled at 23:41 into
+  <code>site_data/2026-27/actuals/gw1.json</code> — the first actuals this site
+  has ever held, joined to the projection it froze earlier the same day.
+  Everything still <span class="wip">underlined</span> is a point total, rank
+  or error from a fixture that has not been played; nine of GW1's ten are
+  still to come, and the nightly job picks each up as it settles.
 </div>
 
 </div>
@@ -830,18 +848,21 @@ const BENCH = [
   {pos:'FWD',nm:'João Pedro',tm:'CHE',xp:4.49,up:true},
 ];
 /* GW1 projections, also real — used by the Review tab. */
+/* MEASURED for the three who have played — actuals/gw1.json, provisional
+   while bonus settles. The other eight kick off across the weekend and
+   Monday, and are shown as pending rather than guessed at. */
 const GW1 = [
-  {nm:'Raya',      xp:4.37,got:6, why:'clean sheet 2.13 of it'},
-  {nm:'Calafiori', xp:5.30,got:9, why:'goal threat 1.12 + clean sheet 2.10'},
-  {nm:'Martinez',  xp:4.50,got:2, why:'clean sheet 1.60'},
-  {nm:'Maguire',   xp:4.25,got:1, why:'defensive contribution 0.47'},
-  {nm:"O'Shea",    xp:3.46,got:2, why:'appearance 1.93 carried it'},
-  {nm:'Saka',      xp:6.34,got:12,why:'goals 2.32 + assists 0.89 + bonus 0.77'},
-  {nm:'Wirtz',     xp:4.66,got:2, why:'goals 1.41'},
-  {nm:'Ndiaye',    xp:4.40,got:2, why:'goals 1.29'},
-  {nm:'E.Le Fée',  xp:4.10,got:5, why:'assists 0.60 + bonus 0.57'},
-  {nm:'Haaland',   xp:6.09,got:8, why:'goals 2.71 + bonus 1.32'},
-  {nm:'Watkins',   xp:4.52,got:3, why:'goals 1.82'},
+  {nm:'Raya',      xp:4.37,got:6,  mins:90,when:'Fri',why:'clean sheet, 4 saves'},
+  {nm:'Calafiori', xp:5.30,got:9,  mins:80,when:'Fri',why:'assist + clean sheet'},
+  {nm:'Saka',      xp:6.34,got:9,  mins:67,when:'Fri',why:'goal + 1 bonus'},
+  {nm:'Martinez',  xp:4.50,got:null,when:'Sun 15:30 · IPS (H)'},
+  {nm:'Maguire',   xp:4.25,got:null,when:'Sun 15:30 · IPS (H)'},
+  {nm:"O'Shea",    xp:3.46,got:null,when:'Sun 15:30 · MUN (A)'},
+  {nm:'Wirtz',     xp:4.66,got:null,when:'Sat 11:30 · NFO (H)'},
+  {nm:'Ndiaye',    xp:4.40,got:null,when:'Sat 14:00 · BOU (A)'},
+  {nm:'E.Le Fée',  xp:4.10,got:null,when:'Sun 13:00 · FUL (H)'},
+  {nm:'Haaland',   xp:6.09,got:null,when:'Fri 19:00 · CRY (A)'},
+  {nm:'Watkins',   xp:4.52,got:null,when:'Mon 19:00 · ARS (H)'},
 ];
 /* Real GW2–GW6 fixtures for the clubs in the squad. */
 const RUNS = [
@@ -891,24 +912,36 @@ document.getElementById('runs').innerHTML = RUNS.map(([club, owned, gws]) => `
 
 /* review table */
 document.getElementById('review').innerHTML = GW1.map((r) => {
+  if (r.got == null) {
+    return `<tr style="opacity:.5"><td style="font-weight:600">${esc(r.nm)}</td>
+      <td class="n">${r.xp.toFixed(2)}</td>
+      <td class="n" colspan="2" style="text-align:center;color:var(--ink3)">to play</td>
+      <td class="muted" style="font-size:12px">${esc(r.when)}</td></tr>`;
+  }
   const d = r.got - r.xp;
   return `<tr><td style="font-weight:600">${esc(r.nm)}</td>
     <td class="n">${r.xp.toFixed(2)}</td>
-    <td class="n"><span class="wip" title="GW1 has not been played">${r.got}</span></td>
+    <td class="n" style="font-weight:700">${r.got}</td>
     <td class="n" style="color:${d >= 0 ? 'var(--good)' : 'var(--bad)'};font-weight:700">
-      <span class="wip">${d >= 0 ? '+' : ''}${d.toFixed(1)}</span></td>
-    <td class="muted" style="font-size:12px">${esc(r.why)}</td></tr>`;
+      ${d >= 0 ? '+' : ''}${d.toFixed(1)}</td>
+    <td class="muted" style="font-size:12px">${r.mins}' — ${esc(r.why)}</td></tr>`;
 }).join('');
 
-/* component error bars */
-const COMP = [['Clean sheets', -0.61], ['Goals', 0.34], ['Bonus', -0.28],
-              ['Assists', 0.19], ['Defensive contribution', 0.11], ['Saves', -0.07]];
+/* Component error bars. MEASURED, from projections/gw1.json against
+   actuals/gw1.json over all 55 players the model projected for Arsenal v
+   Coventry — not only the 31 who featured. That distinction matters: scoring
+   only the players who played selects on the very thing being measured, and
+   doing it that way made appearance points look like the biggest miss in the
+   fixture (+15.5). Over the whole cohort it is +5.2 and fourth. */
+const COMP = [['Clean sheets', 9.2], ['Appearance', 5.2], ['Defensive contribution', -4.1],
+              ['Assists', 3.0], ['Goals', -1.4], ['Saves', -1.1],
+              ['Conceded', 0.7], ['Bonus', -0.7], ['Cards', 0.5]];
 const mx = Math.max(...COMP.map(([, v]) => Math.abs(v)));
 document.getElementById('components').innerHTML = COMP.map(([n, v]) => `
   <div>
     <div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:600">
-      <span>${n}</span><span class="wip" style="color:${v >= 0 ? 'var(--good)' : 'var(--bad)'}">
-        ${v >= 0 ? '+' : ''}${v.toFixed(2)}</span></div>
+      <span>${n}</span><span style="color:${v >= 0 ? 'var(--good)' : 'var(--bad)'}">
+        ${v >= 0 ? '+' : ''}${v.toFixed(1)}</span></div>
     <div class="bar" style="margin-top:5px;justify-content:${v >= 0 ? 'flex-start' : 'flex-end'}">
       <i style="width:${(Math.abs(v) / mx * 100).toFixed(0)}%;background:${v >= 0 ? 'var(--good)' : 'var(--bad)'}"></i>
     </div>
