@@ -52,6 +52,8 @@ on:
 
 permissions:
   contents: write
+  # To ask the Pages deploy to run — see the last step.
+  actions: write
 
 concurrency:
   group: advance-gameweek
@@ -122,6 +124,8 @@ jobs:
 
       - name: Commit if the gameweek moved
         if: ${{ !inputs.dry_run }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git add -A site_data
           if git diff --cached --quiet; then
@@ -139,10 +143,24 @@ jobs:
           # Same retry as the daily refreshes: these commits touch only
           # generated files nobody edits by hand, so a branch that has moved
           # under us rebases cleanly and the history stays linear.
+          pushed=0
           for attempt in 1 2 3 4 5; do
-            if git push; then exit 0; fi
+            if git push; then pushed=1; break; fi
             echo "push rejected (attempt $attempt) — rebasing onto the branch tip"
             git pull --rebase origin main || exit 1
           done
-          echo "still could not push after 5 attempts"
-          exit 1
+          if [ "$pushed" -ne 1 ]; then
+            echo "still could not push after 5 attempts"
+            exit 1
+          fi
+
+          # ASK FOR THE DEPLOY, because the push will not. GitHub does not fire
+          # `on: push` for a commit made with the workflow token, silently — so
+          # without this the site would have moved on to the next gameweek in
+          # the repository and nowhere else, which is the exact failure this
+          # whole job exists to prevent. Only reached when something changed.
+          curl -sS -X POST --fail-with-body \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/dispatches" \
+            -d '{"ref":"main"}' && echo "deploy requested"

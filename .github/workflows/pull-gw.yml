@@ -18,15 +18,29 @@ name: Pull the actual points
 # a deliberate call for the owner to make, with `pull_fpl_gw.py --reset`, not
 # something a nightly job should drift into.
 #
-# WHY NIGHTLY. Provisional points appear within minutes of a whistle but bonus
-# does not settle until FPL marks the gameweek finished, an hour or so after
-# the last match — and a gameweek can be reopened days later when a score is
-# corrected. So it re-pulls every finished gameweek every night and writes only
-# when the numbers actually differ, which after the Monday of each gameweek
-# means it writes nothing at all.
+# WHY IT RUNS ALL DAY. Points appear on the FPL endpoint within a minute or two
+# of the thing that caused them, so there is no reason to make anyone wait for
+# the whistle, let alone for Monday. It runs every quarter of an hour from
+# 11:00 to 22:45 UTC, which covers every Premier League kick-off slot including
+# the Monday night game and the hour afterwards while bonus settles.
+#
+# The scheduled runs pass --live, so the gameweek in progress is pulled as it
+# happens rather than only once FPL closes it. What that costs is honesty about
+# the numbers: `provisional` stays true in the file until FPL marks the
+# gameweek finished, because bonus is not final before then and a score can be
+# corrected days later. Anything reading these files has to say so too.
+#
+# NEARLY EVERY RUN WRITES NOTHING. The script compares the numbers rather than
+# the file, so a run with no football in it, or one during a half-time, ends
+# without a commit. That is what makes a quarter-hourly schedule reasonable:
+# out of season it is three API calls and no push, every time.
 on:
   schedule:
-    - cron: '30 22 * * *'
+    - cron: '*/15 11-22 * * *'
+    # One more overnight, to pick up a score corrected after everyone has
+    # gone home. Cheap, and it means a Tuesday correction is not carried
+    # until the following Friday.
+    - cron: '10 6 * * *'
   workflow_dispatch:
     inputs:
       gw:
@@ -44,6 +58,9 @@ on:
 
 permissions:
   contents: write
+  # To ask the Pages deploy to run — see the last step for why it has to be
+  # asked rather than left to fire on the push.
+  actions: write
 
 concurrency:
   group: pull-gw
@@ -72,12 +89,17 @@ jobs:
             echo "gw must be a number 1-38, got: $GW"
             exit 1
           fi
+          # Scheduled runs always take the gameweek in progress; that is the
+          # whole point of running during the football. A manual dispatch has
+          # to ask, so `live: false` still means "settled gameweeks only".
           python pull_fpl_gw.py --actuals ${GW:+"$GW"} \
-            ${{ inputs.live && '--live' || '' }} \
+            ${{ (github.event_name == 'schedule' || inputs.live) && '--live' || '' }} \
             ${{ inputs.dry_run && '--dry-run' || '' }}
 
       - name: Commit anything new
         if: ${{ !inputs.dry_run }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git add -A site_data
           if git diff --cached --quiet; then
@@ -89,10 +111,29 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Store what actually happened in GW${GWS}"
+          pushed=0
           for attempt in 1 2 3 4 5; do
-            if git push; then exit 0; fi
+            if git push; then pushed=1; break; fi
             echo "push rejected (attempt $attempt) — rebasing onto the branch tip"
             git pull --rebase origin main || exit 1
           done
-          echo "still could not push after 5 attempts"
-          exit 1
+          if [ "$pushed" -ne 1 ]; then
+            echo "still could not push after 5 attempts"
+            exit 1
+          fi
+
+          # ASK FOR THE DEPLOY, because the push will not.
+          #
+          # GitHub does not fire `on: push` for a commit made with the workflow
+          # token — it is the recursion guard, and it is silent. Measured on
+          # this repo: the first actuals commit landed on main at 23:41 and no
+          # deploy ran, so the data was in the repository and not on the site.
+          # deploy.yml has a workflow_run trigger for exactly this reason, but
+          # putting this job in that list would rebuild the site on all
+          # forty-nine daily runs, nearly all of which change nothing. Asking
+          # here means a deploy happens when, and only when, something moved.
+          curl -sS -X POST --fail-with-body \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/dispatches" \
+            -d '{"ref":"main"}' && echo "deploy requested"
