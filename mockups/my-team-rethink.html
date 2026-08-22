@@ -1,0 +1,632 @@
+<title>Six Ways To Build My Team</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700;800&display=swap">
+<style>
+/* Site tokens, unchanged — the argument here is about structure, so nothing
+   is allowed to win by looking different. */
+:root{
+  --bg0:#000; --s1:#121316; --s2:#1b1c1f; --s3:#232427; --s4:#2c2d31;
+  --ink:#edeff3; --ink2:#aaacb0; --ink3:#828386;
+  --line:rgba(255,255,255,.07); --line-mid:rgba(255,255,255,.12); --line-strong:rgba(255,255,255,.2);
+  --acc:#c9a227; --acc2:#ead188;
+  --good:#3ddc7a; --warn:#e8b04a; --bad:#f0736f; --info:#6ea8ff;
+  --r-md:10px; --r-lg:14px; --r-xl:20px; --gap:14px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg0);color:var(--ink);
+     font:15px/1.55 'Manrope',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+.cond{font-family:'Barlow Condensed','Arial Narrow',sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:26px 18px 100px}
+:focus-visible{outline:2px solid var(--acc2);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+h1{font-size:27px;margin:0 0 6px;letter-spacing:-.025em;font-weight:800;text-wrap:balance}
+h2{font-size:20px;margin:0;letter-spacing:-.018em;font-weight:800;text-wrap:balance}
+h3{font-size:14.5px;margin:0;font-weight:800;letter-spacing:-.01em}
+p{margin:0}
+.lede{color:var(--ink2);font-size:14px;max-width:72ch}
+.kicker{font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.muted{color:var(--ink2);font-size:13px}
+.tiny{font-size:12px;color:var(--ink2)}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 16px}
+.note{background:var(--s1);border:1px solid var(--line);border-left:2px solid var(--line-strong);
+  border-radius:0 var(--r-md) var(--r-md) 0;padding:11px 14px;font-size:13px;color:var(--ink2);max-width:82ch}
+.note b{color:var(--ink)} .note .for{color:var(--good)} .note .against{color:var(--bad)}
+.good{color:var(--good)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+.n{font-variant-numeric:tabular-nums}
+.wip{border-bottom:1px dashed var(--warn);cursor:help}
+hr{height:1px;background:var(--line);margin:36px 0 22px;border:0}
+.pill{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 8px;
+  font-size:10.5px;font-weight:800;white-space:nowrap}
+.pill.g{background:rgba(61,220,122,.13);color:var(--good);border:1px solid rgba(61,220,122,.38)}
+.pill.b{background:rgba(240,115,111,.12);color:var(--bad);border:1px solid rgba(240,115,111,.4)}
+.pill.w{background:rgba(232,176,74,.12);color:var(--warn);border:1px solid rgba(232,176,74,.4)}
+.pill.i{background:rgba(110,168,255,.11);color:var(--info);border:1px solid rgba(110,168,255,.36)}
+.pill.n{background:var(--s2);color:var(--ink3);border:1px solid var(--line-mid)}
+
+/* direction switcher */
+.dirs{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0 6px}
+.dirs button{font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;background:var(--s2);
+  color:var(--ink2);border:1px solid var(--line-mid);border-radius:999px;padding:7px 14px;min-height:36px}
+.dirs button:hover{background:var(--s3);color:var(--ink)}
+.dirs button[aria-selected=true]{background:var(--acc);color:#14100a;border-color:var(--acc)}
+section[hidden]{display:none}
+.head{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap;margin:20px 0 8px}
+.head .num{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:700;color:var(--acc);line-height:.9}
+
+/* ══ 1 · FEED ═══════════════════════════════════════════════════════ */
+.feed{display:flex;flex-direction:column;gap:9px}
+.item{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:start;
+  background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg);padding:12px 14px}
+.item.hi{border-color:rgba(240,115,111,.4);background:linear-gradient(90deg,rgba(240,115,111,.06),transparent 45%)}
+.item.md{border-color:rgba(232,176,74,.32)}
+.heat{width:44px;height:44px;border-radius:11px;display:grid;place-items:center;
+  font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;line-height:1}
+.heat.a{background:rgba(240,115,111,.16);color:var(--bad);border:1px solid rgba(240,115,111,.4)}
+.heat.b{background:rgba(232,176,74,.15);color:var(--warn);border:1px solid rgba(232,176,74,.38)}
+.heat.c{background:var(--s2);color:var(--ink3);border:1px solid var(--line-mid)}
+.item .act{margin-top:8px;display:flex;gap:7px;flex-wrap:wrap}
+.btn{font:inherit;font-size:12px;font-weight:700;cursor:pointer;border-radius:8px;padding:5px 11px;
+  background:var(--s3);color:var(--ink);border:1px solid var(--line-mid)}
+.btn.p{background:var(--acc);color:#14100a;border-color:var(--acc)}
+.btn:hover{filter:brightness(1.12)}
+.when{font-size:11px;color:var(--ink3);white-space:nowrap;text-align:right}
+
+/* ══ 2 · PITCH ══════════════════════════════════════════════════════ */
+.pitch{position:relative;border-radius:var(--r-xl);border:1px solid var(--line);overflow:hidden;
+  padding:18px 12px 14px;
+  background:repeating-linear-gradient(180deg,rgba(255,255,255,.045) 0 7.14%,rgba(0,0,0,.05) 7.14% 14.28%),
+             radial-gradient(120% 70% at 50% 0%,rgba(255,255,255,.10),transparent 62%),
+             linear-gradient(180deg,#1b7a3a 0%,#15682f 45%,#125c29 100%)}
+.pitch svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.rows{position:relative;z-index:1;display:flex;flex-direction:column;gap:14px}
+.prow{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;align-items:flex-start}
+.shirt{position:relative;width:122px;border-radius:11px;border:1px solid rgba(255,255,255,.18);
+  background:rgba(0,0,0,.5);backdrop-filter:blur(5px);padding:6px 8px 7px;text-align:left;cursor:pointer;
+  color:#fff;font:inherit;display:block;transition:width .18s}
+.shirt:hover{border-color:rgba(255,255,255,.42)}
+.shirt[aria-expanded=true]{width:236px;border-color:var(--acc);background:rgba(0,0,0,.74)}
+.shirt .top{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.shirt .nm{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shirt .xp{font-size:13px;font-weight:800;color:var(--acc2)}
+.shirt .sub{font-size:9.5px;color:rgba(255,255,255,.62);display:block;margin-top:2px}
+.shirt .more{display:none;margin-top:8px;border-top:1px solid rgba(255,255,255,.18);padding-top:7px}
+.shirt[aria-expanded=true] .more{display:block}
+.brk{display:flex;flex-direction:column;gap:3px;font-size:11px}
+.brk div{display:flex;justify-content:space-between;gap:8px}
+.brk b{font-weight:700;color:var(--acc2)}
+.shirt .arm{position:absolute;top:-6px;right:-6px;display:grid;place-items:center;
+  width:18px;height:18px;border-radius:999px;background:var(--acc);color:#14100a;
+  font-size:9px;font-weight:800;border:2px solid rgba(0,0,0,.55)}
+/* display:block, or the border breaks across every wrapped line instead of
+   boxing the note — it is a span inside a block, and inline boxes fragment. */
+.swap{display:block;margin-top:7px;font-size:11px;color:rgba(255,255,255,.8);line-height:1.45;
+  background:rgba(61,220,122,.14);border:1px solid rgba(61,220,122,.4);border-radius:7px;padding:5px 7px}
+
+/* ══ 3 · QUESTIONS ══════════════════════════════════════════════════ */
+.qs{display:flex;flex-direction:column;gap:8px}
+.q{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.q>button{width:100%;font:inherit;text-align:left;cursor:pointer;background:none;border:0;color:var(--ink);
+  padding:13px 15px;display:flex;align-items:center;gap:11px}
+.q>button:hover{background:var(--s2)}
+.q .qt{font-size:15.5px;font-weight:700;letter-spacing:-.01em}
+.q .qa{margin-left:auto;font-size:12.5px;font-weight:800;white-space:nowrap}
+.q .chev{color:var(--ink3);font-size:12px;transition:transform .16s}
+.q>button[aria-expanded=true] .chev{transform:rotate(90deg)}
+.q .body{display:none;padding:0 15px 14px;border-top:1px solid var(--line)}
+.q>button[aria-expanded=true]+.body{display:block;padding-top:12px}
+
+/* ══ 4 · SCRUBBER ═══════════════════════════════════════════════════ */
+.scrub{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg);padding:15px 17px 11px}
+.track{position:relative;margin:12px 4px 4px}
+input[type=range]{width:100%;margin:0;accent-color:var(--acc);height:22px}
+.ticks{display:flex;justify-content:space-between;margin-top:2px}
+.ticks span{font-size:10.5px;font-weight:700;color:var(--ink3);flex:1;text-align:center}
+.ticks span.on{color:var(--acc)}
+.stage{margin-top:var(--gap)}
+.bigrow{display:flex;align-items:baseline;gap:13px;flex-wrap:wrap}
+.bigrow .v{font-size:38px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+
+/* ══ 5 · KEEP / CHANGE / WATCH ══════════════════════════════════════ */
+.cols{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap)}
+@media(max-width:840px){.cols{grid-template-columns:1fr}}
+.col{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.col>header{padding:11px 14px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:8px}
+.col.keep>header{background:linear-gradient(90deg,rgba(61,220,122,.10),transparent)}
+.col.change>header{background:linear-gradient(90deg,rgba(240,115,111,.10),transparent)}
+.col.watch>header{background:linear-gradient(90deg,rgba(232,176,74,.10),transparent)}
+.col .cnt{margin-left:auto;font-size:12px;font-weight:800;color:var(--ink3)}
+.pl{display:flex;gap:10px;align-items:center;padding:9px 14px;border-top:1px solid var(--line)}
+.pl:first-child{border-top:0}
+.pl .pos{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:var(--ink3);width:26px;flex:none}
+.pl .nm{font-size:13.5px;font-weight:700}
+.pl .why{font-size:11px;color:var(--ink3);margin-top:1px}
+.pl .v{margin-left:auto;font-size:14px;font-weight:800;text-align:right}
+
+/* ══ 6 · TEMPLATE DIFF ══════════════════════════════════════════════ */
+.diff{display:grid;grid-template-columns:1fr 46px 1fr;gap:0;align-items:stretch}
+@media(max-width:760px){.diff{grid-template-columns:1fr}}
+.side{background:var(--s1);border:1px solid var(--line);padding:13px 15px}
+.side.l{border-radius:var(--r-lg) 0 0 var(--r-lg);border-right:0}
+.side.r{border-radius:0 var(--r-lg) var(--r-lg) 0;border-left:0}
+@media(max-width:760px){.side.l,.side.r{border-radius:var(--r-lg);border:1px solid var(--line)}}
+.spine{display:grid;place-items:center;background:var(--s2);border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);font-size:11px;font-weight:800;color:var(--ink3)}
+@media(max-width:760px){.spine{display:none}}
+.dl{display:flex;justify-content:space-between;gap:9px;padding:6px 0;border-top:1px solid var(--line);font-size:13px}
+.dl:first-of-type{border-top:0}
+.dl .pos{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--ink3);
+  display:inline-block;width:24px}
+.bar{height:7px;border-radius:99px;background:var(--s3);overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+</style>
+
+<div class="wrap">
+
+<header>
+  <span class="kicker">Mockups · six structures, one team</span>
+  <h1>Six ways to build My Team</h1>
+  <p class="lede" style="margin-top:6px">
+    The last set was one idea — tabs — refined four times. These are six
+    different answers to the same question, three of which throw navigation out
+    entirely. Same squad, same numbers, read out of
+    <code>site_data/2026-27/</code> tonight. GW1's opening fixture is now
+    played, so the results in here are real: Arsenal 3 Coventry 0, pulled at
+    23:41. Anything not yet knowable is <span class="wip" title="not knowable yet">stamped</span>.
+  </p>
+</header>
+
+<div class="dirs" role="tablist" aria-label="Directions">
+  <button role="tab" aria-selected="true"  aria-controls="d1" id="t1">1 · The feed</button>
+  <button role="tab" aria-selected="false" aria-controls="d2" id="t2">2 · The pitch is the page</button>
+  <button role="tab" aria-selected="false" aria-controls="d3" id="t3">3 · Questions, not data</button>
+  <button role="tab" aria-selected="false" aria-controls="d4" id="t4">4 · The scrubber</button>
+  <button role="tab" aria-selected="false" aria-controls="d5" id="t5">5 · Keep / change / watch</button>
+  <button role="tab" aria-selected="false" aria-controls="d6" id="t6">6 · You against the template</button>
+</div>
+
+<!-- ═══════════════ 1 ═══════════════ -->
+<section id="d1" role="tabpanel" aria-labelledby="t1">
+  <div class="head"><span class="num">01</span><h2>The feed</h2></div>
+  <div class="note">
+    <b>No tabs, no sections, no navigation at all.</b> One column of cards,
+    ordered by how much they matter <em>right now</em>, recomputed every time
+    the page loads. A card about your captain being injured is at the top on
+    Friday and gone by Sunday; your season rank sits at the bottom for eleven
+    months. The page has no fixed shape — the week gives it one.
+    <span class="for">For:</span> nothing is ever more than one screen away, and
+    it is the only structure that works identically on a phone and a desktop.
+    <span class="against">Against:</span> if the ordering is wrong even twice,
+    people stop trusting the top of the list, and there is nothing else to fall
+    back on. It also has nowhere to put something you want to browse rather
+    than be told.
+  </div>
+  <div class="feed" id="feed" style="margin-top:var(--gap)"></div>
+  <p class="tiny" style="margin-top:11px">
+    The number in the tile is the urgency score. It is the thing that would
+    need building — everything else here already exists.
+  </p>
+</section>
+
+<!-- ═══════════════ 2 ═══════════════ -->
+<section id="d2" role="tabpanel" aria-labelledby="t2" hidden>
+  <div class="head"><span class="num">02</span><h2>The pitch is the page</h2></div>
+  <div class="note">
+    <b>Everything lives on the player it is about.</b> There are no panels,
+    tables or charts — tap a shirt and it widens in place to show the
+    projection broken into its parts, the fixture, and the one swap worth
+    making. Close it and the pitch is whole again.
+    <span class="for">For:</span> it matches how people actually think about
+    their team, which is player by player, and the site already has every
+    number it needs per player.
+    <span class="against">Against:</span> anything about the squad as a whole —
+    concentration, budget, the shape of the next five weeks — has no home at
+    all. It is a beautiful answer to half the problem.
+    <br><br>
+    <b>Try it:</b> the shirts are buttons. O'Shea is the interesting one.
+  </div>
+  <div class="pitch" style="margin-top:var(--gap)">
+    <svg viewBox="0 0 300 406" preserveAspectRatio="none" aria-hidden="true">
+      <g fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.6">
+        <rect x="6" y="6" width="288" height="394" rx="2"/><line x1="6" y1="203" x2="294" y2="203"/>
+        <ellipse cx="150" cy="203" rx="46" ry="46"/><rect x="60" y="6" width="180" height="62"/>
+        <rect x="112" y="6" width="76" height="26"/><path d="M108 68 A 46 46 0 0 0 192 68"/>
+        <rect x="60" y="338" width="180" height="62"/><rect x="112" y="374" width="76" height="26"/>
+        <path d="M108 338 A 46 46 0 0 1 192 338"/>
+      </g>
+    </svg>
+    <div class="rows" id="pitch2"></div>
+  </div>
+</section>
+
+<!-- ═══════════════ 3 ═══════════════ -->
+<section id="d3" role="tabpanel" aria-labelledby="t3" hidden>
+  <div class="head"><span class="num">03</span><h2>Questions, not data</h2></div>
+  <div class="note">
+    <b>Navigate by what you came to find out.</b> Not "Live", "Planner",
+    "Review" — those are names for where data is kept. These are the eight
+    things a manager actually opens the app to settle, each with its answer
+    already computed and visible in the header, so the page is readable without
+    opening anything.
+    <span class="for">For:</span> every row is a claim the site is willing to
+    make, which is the whole product in one screen.
+    <span class="against">Against:</span> the questions are fixed and yours may
+    not be on the list — and a question the model cannot answer well still has
+    to sit there with something next to it.
+  </div>
+  <div class="qs" id="qs" style="margin-top:var(--gap)"></div>
+</section>
+
+<!-- ═══════════════ 4 ═══════════════ -->
+<section id="d4" role="tabpanel" aria-labelledby="t4" hidden>
+  <div class="head"><span class="num">04</span><h2>The scrubber</h2></div>
+  <div class="note">
+    <b>One control, and it is time.</b> Drag left into gameweeks that have
+    happened and the page is a review; drag right into ones that have not and
+    it is a planner. There is no boundary between the two because there is no
+    boundary in the season — the same eleven players, the same projections,
+    just aimed at a different week. The handle starts on the gameweek that is
+    live.
+    <span class="for">For:</span> one interaction replaces a navigation
+    hierarchy, and "what does GW5 look like" stops being three clicks.
+    <span class="against">Against:</span> a slider is a poor way to reach a
+    specific place, it is fiddly with a thumb, and it hides everything you are
+    not currently pointing at.
+    <br><br>
+    <b>Try it:</b> drag the handle.
+  </div>
+  <div class="scrub" style="margin-top:var(--gap)">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+      <span class="kicker">Season</span>
+      <span class="tiny" id="scrub-when">GW1 · in progress</span>
+    </div>
+    <div class="track">
+      <input type="range" id="scrub" min="1" max="6" step="1" value="1" aria-label="Gameweek">
+      <div class="ticks" id="ticks"></div>
+    </div>
+  </div>
+  <div class="stage card" id="stage" style="margin-top:var(--gap)"></div>
+</section>
+
+<!-- ═══════════════ 5 ═══════════════ -->
+<section id="d5" role="tabpanel" aria-labelledby="t5" hidden>
+  <div class="head"><span class="num">05</span><h2>Keep / change / watch</h2></div>
+  <div class="note">
+    <b>Shaped like the decision, not like the data.</b> Every one of your
+    fifteen sits in exactly one column, placed there by the model, and the
+    entire job of the page is moving players between them. Nothing is displayed
+    that does not help you make or resist that move.
+    <span class="for">For:</span> it is the only one of these six where the
+    page has a completed state — three columns you agree with — so you can
+    finish and leave.
+    <span class="against">Against:</span> it is opinionated to the point of
+    being bossy, and it is wrong the moment the projection is. Being told to
+    sell someone who then scores is a worse experience than working it out
+    yourself.
+  </div>
+  <div class="cols" id="cols" style="margin-top:var(--gap)"></div>
+  <p class="tiny" style="margin-top:11px">
+    Placement rule as drawn: below 2.5 projected is Change, below 4.0 with a
+    hard fixture is Watch, everything else is Keep. Real numbers, deliberately
+    crude threshold — the point is the shape.
+  </p>
+</section>
+
+<!-- ═══════════════ 6 ═══════════════ -->
+<section id="d6" role="tabpanel" aria-labelledby="t6" hidden>
+  <div class="head"><span class="num">06</span><h2>You against the template</h2></div>
+  <div class="note">
+    <b>Your team only matters relative to everyone else's.</b> Points do not
+    win the game, rank does — so the page opens as a diff against the
+    most-owned eleven and expresses everything as where you differ and what
+    that difference is worth. Eight players in, eight players out.
+    <span class="for">For:</span> it answers the question people actually care
+    about, which is not "how many points" but "am I gaining or losing ground".
+    <span class="against">Against:</span> it quietly encourages you to converge
+    on the template, which is how you finish exactly average — and it is
+    dispiriting in a week like this one, where the template is ahead.
+  </div>
+  <div id="tmpl" style="margin-top:var(--gap)"></div>
+</section>
+
+<hr>
+<div class="note">
+  <b>What is real here.</b> Every projection, price, ownership share, fixture
+  and kick-off is read from <code>site_data/2026-27/</code> tonight. The GW1
+  results — Raya 6, Calafiori 9, Saka 9 — are the real ones from
+  <code>actuals/gw1.json</code>, provisional while bonus settles. The template
+  eleven is genuinely the most-owned player in each position and it genuinely
+  projects <b>51.57</b> against this squad's <b>44.99</b>, for £12.0m less.
+  That is not a flattering number and it is not invented. Only points from
+  fixtures that have not been played are <span class="wip">stamped</span>.
+</div>
+
+</div>
+
+<script>
+/* ─── one squad, real numbers, shared by all six ─────────────────────── */
+const SQUAD = [
+  {pos:'GKP',nm:'Raya',       tm:'ARS',pr:6,   xp:3.98,own:36.8,opp:'AVL (A)',day:'Mon 19:00',gw1:6,   xi:1,
+   parts:{'Clean sheet':1.70,'Appearance':1.92,'Bonus':0.30,'Saves':0.27,'Conceded':-0.19,'Cards':-0.03}},
+  {pos:'DEF',nm:'Calafiori', tm:'ARS',pr:5.5, xp:4.40,own:34.7,opp:'AVL (A)',day:'Mon 19:00',gw1:9,   xi:1,
+   parts:{'Clean sheet':1.68,'Appearance':1.88,'Goal':0.74,'Bonus':0.23,'Def. contribution':0.14,'Assist':0.11,'Cards':-0.19,'Conceded':-0.18}},
+  {pos:'DEF',nm:'Martinez',  tm:'MUN',pr:5,   xp:4.40,own:1.1, opp:'IPS (H)',day:'Sun 15:30',gw1:null,xi:1,
+   parts:{'Clean sheet':1.60,'Appearance':1.93,'Def. contribution':0.49,'Goal':0.22,'Assist':0.21,'Bonus':0.17,'Conceded':-0.21}},
+  {pos:'DEF',nm:'Maguire',   tm:'MUN',pr:5,   xp:4.22,own:16.1,opp:'IPS (H)',day:'Sun 15:30',gw1:null,xi:1,
+   parts:{'Clean sheet':1.39,'Appearance':1.81,'Def. contribution':0.52,'Goal':0.46,'Bonus':0.21,'Assist':0.13,'Conceded':-0.18,'Cards':-0.13}},
+  {pos:'DEF',nm:"O'Shea",    tm:'IPS',pr:4,   xp:2.01,own:3.3, opp:'MUN (A)',day:'Sun 15:30',gw1:null,xi:1,
+   parts:{'Appearance':1.93,'Def. contribution':0.50,'Clean sheet':0.27,'Goal':0.22,'Assist':0.11,'Bonus':0.11,'Cards':-0.11,'Conceded':-1.01},
+   swap:"van Ewijk, same £4.0m, projects 4.23 — Coventry are at home to Hull"},
+  {pos:'MID',nm:'Saka',      tm:'ARS',pr:9.5, xp:4.87,own:9.2, opp:'AVL (A)',day:'Mon 19:00',gw1:9,   xi:1,
+   parts:{'Appearance':1.71,'Goal':1.48,'Assist':0.57,'Bonus':0.54,'Clean sheet':0.33,'Def. contribution':0.30,'Cards':-0.07}},
+  {pos:'MID',nm:'Wirtz',     tm:'LIV',pr:7.5, xp:4.47,own:13.4,opp:'NFO (H)',day:'Sat 11:30',gw1:null,xi:1,
+   parts:{'Appearance':1.77,'Goal':1.21,'Bonus':0.58,'Assist':0.53,'Clean sheet':0.30,'Def. contribution':0.10,'Cards':-0.03}},
+  {pos:'MID',nm:'Ndiaye',    tm:'EVE',pr:6,   xp:3.82,own:15.9,opp:'BOU (A)',day:'Sat 14:00',gw1:null,xi:1,
+   parts:{'Appearance':1.87,'Goal':0.95,'Assist':0.35,'Def. contribution':0.33,'Bonus':0.21,'Clean sheet':0.17,'Cards':-0.06}},
+  {pos:'MID',nm:'E.Le Fée',  tm:'SUN',pr:6,   xp:3.89,own:11,  opp:'FUL (H)',day:'Sun 13:00',gw1:null,xi:1,
+   parts:{'Appearance':1.93,'Assist':0.51,'Bonus':0.50,'Def. contribution':0.43,'Goal':0.37,'Clean sheet':0.30,'Cards':-0.14}},
+  {pos:'FWD',nm:'Haaland',   tm:'MCI',pr:15.5,xp:5.61,own:69.4,opp:'CRY (A)',day:'Fri 19:00',gw1:null,xi:1,cap:1,
+   parts:{'Goal':2.45,'Appearance':1.90,'Bonus':1.14,'Assist':0.18,'Cards':-0.06}},
+  {pos:'FWD',nm:'Watkins',   tm:'AVL',pr:8,   xp:3.32,own:11,  opp:'ARS (H)',day:'Mon 19:00',gw1:null,xi:1,
+   parts:{'Appearance':1.93,'Goal':1.01,'Bonus':0.42,'Assist':0.07,'Cards':-0.11},
+   swap:'Calvert-Lewin, £6.0m, projects 4.82 and frees £2.0m'},
+  {pos:'GKP',nm:'Lammens',   tm:'MUN',pr:5,   xp:3.89,own:17.3,opp:'IPS (H)',day:'Sun 15:30',gw1:null,xi:0,
+   parts:{'Appearance':1.93,'Clean sheet':1.60,'Bonus':0.34,'Saves':0.23,'Conceded':-0.21}},
+  {pos:'DEF',nm:'Davis',     tm:'IPS',pr:4,   xp:2.01,own:5.3, opp:'MUN (A)',day:'Sun 15:30',gw1:null,xi:0,
+   parts:{'Appearance':1.92,'Def. contribution':0.49,'Clean sheet':0.27,'Goal':0.22,'Assist':0.10,'Bonus':0.11,'Cards':-0.11,'Conceded':-1.00}},
+  {pos:'MID',nm:'Groß',      tm:'BHA',pr:5.5, xp:3.75,own:13.9,opp:'CHE (A)',day:'Sun 13:00',gw1:null,xi:0,
+   parts:{'Appearance':1.93,'Bonus':0.58,'Assist':0.53,'Goal':0.45,'Def. contribution':0.24,'Clean sheet':0.13,'Cards':-0.11}},
+  {pos:'FWD',nm:'João Pedro',tm:'CHE',pr:7.5, xp:4.49,own:63.1,opp:'BHA (H)',day:'Sun 13:00',gw1:null,xi:0,
+   parts:{'Goal':1.70,'Appearance':1.85,'Bonus':0.91,'Assist':0.17,'Cards':-0.14},
+   swap:'Projects 4.49 on your bench while O’Shea starts on 2.01'},
+];
+const XI = SQUAD.filter((p) => p.xi);
+const BENCH = SQUAD.filter((p) => !p.xi);
+const XI_XP = 44.99, CAP_XP = 50.60, BENCH_XP = 14.14;
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ═══ 1 · FEED ═══ */
+const FEED = [
+  {u:94, k:'a', t:"O'Shea is starting and projects 2.01",
+   d:"Your lowest starter, in the fixture your two United defenders are keeping a clean sheet in. João Pedro projects 4.49 on the bench.",
+   w:'now', acts:['Swap them', 'Why?']},
+  {u:81, k:'a', t:'A third of your week is one Monday night fixture',
+   d:'Raya, Calafiori, Saka and Watkins are all in Villa v Arsenal — 16.6 of a projected 50.60, and you own both sides of it.',
+   w:'Mon 19:00', acts:['See the split']},
+  {u:66, k:'b', t:'Your free transfer is worth +2.22 this week',
+   d:"O'Shea to van Ewijk, same £4.0m. Best available move; the next best frees £2.0m but gains 1.50.",
+   w:'by Fri 17:30', acts:['Make it','Roll it']},
+  {u:52, k:'b', t:'The bookmakers have priced one GW2 fixture of ten',
+   d:'Chelsea v Brighton only. Everything else in the grid is running on the house baselines until the rest are posted.',
+   w:'updates daily', acts:['What changes?']},
+  {u:38, k:'c', t:'Saka returned 9 off a projection of 6.34',
+   d:'Goal and a bonus point in the 3–0. Two of your three players who have played beat their projection; the model was +0.20 across the fixture.',
+   w:'Fri, played', acts:['Full review']},
+  {u:21, k:'c', t:'Bruno Fernandes projects 7.13 and half the game owns him',
+   d:'Highest projection of any player in GW2. You do not have him and you cannot afford him without selling Haaland.',
+   w:'context', acts:['Compare']},
+  {u:9,  k:'c', t:'You are 8 players different from the template',
+   d:'The most-owned eleven projects 51.57 to your 44.99, and costs £12.0m less.',
+   w:'season', acts:['Show the diff']},
+];
+document.getElementById('feed').innerHTML = FEED.map((f) => `
+  <article class="item ${f.k === 'a' ? 'hi' : f.k === 'b' ? 'md' : ''}">
+    <div class="heat ${f.k}">${f.u}</div>
+    <div>
+      <h3>${esc(f.t)}</h3>
+      <p class="tiny" style="margin-top:3px">${esc(f.d)}</p>
+      <div class="act">${f.acts.map((a, i) =>
+        `<button class="btn${i === 0 && f.k === 'a' ? ' p' : ''}">${esc(a)}</button>`).join('')}</div>
+    </div>
+    <div class="when">${esc(f.w)}</div>
+  </article>`).join('');
+
+/* ═══ 2 · PITCH ═══ */
+document.getElementById('pitch2').innerHTML = ['GKP','DEF','MID','FWD'].map((pos) => `
+  <div class="prow">${XI.filter((p) => p.pos === pos).map((p, i) => `
+    <button class="shirt" aria-expanded="false" data-shirt>
+      <span class="top"><span class="nm">${esc(p.nm)}</span><span class="xp">${p.cap ? '<span class="arm">C</span>' : ''}${p.xp.toFixed(2)}</span></span>
+      <span class="sub">${esc(p.tm)} · ${esc(p.opp)} · ${esc(p.day)}</span>
+      <span class="more">
+        <span class="brk">${Object.entries(p.parts).map(([k, v]) =>
+          `<div><span>${esc(k)}</span><b>${v > 0 ? '+' : ''}${v.toFixed(2)}</b></div>`).join('')}</span>
+        ${p.swap ? `<span class="swap">${esc(p.swap)}</span>` : ''}
+      </span>
+    </button>`).join('')}</div>`).join('');
+document.querySelectorAll('[data-shirt]').forEach((b) => b.addEventListener('click', () => {
+  const open = b.getAttribute('aria-expanded') === 'true';
+  document.querySelectorAll('[data-shirt]').forEach((o) => o.setAttribute('aria-expanded', 'false'));
+  b.setAttribute('aria-expanded', String(!open));
+}));
+
+/* ═══ 3 · QUESTIONS ═══ */
+const QS = [
+  {q:'Who do I captain?', a:'Haaland', c:'good',
+   b:`He projects <b>5.61</b> and the next best you own is Saka at 4.87. Nobody in your fifteen is close to Bruno Fernandes on <b>7.13</b>, and you cannot buy him without selling Haaland. City are away at Crystal Palace on Friday night, which also means the armband is settled before anyone else's.`},
+  {q:'Should I use my free transfer?', a:'+2.22 if you do', c:'good',
+   b:`O'Shea to van Ewijk, both £4.0m. Ipswich are away at United; Coventry are at home to Hull. Rolling it is only right if next week beats +2.22, and GW3 has no odds posted yet, so there is nothing to judge that on.`},
+  {q:'Is my eleven the right eleven?', a:'No — costs you 2.48', c:'bad',
+   b:`O'Shea starts on <b>2.01</b> while João Pedro sits on <b>4.49</b>. Going three at the back fixes it and costs nothing at all. This is the cheapest points on the page.`},
+  {q:'Am I too concentrated?', a:'Two fixtures, 54%', c:'bad',
+   b:`Villa v Arsenal carries <b>32.7%</b> of your projected week and United v Ipswich another <b>21.0%</b>. You own both sides of both. That is not automatically wrong — it is how you beat the field — but it is worth knowing you did it.`},
+  {q:'Who is about to become a problem?', a:'Watkins', c:'warn',
+   b:`Projects <b>3.32</b>, your weakest starter after O'Shea, and Villa host Arsenal on Monday. Selling him frees £2.0m and gains 1.50 immediately, which is the only move that gives you money to work with.`},
+  {q:'How did last week go?', a:'3 played, 33 points', c:'good',
+   b:`Raya 6, Calafiori 9, Saka 9 doubled — all three ahead of projection in the 3–0. The other eight play across the weekend and Monday, and are worth <b>36.0</b> more on the projection.`},
+  {q:'Is the model any good?', a:'MAE 1.25 so far', c:'',
+   b:`Over all 55 players it projected for Arsenal v Coventry, mean error <b>+0.20</b>. One fixture proves nothing; the number is published every week either way. The one thing worth watching is defensive contribution — 6.1 points projected across the fixture, one player cleared the threshold.`},
+  {q:'Should I wildcard?', a:'Not yet', c:'',
+   b:`The case for is real: £0.0m banked, 100% spent, two changes wanted. The case against is that it is GW2 and you would be acting on one afternoon of evidence. Ask again at GW5.`},
+];
+document.getElementById('qs').innerHTML = QS.map((q, i) => `
+  <div class="q">
+    <button aria-expanded="${i === 0}" data-q>
+      <span class="chev">▶</span><span class="qt">${esc(q.q)}</span>
+      <span class="qa ${q.c}">${esc(q.a)}</span>
+    </button>
+    <div class="body"><p class="muted">${q.b}</p></div>
+  </div>`).join('');
+document.querySelectorAll('[data-q]').forEach((b) => b.addEventListener('click', () =>
+  b.setAttribute('aria-expanded', String(b.getAttribute('aria-expanded') !== 'true'))));
+
+/* ═══ 4 · SCRUBBER ═══ */
+/* GW1 actual so far is real; GW2-6 are real projections for this XI. */
+const WEEKS = {
+  1:{state:'played', when:'GW1 · 3 of 11 played', proj:58.33, got:33, note:
+     'Raya 6, Calafiori 9, Saka 9 doubled — the only three of yours whose fixture has finished. The remaining eight are worth 36.0 on the projection and play across the weekend and Monday.',
+     chips:['Arsenal 3 Coventry 0','model +0.20 over 55 players','bonus still provisional']},
+  2:{state:'next', when:'GW2 · deadline Fri 28 Aug 17:30', proj:50.60, cap:'Haaland 5.61', note:
+     'One free transfer, £0.0m banked. Your eleven is not your best eleven — O’Shea projects 2.01 and starts, while João Pedro projects 4.49 on the bench.',
+     chips:['+2.48 free from the bench','+2.22 from the transfer','1 of 10 fixtures priced']},
+  3:{state:'future', when:'GW3 · Fri 4 Sep', proj:55.51, cap:'Haaland 7.51', note:
+     'Your best week in the range, and almost all of it is one player: City host Coventry and Haaland projects 7.51, his highest of the six. Watkins jumps to 4.91 at Hull. Nobody has priced it yet.',
+     chips:['best week of the six','Haaland 7.51 · MCI v COV','0 of 10 priced']},
+  4:{state:'future', when:'GW4 · Sat 12 Sep', proj:48.83, cap:'Haaland 5.19', note:
+     'Your worst week, and the reason is the Manchester derby. United host City, so Martinez drops to 3.09, Maguire to 3.01 and Haaland to 5.19 — four of your eleven in one fixture, on opposite sides of it. There is no version of that afternoon that is good for all of them.',
+     chips:['worst week of the six','MUN v MCI · 4 of your XI','−6.7 on GW3']},
+  5:{state:'future', when:'GW5 · Sep', proj:51.94, cap:'Haaland 6.67', note:
+     'Ndiaye’s best week of the six at 5.02, Everton at home to Ipswich — which is also the week your two Ipswich defenders are away at Everton. You own both sides again.',
+     chips:['Ndiaye 5.02','EVE v IPS · both sides']},
+  6:{state:'future', when:'GW6 · Sep', proj:53.78, cap:'Saka 5.59', note:
+     'The armband changes hands. City go to Liverpool and Haaland falls to 5.19, while Saka projects 5.59 at home to Leeds — the only week in the range where your captain is not Haaland.',
+     chips:['captain: Saka 5.59','Haaland 5.19 at Anfield','planning only']},
+};
+
+const ticks = document.getElementById('ticks');
+const stage = document.getElementById('stage');
+const scrub = document.getElementById('scrub');
+function drawScrub() {
+  const gw = Number(scrub.value), w = WEEKS[gw];
+  ticks.innerHTML = Object.keys(WEEKS).map((k) =>
+    `<span class="${Number(k) === gw ? 'on' : ''}">GW${k}</span>`).join('');
+  document.getElementById('scrub-when').textContent = w.when;
+  const isPast = w.state === 'played';
+  const unreal = w.state === 'future';
+  stage.innerHTML = `
+    <span class="kicker">${isPast ? 'What happened' : 'What is projected'}</span>
+    <div class="bigrow" style="margin-top:5px">
+      <span class="v">${isPast ? w.got : (unreal ? `<span class="wip" title="projection, not a result">${w.proj.toFixed(1)}</span>` : w.proj.toFixed(1))}</span>
+      <span class="muted">${isPast
+        ? `so far, against a projection of <b>${w.proj.toFixed(2)}</b> for the full eleven`
+        : `projected — eleven plus the armband on <b>${esc(w.cap)}</b>`}</span>
+    </div>
+    <p class="muted" style="margin-top:10px;max-width:74ch">${esc(w.note)}</p>
+    <div class="chips">${w.chips.map((c) => `<span class="pill n">${esc(c)}</span>`).join('')}</div>`;
+}
+scrub.addEventListener('input', drawScrub);
+drawScrub();
+
+/* ═══ 5 · KEEP / CHANGE / WATCH ═══ */
+const WHY = {
+  "O'Shea":'Ipswich away at United', 'Davis':'Same fixture, on your bench',
+  'Watkins':'Villa host Arsenal, Monday night', 'Ndiaye':'Everton away at Bournemouth',
+  'Groß':'Brighton away at Chelsea',
+};
+const bucket = (p) => p.xp < 2.5 ? 'change' : (p.xp < 4.0 && WHY[p.nm]) ? 'watch' : 'keep';
+const COLS = [
+  ['keep','Keep','Nothing here needs your attention this week.'],
+  ['change','Change','Projected under 2.5. Both are the same fixture.'],
+  ['watch','Watch','Fine now. Not fine in three weeks.'],
+];
+document.getElementById('cols').innerHTML = COLS.map(([k, title, sub]) => {
+  const list = SQUAD.filter((p) => bucket(p) === k).sort((a, b) => b.xp - a.xp);
+  return `<div class="col ${k}">
+    <header><h3>${title}</h3><span class="cnt">${list.length}</span></header>
+    <p class="tiny" style="padding:9px 14px 3px;margin:0">${esc(sub)}</p>
+    ${list.map((p) => `
+      <div class="pl">
+        <span class="pos cond">${p.pos}</span>
+        <span><span class="nm">${esc(p.nm)}${p.cap ? ' <span class="pill n">C</span>' : ''}${p.xi ? '' : ' <span class="pill n">sub</span>'}</span>
+          <div class="why">${esc(WHY[p.nm] || `${p.tm} · ${p.opp}`)}</div></span>
+        <span class="v ${p.xp < 2.5 ? 'bad' : p.xp < 4 ? 'warn' : 'good'}">${p.xp.toFixed(2)}</span>
+      </div>`).join('')}
+  </div>`;
+}).join('');
+
+/* ═══ 6 · TEMPLATE ═══ */
+/* Paired by position, best to worst within each — so row N on the left is
+   genuinely the player row N on the right replaces. Ordering them any other
+   way makes the deltas beside them meaningless. */
+const PAIRS = [
+  ['MID','Saka','ARS',4.87,      'B.Fernandes','MUN',7.13,50.8],
+  ['MID','Wirtz','LIV',4.47,     'Mbeumo','MUN',5.45,36.0],
+  ['MID','E.Le Fée','SUN',3.89,  'Szoboszlai','LIV',3.95,41.6],
+  ['MID','Ndiaye','EVE',3.82,    'Semenyo','MCI',3.77,26.4],
+  ['DEF','Martinez','MUN',4.40,  'Gabriel','ARS',5.56,29.7],
+  ['DEF','Maguire','MUN',4.22,   'Pedro Porro','TOT',3.67,22.6],
+  ['DEF',"O'Shea",'IPS',2.01,    'Shaw','MUN',3.56,21.5],
+  ['FWD','Watkins','AVL',3.32,   'João Pedro','CHE',4.49,63.1],
+];
+document.getElementById('tmpl').innerHTML = `
+  <div class="diff">
+    <div class="side l">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span class="kicker">Yours</span><span class="pill n">£100.0m</span></div>
+      <div class="bigrow" style="margin:4px 0 10px"><span class="v">44.99</span>
+        <span class="muted">projected XI</span></div>
+      ${PAIRS.map(([ps, n, t, x, , , y]) => `<div class="dl">
+        <span><span class="pos cond">${ps}</span> ${esc(n)} <span class="muted">${t}</span></span>
+        <span class="n" style="color:${x >= y ? 'var(--good)' : 'var(--ink)'}">${x.toFixed(2)}</span></div>`).join('')}
+    </div>
+    <div class="spine">vs</div>
+    <div class="side r">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span class="kicker">The template</span><span class="pill g">£88.0m</span></div>
+      <div class="bigrow" style="margin:4px 0 10px"><span class="v">51.57</span>
+        <span class="muted">projected XI</span></div>
+      ${PAIRS.map(([, , , x, n, t, y, o]) => `<div class="dl">
+        <span>${esc(n)} <span class="muted">${t} · ${o}%</span></span>
+        <span><span class="n">${y.toFixed(2)}</span>
+          <span class="n" style="color:${x >= y ? 'var(--good)' : 'var(--bad)'};font-weight:800;
+            display:inline-block;min-width:44px;text-align:right">${(x - y) >= 0 ? '+' : ''}${(x - y).toFixed(2)}</span></span>
+        </div>`).join('')}
+    </div>
+  </div>
+  <div class="card" style="margin-top:var(--gap)">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap">
+      <h3>You are 6.58 behind the field's eleven, with £12.0m more spent on it</h3>
+      <span class="pill b">8 differentials</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+      ${[['Midfield',-3.25,17.05,20.30],['Defence',-2.16,10.63,12.79],['Forward',-1.17,3.32,4.49]]
+        .map(([k,d,a,b2]) => `
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:600">
+            <span>${k}</span>
+            <span><span class="n">${a.toFixed(2)}</span> <span class="muted">against</span>
+              <span class="n">${b2.toFixed(2)}</span> <span class="bad n">${d.toFixed(2)}</span></span></div>
+          <div class="bar" style="margin-top:5px">
+            <i style="width:${(Math.abs(d)/3.25*100).toFixed(0)}%;background:var(--bad)"></i></div>
+        </div>`).join('')}
+    </div>
+    <p class="muted" style="margin-top:12px;max-width:76ch">
+      The gap is not spread across your eight differentials. Four of the
+      eight pairings account for <b>6.14</b> of the 6.58: Bruno Fernandes
+      against Saka is <b>2.26</b> of it on its own, then O'Shea against Shaw
+      1.55, Watkins against João Pedro 1.17, and Gabriel against Martinez
+      1.16. Two of your eight are actually <span class="good">ahead</span> —
+      Maguire by 0.55, Ndiaye by 0.05 — and Le Fée is level to within 0.06.
+    </p>
+    <p class="muted" style="margin-top:8px;max-width:76ch">
+      The forward gap is the strangest line on the page. It is Watkins 3.32
+      against João Pedro 4.49 — and João Pedro is already in your fifteen,
+      sitting on your bench.
+    </p>
+    <p class="tiny" style="margin-top:9px">
+      Being behind the template in one gameweek is not a verdict — the whole
+      point of a differential is that it pays on a different week from
+      everyone else's. Shown because it is true, not because it is a
+      recommendation.
+    </p>
+  </div>`;
+
+/* ─── switcher ─── */
+const tabs = [...document.querySelectorAll('.dirs [role=tab]')];
+tabs.forEach((b) => b.addEventListener('click', () => {
+  tabs.forEach((o) => {
+    const on = o === b;
+    o.setAttribute('aria-selected', String(on));
+    document.getElementById(o.getAttribute('aria-controls')).hidden = !on;
+  });
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}));
+</script>
