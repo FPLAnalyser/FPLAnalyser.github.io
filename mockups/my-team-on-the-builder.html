@@ -1,0 +1,995 @@
+<title>My Team On The Builder</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700;800&display=swap">
+<style>
+/* Everything below is the Squad Builder's own furniture, rebuilt from the
+   running page rather than imagined: the season spine, the gameweek stepper,
+   the three stat tiles, the pitch card with its fixture chips and rating, the
+   bench spine, the chip row, and the right-hand Players/Analysis/Fixtures/Risk
+   column. Tokens read off the live DOM — body #000, ink #edeff3, Manrope. */
+:root{
+  --bg0:#000; --s1:#101114; --s2:#17181c; --s3:#1f2024; --s4:#282a2e;
+  --ink:#edeff3; --ink2:#aaacb0; --ink3:#7e8084;
+  --line:rgba(255,255,255,.07); --line-mid:rgba(255,255,255,.12); --line-strong:rgba(255,255,255,.22);
+  --acc:#c9a227; --acc2:#ead188; --acc-soft:rgba(201,162,39,.12);
+  --good:#3ddc7a; --warn:#e8b04a; --bad:#f0736f; --info:#6ea8ff;
+  --easy:#2fae5f; --hard:#d1544f;
+  --r-sm:7px; --r-md:10px; --r-lg:14px; --r-xl:20px; --gap:14px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg0);color:var(--ink);
+     font:15px/1.55 'Manrope',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+.cond{font-family:'Barlow Condensed','Arial Narrow',sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 90px}
+:focus-visible{outline:2px solid var(--acc2);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+h1{font-size:26px;margin:0 0 6px;letter-spacing:-.025em;font-weight:800;text-wrap:balance}
+h2{font-size:19px;margin:0;letter-spacing:-.018em;font-weight:800}
+h3{font-size:14px;margin:0;font-weight:800;letter-spacing:-.01em}
+p{margin:0}
+.lede{color:var(--ink2);font-size:14px;max-width:74ch}
+.kicker{font-size:9px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--ink3)}
+.muted{color:var(--ink2);font-size:13px}
+.tiny{font-size:11.5px;color:var(--ink2)}
+.n{font-variant-numeric:tabular-nums}
+.good{color:var(--good)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+.wip{border-bottom:1px dashed var(--warn);cursor:help}
+hr{height:1px;background:var(--line);margin:34px 0 20px;border:0}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg)}
+.pad{padding:13px 15px}
+.note{background:var(--s1);border:1px solid var(--line);border-left:2px solid var(--line-strong);
+  border-radius:0 var(--r-md) var(--r-md) 0;padding:11px 14px;font-size:13px;color:var(--ink2);max-width:84ch}
+.note b{color:var(--ink)} .note .for{color:var(--good)} .note .against{color:var(--bad)}
+.pill{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 8px;
+  font-size:10px;font-weight:800;white-space:nowrap;border:1px solid var(--line-mid);
+  background:var(--s2);color:var(--ink3)}
+.pill.g{background:rgba(61,220,122,.13);color:var(--good);border-color:rgba(61,220,122,.4)}
+.pill.b{background:rgba(240,115,111,.12);color:var(--bad);border-color:rgba(240,115,111,.42)}
+.pill.w{background:rgba(232,176,74,.12);color:var(--warn);border-color:rgba(232,176,74,.42)}
+.pill.a{background:var(--acc-soft);color:var(--acc2);border-color:rgba(201,162,39,.45)}
+
+/* direction switcher — the mockup's own chrome, not the site's */
+.dirs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 4px}
+.dirs button{font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;background:var(--s2);
+  color:var(--ink2);border:1px solid var(--line-mid);border-radius:999px;padding:7px 13px;min-height:36px}
+.dirs button:hover{background:var(--s3);color:var(--ink)}
+.dirs button[aria-selected=true]{background:var(--acc);color:#14100a;border-color:var(--acc)}
+section[hidden]{display:none}
+.head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:18px 0 8px}
+.head .num{font-family:'Barlow Condensed',sans-serif;font-size:29px;font-weight:700;color:var(--acc);line-height:.9}
+
+/* ── the page banner, as the builder has it ─────────────────────────── */
+.banner{position:relative;overflow:hidden;border-radius:var(--r-lg);border:1px solid var(--line);
+  padding:13px 16px 14px;background:linear-gradient(100deg,#2a1416,#160d10 42%,#0c0b0e)}
+.banner .crumb{font-size:9px;font-weight:800;letter-spacing:.11em;color:var(--acc);text-transform:uppercase}
+.banner .ttl{font-family:'Barlow Condensed',sans-serif;font-size:27px;font-weight:700;letter-spacing:.01em;line-height:1.05;margin-top:1px}
+.banner .sub{font-size:12.5px;color:var(--ink2);margin-top:2px}
+.banner .rail{position:absolute;right:0;top:0;bottom:0;width:38%;
+  background:linear-gradient(270deg,rgba(201,162,39,.16),transparent);pointer-events:none}
+
+/* ── manager strip: the thing a real team has that a plan does not ──── */
+.mgr{display:flex;gap:0;flex-wrap:wrap;border:1px solid var(--line);border-radius:var(--r-lg);
+  background:var(--s1);overflow:hidden;margin-top:var(--gap)}
+.mgr>div{flex:1;min-width:118px;padding:9px 13px;border-left:1px solid var(--line)}
+.mgr>div:first-child{border-left:0;flex:1.7;min-width:172px}
+.mgr .k{font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.mgr .v{font-size:19px;font-weight:800;letter-spacing:-.02em;line-height:1.2;margin-top:1px}
+.mgr .v small{font-size:11.5px;font-weight:600;color:var(--ink2);letter-spacing:0}
+
+/* ── season spine ───────────────────────────────────────────────────── */
+.spine{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--s1);overflow:hidden}
+.spine>header{display:flex;align-items:center;gap:11px;padding:10px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.bars{display:flex;gap:5px;padding:14px 14px 10px;overflow-x:auto;align-items:flex-end}
+.bw{flex:1;min-width:56px;display:flex;flex-direction:column;align-items:stretch;gap:0}
+.bw .v{font-size:12px;font-weight:800;text-align:center;margin-bottom:4px;font-variant-numeric:tabular-nums}
+.bar{height:104px;border-radius:var(--r-sm) var(--r-sm) 0 0;border:1px solid rgba(201,162,39,.32);
+  background:rgba(201,162,39,.11);position:relative;cursor:pointer}
+.bar i{position:absolute;left:0;right:0;bottom:0;display:block;border-radius:0 0 0 0}
+.bw.past .bar{border-color:rgba(255,255,255,.18);background:var(--s3)}
+.bw.past .bar i{background:linear-gradient(180deg,#5b6470,#3d434c)}
+.bw.now .bar{border-color:var(--acc);background:var(--acc-soft);box-shadow:0 0 0 1px rgba(201,162,39,.3)}
+.bw.now .bar i{background:linear-gradient(180deg,var(--acc2),var(--acc))}
+.bw.fut .bar i{background:linear-gradient(180deg,rgba(201,162,39,.34),rgba(201,162,39,.2))}
+.bw.sel .bar{outline:2px solid var(--acc2);outline-offset:1px}
+.fx{display:flex;gap:2px;margin-top:3px}
+.fx i{height:3px;border-radius:99px;flex:1}
+.bw .lb{font-size:10px;font-weight:800;color:var(--ink3);text-align:center;margin-top:5px;
+  display:flex;align-items:center;justify-content:center;gap:3px}
+.bw.now .lb,.bw.sel .lb{color:var(--acc)}
+.capdot{width:11px;height:11px;border-radius:999px;background:var(--acc);color:#14100a;
+  font-size:7.5px;font-weight:800;display:inline-grid;place-items:center}
+.legend{display:flex;gap:14px;flex-wrap:wrap;padding:0 14px 12px;font-size:10.5px;color:var(--ink3);align-items:center}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:99px;vertical-align:2px;margin-right:4px}
+.nowline{position:relative}
+.nowline::after{content:'';position:absolute;top:8px;bottom:26px;width:1px;background:var(--acc);opacity:.55}
+
+/* ── gameweek stepper + stat tiles ──────────────────────────────────── */
+.step{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin:var(--gap) 0 10px}
+.step .arw{width:32px;height:32px;border-radius:999px;border:1px solid var(--line-mid);background:var(--s2);
+  color:var(--ink);font:inherit;font-size:14px;cursor:pointer;display:grid;place-items:center}
+.step .arw:hover{background:var(--s3)}
+.step .gw{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;letter-spacing:.01em}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tile{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg);padding:10px 14px 11px;text-align:center}
+.tile .big{font-size:23px;font-weight:800;letter-spacing:-.025em;line-height:1.15;font-variant-numeric:tabular-nums}
+.tile .k{font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-top:3px}
+
+/* ── board: pitch + right column, exactly the builder's split ───────── */
+.board{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.86fr);gap:var(--gap);align-items:start}
+@media(max-width:900px){.board{grid-template-columns:1fr}}
+/* A grid item is min-width:auto by default, so it refuses to shrink below its
+   content and the whole page scrolls sideways instead. Measured at 390px: the
+   board reported 499 against a 358 column, which is the bench's four cards.
+   The bench already scrolls on its own; it just needed permission to be
+   narrower than its contents. */
+.board>*{min-width:0}
+.bench>div{min-width:0}
+.pc .two .ch{min-width:0}
+.pitch{position:relative;border-radius:var(--r-xl);border:1px solid rgba(255,255,255,.1);overflow:hidden;
+  padding:14px 10px 12px;
+  background:repeating-linear-gradient(180deg,rgba(255,255,255,.05) 0 7.14%,rgba(0,0,0,.05) 7.14% 14.28%),
+             radial-gradient(120% 70% at 50% 0%,rgba(255,255,255,.09),transparent 62%),
+             linear-gradient(180deg,#1d7d3d 0%,#166a31 45%,#125c29 100%)}
+.pitch svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.rows{position:relative;z-index:1;display:flex;flex-direction:column;gap:11px}
+.prow{display:flex;justify-content:center;gap:7px;flex-wrap:wrap}
+.pc{width:110px;border-radius:9px;border:1px solid rgba(255,255,255,.14);background:rgba(8,10,9,.82);
+  padding:5px 5px 4px;position:relative;text-align:center}
+.pc.cap{border-color:rgba(201,162,39,.75);box-shadow:0 0 0 1px rgba(201,162,39,.28)}
+.pc.done{opacity:.55}
+.pc .nm{font-size:11.5px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc .ch{display:block;font-size:8.5px;font-weight:800;letter-spacing:.02em;border-radius:4px;
+  padding:1.5px 3px;margin-top:2px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc .two{display:flex;gap:2px;margin-top:2px}
+.pc .two .ch{flex:1;margin-top:0;font-size:8px}
+.pc .val{font-size:13px;font-weight:800;color:#fff;margin-top:3px;font-variant-numeric:tabular-nums}
+.pc .val.live{color:var(--acc2)}
+.pc .arm{position:absolute;top:-5px;left:-5px;width:17px;height:17px;border-radius:999px;background:var(--acc);
+  color:#14100a;font-size:8.5px;font-weight:800;display:grid;place-items:center;border:2px solid rgba(0,0,0,.6)}
+.pc .stat{position:absolute;top:-5px;right:-5px;font-size:8px;font-weight:800;border-radius:999px;
+  padding:1px 5px;border:2px solid rgba(0,0,0,.6)}
+.pc .stat.pl{background:var(--good);color:#06210f}
+.pc .stat.to{background:var(--s4);color:var(--ink2)}
+.bench{display:flex;gap:7px;margin-top:9px;padding:8px;background:var(--s1);border:1px solid var(--line);
+  border-radius:var(--r-lg);align-items:stretch;overflow-x:auto}
+.bench .lbl{writing-mode:vertical-rl;transform:rotate(180deg);font-size:8.5px;font-weight:800;
+  letter-spacing:.13em;color:var(--ink3);text-transform:uppercase;display:grid;place-items:center}
+.chiprow{display:flex;gap:7px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.chiprow .cl{font-size:9px;font-weight:800;letter-spacing:.11em;color:var(--ink3);text-transform:uppercase}
+.chip{font-size:11.5px;font-weight:700;border-radius:999px;padding:5px 12px;border:1px solid var(--line-mid);
+  background:var(--s2);color:var(--ink2)}
+.chip.used{opacity:.4;text-decoration:line-through}
+.chip.on{background:var(--acc);color:#14100a;border-color:var(--acc)}
+
+/* ── right column ───────────────────────────────────────────────────── */
+.rtabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:11px;overflow-x:auto}
+.rtabs button{font:inherit;font-size:13px;font-weight:700;cursor:pointer;background:none;border:0;
+  color:var(--ink3);padding:8px 11px 9px;border-bottom:2px solid transparent;white-space:nowrap}
+.rtabs button:hover{color:var(--ink2)}
+.rtabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--acc)}
+.rrow{display:flex;gap:10px;align-items:center;padding:9px 13px;border-top:1px solid var(--line)}
+.rrow:first-of-type{border-top:0}
+.rrow .who{min-width:0}
+.rrow .who b{font-size:13px;font-weight:700;display:block}
+.rrow .who span{font-size:10.5px;color:var(--ink3)}
+.rrow .rt{margin-left:auto;text-align:right;white-space:nowrap}
+.meter{display:flex;gap:1.5px}
+.meter i{width:5px;height:12px;border-radius:1.5px;background:var(--s4)}
+.ins{display:flex;gap:10px;align-items:center;padding:11px 13px;border-top:1px solid var(--line)}
+.ins:first-of-type{border-top:0}
+.ins .dot{width:6px;height:6px;border-radius:999px;flex:none}
+.ins .t{font-size:13.5px;font-weight:700;letter-spacing:-.01em}
+.ins .s{font-size:10.5px;color:var(--ink3);margin-top:1px}
+.ins .r{margin-left:auto;text-align:right;font-size:13px;font-weight:800;white-space:nowrap}
+.barline{height:7px;border-radius:99px;background:var(--s3);overflow:hidden}
+.barline i{display:block;height:100%}
+
+/* ── the every-man-every-week grid ──────────────────────────────────── */
+.gridwrap{overflow-x:auto}
+table.plan{width:100%;border-collapse:separate;border-spacing:2px}
+table.plan th{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);
+  padding:3px 2px;font-weight:800;text-align:center;white-space:nowrap}
+table.plan td{padding:0}
+table.plan .who{text-align:left;font-size:11.5px;font-weight:600;white-space:nowrap;padding-right:7px;color:var(--ink)}
+table.plan .who i{font-family:'Barlow Condensed',sans-serif;font-style:normal;font-size:10px;
+  color:var(--ink3);display:inline-block;width:24px}
+.cell{border-radius:5px;border:1px solid var(--line-mid);background:var(--s2);color:var(--ink2);
+  font-size:10.5px;font-weight:800;padding:4px 2px;text-align:center;min-width:46px;white-space:nowrap}
+.cell.e{border-color:rgba(47,174,95,.5);color:#79e5a4}
+.cell.h{border-color:rgba(209,84,79,.5);color:#f39793}
+.cell.bench{opacity:.32}
+.cell.act{background:var(--s4);border-color:var(--line-strong);color:var(--ink)}
+.cell.act.hit{border-color:rgba(61,220,122,.55);color:var(--good)}
+.cell.act.miss{border-color:rgba(240,115,111,.5);color:var(--bad)}
+/* `now` and `capt` were both a gold outline, so the current column read as
+   twelve captains. This week is a lift in weight; the armband stays gold. */
+.cell.now{background:var(--s4);border-color:var(--line-strong);color:var(--ink)}
+.cell.capt{box-shadow:inset 0 0 0 1.5px var(--acc)}
+
+/* ── mode switch (direction 2) ──────────────────────────────────────── */
+.modes{display:inline-flex;background:var(--s2);border:1px solid var(--line-mid);border-radius:999px;padding:3px}
+.modes button{font:inherit;font-size:13px;font-weight:700;cursor:pointer;background:none;border:0;
+  color:var(--ink3);border-radius:999px;padding:6px 18px}
+.modes button[aria-selected=true]{background:var(--acc);color:#14100a}
+</style>
+
+<div class="wrap">
+
+<header>
+  <span class="kicker">Mockups · My Team, built on the Squad Builder</span>
+  <h1>My Team is the Squad Builder, with your fifteen already in it</h1>
+  <p class="lede" style="margin-top:6px">
+    Five ways to fit a <em>real</em> season into the board that already exists —
+    the season spine, the gameweek stepper, the pitch and its fixture chips,
+    the chip row, and the Players / Analysis / Fixtures / Risk column. Nothing
+    below invents a component the Squad Builder does not already have. Every
+    number is read off the running page with this fifteen loaded, or out of
+    <code>site_data/2026-27/</code>. Only what is genuinely unknowable is
+    <span class="wip" title="not knowable yet">stamped</span>.
+  </p>
+</header>
+
+<div class="note" style="margin-top:14px">
+  <b>The idea the existing design hands you.</b> The spine already draws one
+  bar per gameweek, forwards. A real team has a past, so the same chart runs
+  the other way too: <b>bars behind now are what you scored, bars ahead are
+  what you are projected</b>, and the join is the gameweek in progress. Look
+  back, live and plan forward stop being three tabs and become one chart you
+  were already looking at. Four of the five directions below are arguments
+  about how you move along it.
+</div>
+
+<div class="dirs" role="tablist" aria-label="Directions">
+  <button role="tab" aria-selected="true"  aria-controls="d1" id="t1">1 · One spine, two halves</button>
+  <button role="tab" aria-selected="false" aria-controls="d2" id="t2">2 · Track / Plan</button>
+  <button role="tab" aria-selected="false" aria-controls="d3" id="t3">3 · Sub-tabs, as the board has</button>
+  <button role="tab" aria-selected="false" aria-controls="d4" id="t4">4 · The spine is the navigation</button>
+  <button role="tab" aria-selected="false" aria-controls="d5" id="t5">5 · The grid is the front door</button>
+</div>
+
+<!-- ══════════════════════ 1 ══════════════════════ -->
+<section id="d1" role="tabpanel" aria-labelledby="t1">
+  <div class="head"><span class="num">01</span><h2>One spine, two halves</h2></div>
+  <div class="note">
+    <b>Nothing is added to the page at all.</b> It is the Squad Builder, with
+    your fifteen loaded from a Team ID instead of picked, and the spine
+    extended backwards to GW1. Step the gameweek stepper into a week that has
+    been played and every panel switches to its past tense on its own: the
+    shirts carry points instead of xP, the tiles read <em>scored</em> instead
+    of <em>projected</em>, and the right column's fifth tab is Review.
+    <span class="for">For:</span> one page, no new navigation, and the code is
+    mostly wiring rather than building.
+    <span class="against">Against:</span> a page that silently changes meaning
+    depending on the stepper is a page people can misread — and there is
+    nowhere to stand that shows you the season rather than a week of it.
+  </div>
+
+  <div class="banner" style="margin-top:var(--gap)">
+    <span class="rail"></span>
+    <div class="crumb">Home / My Team</div>
+    <div class="ttl">MY TEAM</div>
+    <div class="sub">Your fifteen, week by week — what they scored, what they are projected, and what to do next</div>
+  </div>
+
+  <div class="mgr" id="mgr1"></div>
+
+  <div class="spine" style="margin-top:var(--gap)" id="spine1"></div>
+
+  <div class="step">
+    <button class="arw" aria-label="Previous gameweek">‹</button>
+    <span class="gw" id="gwlabel1">Gameweek 1</span>
+    <button class="arw" aria-label="Next gameweek">›</button>
+    <span class="pill a" id="gwstate1">in progress</span>
+    <span class="tiny" style="margin-left:auto">the stepper walks the whole season, not just the part in front of you</span>
+  </div>
+  <div class="tiles" id="tiles1"></div>
+
+  <div class="board" style="margin-top:var(--gap)">
+    <div>
+      <div class="pitch"><svg viewBox="0 0 300 380" preserveAspectRatio="none" aria-hidden="true">
+        <g fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.5">
+          <rect x="5" y="5" width="290" height="370" rx="2"/><line x1="5" y1="190" x2="295" y2="190"/>
+          <circle cx="150" cy="190" r="42"/><rect x="62" y="5" width="176" height="58"/>
+          <rect x="112" y="5" width="76" height="24"/><rect x="62" y="317" width="176" height="58"/>
+          <rect x="112" y="351" width="76" height="24"/>
+        </g></svg>
+        <div class="rows" id="pitch1"></div>
+      </div>
+      <div class="bench"><span class="lbl">Subs</span><div id="bench1" style="display:flex;gap:7px;flex:1"></div></div>
+      <div class="chiprow"><span class="cl">Chip</span>
+        <span class="chip">Wildcard</span><span class="chip">Bench Boost</span>
+        <span class="chip">Triple Captain</span><span class="chip">Free Hit</span>
+        <span class="tiny" style="margin-left:auto">none used — real chip state comes with the Team ID</span></div>
+    </div>
+    <div>
+      <div class="rtabs" role="tablist">
+        <button role="tab" aria-selected="true">Review</button>
+        <button role="tab" aria-selected="false">Players</button>
+        <button role="tab" aria-selected="false">Analysis</button>
+        <button role="tab" aria-selected="false">Fixtures</button>
+        <button role="tab" aria-selected="false">Risk</button>
+      </div>
+      <div class="card">
+        <div class="pad" style="border-bottom:1px solid var(--line)">
+          <span class="kicker">Gameweek 1 · 1 of 10 fixtures played</span>
+          <h3 style="margin-top:4px">Three of your eleven have finished</h3>
+          <p class="tiny" style="margin-top:4px">
+            Arsenal 3 Coventry 0, pulled at 23:41 and re-pulled every quarter
+            of an hour while the football is on. Bonus is provisional until FPL
+            closes the gameweek.</p>
+        </div>
+        <div id="rev1"></div>
+      </div>
+      <div class="card" style="margin-top:var(--gap)">
+        <div class="pad"><span class="kicker">Where the model missed · this fixture</span>
+          <h3 style="margin-top:3px">By component, over all 55 it projected</h3></div>
+        <div class="pad" style="padding-top:0" id="comp1"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ 2 ══════════════════════ -->
+<section id="d2" role="tabpanel" aria-labelledby="t2" hidden>
+  <div class="head"><span class="num">02</span><h2>Track / Plan</h2></div>
+  <div class="note">
+    <b>One switch, and it says which way you are facing.</b> <em>Track</em> is
+    the season behind you and the one in front of you today — live points,
+    rank, where the model missed. <em>Plan</em> is the Squad Builder exactly as
+    it is now, on your real fifteen, with your real bank and free transfers.
+    The spine is the same chart in both; only the half it emphasises changes.
+    <span class="for">For:</span> the two things genuinely have different
+    moods, and one word tells you which you are in — no guessing what the
+    stepper did.
+    <span class="against">Against:</span> a switch is a decision you have to
+    make before the page will tell you anything, and the honest answer most of
+    the time is "both".
+  </div>
+
+  <div class="banner" style="margin-top:var(--gap)"><span class="rail"></span>
+    <div class="crumb">Home / My Team</div><div class="ttl">MY TEAM</div>
+    <div class="sub">Track what happened, plan what is next — same fifteen, same board</div></div>
+
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:var(--gap)">
+    <div class="modes" role="tablist" aria-label="Mode">
+      <button role="tab" aria-selected="true" id="m-track" data-mode>Track</button>
+      <button role="tab" aria-selected="false" id="m-plan" data-mode>Plan</button>
+    </div>
+    <span class="tiny" id="modehint">Behind you: GW1, in progress. The spine fills in as the weekend runs.</span>
+  </div>
+
+  <div class="mgr" id="mgr2"></div>
+  <div class="spine" style="margin-top:var(--gap)" id="spine2"></div>
+  <div id="modebody" style="margin-top:var(--gap)"></div>
+</section>
+
+<!-- ══════════════════════ 3 ══════════════════════ -->
+<section id="d3" role="tabpanel" aria-labelledby="t3" hidden>
+  <div class="head"><span class="num">03</span><h2>Sub-tabs, the way the board already does it</h2></div>
+  <div class="note">
+    <b>The Squad Builder already has a tab row</b> — Squad, Insights, Compare
+    Plans — sitting above the season spine. My Team uses the same row, with the
+    four faces you asked for: <em>Live</em>, <em>Plan</em>, <em>Review</em>,
+    <em>Season</em>. The spine and the manager strip stay put above it, because
+    they are true on every tab.
+    <span class="for">For:</span> it is the pattern the reader has already
+    learned one page across, and each face gets room to be good rather than
+    fighting for the same column.
+    <span class="against">Against:</span> four tabs is four places to be wrong
+    about which one someone wants on a Saturday — and Season will be empty and
+    faintly embarrassing until about November.
+  </div>
+
+  <div class="banner" style="margin-top:var(--gap)"><span class="rail"></span>
+    <div class="crumb">Home / My Team</div><div class="ttl">MY TEAM</div>
+    <div class="sub">Live now, plan forward, look back — your fifteen, all season</div></div>
+  <div class="mgr" id="mgr3"></div>
+
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:var(--gap)">
+    <div class="rtabs" style="border-bottom:0;margin:0" role="tablist" aria-label="Face">
+      <button role="tab" aria-selected="true"  data-face="live">Live</button>
+      <button role="tab" aria-selected="false" data-face="plan">Plan</button>
+      <button role="tab" aria-selected="false" data-face="review">Review</button>
+      <button role="tab" aria-selected="false" data-face="season">Season</button>
+    </div>
+    <span class="pill a" id="facehint">GW1 · 3 of 11 played</span>
+  </div>
+
+  <div class="spine" style="margin-top:11px" id="spine3"></div>
+  <div id="facebody" style="margin-top:var(--gap)"></div>
+</section>
+
+<!-- ══════════════════════ 4 ══════════════════════ -->
+<section id="d4" role="tabpanel" aria-labelledby="t4" hidden>
+  <div class="head"><span class="num">04</span><h2>The spine is the navigation</h2></div>
+  <div class="note">
+    <b>No tabs and no stepper — the bars are the controls.</b> The chart is
+    already the only thing on the page that shows the whole season at once, so
+    clicking a bar loads that week onto the board beneath it. Click GW1 and you
+    get what happened; click GW2 and you get the deadline; click GW9 and you
+    get a fixture read with nothing pretending to be a team sheet. The board
+    changes what it offers depending on which bar you are standing on.
+    <span class="for">For:</span> it removes two navigation systems and
+    replaces them with the one that carries the most information per pixel.
+    <span class="against">Against:</span> bars are small targets on a phone,
+    and nothing about a bar chart says "I am clickable" until you try.
+    <br><br>
+    <b>Try it:</b> click the bars.
+  </div>
+
+  <div class="banner" style="margin-top:var(--gap)"><span class="rail"></span>
+    <div class="crumb">Home / My Team</div><div class="ttl">MY TEAM</div>
+    <div class="sub">Pick a week. The board becomes it.</div></div>
+  <div class="mgr" id="mgr4"></div>
+  <div class="spine" style="margin-top:var(--gap)" id="spine4"></div>
+  <div id="weekbody" style="margin-top:var(--gap)"></div>
+</section>
+
+<!-- ══════════════════════ 5 ══════════════════════ -->
+<section id="d5" role="tabpanel" aria-labelledby="t5" hidden>
+  <div class="head"><span class="num">05</span><h2>The grid is the front door</h2></div>
+  <div class="note">
+    <b>The Squad Builder's best screen is hidden behind "pull down for the
+    whole plan".</b> Every man, every week, one cell each — and for a real team
+    that grid has a past: the cells behind now hold what each player actually
+    scored, the cells ahead hold the fixture. One screen, fifteen players,
+    thirteen weeks, no navigation and no scrolling to compare.
+    <span class="for">For:</span> it is the densest true thing the site can
+    draw, it makes a bad run visible without reading a word, and the component
+    exists.
+    <span class="against">Against:</span> it is close to unusable on a phone,
+    and opening on a wall of numbers is a hard first impression for someone who
+    has just typed in a Team ID.
+  </div>
+
+  <div class="banner" style="margin-top:var(--gap)"><span class="rail"></span>
+    <div class="crumb">Home / My Team</div><div class="ttl">MY TEAM</div>
+    <div class="sub">Fifteen players, thirteen weeks — what they scored, and what is coming</div></div>
+  <div class="mgr" id="mgr5"></div>
+
+  <div class="card" style="margin-top:var(--gap)">
+    <div class="pad" style="display:flex;align-items:center;gap:11px;flex-wrap:wrap;border-bottom:1px solid var(--line)">
+      <h3>Every man, every week</h3>
+      <span class="pill a">GW1–13</span>
+      <span class="tiny" style="margin-left:auto">GW1 holds points scored · GW2 onwards holds the fixture</span>
+    </div>
+    <div class="pad gridwrap" id="grid5"></div>
+    <p class="tiny" id="capnote" style="padding:0 15px 4px;max-width:88ch"></p>
+    <div class="legend" style="padding:0 15px 13px">
+      <span><i style="background:var(--easy)"></i>easy that week</span>
+      <span><i style="background:var(--hard)"></i>hard, and blanks</span>
+      <span><span class="capdot">C</span> your captain</span>
+      <span style="opacity:.4">dimmed = benched</span>
+      <span><span class="cell act hit" style="padding:1px 5px">11</span> beat its projection</span>
+      <span><span class="cell act miss" style="padding:1px 5px">1</span> missed it</span>
+    </div>
+  </div>
+</section>
+
+<hr>
+<div class="note">
+  <b>What is real.</b> The manager strip's rank, total and free transfers come
+  from the FPL entry endpoint via your Team ID and are
+  <span class="wip">stamped</span> here — nothing in the repo fetches them yet,
+  and that is the one piece of plumbing all five of these need. Everything else
+  is measured: the spine's GW2–13 numbers are the ones the running Squad
+  Builder draws for this exact fifteen; the ratings, prices, fixture chips and
+  risk rows are read off the same page; GW1's points are the real ones from
+  <code>actuals/gw1.json</code>, provisional while bonus settles.
+</div>
+
+</div>
+
+<script>
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ─────────────────────────────────────────────────────────────────────
+   Read off the running Squad Builder with this fifteen loaded. The spine
+   numbers are the app's own per-week projections for the best XI plus the
+   armband — not recomputed here, because a mockup of a page should show
+   the page's numbers.
+   ───────────────────────────────────────────────────────────────────── */
+const SPINE = [
+  {gw:1,  v:33,   state:'past', cap:false, easy:2, hard:1, part:true},
+  {gw:2,  v:53.0, state:'now',  cap:false, easy:4, hard:4},
+  {gw:3,  v:56.1, state:'fut',  cap:true,  easy:5, hard:3},
+  {gw:4,  v:52.3, state:'fut',  cap:false, easy:4, hard:4},
+  {gw:5,  v:51.7, state:'fut',  cap:true,  easy:3, hard:5},
+  {gw:6,  v:54.3, state:'fut',  cap:false, easy:5, hard:3},
+  {gw:7,  v:56.3, state:'fut',  cap:true,  easy:5, hard:2},
+  {gw:8,  v:53.8, state:'fut',  cap:false, easy:4, hard:4},
+  {gw:9,  v:50.2, state:'fut',  cap:true,  easy:3, hard:5},
+  {gw:10, v:56.1, state:'fut',  cap:false, easy:5, hard:3},
+  {gw:11, v:53.4, state:'fut',  cap:true,  easy:4, hard:4},
+  {gw:12, v:48.4, state:'fut',  cap:false, easy:2, hard:5},
+  {gw:13, v:53.7, state:'fut',  cap:true,  easy:4, hard:3},
+];
+const MAXV = 58;
+
+/* Real per-player projections for every week in the spine, produced by running
+   snapshot_projections.mjs for GW2 through GW13 against tonight's site_data.
+   The first draft of direction 4 drew GW2's fixtures and GW2's xP under a
+   "Gameweek 9" heading — the numbers were real and the label was a lie, which
+   is the worst of the two failure modes. */
+const XPW = {
+  "Raya": {2:3.98, 3:3.86, 4:4.3, 5:3.83, 6:4.15, 7:4.1, 8:4.3, 9:3.72, 10:4.79, 11:3.87, 12:3.67, 13:3.81},
+  "Calafiori": {2:4.4, 3:4.36, 4:4.77, 5:4.09, 6:4.88, 7:4.61, 8:5.05, 9:3.88, 10:5.93, 11:4.17, 12:3.92, 13:4.12},
+  "Maguire": {2:4.22, 3:3.51, 4:3.01, 5:3.51, 6:3.96, 7:3.33, 8:3.69, 9:2.94, 10:3.76, 11:3.02, 12:3.54, 13:3.24},
+  "Martinez": {2:4.4, 3:3.66, 4:3.09, 5:3.66, 6:4.17, 7:3.45, 8:3.78, 9:3.01, 10:3.93, 11:3.13, 12:3.71, 13:3.37},
+  "Saka": {2:4.87, 3:5.36, 4:5.07, 5:4.79, 6:5.59, 7:4.92, 8:5.54, 9:4.54, 10:6.73, 11:4.9, 12:4.9, 13:5.19},
+  "E.Le F\u00e9e": {2:3.89, 3:3.63, 4:3.14, 5:3.23, 6:3.78, 7:3.53, 8:3.88, 9:3.88, 10:3.72, 11:3.53, 12:3.85, 13:3.35},
+  "Gro\u00df": {2:3.75, 3:4.05, 4:4.04, 5:3.16, 6:3.76, 7:3.96, 8:3.4, 9:3.28, 10:4.12, 11:4.33, 12:3.98, 13:3.67},
+  "Wirtz": {2:4.47, 3:4.77, 4:4.45, 5:3.91, 6:3.93, 7:4.16, 8:4.34, 9:3.29, 10:3.9, 11:4.1, 12:3.95, 13:4.62},
+  "Haaland": {2:5.61, 3:7.51, 4:5.19, 5:6.67, 6:5.19, 7:8.02, 8:5.59, 9:6.36, 10:5.63, 11:6.49, 12:3.89, 13:6.58},
+  "Jo\u00e3o Pedro": {2:4.49, 3:2.98, 4:5.49, 5:4.27, 6:4.74, 7:4.08, 8:4.47, 9:4.32, 10:4.12, 11:4.7, 12:4.11, 13:4.6},
+  "Watkins": {2:3.32, 3:4.91, 4:4.61, 5:3.95, 6:4.9, 7:4.08, 8:4.13, 9:4.6, 10:3.83, 11:4.68, 12:4.97, 13:4.58},
+  "Lammens": {2:3.89, 3:3.45, 4:3.09, 5:3.45, 6:3.81, 7:3.3, 8:3.49, 9:3.06, 10:3.61, 11:3.13, 12:3.43, 13:3.26},
+  "Ndiaye": {2:3.82, 3:3.97, 4:3.81, 5:5.02, 6:4.59, 7:4.1, 8:3.08, 9:3.84, 10:4.76, 11:4, 12:3.98, 13:3.83},
+  "O'Shea": {2:2.01, 3:2.46, 4:2.2, 5:2.61, 6:3.05, 7:1.58, 8:3.11, 9:3.57, 10:2.76, 11:2.75, 12:2.92, 13:2.91},
+  "Davis": {2:2.01, 3:2.46, 4:2.19, 5:2.6, 6:3.04, 7:1.58, 8:3.1, 9:3.55, 10:2.75, 11:2.74, 12:2.91, 13:2.9},
+};
+/* Opponent per club per week, GW2-13, upper case = home. Same source as the
+   grid in direction 5. */
+const RUNS = {
+  ARS:['avl','CHE','sun','bha','LEE','nfo','EVE','liv','HUL','new','MCI','bre'],
+  MUN:['IPS','eve','MCI','ful','TOT','lee','BOU','che','AVL','liv','BRE','new'],
+  SUN:['FUL','bre','ARS','mci','BHA','bou','LEE','cov','CHE','avl','TOT','liv'],
+  BHA:['che','LEE','cov','ARS','sun','CRY','liv','mci','BRE','hul','NEW','bou'],
+  LIV:['NFO','ips','FUL','bou','MCI','bre','BHA','ARS','cry','MUN','eve','SUN'],
+  MCI:['cry','COV','mun','SUN','liv','IPS','avl','BHA','nfo','FUL','ars','LEE'],
+  CHE:['BHA','ars','HUL','bre','BOU','eve','TOT','MUN','sun','LEE','nfo','CRY'],
+  AVL:['ARS','hul','NFO','tot','BRE','new','MCI','FUL','mun','SUN','ips','EVE'],
+  EVE:['bou','MUN','tot','IPS','hul','CHE','ars','new','COV','bre','LIV','avl'],
+  IPS:['mun','LIV','cry','eve','FUL','mci','NFO','hul','BOU','tot','AVL','cov'],
+};
+const HARDSET = new Set(['avl','CHE','MCI','ARS','LIV','mun','che','liv','ars','mci','MUN','AVL','TOT','tot']);
+const EASYSET = new Set(['IPS','ips','cov','COV','HUL','hul','sun','SUN','LEE','lee','bre','BRE','new','NEW','ful','FUL']);
+const fxFor = (tm, gw) => { const o = (RUNS[tm]||[])[gw-2]; if(!o) return ['—','n']
+  return [o, HARDSET.has(o) ? 'h' : EASYSET.has(o) ? 'e' : 'n'] };
+
+
+/* The fifteen, with everything the pitch card shows: rating, fixture chips,
+   GW2 xP, price, and GW1's actual where the fixture has been played. */
+const SQ = [
+  {pos:'GKP',nm:'Raya',      tm:'ARS',pr:6.0, rtg:76,xp:3.98,fx:['AVL (A)','h'],nx:[['CHE (H)','h'],['SUN (A)','h']],xi:1,g1:6,  g1p:4.37,mins:90,g1fx:['COV (H)','e']},
+  {pos:'DEF',nm:'Calafiori', tm:'ARS',pr:5.5, rtg:65,xp:4.40,fx:['AVL (A)','h'],nx:[['CHE (H)','h'],['SUN (A)','h']],xi:1,g1:9,  g1p:5.30,mins:80,g1fx:['COV (H)','e']},
+  {pos:'DEF',nm:'Maguire',   tm:'MUN',pr:5.0, rtg:44,xp:4.22,fx:['IPS (H)','e'],nx:[['EVE (A)','n'],['MCI (H)','h']],xi:1,g1fx:['HUL (A)','e']},
+  {pos:'DEF',nm:'Martinez',  tm:'MUN',pr:5.0, rtg:33,xp:4.40,fx:['IPS (H)','e'],nx:[['EVE (A)','n'],['MCI (H)','h']],xi:1,g1fx:['HUL (A)','e']},
+  {pos:'MID',nm:'Saka',      tm:'ARS',pr:9.5, rtg:76,xp:4.87,fx:['AVL (A)','h'],nx:[['CHE (H)','h'],['SUN (A)','h']],xi:1,g1:9,  g1p:6.34,mins:67,g1fx:['COV (H)','e']},
+  {pos:'MID',nm:'E.Le Fée',  tm:'SUN',pr:6.0, rtg:71,xp:3.89,fx:['FUL (H)','e'],nx:[['BRE (A)','n'],['ARS (H)','h']],xi:1,g1fx:['IPS (A)','e']},
+  {pos:'MID',nm:'Groß',      tm:'BHA',pr:5.5, rtg:70,xp:3.75,fx:['CHE (A)','h'],nx:[['LEE (H)','e'],['COV (A)','e']],xi:1,g1fx:['AVL (H)','n']},
+  {pos:'MID',nm:'Wirtz',     tm:'LIV',pr:7.5, rtg:68,xp:4.47,fx:['NFO (H)','n'],nx:[['IPS (A)','e'],['FUL (H)','e']],xi:1,g1fx:['NEW (A)','h']},
+  {pos:'FWD',nm:'Haaland',   tm:'MCI',pr:15.5,rtg:99,xp:5.61,fx:['CRY (A)','h'],nx:[['COV (H)','e'],['MUN (A)','h']],xi:1,cap:1,g1fx:['BOU (H)','e']},
+  {pos:'FWD',nm:'João Pedro',tm:'CHE',pr:7.5, rtg:78,xp:4.49,fx:['BHA (H)','e'],nx:[['ARS (A)','h'],['HUL (H)','e']],xi:1,vice:1,g1fx:['FUL (A)','n']},
+  {pos:'FWD',nm:'Watkins',   tm:'AVL',pr:8.0, rtg:77,xp:3.32,fx:['ARS (H)','h'],nx:[['HUL (A)','e'],['NFO (H)','n']],xi:1,g1fx:['BHA (A)','n']},
+  {pos:'GKP',nm:'Lammens',   tm:'MUN',pr:5.0, rtg:60,xp:3.89,fx:['IPS (H)','e'],nx:[['EVE (A)','n'],['MCI (H)','h']],xi:0,g1fx:['HUL (A)','e']},
+  {pos:'MID',nm:'Ndiaye',    tm:'EVE',pr:6.0, rtg:68,xp:3.82,fx:['BOU (A)','n'],nx:[['MUN (H)','h'],['TOT (A)','h']],xi:0,g1fx:['CRY (H)','n']},
+  {pos:'DEF',nm:"O'Shea",    tm:'IPS',pr:4.0, rtg:null,xp:2.01,fx:['MUN (A)','h'],nx:[['LIV (H)','h'],['CRY (A)','n']],xi:0,g1fx:['SUN (H)','n']},
+  {pos:'DEF',nm:'Davis',     tm:'IPS',pr:4.0, rtg:null,xp:2.01,fx:['MUN (A)','h'],nx:[['LIV (H)','h'],['CRY (A)','n']],xi:0,g1fx:['SUN (H)','n']},
+];
+const XI = SQ.filter((p) => p.xi), BENCH = SQ.filter((p) => !p.xi);
+
+/* Squad Risk Monitor, straight off the Risk tab. */
+const RISK = [
+  ['Saka','MID · ARS · £9.5','Minutes','28% chance he does not reach 60',71,'At risk','b'],
+  ['Davis','DEF · IPS · £4.0','Fixtures','3 hard of 6',50,'At risk','b'],
+  ["O'Shea",'DEF · IPS · £4.0','Fixtures','3 hard of 6',49,'Watch','w'],
+  ['Wirtz','MID · LIV · £7.5','Minutes','22% chance he does not reach 60',48,'Watch','w'],
+  ['Ndiaye','MID · EVE · £6.0','Minutes + fixtures','12% below the hour · 2 hard of 6',45,'Watch','w'],
+  ['Maguire','DEF · MUN · £5.0','Minutes','18% chance he does not reach 60',42,'Watch','w'],
+  ['Haaland','FWD · MCI · £15.5','Fixtures','2 hard of 6',40,'Watch','w'],
+  ['Calafiori','DEF · ARS · £5.5','Fixtures','2 hard of 6',37,'Watch','w'],
+];
+/* Squad Lab, straight off the Analysis tab. */
+const LAB = [
+  ['3 moves worth +13.9 points','The Analyser','+13.9','3 moves','var(--acc2)'],
+  ['Triple Captain in GW7, worth about +8 points','Chips','GW7','+8','var(--acc2)'],
+  ['Your own players meet 5 times','Clashes','−3.0','5 fixtures','var(--bad)'],
+  ['Haaland, 0.7 clear of Saka','Captain','Haaland','','var(--acc2)'],
+  ['A normal spread — 7 template and 2 punts','Template risk','7 of 15','21% owned','var(--good)'],
+];
+/* Measured earlier tonight: projections/gw1.json against actuals/gw1.json,
+   over all 55 players projected for Arsenal v Coventry — not only the 31
+   who featured, which is a different and much more flattering question. */
+const COMP = [['Clean sheets',9.2],['Appearance',5.2],['Defensive contribution',-4.1],
+              ['Assists',3.0],['Goals',-1.4],['Saves',-1.1],['Conceded',0.7],['Bonus',-0.7],['Cards',0.5]];
+
+/* ── manager strip ── */
+function mgr(el) {
+  el.innerHTML = `
+    <div><div class="k">Manager</div><div class="v">My Team <small>· GW1</small></div></div>
+    <div><div class="k">Overall rank</div><div class="v"><span class="wip" title="needs the FPL entry endpoint, which nothing fetches yet">—</span></div></div>
+    <div><div class="k">Points</div><div class="v n">33 <small>so far</small></div></div>
+    <div><div class="k">Team value</div><div class="v n">£100.0m</div></div>
+    <div><div class="k">In the bank</div><div class="v n">£0.0m</div></div>
+    <div><div class="k">Free transfers</div><div class="v n">1</div></div>`;
+}
+['mgr1','mgr2','mgr3','mgr4','mgr5'].forEach((id) => { const e = document.getElementById(id); if (e) mgr(e); });
+
+/* ── the spine ── */
+function spine(el, opts = {}) {
+  const { clickable = false, sel = null, sub = 'scored behind, projected ahead' } = opts;
+  el.innerHTML = `
+    <header>
+      <h3>Your season</h3><span class="pill">GW1–13</span>
+      <span class="tiny">${esc(sub)}</span>
+      <span class="pill a" style="margin-left:auto">now · GW2 deadline Fri 17:30</span>
+    </header>
+    <div class="bars nowline">
+      ${SPINE.map((w) => {
+        const h = Math.max(6, Math.round((w.v / MAXV) * 100));
+        const cls = `bw ${w.state}${sel === w.gw ? ' sel' : ''}`;
+        return `<div class="${cls}" data-gw="${w.gw}">
+          <div class="v" style="color:${w.state === 'past' ? 'var(--ink2)' : w.state === 'now' ? 'var(--acc)' : 'var(--ink)'}">
+            ${w.v.toFixed(w.state === 'past' ? 0 : 1)}${w.part ? '<span class="tiny">·3/11</span>' : ''}</div>
+          <div class="bar" ${clickable ? 'role="button" tabindex="0"' : ''}><i style="height:${h}%"></i></div>
+          <div class="fx">
+            <i style="background:var(--easy);flex:${w.easy}"></i>
+            <i style="background:var(--hard);flex:${w.hard}"></i></div>
+          <div class="lb">GW${w.gw}${w.cap ? '<span class="capdot">C</span>' : ''}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--easy)"></i>easy fixtures that week</span>
+      <span><i style="background:var(--hard)"></i>hard ones, and blanks</span>
+      <span><span class="capdot">C</span> you own the best captain in the game</span>
+      <span style="margin-left:auto"><i style="background:linear-gradient(90deg,#5b6470,#3d434c)"></i>scored</span>
+      <span><i style="background:var(--acc)"></i>projected</span>
+    </div>`;
+  // The `now` divider sits on the boundary between GW1 and GW2.
+  const bars = el.querySelector('.bars');
+  const first = bars.querySelector('.bw.now');
+  if (first) bars.style.setProperty('--x', '0');
+  if (first) el.querySelector('.nowline').style.setProperty('position', 'relative');
+  if (first) {
+    const line = document.createElement('span');
+    line.style.cssText = `position:absolute;top:26px;bottom:30px;width:1px;background:var(--acc);opacity:.5;
+      left:${first.offsetLeft - 3}px`;
+    bars.appendChild(line);
+  }
+}
+['spine1','spine2','spine3'].forEach((id) => { const e = document.getElementById(id); if (e) spine(e); });
+
+/* ── pitch card, as the builder draws it ── */
+const chipCls = (k) => k === 'e' ? 'background:rgba(47,174,95,.85)' : k === 'h' ? 'background:rgba(209,84,79,.85)' : 'background:rgba(90,96,106,.85)';
+function card(p, mode) {
+  const played = p.g1 != null;
+  const live = mode === 'live';
+  /* "to play" goes in the value slot rather than a corner badge: at 110px the
+     badge sat on top of the name, and the value line is where the eye already
+     is. Only a played card earns a corner badge, and it is the minutes. */
+  const val = mode === 'live'
+    ? (played ? `<div class="val live">${p.g1}</div>`
+              : `<div class="val" style="color:rgba(255,255,255,.42);font-size:9.5px;font-weight:700;
+                  letter-spacing:.06em;text-transform:uppercase">to play</div>`)
+    : mode === 'xp' ? `<div class="val">${p.xp.toFixed(2)}</div>`
+    : `<div class="val">${p.rtg ?? '—'}</div>`;
+  const stat = mode === 'live' && played ? `<span class="stat pl">${p.mins}'</span>` : ''
+  return `<div class="pc${p.cap ? ' cap' : ''}${live && !played ? ' done' : ''}">
+    ${p.cap ? '<span class="arm">C</span>' : p.vice ? '<span class="arm" style="background:var(--s4);color:var(--ink2)">V</span>' : ''}
+    ${stat}
+    <div class="nm">${esc(p.nm)}</div>
+    ${live
+      /* The live face shows the fixture the points came FROM. Next week's
+         chips above this week's score is the kind of quiet mismatch nobody
+         reports and everybody half-notices. */
+      ? `<span class="ch" style="${chipCls(p.g1fx[1])}">${esc(p.g1fx[0])}</span>
+         <div class="two"><span class="ch" style="${chipCls(p.fx[1])};opacity:.45">next · ${esc(p.fx[0])}</span></div>`
+      : `<span class="ch" style="${chipCls(p.fx[1])}">${esc(p.fx[0])}</span>
+         <div class="two">${p.nx.map(([t, k]) => `<span class="ch" style="${chipCls(k)}">${esc(t)}</span>`).join('')}</div>`}
+    ${val}</div>`;
+}
+function pitch(el, mode) {
+  el.innerHTML = ['GKP','DEF','MID','FWD'].map((pos) =>
+    `<div class="prow">${XI.filter((p) => p.pos === pos).map((p) => card(p, mode)).join('')}</div>`).join('');
+}
+function bench(el, mode) {
+  el.innerHTML = BENCH.map((p) => card(p, mode)).join('');
+}
+pitch(document.getElementById('pitch1'), 'live');
+bench(document.getElementById('bench1'), 'live');
+
+/* ── tiles ── */
+function tiles(el, mode) {
+  el.innerHTML = mode === 'live' ? `
+    <div class="tile"><div class="big"><span class="n">33</span> <span class="muted" style="font-size:15px">/ 58.3</span></div>
+      <div class="k">Scored / projected</div></div>
+    <div class="tile"><div class="big n">3<span class="muted" style="font-size:15px"> of 11</span></div><div class="k">Played</div></div>
+    <div class="tile"><div class="big n">68</div><div class="k">Squad rating</div></div>
+    <div class="tile"><div class="big n">£0.0m</div><div class="k">In the bank</div></div>`
+  : `
+    <div class="tile"><div class="big"><span class="n">53.0</span> <span class="muted" style="font-size:15px">/ 82</span></div>
+      <div class="k">xP / rating</div></div>
+    <div class="tile"><div class="big n">68</div><div class="k">Squad rating</div></div>
+    <div class="tile"><div class="big n">£0.0m</div><div class="k">In the bank</div></div>
+    <div class="tile"><div class="big n">1</div><div class="k">Free transfer</div></div>`;
+}
+tiles(document.getElementById('tiles1'), 'live');
+
+/* ── review rows ── */
+function reviewRows(el) {
+  el.innerHTML = SQ.filter((p) => p.xi).map((p) => {
+    if (p.g1 == null) return `<div class="rrow" style="opacity:.45">
+      <div class="who"><b>${esc(p.nm)}</b><span>${p.tm} · ${esc(p.fx[0])}</span></div>
+      <div class="rt"><span class="tiny">to play</span></div></div>`;
+    const d = p.g1 - p.g1p;
+    return `<div class="rrow">
+      <div class="who"><b>${esc(p.nm)}</b><span>${p.mins}' · projected ${p.g1p.toFixed(2)}</span></div>
+      <div class="rt"><span class="n" style="font-size:15px;font-weight:800">${p.g1}</span>
+        <span class="n ${d >= 0 ? 'good' : 'bad'}" style="font-weight:800;margin-left:7px">${d >= 0 ? '+' : ''}${d.toFixed(1)}</span></div></div>`;
+  }).join('');
+}
+reviewRows(document.getElementById('rev1'));
+
+/* ── component bars ── */
+function comps(el) {
+  const m = Math.max(...COMP.map(([, v]) => Math.abs(v)));
+  el.innerHTML = COMP.map(([k, v]) => `
+    <div style="margin-top:9px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600">
+        <span>${esc(k)}</span><span class="n ${v >= 0 ? 'good' : 'bad'}">${v >= 0 ? '+' : ''}${v.toFixed(1)}</span></div>
+      <div class="barline" style="margin-top:4px">
+        <i style="width:${(Math.abs(v) / m * 100).toFixed(0)}%;background:${v >= 0 ? 'var(--good)' : 'var(--bad)'}"></i></div>
+    </div>`).join('') + `
+    <p class="tiny" style="margin-top:11px">
+      Clean sheets is the biggest bar and the least meaningful one — Arsenal
+      kept theirs and the model priced it as a chance, so one fixture can only
+      show a probability as a whole number against a fraction. Defensive
+      contribution is the real signal: 6.1 points projected across the fixture,
+      one player cleared the threshold.</p>`;
+}
+comps(document.getElementById('comp1'));
+
+/* ── shared panels used by directions 2–4 ── */
+function riskPanel() {
+  return `<div class="card">
+    <div class="pad" style="border-bottom:1px solid var(--line)">
+      <span class="kicker">Squad risk monitor</span>
+      <h3 style="margin-top:3px">Sorted by how much attention he needs</h3>
+      <p class="tiny" style="margin-top:3px">Not how good he is — how likely you are to regret holding him.</p></div>
+    ${RISK.map(([nm, meta, drv, why, pct, st, k]) => `
+      <div class="rrow">
+        <div class="who" style="flex:1"><b>${esc(nm)}</b><span>${esc(meta)}</span></div>
+        <div style="flex:1.1;min-width:0"><div class="tiny" style="color:var(--ink)">${esc(drv)}</div>
+          <div class="tiny">${esc(why)}</div></div>
+        <div class="meter">${Array.from({length:10},(_,i)=>
+          `<i style="background:${i < Math.round(pct/10) ? (k==='b'?'var(--bad)':'var(--warn)') : 'var(--s4)'}"></i>`).join('')}</div>
+        <span class="n tiny" style="width:30px;text-align:right">${pct}%</span>
+        <span class="pill ${k}">${st}</span>
+      </div>`).join('')}
+  </div>`;
+}
+function labPanel() {
+  return `<div class="card">
+    <div class="pad" style="border-bottom:1px solid var(--line)">
+      <span class="kicker">Squad lab · needs attention</span>
+      <h3 style="margin-top:3px">GW2 is the week to plan for — 7 of your 15 walk into a hard game</h3>
+      <p class="tiny" style="margin-top:3px">That is this week or next, so whatever you do about it you do now.</p></div>
+    ${LAB.map(([t, s, r, r2, c]) => `
+      <div class="ins"><span class="dot" style="background:${c}"></span>
+        <div><div class="t">${esc(t)}</div><div class="s">${esc(s)}</div></div>
+        <div class="r" style="color:${c}">${esc(r)}<div class="s" style="color:var(--ink3);font-weight:600">${esc(r2)}</div></div>
+      </div>`).join('')}
+  </div>`;
+}
+function boardHTML(mode, right) {
+  return `<div class="board">
+    <div>
+      <div class="pitch"><svg viewBox="0 0 300 380" preserveAspectRatio="none" aria-hidden="true">
+        <g fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.5">
+          <rect x="5" y="5" width="290" height="370" rx="2"/><line x1="5" y1="190" x2="295" y2="190"/>
+          <circle cx="150" cy="190" r="42"/><rect x="62" y="5" width="176" height="58"/>
+          <rect x="112" y="5" width="76" height="24"/><rect x="62" y="317" width="176" height="58"/>
+          <rect x="112" y="351" width="76" height="24"/></g></svg>
+        <div class="rows">${['GKP','DEF','MID','FWD'].map((pos) =>
+          `<div class="prow">${XI.filter((p) => p.pos === pos).map((p) => card(p, mode)).join('')}</div>`).join('')}</div>
+      </div>
+      <div class="bench"><span class="lbl">Subs</span>
+        <div style="display:flex;gap:7px;flex:1">${BENCH.map((p) => card(p, mode)).join('')}</div></div>
+      <div class="chiprow"><span class="cl">Chip</span>
+        <span class="chip">Wildcard</span><span class="chip">Bench Boost</span>
+        <span class="chip">Triple Captain</span><span class="chip">Free Hit</span></div>
+    </div>
+    <div>${right}</div></div>`;
+}
+
+/* ── direction 2: Track / Plan ── */
+function drawMode(mode) {
+  const body = document.getElementById('modebody');
+  document.getElementById('modehint').textContent = mode === 'track'
+    ? 'Behind you: GW1, in progress. The spine fills in as the weekend runs.'
+    : 'Ahead of you: GW2, deadline Friday 17:30. One free transfer, £0.0m banked.';
+  if (mode === 'track') {
+    body.innerHTML = `<div class="tiles" style="margin-bottom:var(--gap)">${
+      `<div class="tile"><div class="big"><span class="n">33</span> <span class="muted" style="font-size:15px">/ 58.3</span></div><div class="k">Scored / projected</div></div>
+       <div class="tile"><div class="big n">3<span class="muted" style="font-size:15px"> of 11</span></div><div class="k">Played</div></div>
+       <div class="tile"><div class="big n">+1.25</div><div class="k">Model error, GW1</div></div>
+       <div class="tile"><div class="big"><span class="wip">—</span></div><div class="k">Overall rank</div></div>`}</div>
+      ${boardHTML('live', `<div class="card">
+        <div class="pad" style="border-bottom:1px solid var(--line)">
+          <span class="kicker">GW1 · live</span><h3 style="margin-top:3px">Projected against actual</h3>
+          <p class="tiny" style="margin-top:3px">Re-pulled every quarter of an hour while the football is on.</p></div>
+        <div id="rev2"></div></div>`)}`;
+    reviewRows(document.getElementById('rev2'));
+  } else {
+    body.innerHTML = `<div class="tiles" style="margin-bottom:var(--gap)">${
+      `<div class="tile"><div class="big"><span class="n">53.0</span> <span class="muted" style="font-size:15px">/ 82</span></div><div class="k">xP / rating</div></div>
+       <div class="tile"><div class="big n">68</div><div class="k">Squad rating</div></div>
+       <div class="tile"><div class="big n">£0.0m</div><div class="k">In the bank</div></div>
+       <div class="tile"><div class="big n">1</div><div class="k">Free transfer</div></div>`}</div>
+      ${boardHTML('rating', labPanel())}`;
+  }
+}
+document.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-mode]').forEach((o) => o.setAttribute('aria-selected', String(o === b)));
+  drawMode(b.id === 'm-track' ? 'track' : 'plan');
+}));
+drawMode('track');
+
+/* ── direction 3: four faces ── */
+const FACES = {
+  live:  { hint:'GW1 · 3 of 11 played', build: () => boardHTML('live', `<div class="card">
+            <div class="pad" style="border-bottom:1px solid var(--line)"><span class="kicker">GW1 · live</span>
+              <h3 style="margin-top:3px">Projected against actual</h3></div><div id="rev3"></div></div>`) },
+  plan:  { hint:'GW2 · deadline Fri 17:30', build: () => boardHTML('rating', labPanel()) },
+  review:{ hint:'GW1 · where the model missed', build: () => `<div class="board"><div class="card">
+            <div class="pad" style="border-bottom:1px solid var(--line)">
+              <span class="kicker">Where it missed · Arsenal v Coventry</span>
+              <h3 style="margin-top:3px">By component, over all 55 it projected</h3></div>
+            <div class="pad" id="comp3"></div></div>${riskPanel()}</div>` },
+  season:{ hint:'1 of 38 played', build: () => `<div class="card pad">
+            <span class="kicker">Season to date</span>
+            <h3 style="margin-top:3px">One gameweek in, and it shows</h3>
+            <p class="muted" style="margin-top:8px;max-width:70ch">
+              This face is the one that has nothing to say yet, and pretending
+              otherwise is how a site loses trust in week one. It holds three
+              things and says so: points to date (<b>33</b>, from three
+              players), the model's running error (<b>MAE 1.25</b> over the 55
+              players in the only fixture played), and your rank
+              (<span class="wip">unknown</span> — nothing here fetches it).
+              By GW6 it is a season chart, a best and worst week, a captaincy
+              record and a transfer ledger. In August it is a promise.</p>
+            <div class="tiles" style="margin-top:13px">
+              <div class="tile"><div class="big n">33</div><div class="k">Points</div></div>
+              <div class="tile"><div class="big n">1.25</div><div class="k">Model MAE</div></div>
+              <div class="tile"><div class="big n">0</div><div class="k">Transfers made</div></div>
+              <div class="tile"><div class="big n">4</div><div class="k">Chips left</div></div>
+            </div></div>` },
+};
+function drawFace(k) {
+  document.getElementById('facehint').textContent = FACES[k].hint;
+  document.getElementById('facebody').innerHTML = FACES[k].build();
+  const r = document.getElementById('rev3'); if (r) reviewRows(r);
+  const c = document.getElementById('comp3'); if (c) comps(c);
+}
+document.querySelectorAll('[data-face]').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-face]').forEach((o) => o.setAttribute('aria-selected', String(o === b)));
+  drawFace(b.dataset.face);
+}));
+drawFace('live');
+
+/* ── direction 4: the spine is the navigation ── */
+function drawWeek(gw) {
+  spine(document.getElementById('spine4'), { clickable:true, sel:gw, sub:'click a week' });
+  wireBars();
+  const body = document.getElementById('weekbody');
+  const w = SPINE.find((x) => x.gw === gw);
+  if (gw === 1) {
+    body.innerHTML = `<div class="step"><span class="gw">Gameweek 1</span><span class="pill a">in progress</span>
+      <span class="tiny" style="margin-left:auto">3 of 11 played · bonus provisional</span></div>
+      ${boardHTML('live', `<div class="card"><div class="pad" style="border-bottom:1px solid var(--line)">
+        <span class="kicker">GW1 · live</span><h3 style="margin-top:3px">Projected against actual</h3></div>
+        <div id="rev4"></div></div>`)}`;
+    reviewRows(document.getElementById('rev4'));
+  } else if (gw === 2) {
+    body.innerHTML = `<div class="step"><span class="gw">Gameweek 2</span>
+      <span class="pill a">deadline Fri 17:30</span>
+      <span class="tiny" style="margin-left:auto">1 free transfer · £0.0m banked</span></div>
+      ${boardHTML('rating', labPanel())}`;
+  } else {
+    /* Far enough out that a team sheet is a fiction — so it does not draw one.
+       This is the honest half of making the spine the navigation. */
+    body.innerHTML = `<div class="step"><span class="gw">Gameweek ${gw}</span>
+      <span class="pill">${gw <= 3 ? 'next but one' : 'planning only'}</span>
+      <span class="tiny" style="margin-left:auto">${gw <= 3 ? '' : 'no team sheet — too far out to pretend'}</span></div>
+      <div class="card pad">
+        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+          <span style="font-size:30px;font-weight:800;letter-spacing:-.03em" class="n">${w.v.toFixed(1)}</span>
+          <span class="muted">projected for your best eleven${w.cap ? ', armband included' : ''}</span>
+          <span class="pill ${w.easy > w.hard ? 'g' : 'b'}" style="margin-left:auto">${w.easy} easy · ${w.hard} hard</span>
+        </div>
+        <p class="muted" style="margin-top:10px;max-width:72ch">
+          ${gw >= 9
+            ? 'No fixture in this week has been priced, so the projection is fixture strength and squad quality only. Useful for spotting a run; useless for picking a team.'
+            : 'Close enough to plan against, far enough that team news will move it. The board below the spine shows the fixture read rather than a line-up.'}
+        </p>
+        <div class="gridwrap" style="margin-top:13px">${miniGrid(gw)}</div>
+      </div>`;
+  }
+}
+function miniGrid(gw) {
+  /* Everything here is keyed on the gameweek being shown, not on GW2. */
+  const rows = SQ.map((p) => ({ p, x: XPW[p.nm]?.[gw] ?? null, fx: fxFor(p.tm, gw) }))
+    .sort((a, b) => (b.x ?? 0) - (a.x ?? 0));
+  return `<table class="plan"><tbody>${rows.map(({ p, x, fx }) => {
+    const [t, k] = fx;
+    return `<tr><td class="who"><i>${p.pos}</i>${esc(p.nm)}</td>
+      <td><div class="cell ${k === 'e' ? 'e' : k === 'h' ? 'h' : ''}">${esc(t)}</div></td>
+      <td style="width:99%"><div class="barline" style="max-width:230px">
+        <i style="width:${x == null ? 0 : Math.min(100, x / 8 * 100).toFixed(0)}%;background:${
+          x == null ? 'var(--s4)' : x < 2.5 ? 'var(--bad)' : x < 4 ? 'var(--warn)' : 'var(--good)'}"></i></div></td>
+      <td class="n" style="font-size:12px;font-weight:700;padding-left:8px">${x == null ? '—' : x.toFixed(2)}</td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+function wireBars() {
+  document.querySelectorAll('#spine4 .bw').forEach((el) => {
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', () => drawWeek(Number(el.dataset.gw)));
+  });
+}
+drawWeek(1);
+
+/* ── direction 5: the grid ── */
+(function () {
+  const GWS = SPINE.map((w) => w.gw);
+  const G1 = { Raya:[6,4.37], Calafiori:[9,5.30], Saka:[9,6.34] };
+
+  /* Captain and bench are DERIVED per week, not assumed. The first draft ringed
+     Haaland in all twelve and dimmed the same four all season, which is a
+     picture of one week repeated — and wrong: he is not the best captain in
+     four of them, and the armband moving is the most interesting thing the
+     grid has to say. */
+  const capOf = {}, benchOf = {};
+  for (const g of GWS.slice(1)) {
+    let best = null;
+    for (const p of SQ) { const x = XPW[p.nm]?.[g]; if (x != null && (!best || x > best.x)) best = { nm: p.nm, x } }
+    capOf[g] = best?.nm;
+    // Bench the weaker keeper plus the three weakest outfielders — the shape
+    // autoLineup lands on when nothing is injured.
+    const keepers = SQ.filter((p) => p.pos === 'GKP').sort((a, b) => (XPW[a.nm]?.[g] ?? 0) - (XPW[b.nm]?.[g] ?? 0));
+    const field = SQ.filter((p) => p.pos !== 'GKP').sort((a, b) => (XPW[a.nm]?.[g] ?? 0) - (XPW[b.nm]?.[g] ?? 0));
+    benchOf[g] = new Set([keepers[0]?.nm, ...field.slice(0, 3).map((p) => p.nm)]);
+  }
+  const moves = GWS.slice(1).filter((g) => capOf[g] !== 'Haaland');
+  document.getElementById('capnote').innerHTML = moves.length
+    ? `The armband is not Haaland's in <b>${moves.length}</b> of the twelve — ` +
+      moves.map((g) => `GW${g} ${esc(capOf[g])}`).join(', ') +
+      `. GW12 is the one to look at: City go to Arsenal, he projects <b>3.89</b>, and he is not even your best forward that week.`
+    : '';
+
+  document.getElementById('grid5').innerHTML = `
+    <table class="plan">
+      <thead><tr><th></th>${GWS.map((g) => `<th>GW${g}</th>`).join('')}</tr></thead>
+      <tbody>${SQ.map((p) => {
+        const a = G1[p.nm];
+        const first = a
+          ? `<div class="cell act ${a[0] >= a[1] ? 'hit' : 'miss'}" title="projected ${a[1].toFixed(2)}">${a[0]}</div>`
+          : `<div class="cell" style="opacity:.34" title="fixture not played yet">–</div>`;
+        return `<tr><td class="who"><i>${p.pos}</i>${esc(p.nm)}</td>
+          <td>${first}</td>
+          ${GWS.slice(1).map((g) => {
+            const [o, k] = fxFor(p.tm, g);
+            const x = XPW[p.nm]?.[g];
+            const cls = ['cell', k === 'e' ? 'e' : k === 'h' ? 'h' : '',
+                         benchOf[g].has(p.nm) ? 'bench' : '',
+                         capOf[g] === p.nm ? 'capt' : '',
+                         g === 2 ? 'now' : ''].filter(Boolean).join(' ');
+            return `<td><div class="${cls}" title="${esc(p.nm)} GW${g}: projected ${x == null ? '—' : x.toFixed(2)}${
+              capOf[g] === p.nm ? ' · captain' : ''}${benchOf[g].has(p.nm) ? ' · benched' : ''}">${esc(o)}</div></td>`;
+          }).join('')}</tr>`;
+      }).join('')}</tbody>
+    </table>`;
+})();
+
+/* ── switcher ── */
+const tabs = [...document.querySelectorAll('.dirs [role=tab]')];
+tabs.forEach((b) => b.addEventListener('click', () => {
+  tabs.forEach((o) => {
+    const on = o === b;
+    o.setAttribute('aria-selected', String(on));
+    document.getElementById(o.getAttribute('aria-controls')).hidden = !on;
+  });
+  if (b.id === 't4') { spine(document.getElementById('spine4'), { clickable:true, sel:1, sub:'click a week' }); wireBars(); }
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}));
+</script>
