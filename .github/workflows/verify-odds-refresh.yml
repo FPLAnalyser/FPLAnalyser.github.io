@@ -16,7 +16,7 @@ on:
       enrich_limit:
         description: 'Fixtures to enrich (4 credits each; 0 = all)'
         type: string
-        default: '3'
+        default: '6'
   push:
     branches-ignore: [main]
     paths:
@@ -38,9 +38,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python refresh_odds.py --dry-run
+      - run: python refresh_odds.py --dry-run --compare-legs
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           ENRICH: '1'
-          ENRICH_LIMIT: ${{ inputs.enrich_limit || '3' }}
+          ENRICH_LIMIT: ${{ inputs.enrich_limit || '6' }}
 

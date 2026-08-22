@@ -532,7 +532,7 @@ if __name__ == "__main__":
     key = os.environ.get("ODDS_API_KEY", "").strip()
     events, source, enriched = (from_odds_api(key, enrich) if key else from_football_data())
 
-    matches, unmatched, rejected = [], [], []
+    matches, unmatched, rejected, compare = [], [], [], []
     for home, away, kick, cons, used in events:
         h, a = by_norm.get(norm(home)), by_norm.get(norm(away))
         if h is None or a is None:
@@ -576,6 +576,16 @@ if __name__ == "__main__":
             continue
         matches.append({"gw": gw, "h": h, "a": a, "lh": lh, "la": la, "src": used})
 
+        # What the US leg is worth, measured rather than argued. Team totals
+        # are the only constraint that speaks to one side's goals on its own;
+        # everything else prices the pair. Solving the same fixture with them
+        # and without says what dropping that leg would cost — and the number
+        # that matters is not the lambda but the clean sheet it implies, since
+        # that is what the site puts on a defender's page.
+        if "--compare-legs" in sys.argv and any(c[0].startswith("tt_") for c in cons):
+            lh2, la2 = solve([c for c in cons if not c[0].startswith("tt_")])
+            compare.append((gw, h, a, lh, la, lh2, la2))
+
     # ── accumulate, rather than replace ──────────────────────────────────────
     # Bookmakers price about a round at a time, so any single pull sees one
     # gameweek. Keeping the ones already banked turns 38 one-round snapshots
@@ -606,7 +616,21 @@ if __name__ == "__main__":
     if enriched_gw is not None:
         payload["enriched_gw"] = enriched_gw
 
-    if "--dry-run" in sys.argv:
+    if compare:
+        print("\n  fixture      with team totals    without         d(lh)  d(la)   "
+              "home CS%  away CS%   (without -> with)")
+        worst = 0.0
+        for gw, h, a, lh, la, lh2, la2 in compare:
+            cs_h, cs_h2 = math.exp(-la), math.exp(-la2)      # home keeps a clean sheet
+            cs_a, cs_a2 = math.exp(-lh), math.exp(-lh2)
+            worst = max(worst, abs(cs_h - cs_h2), abs(cs_a - cs_a2))
+            print(f"  GW{gw} {h:>2} v {a:<2}  {lh:.2f}/{la:.2f}         {lh2:.2f}/{la2:.2f}"
+                  f"    {lh - lh2:+.2f}  {la - la2:+.2f}   "
+                  f"{cs_h2 * 100:5.1f} -> {cs_h * 100:5.1f}  {cs_a2 * 100:5.1f} -> {cs_a * 100:5.1f}")
+        print(f"  largest clean-sheet move from the US leg: {worst * 100:.2f} percentage points "
+              f"({worst * 4:.3f} pts for a defender, {worst * 4:.3f} for a keeper)")
+
+    if "--dry-run" in sys.argv or "--compare-legs" in sys.argv:
         print("dry run — not writing " + out_path)
         for m in sorted(payload["matches"], key=lambda m: (m["gw"], m["h"]))[:12]:
             print(f"  GW{m['gw']} {m['h']:>2} v {m['a']:<2}  "
