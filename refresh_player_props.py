@@ -123,6 +123,11 @@ def squad_index(players, team_ids):
 PROPS_LEAD_HOURS = float(os.environ.get("PROPS_LEAD_HOURS", "3"))
 PROPS_CRON_HOURS = float(os.environ.get("PROPS_CRON_HOURS", "1"))
 PROPS_POST_MIN_HOURS = float(os.environ.get("PROPS_POST_MIN_HOURS", "36"))
+# The odds refresh stops enriching under 150 credits; this had no floor at all
+# and would have spent the balance to zero two credits at a time. A partial
+# round is worth having — the fixtures it did reach are still priced — so stop
+# pulling rather than refuse to start.
+PROPS_MIN_CREDITS = float(os.environ.get("PROPS_MIN_CREDITS", "40"))
 
 
 def decide_stage(events, now, done):
@@ -296,6 +301,14 @@ if __name__ == "__main__":
         if (h, a) not in lam:
             print(f"  not yet priced, skipping: {ev['home_team']} v {ev['away_team']}")
             continue
+
+        try:
+            if float(remaining) < PROPS_MIN_CREDITS:
+                print(f"  stopping: {remaining} credits left (< {PROPS_MIN_CREDITS:g}), "
+                      f"{len(out)} players priced so far")
+                break
+        except (TypeError, ValueError):
+            pass
 
         merged = {"bookmakers": []}
         for region in REGIONS:
