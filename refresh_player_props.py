@@ -102,6 +102,31 @@ def squad_index(players, team_ids):
     return idx, clashes
 
 
+def contained_in(quoted, squad):
+    """The book wrote a longer name than FPL holds.
+
+       "Marcelino Ignacio Nunez Espinoza" is FPL's "Marcelino Nunez", and the
+       surname fallback cannot see it: that fallback reads the LAST token, and
+       the last token here is a second family name the record does not carry.
+       Same for "Nilson David Angulo Ramirez" and, through the hyphen, for
+       "Jaden Philogene-Bidace".
+
+       So look the other way round — is every token FPL holds for a player
+       present in what the book wrote? Both names, not just the surname, and
+       only when exactly one player in the fixture qualifies. A surname alone
+       would happily tie "Jenson Jones" to whichever Jones was listed first."""
+    tokens = set(fold(quoted).split()) - PARTICLES
+    if not tokens:
+        return None
+    hits = []
+    for pl in squad:
+        first = set(fold(pl.get("first_name", "")).split()) - PARTICLES
+        second = set(fold(pl.get("second_name", "")).split()) - PARTICLES
+        if first and second and first <= tokens and second <= tokens:
+            hits.append(pl["id"])
+    return hits[0] if len(hits) == 1 else None
+
+
 def prices_for(event, markets_wanted):
     """{market key: {player name: [prices]}} across every bookmaker."""
     out = {}
@@ -213,13 +238,17 @@ if __name__ == "__main__":
                 if sn:
                     surnames.setdefault(sn[-1], []).append(pl["id"])
         surnames = {k: v[0] for k, v in surnames.items() if len(v) == 1}
-        rows = {}
+        squad = [pl for pl in players if pl["team"] in (h, a)]
+        rows, claims = {}, {}
         for market, by_name in quotes.items():
             for who, prices in by_name.items():
-                pid = idx.get(fold(who)) or surnames.get(fold(who).split()[-1])
+                pid = (idx.get(fold(who))
+                       or surnames.get(fold(who).split()[-1])
+                       or contained_in(who, squad))
                 if pid is None:
                     unmatched.append(f"{who} ({ev['home_team']} v {ev['away_team']})")
                     continue
+                claims.setdefault(pid, set()).add(fold(who))
                 row = rows.setdefault(pid, {"books": 0})
                 if market == "player_goal_scorer_anytime":
                     row["p_raw"] = round(to_prob(prices), 4)
@@ -260,6 +289,16 @@ if __name__ == "__main__":
                 rows[pid]["k"] = round(k, 3)
             print(f"  {club}: {len(ids)} priced, sum xg {xg_total(raw, 1.0):.2f} -> "
                   f"{xg_total(raw, k):.2f} vs lambda {target:.2f} (k={k:.2f})")
+        # Two different quoted names landing on one FPL id means a fallback
+        # reached too far. The same name arriving twice is just the two markets
+        # both quoting him, which is expected. Drop the ambiguous ones rather
+        # than keep whichever was seen last.
+        for pid, names in claims.items():
+            if len(names) > 1:
+                rows.pop(pid, None)
+                unmatched.extend(f"{n} (ambiguous, {ev['home_team']} v {ev['away_team']})"
+                                 for n in sorted(names))
+
         team_of_all = {pl["id"]: pl["team"] for pl in players}
         for pid, row in rows.items():
             mine = team_of_all.get(pid)
