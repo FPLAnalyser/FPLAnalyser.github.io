@@ -1,0 +1,35 @@
+name: Check FPL names
+
+# Free diagnostic: the FPL bootstrap only, never the odds API, so running it
+# costs nothing against the monthly credit allowance.
+#
+# A name the props pipeline could not place fails for one of four reasons — a
+# different spelling, a different given name, a different club, or not being in
+# the game at all — and each wants a different fix. The log line cannot tell
+# them apart, and guessing is how a matcher picks up a rule that papers over
+# the wrong problem. This asks FPL directly.
+on:
+  workflow_dispatch:
+    inputs:
+      names:
+        description: 'Names to look up, space separated and quoted'
+        type: string
+        default: ''
+  push:
+    branches-ignore: [main]
+    paths:
+      - 'fpl_name_check.py'
+      - '.github/workflows/check-names.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  names:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python fpl_name_check.py ${{ inputs.names }}
