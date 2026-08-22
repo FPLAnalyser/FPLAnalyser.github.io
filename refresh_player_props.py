@@ -33,6 +33,7 @@ overround and the goals of players nobody priced, so a value far from 1 is a
 signal to look rather than a number to trust.
 """
 import datetime
+import difflib
 import json
 import math
 import os
@@ -100,6 +101,14 @@ def squad_index(players, team_ids):
     for k in clashes:
         idx.pop(k, None)
     return idx, clashes
+
+
+def one_player(names):
+    """Are these spellings of the same man? Yeremi and Yeremy are; Jaydon Jones
+       and Jenson Jones are not, and never may be."""
+    names = sorted(names)
+    return all(difflib.SequenceMatcher(None, a, b).ratio() >= 0.9
+               for a, b in zip(names, names[1:]))
 
 
 def contained_in(quoted, squad):
@@ -244,7 +253,11 @@ if __name__ == "__main__":
                     surnames.setdefault(tok, set()).add(pl["id"])
         surnames = {k: next(iter(v)) for k, v in surnames.items() if len(v) == 1}
         squad = [pl for pl in players if pl["team"] in (h, a)]
-        rows, claims = {}, {}
+        # Pool by player before pricing anything. Bookmakers do not agree on
+        # spelling — one writes Yeremi Pino, another Yeremy Pino — and keying
+        # the prices by the name meant the second spelling's median overwrote
+        # the first's and the book count was whichever spelling was seen last.
+        pooled, claims = {}, {}
         for market, by_name in quotes.items():
             for who, prices in by_name.items():
                 pid = (idx.get(fold(who))
@@ -254,7 +267,22 @@ if __name__ == "__main__":
                     unmatched.append(f"{who} ({ev['home_team']} v {ev['away_team']})")
                     continue
                 claims.setdefault(pid, set()).add(fold(who))
-                row = rows.setdefault(pid, {"books": 0})
+                pooled.setdefault(pid, {}).setdefault(market, []).extend(prices)
+
+        # Two names on one id is either two spellings of one man or a fallback
+        # that reached too far, and the difference matters: the first should be
+        # merged, the second dropped. Near-identical strings are the same
+        # player; anything else is the failure the guard exists for.
+        for pid, names in sorted(claims.items()):
+            if len(names) > 1 and not one_player(names):
+                pooled.pop(pid, None)
+                unmatched.extend(f"{n} (ambiguous, {ev['home_team']} v {ev['away_team']})"
+                                 for n in sorted(names))
+
+        rows = {}
+        for pid, markets in pooled.items():
+            row = rows.setdefault(pid, {"books": 0})
+            for market, prices in markets.items():
                 if market == "player_goal_scorer_anytime":
                     row["p_raw"] = round(to_prob(prices), 4)
                     row["books"] = len(prices)
