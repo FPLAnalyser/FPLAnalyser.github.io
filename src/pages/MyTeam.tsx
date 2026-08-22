@@ -21,6 +21,8 @@ import { RULES } from '../lib/insights/rules'
 import type { CoreData, FixtureEaseRow, RatingRow, Row } from '../lib/types'
 import { useAvailability, availBadge, availFor } from '../lib/availability'
 import { readTeamId, saveTeamId } from '../lib/teamId'
+import { ensurePlan } from '../lib/plans'
+import SquadBuilder from './SquadBuilder'
 
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -125,7 +127,7 @@ interface Enriched { pick: any; r: RatingRow | undefined; p4: Row | undefined; s
 function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
   const { picksData, gw, historyData, entryData, teamId } = loaded
   const navigate = useNavigate()
-  const [tab, setTab] = useState<SquadTab>('squad')
+  const [tab, setTab] = useState<SquadTab>('board')
   const [ratingWin, setRatingWin] = useState<RatingWindow>('season')
   const picks: any[] = picksData.picks || []
   const entryHistory = picksData.entry_history || {}
@@ -171,7 +173,14 @@ function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
         <Tabs tabs={SQUAD_TABS(hasLeagues)} active={tab} onChange={(id) => setTab(id as SquadTab)} layoutId="myteam-tab" />
       </div>
 
-      {tab === 'squad' ? (
+      {tab === 'board' ? (
+        <TeamBoard
+          picksData={picksData}
+          teamId={teamId}
+          gw={gw}
+          teamName={entryData?.name ? String(entryData.name) : undefined}
+        />
+      ) : tab === 'squad' ? (
         <>
           {/* Your card for the week: what it returned, where it ranked, and a
               rating for the decisions rather than the players. */}
@@ -245,9 +254,54 @@ function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
   )
 }
 
-type SquadTab = 'squad' | 'league'
-const SQUAD_TABS = (hasLeagues: boolean): TabDef[] =>
-  hasLeagues ? [{ id: 'squad', label: 'Squad & Report' }, { id: 'league', label: 'Mini-League' }] : [{ id: 'squad', label: 'Squad & Report' }]
+type SquadTab = 'board' | 'squad' | 'league'
+const SQUAD_TABS = (hasLeagues: boolean): TabDef[] => [
+  { id: 'board', label: 'Board' },
+  { id: 'squad', label: 'Squad & Report' },
+  ...(hasLeagues ? [{ id: 'league', label: 'Mini-League' }] : []),
+]
+
+/* THE BOARD IS THE SQUAD BUILDER, NOT A COPY OF IT.
+ *
+ * Same component, same season spine, same gameweek stepper, same pitch, same
+ * Players/Analysis/Fixtures/Risk column — the only difference is that the
+ * fifteen arrives from your Team ID instead of being picked. Rendering the
+ * real thing rather than reimplementing it is why this is thirty lines:
+ * anything that improves the Squad Builder improves this on the same commit,
+ * and the two cannot drift apart.
+ *
+ * SEEDING, AND WHY IT IS NOT DONE ON EVERY RENDER. The board reads its fifteen
+ * from the plan library, so your real squad has to become a plan. Writing the
+ * live picks over that plan on every visit would throw away any transfer you
+ * had tried out on the board, which is the one thing this page is for. So it
+ * seeds once per gameweek: the marker records which team and which gameweek
+ * the plan was built from, and only a new gameweek — when your real squad has
+ * genuinely moved on — re-imports. Inside a gameweek the board is yours.
+ */
+const SEED_KEY = 'fpl_myteam_seed'
+
+function TeamBoard({ picksData, teamId, gw, teamName }: {
+  picksData: any; teamId: string; gw: number; teamName?: string
+}) {
+  /* Seeded in a lazy initialiser, which runs ONCE and — the point — before
+     SquadBuilder mounts and takes its own read of the library. Doing it in an
+     effect instead put the write after the child's first render, and the board
+     came up "0/15 picked" with the plan sitting in localStorage beside it. */
+  useState(() => {
+    const base: number[] = (picksData?.picks ?? [])
+      .map((p: any) => Number(p.element))
+      .filter((n: number) => Number.isFinite(n))
+    if (base.length !== 15) return false
+    const marker = `${teamId}:${gw}`
+    let last: string | null = null
+    try { last = localStorage.getItem(SEED_KEY) } catch { /* private mode */ }
+    ensurePlan(teamName?.trim() || `Team ${teamId}`, base, last !== marker)
+    try { localStorage.setItem(SEED_KEY, marker) } catch { /* private mode */ }
+    return true
+  })
+
+  return <SquadBuilder bare banner={null} />
+}
 
 /**
  * Decorative half-pitch markings behind the Starting XI (own goal at the top,

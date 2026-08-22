@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { PREVIEW } from '../lib/flags'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -256,7 +256,19 @@ const PRICE_MAX = 15.5 // a hair above the most expensive player so nobody is fi
     would have bought, with four more weeks of season beside it. */
 const SPINE_WEEKS = 12
 
-export default function SquadBuilder() {
+/** Rendered as its own page at /squad, and embedded inside My Team, where the
+ *  fifteen is your real one rather than one you picked. The board is identical
+ *  either way — that is the point of it being the same component and not a
+ *  copy — so all that differs is the banner above it and, when embedded, the
+ *  PageShell the host page has already opened. */
+export interface SquadBuilderProps {
+  /** Replace the banner. `null` renders none, for an embed that has its own. */
+  banner?: { title: string; subtitle: string } | null
+  /** Skip PageShell — the host page is already inside one. */
+  bare?: boolean
+}
+
+export default function SquadBuilder({ banner, bare = false }: SquadBuilderProps = {}) {
   const { data, error } = useCore()
   const navigate = useNavigate()
   /* The fifteen now belongs to a PLAN, and there can be several. The library
@@ -740,18 +752,26 @@ export default function SquadBuilder() {
     />
   )
 
+  /* One wrapper for both callers, so the embed cannot drift from the page. */
+  const Shell = bare
+    ? ({ children }: { children: ReactNode }) => <>{children}</>
+    : PageShell
+  const bannerFor = (subtitle: string) =>
+    banner === null ? null
+      : <SectionBanner imgKey="squad" title={banner?.title ?? 'Squad Builder'} subtitle={banner?.subtitle ?? subtitle} />
+
   if (!data) {
     return (
-      <PageShell>
-        <SectionBanner imgKey="squad" title="Squad Builder" subtitle="Build a 15-man squad within £100m and rate it" />
+      <Shell>
+        {bannerFor('Build a 15-man squad within £100m and rate it')}
         <PageSkeleton error={error} />
-      </PageShell>
+      </Shell>
     )
   }
 
   return (
-    <PageShell>
-      <SectionBanner imgKey="squad" title="Squad Builder" subtitle={`Pick your Gameweek ${buildGw} fifteen within £100m, then step forward week by week — transfers, captain and chips`} />
+    <Shell>
+      {bannerFor(`Pick your Gameweek ${buildGw} fifteen within £100m, then step forward week by week — transfers, captain and chips`)}
 
       {/* A fork switches you into a plan that looks identical to the one you
           were in — same fifteen, same weeks behind you — so without a line
@@ -1395,7 +1415,7 @@ export default function SquadBuilder() {
         captain={planner.week?.captain ?? null} vice={planner.week?.vice ?? null} chip={planner.week?.chip ?? null}
         open={shareOpen} onClose={() => setShareOpen(false)}
       />
-    </PageShell>
+    </Shell>
   )
 }
 

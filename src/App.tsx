@@ -54,7 +54,9 @@ const Legal = lazyRetry(PAGE_LOADERS.legal)
 const Scouting = lazyRetry(PAGE_LOADERS.scouting)
 const Fixtures = lazyRetry(PAGE_LOADERS.fixtures)
 const Compare = lazyRetry(PAGE_LOADERS.compare)
-const SquadBuilder = lazyRetry(PAGE_LOADERS.squad)
+/* Takes optional props now — it is embedded in My Team as well as being its
+   own page — and the route renders it with none. */
+const SquadBuilder = lazyRetry(PAGE_LOADERS.squad as () => Promise<{ default: React.ComponentType<unknown> }>)
 const Captaincy = lazyRetry(PAGE_LOADERS.captaincy)
 const MyRatings = lazyRetry(PAGE_LOADERS.myratings)
 const Debug = lazyRetry(() => import('./pages/Debug'))

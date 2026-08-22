@@ -122,6 +122,48 @@ export interface Plans {
   full: boolean
 }
 
+/** Put a squad into the library and make it active, WITHOUT a hook.
+ *
+ *  My Team needs this. It renders the Squad Builder with your real fifteen,
+ *  and the builder reads the library through its own usePlans() — a separate
+ *  instance from any the host holds. Seeding through the host's hook writes
+ *  localStorage and updates the host's state, but the builder mounted in the
+ *  same render keeps the snapshot it read first, so the board comes up empty.
+ *  (The storage event that keeps two TABS in step does not fire in the
+ *  document that wrote it.) Measured that way round before this was written.
+ *
+ *  So this is a plain read-modify-write the caller runs BEFORE the builder
+ *  mounts, and usePlans picks it up in its own initial read.
+ *
+ *  `refresh` false leaves an existing plan's fifteen alone — the caller has
+ *  decided your edits to it matter more than re-importing the same squad.
+ *  Returns the plan's id.
+ */
+export function ensurePlan(name: string, base: number[], refresh: boolean): string {
+  const lib = read()
+  const label = name.slice(0, 28)
+  const found = lib.plans.find((p) => p.name === label)
+  if (found) {
+    const next: Library = {
+      ...lib,
+      activeId: found.id,
+      plans: refresh
+        ? lib.plans.map((p) => (p.id === found.id ? { ...p, base: [...base], updated: Date.now() } : p))
+        : lib.plans,
+    }
+    write(next)
+    return found.id
+  }
+  const id = newId()
+  // At the cap, the least recently edited plan makes way — otherwise your own
+  // team could not be imported at all, which is the worse failure.
+  const room = lib.plans.length >= MAX_PLANS
+    ? [...lib.plans].sort((a, b) => a.updated - b.updated).slice(1)
+    : lib.plans
+  write({ ...lib, plans: [...room, { id, name: label, base: [...base], updated: Date.now() }], activeId: id })
+  return id
+}
+
 export function usePlans(): Plans {
   const [lib, setLib] = useState<Library>(() => (typeof window === 'undefined' ? EMPTY : read()))
 
