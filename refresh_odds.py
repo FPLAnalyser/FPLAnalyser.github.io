@@ -274,6 +274,21 @@ def constraints_from_event(ev, home, away):
             cons.append(("over", ln, p_over, 1.0 if ln == anchor else w_other))
         used.append("ou" if not others else "ou+aou")
 
+    # A fixture nobody has quoted a total for is two unknowns and one equation.
+    # Any pair of lambdas that gives the right win probability fits it, so the
+    # search returns whichever the grid reached first — 4.61 and 3.86 for one
+    # GW2 fixture, eight and a half goals, and two such fits are banked in the
+    # live file right now at totals of 1.60 and 3.58. The result market says
+    # nothing about how many goals there will be, so say so: anchor the total
+    # at the league average and let 1X2 do what it can do, which is split it.
+    # Weak enough that any real line outvotes it, and only added when there is
+    # no line at all.
+    if not any(c[0] == "over" for c in cons):
+        p_over = 1 - sum(math.exp(-LEAGUE_TOTAL_PRIOR) * LEAGUE_TOTAL_PRIOR ** k
+                         / math.factorial(k) for k in range(3))
+        cons.append(("over", 2.5, p_over, 0.6))
+        used.append("prior")
+
     if btts_y and btts_n:
         cons.append(("btts", None, demargin(median(btts_y), median(btts_n))[0], 0.8))
         used.append("btts")

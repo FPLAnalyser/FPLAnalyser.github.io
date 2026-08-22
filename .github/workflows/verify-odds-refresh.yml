@@ -16,7 +16,7 @@ on:
       enrich_limit:
         description: 'Fixtures to enrich (4 credits each; 0 = all)'
         type: string
-        default: '6'
+        default: '3'
   push:
     branches-ignore: [main]
     paths:
@@ -42,5 +42,5 @@ jobs:
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           ENRICH: '1'
-          ENRICH_LIMIT: ${{ inputs.enrich_limit || '6' }}
+          ENRICH_LIMIT: ${{ inputs.enrich_limit || '3' }}
 
