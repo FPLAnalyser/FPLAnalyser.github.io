@@ -231,13 +231,18 @@ if __name__ == "__main__":
         # Last resort: the quoted surname alone, when exactly one player in the
         # fixture answers to it. "Ben White" is "Benjamin White" in FPL, and no
         # amount of key-building on the record side produces the short form.
+        # Every token of the family name, not just the last. FPL files Yeremy
+        # Pino as "Pino Santos", so an index keyed on the last token held
+        # "santos" and never "pino" — which is the only name a bookmaker uses.
+        # Spanish and Portuguese double surnames make this the rule rather than
+        # the exception. Tokens claimed by two players in the fixture are
+        # dropped, as before.
         surnames = {}
         for pl in players:
             if pl["team"] in (h, a):
-                sn = [t for t in fold(pl["second_name"]).split() if t not in PARTICLES]
-                if sn:
-                    surnames.setdefault(sn[-1], []).append(pl["id"])
-        surnames = {k: v[0] for k, v in surnames.items() if len(v) == 1}
+                for tok in set(fold(pl["second_name"]).split()) - PARTICLES:
+                    surnames.setdefault(tok, set()).add(pl["id"])
+        surnames = {k: next(iter(v)) for k, v in surnames.items() if len(v) == 1}
         squad = [pl for pl in players if pl["team"] in (h, a)]
         rows, claims = {}, {}
         for market, by_name in quotes.items():
