@@ -1,0 +1,76 @@
+name: Refresh player props
+
+# Per-player market prices into site_data/<season>/player_props.json, which the
+# xP engine blends with its own shot-profile estimate.
+#
+# Hourly, but it almost never spends: the gate reads FPL's bootstrap and the
+# odds.json already in the repo, and neither costs a credit. Two pulls per
+# gameweek actually buy anything —
+#
+#   post  once the previous round has finished and the next one is priced, for
+#         people planning transfers across the week
+#   pre   at the last wake that still leaves PROPS_LEAD_HOURS before the
+#         deadline, which is what puts it after the press conferences. A fixed
+#         window would fire on entering it — seven in the morning for a Friday
+#         night deadline, before a manager has spoken.
+#
+# 2 credits a fixture, so 40 a round, ~170 a month, ~240 in a six-gameweek
+# December. With the daily odds pull at 62 and its enrichment at 120, that is
+# 422 of the 500 free tier in the worst month.
+on:
+  schedule:
+    - cron: '40 * * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Pull now, whatever the schedule says'
+        type: boolean
+        default: false
+      limit:
+        description: 'Cap fixtures (2 credits each; 0 = all)'
+        type: string
+        default: '0'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-player-props
+  cancel-in-progress: false
+
+jobs:
+  props:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - run: git fetch origin main && git reset --hard origin/main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python refresh_player_props.py
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          PROPS_LIMIT: ${{ inputs.limit || '0' }}
+          PROPS_STAGE: ${{ inputs.force && 'force' || '' }}
+      - name: Commit if changed
+        run: |
+          git add site_data/*/player_props.json
+          if git diff --cached --quiet; then
+            echo "No pull was due."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Refresh player props"
+          # Same rebase-and-retry as the odds refresh: this runs hourly and the
+          # other data jobs push to the same branch, so a rejected push here
+          # would otherwise drop a pull we have already paid for.
+          for attempt in 1 2 3 4 5; do
+            if git push; then exit 0; fi
+            echo "push rejected (attempt $attempt) — rebasing onto the branch tip"
+            git pull --rebase origin main || exit 1
+          done
+          echo "still could not push after 5 attempts"
+          exit 1

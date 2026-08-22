@@ -83,11 +83,22 @@ ENRICH_MIN_CREDITS = 150
 # a single price, and it cost a credit a day to fetch.
 BULK_MARKETS = "h2h,totals"
 
-# Per-event, per region, 1 credit per market per fixture. Split by region
-# because the books differ: UK quotes btts (11 of 21) and alternate totals
-# (9), US quotes the team totals no UK book offers.
-EVENT_MARKETS = (("uk", "btts,alternate_totals"),
-                 ("us", "team_totals,alternate_team_totals"))
+# Per-event, per region, 1 credit per market per fixture.
+#
+# The US leg — team totals, the only market that speaks to one side's goals
+# rather than to the pair — was measured against a run without it and moved the
+# clean sheet by at most 0.27 percentage points, a hundredth of a point on a
+# defender's page. 1X2 and a totals ladder already determine both lambdas, so a
+# direct per-team quote confirms rather than informs. It cost two credits a
+# fixture, which in a six-gameweek December is 120 that the player props use
+# better. Off, not deleted: the parsing and the model term remain, and
+# ODDS_EVENT_MARKETS turns it back on without a code change —
+#     ODDS_EVENT_MARKETS="uk:btts,alternate_totals us:team_totals"
+EVENT_MARKETS = tuple(
+    tuple(part.split(":", 1))
+    for part in os.environ.get("ODDS_EVENT_MARKETS",
+                               "uk:btts,alternate_totals").split()
+    if ":" in part)
 
 
 def get(url, as_json=True):

@@ -103,6 +103,61 @@ def squad_index(players, team_ids):
     return idx, clashes
 
 
+# Twice a gameweek, and the second one is the whole point.
+#
+# POST is for planning: as soon as the previous round is done, the next one is
+# priced and people are picking transfers off it.
+#
+# PRE has to land after the press conferences and early enough to act on. Those
+# pull in opposite directions and the deadline shape decides how tight it gets:
+# a Saturday round has its news out by Friday lunchtime, but a Friday-night
+# deadline is the SAME DAY as the pressers for everyone playing that weekend,
+# and a midweek evening deadline is the same again. So the rule cannot be
+# "fire when the deadline comes inside a window" — that fires at the top of the
+# window, which for a Friday 18:30 deadline is seven in the morning, before a
+# manager has said a word. It is "fire at the last wake that still leaves
+# PROPS_LEAD_HOURS", which lands at three in the afternoon instead.
+#
+# The cron is hourly because waking is free: the gate reads FPL's bootstrap and
+# our own odds.json, neither of which costs a credit. Only the pull spends.
+PROPS_LEAD_HOURS = float(os.environ.get("PROPS_LEAD_HOURS", "3"))
+PROPS_CRON_HOURS = float(os.environ.get("PROPS_CRON_HOURS", "1"))
+PROPS_POST_MIN_HOURS = float(os.environ.get("PROPS_POST_MIN_HOURS", "36"))
+
+
+def decide_stage(events, now, done):
+    """Which pull, if any, is due — and the gameweek it is for.
+
+       `done` is what the last written file recorded, so a second wake inside
+       the same window cannot spend the credits twice."""
+    dated = sorted(((datetime.datetime.fromisoformat(e["deadline_time"].replace("Z", "+00:00")), e)
+                    for e in events), key=lambda x: x[0])
+    nxt = next(((dl, e) for dl, e in dated if dl > now), None)
+    if not nxt:
+        return None, None, "no upcoming deadline"
+    dl, ev = nxt
+    gw = ev["id"]
+    lead = (dl - now).total_seconds() / 3600.0
+    already = set(done.get(str(gw), []))
+
+    # PRE first: if both could fire, the later one is the one worth having.
+    if PROPS_LEAD_HOURS <= lead < PROPS_LEAD_HOURS + PROPS_CRON_HOURS:
+        if "pre" in already:
+            return None, gw, f"GW{gw} pre-deadline pull already done"
+        return "pre", gw, f"GW{gw} deadline in {lead:.1f}h — last wake before the lead floor"
+    if lead < PROPS_LEAD_HOURS:
+        return None, gw, f"GW{gw} deadline in {lead:.1f}h — inside the lead floor, too late to be useful"
+
+    prev = [e for d, e in dated if d <= now]
+    if prev and not prev[-1].get("finished"):
+        return None, gw, f"GW{prev[-1]['id']} still playing"
+    if lead < PROPS_POST_MIN_HOURS:
+        return None, gw, f"GW{gw} deadline in {lead:.1f}h — holding for the pre-deadline pull"
+    if "post" in already:
+        return None, gw, f"GW{gw} post-round pull already done"
+    return "post", gw, f"GW{gw} priced and the round is over — {lead:.1f}h to the deadline"
+
+
 def one_player(names):
     """Are these spellings of the same man? Yeremi and Yeremy are; Jaydon Jones
        and Jenson Jones are not, and never may be."""
@@ -206,6 +261,16 @@ if __name__ == "__main__":
     team_by_norm = {ro.norm(t["name"]): t["id"] for t in boot["teams"]}
     players = boot["elements"]
 
+    banked = ro.read_existing(out_path)
+    pulls = banked.get("pulls", {}) if isinstance(banked.get("pulls"), dict) else {}
+    now = datetime.datetime.now(datetime.timezone.utc)
+    stage, target_gw, why = decide_stage(boot["events"], now, pulls)
+    if os.environ.get("PROPS_STAGE", "").strip() in ("force", "1"):
+        stage, why = stage or "manual", why + " (forced)"
+    print(why)
+    if not stage:
+        sys.exit(0)
+
     # Team lambdas already solved by refresh_odds, for the calibration check.
     lam, gw_of = {}, {}
     for m in ro.read_existing(os.path.join(ro.ROOT, season, "odds.json")).get("matches", []):
@@ -224,6 +289,12 @@ if __name__ == "__main__":
         a = team_by_norm.get(ro.norm(ev["away_team"]))
         if h is None or a is None:
             unmatched.append(f"club: {ev['home_team']} v {ev['away_team']}")
+            continue
+        # No banked lambda means the bulk pull has not priced this fixture yet.
+        # The calibration needs one, so a pull now would spend two credits to
+        # produce numbers we could not anchor. It will be priced by tomorrow.
+        if (h, a) not in lam:
+            print(f"  not yet priced, skipping: {ev['home_team']} v {ev['away_team']}")
             continue
 
         merged = {"bookmakers": []}
@@ -349,6 +420,12 @@ if __name__ == "__main__":
         # a squad that quietly matches four fifths looks like a squad the
         # market expects not to score.
         "unmatched": sorted(set(unmatched)),
+        # Which pulls each gameweek has had, so a second wake inside the same
+        # window does not buy the same prices twice. Carried forward, not
+        # rewritten: the file is replaced every pull.
+        "pulls": {**pulls, str(target_gw): sorted(set(pulls.get(str(target_gw), []) + [stage]))},
+        "stage": stage,
+        "gw": target_gw,
     }
     matched = len(out)
     print(f"{matched} players matched, {len(unmatched)} names unmatched "
