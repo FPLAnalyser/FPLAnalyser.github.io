@@ -276,6 +276,11 @@ if __name__ == "__main__":
         "regions": REGIONS,
         "markets": MARKETS.split(","),
         "players": out,
+        # Who the books quoted and we could not place. Carried in the file
+        # rather than left in a log line, because it is the coverage number:
+        # a squad that quietly matches four fifths looks like a squad the
+        # market expects not to score.
+        "unmatched": sorted(set(unmatched)),
     }
     matched = len(out)
     print(f"{matched} players matched, {len(unmatched)} names unmatched "

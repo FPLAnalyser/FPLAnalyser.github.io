@@ -54,6 +54,14 @@ jobs:
       # sandbox that reads these logs — an artifact nobody can fetch is not a
       # verification step.
       - run: cat site_data/*/player_props.json
+      # Last, so it is readable from a short tail of the log — the full file
+      # above is one very long line.
+      - run: |
+          python3 -c "
+          import json, glob
+          d = json.load(open(glob.glob('site_data/*/player_props.json')[0]))
+          print('MATCHED:', len(d['players']))
+          print('UNMATCHED:', json.dumps(d['unmatched']))"
       - uses: actions/upload-artifact@v4
         with:
           name: player-props
