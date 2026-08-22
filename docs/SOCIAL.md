@@ -155,15 +155,47 @@ picks the players:
   `dc_rules.py`. The badge shows only when it was actually cleared, and the
   `DC/10` column turns green at the same moment.
 
-Bonus is outlined in gold rather than filled in green because it is the one
-badge that can still change — `pull-gw.yml` keeps writing until FPL closes the
-gameweek, and the footer says `Provisional — bonus not final` until it does.
+Bonus is the same green as the rest but outlined rather than filled, because
+it is the one badge that can still change — `pull-gw.yml` keeps writing until
+FPL closes the gameweek, and the footer says `Provisional — bonus not final`
+until it does. It reads `+3`, not `+3 BONUS`: with three badges beside it on
+the name line, the longer label pushed "Ødegaard" into an ellipsis.
 
-The xG/xA bar is two golds a value apart, and the `xG` and `xA` labels in the
-stat strip are tinted to match, which is what lets the bar go without a legend
-of its own. The first draft used `--chart-1` and `--chart-2`, the site's series
-colours: correct for a graph inside the product, wrong for a picture meant to
-be recognisable as this brand at thumbnail size on somebody else's timeline.
+## Gold means one thing
+
+**Gold marks whoever led the round on a column** — xG, xA or defensive
+contribution — and the footer says so, because a colour nobody has been given
+a key to is decoration. The scope needs no special case: the maxima are taken
+over everyone in the file, which with one fixture played *is* that match and on
+a full weekend is the gameweek, and the footer wording follows. Zero never
+counts as a lead; in a round where nobody registered an expected assist, six
+tiles marked joint-top on 0.00 would be a decoration, not a fact.
+
+Everything else gold had to give it up. That is why the bonus badge is a green
+outline rather than the gold one it started as: the same colour meaning two
+things a centimetre apart is worse than a slightly duller badge.
+
+## The bar's two colours
+
+`--palette` picks the pair, and none of them is gold:
+
+| | xG | xA | |
+|---|---|---|---|
+| `aurora` *(default)* | teal | violet | Cool, high contrast, and nothing else on the card is either — which is what a legend colour wants to be |
+| `neon` | cyan | magenta | The loudest legible pair on black. Picks a fight with the gold, which is the point of offering it |
+| `team` | the club's accent | a neutral | Reads best on a full weekend where six tiles are six clubs; in a single match every Arsenal tile is the same red |
+
+`team` reads the accents out of `teamColors` in `src/lib/util.ts` rather than
+keeping a second copy of twenty hex values — the copy that goes stale is always
+the one nobody looks at. It throws if that declaration changes shape, which is
+the failure worth having: a card that stops rendering beats one quietly drawing
+last season's colours.
+
+Two earlier attempts are worth not repeating. `--chart-1` and `--chart-2`, the
+site's series colours, put a flat mid-gold beside a cornflower blue — correct
+for a graph inside the product, wrong for a picture meant to be recognisable as
+this brand at thumbnail size on somebody else's timeline. Two golds a value
+apart fixed the brand problem and were too close to tell apart at all.
 
 It does not need `npm run build`. The card is its own HTML rather than a
 screenshot of the site, because the site has no page shaped like this and

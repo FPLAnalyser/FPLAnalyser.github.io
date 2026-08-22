@@ -62,6 +62,33 @@ const FORMATS = {
 const format = FORMATS[arg('format', 'square')]
 if (!format) throw new Error(`unknown --format (want ${Object.keys(FORMATS).join(', ')})`)
 
+/**
+ * The bar's two segments.
+ *
+ * Gold is spoken for twice over on this card — it is the brand, and it now
+ * marks whoever led the match in a column — so the bar cannot have it as well
+ * without the same colour meaning two things a centimetre apart. Two golds a
+ * value apart was the first attempt at that and they were too close to tell
+ * apart at all; the pairs here are all cross-hue.
+ *
+ *   aurora  teal against violet. Cool, high contrast, and nothing else on the
+ *           card is either — which is what a legend colour wants to be.
+ *   neon    cyan against magenta. The loudest legible pair on black; picks a
+ *           fight with the gold, which is the point of offering it.
+ *   team    the club's own accent for shooting, a neutral for creating. Reads
+ *           best on a full weekend where six tiles are six clubs; in a single
+ *           match every Arsenal tile is the same red.
+ */
+const PALETTES = {
+  aurora: { xg: '#2fe0c4', xa: '#b79bf0' },
+  neon: { xg: '#22e0ff', xa: '#ff4d9d' },
+  team: { xg: 'club', xa: 'rgba(237,239,243,.52)' },
+}
+
+const paletteName = arg('palette', 'aurora')
+const palette = PALETTES[paletteName]
+if (!palette) throw new Error(`unknown --palette (want ${Object.keys(PALETTES).join(', ')})`)
+
 const one = (v) => Math.round(v * 10) / 10
 const two = (v) => (Math.round(v * 100) / 100).toFixed(2)
 
@@ -86,6 +113,28 @@ const gw = Number(arg('gw', await latestGw()))
 const actual = await read(path.join('actuals', `gw${gw}.json`))
 const ratings = (await maybe('ratings.json')) || []
 const teams = (await maybe('teams.json')) || []
+
+/**
+ * The club accents the site already uses, read from the site rather than
+ * copied into here.
+ *
+ * A second copy of twenty hex values is a second copy to go stale, and the one
+ * that goes stale is always the one nobody looks at. Parsing throws loudly if
+ * the shape of that declaration ever changes, which is the failure mode worth
+ * having — a card that stops rendering beats a card quietly drawing last
+ * season's colours.
+ */
+async function clubColours() {
+  const src = await readFile(path.join(ROOT, 'src/lib/util.ts'), 'utf8')
+  const block = /export const teamColors[^{]*\{([\s\S]*?)\n\}/.exec(src)
+  if (!block) throw new Error('no teamColors in src/lib/util.ts — the team palette reads its accents from there')
+  const out = new Map()
+  for (const m of block[1].matchAll(/\b([A-Z]{3})\s*:\s*'(#[0-9a-fA-F]{3,8})'/g)) out.set(m[1], m[2])
+  if (out.size < 20) throw new Error(`teamColors parsed as ${out.size} clubs, expected the whole league`)
+  return out
+}
+
+const clubs = palette.xg === 'club' ? await clubColours() : new Map()
 
 const byCode = new Map(ratings.map((r) => [r.code, r]))
 const teamCode = new Map(teams.map((t) => [t.short_name, t.code]))
@@ -165,6 +214,23 @@ function fixtures() {
 const games = fixtures()
 
 /**
+ * The best xG, xA and defensive contribution anybody managed, so a tile can
+ * say when its man led on one.
+ *
+ * Over everyone in the file, which is the right scope in both directions
+ * without a special case: with one fixture played the file IS that match, and
+ * on a full weekend it is the gameweek. Zero never counts as a lead — in a
+ * round where nobody registered an expected assist, six tiles marked joint-top
+ * on 0.00 is a decoration, not a fact.
+ */
+const best = {
+  xg: Math.max(...played.map((p) => p.expected_goals || 0)),
+  xa: Math.max(...played.map((p) => p.expected_assists || 0)),
+  dc: Math.max(...played.map((p) => p.defensive_contribution || 0)),
+}
+const leads = (key, v) => v > 0 && v >= best[key]
+
+/**
  * A repo file as something an <img> can load, or null if it is not there.
  *
  * Absolute, because the page is written to `--out` and a relative path is then
@@ -199,6 +265,12 @@ function tile(p) {
     dcThr: thr,
     bps: p.bps,
     bonus: p.bonus || 0,
+    // Whoever topped the match on a column gets it in gold. Announced in the
+    // footer, because a colour nobody has been given a key to is decoration.
+    topXg: leads('xg', p.expected_goals || 0),
+    topXa: leads('xa', p.expected_assists || 0),
+    topDc: leads('dc', p.defensive_contribution || 0),
+    club: clubs.get(p.team) || 'var(--ink-2)',
     saves: p.saves,
     // A clean sheet only pays a keeper, a defender and — at a quarter of the
     // rate — a midfielder. The API sets the flag on the whole side, so a
@@ -253,14 +325,13 @@ function subtitle() {
 /**
  * A statistic in the strip under a player's name.
  *
- * `tone` colours the value — green when a threshold was actually cleared, so
- * the eye finds the two points that were earned rather than being asked to
- * remember that ten is the number for a defender and twelve is not. `key`
- * colours the LABEL to match a segment of the bar above, which is what lets
- * the bar go without a legend of its own.
+ * `tone` colours the value: gold for the best in the match, green for a
+ * defensive threshold cleared. Gold wins a tie between them — leading the
+ * match is the rarer thing, and the DC badge on the name line has already said
+ * the threshold was cleared.
  */
-const stat = (label, value, { tone = '', key = '' } = {}) =>
-  `<div class="s"><b class="${tone}">${value}</b><i class="${key}">${label}</i></div>`
+const stat = (label, value, tone = '') =>
+  `<div class="s"><b class="${tone}">${value}</b><i>${label}</i></div>`
 
 /**
  * Everything this appearance actually earned, as badges.
@@ -271,9 +342,13 @@ const stat = (label, value, { tone = '', key = '' } = {}) =>
  * as a goal or more, and a card that showed only goals and assists was
  * crediting a 90-minute defender with nothing at all.
  *
- * Bonus is set apart in gold because it is the one badge that can still
- * change: `pull-gw.yml` keeps writing until FPL closes the gameweek, and until
- * then the footer says so.
+ * Bonus is set apart as an outline rather than a fill, because it is the one
+ * badge that can still change: `pull-gw.yml` keeps writing until FPL closes
+ * the gameweek, and until then the footer says so. Outline rather than a
+ * different colour because gold is now spoken for — it marks the best in the
+ * match, and a gold badge here would be a second meaning for it a centimetre
+ * away. `+3` rather than `+3 BONUS` for width: with three badges beside it,
+ * the longer label pushed "Ødegaard" into an ellipsis.
  */
 function badges(t) {
   const out = []
@@ -281,7 +356,7 @@ function badges(t) {
   if (t.assists) out.push(['ret', `${t.assists}A`])
   if (t.cs) out.push(['ret', 'CS'])
   if (t.dcHit) out.push(['ret', 'DC'])
-  if (t.bonus) out.push(['bon', `+${t.bonus} BONUS`])
+  if (t.bonus) out.push(['bon', `+${t.bonus}`])
   return out.map(([k, v]) => `<em class="chip ${k}">${esc(v)}</em>`).join('')
 }
 
@@ -305,13 +380,20 @@ const peak = Math.max(...picked.map((t) => t.xg + t.xa), 0.01)
  */
 function bar(t) {
   const pct = (v) => `${(v / peak) * 100}%`
+  // The club accent only varies per tile, so it rides on the element rather
+  // than in the stylesheet; every other palette resolves once, in :root.
+  const xg = palette.xg === 'club' ? t.club : 'var(--seg-xg)'
   return `
     <div class="xgi">
       <div class="track">
-        <span class="g" style="width:${pct(t.xg)}"></span>
-        <span class="a" style="width:${pct(t.xa)}"></span>
+        <span style="width:${pct(t.xg)};background:${xg}"></span>
+        <span style="width:${pct(t.xa)};background:var(--seg-xa)"></span>
       </div>
-      <div class="earned">${badges(t)}<b>${two(t.xg + t.xa)} xGI</b></div>
+      <div class="key">
+        <em style="background:${xg}"></em>xG
+        <em style="background:var(--seg-xa)"></em>xA
+        <b>${two(t.xg + t.xa)} xGI</b>
+      </div>
     </div>`
 }
 
@@ -321,7 +403,7 @@ function card(t) {
     <header>
       ${t.photo ? `<img class="face" src="${t.photo}" alt="">` : '<div class="face"></div>'}
       <div class="who">
-        <h2>${esc(t.name)}</h2>
+        <h2><span>${esc(t.name)}</span>${badges(t)}</h2>
         <p>${t.badge ? `<img class="crest" src="${t.badge}" alt="">` : ''}${esc(t.pos)}${t.price ? ` · £${t.price}m` : ''}${games.length === 1 ? '' : ` · v ${esc(t.opp)}`}</p>
       </div>
       <div class="pts"><b>${t.points}</b><i>pts</i></div>
@@ -329,11 +411,11 @@ function card(t) {
     ${bar(t)}
     <div class="strip">
       ${stat('MIN', t.mins)}
-      ${stat('xG', two(t.xg), { key: 'g' })}
-      ${stat('xA', two(t.xa), { key: 'a' })}
+      ${stat('xG', two(t.xg), t.topXg ? 'top' : '')}
+      ${stat('xA', two(t.xa), t.topXa ? 'top' : '')}
       ${t.pos === 'GKP'
         ? stat('SAVES', t.saves)
-        : stat(`DC/${t.dcThr}`, t.dc, { tone: t.dcHit ? 'good' : '' })}
+        : stat(`DC/${t.dcThr}`, t.dc, t.topDc ? 'top' : t.dcHit ? 'good' : '')}
       ${stat('BPS', t.bps)}
       ${t.shots === null ? '' : stat('SHOTS', t.shots)}
     </div>
@@ -359,15 +441,7 @@ const html = `<!doctype html><meta charset="utf-8">
     --ink-1:#edeff3; --ink-2:#aaacb0; --ink-3:#828386;
     --line-subtle:rgba(255,255,255,.07); --line-mid:rgba(255,255,255,.12);
     --accent:#c9a227; --accent-2:#ead188; --accent-strong:#9a761c; --good:#3ddc7a;
-    /* The bar's two segments. The first draft borrowed --chart-1 and
-       --chart-2, the site's series colours, which put a flat mid-gold beside a
-       cornflower blue: correct for a graph inside the product, wrong for a
-       picture that is meant to be recognisable as this brand at thumbnail size
-       on somebody else's timeline. Both are now golds a value apart, light for
-       xG and bronze for xA, and both are legible as 13px label text as well as
-       12px of bar — which is what lets the same pair do the legend's job in
-       the strip below and the bar go without one. */
-    --seg-xg:#ead188; --seg-xa:#b8933a;
+    --seg-xg:${palette.xg === 'club' ? 'var(--ink-2)' : palette.xg}; --seg-xa:${palette.xa};
   }
   *{margin:0;padding:0;box-sizing:border-box}
   body{
@@ -408,10 +482,11 @@ const html = `<!doctype html><meta charset="utf-8">
     object-position:top center; background:var(--surface-2);
   }
   .who{flex:1; min-width:0}
-  .who h2{
-    font-weight:800; font-size:32px; letter-spacing:-.02em;
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  }
+  .who h2{display:flex; align-items:center; gap:7px; font-weight:800; font-size:30px; letter-spacing:-.02em}
+  /* The name yields, the badges do not. A tile that elides "1G" to fit
+     "Lewis-Skelly" has dropped the thing the reader was looking for; one that
+     shows "Lewis-Skell… 1G CS" has not. */
+  .who h2 span{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .who p{
     display:flex; align-items:center; gap:8px; margin-top:4px;
     font-size:19px; color:var(--ink-2); white-space:nowrap;
@@ -425,39 +500,32 @@ const html = `<!doctype html><meta charset="utf-8">
     display:flex; height:12px; border-radius:999px; overflow:hidden;
     background:var(--surface-2);
   }
-  .track .g{background:var(--seg-xg)}
-  .track .a{background:var(--seg-xa)}
-  /* A fixed minimum, so a row of badges and no badges at all produce the same
-     tile height and the six line up. */
-  .earned{
-    display:flex; align-items:center; gap:8px; margin-top:13px; min-height:31px;
+  .key{
+    display:flex; align-items:center; gap:7px; margin-top:11px;
+    font-size:16px; color:var(--ink-3); letter-spacing:.02em;
   }
-  .earned b{
-    margin-left:auto; font-weight:800; font-size:16px; color:var(--ink-2);
-    letter-spacing:.02em; font-variant-numeric:tabular-nums;
-  }
+  .key em{width:11px; height:11px; border-radius:3px; margin-left:6px}
+  .key em:first-child{margin-left:0}
+  .key b{margin-left:auto; font-weight:800; color:var(--ink-2); font-variant-numeric:tabular-nums}
   .chip{
-    flex:0 0 auto; font-style:normal; padding:4px 11px; border-radius:999px;
+    flex:0 0 auto; font-style:normal; padding:3px 9px; border-radius:999px;
     border:1.5px solid transparent; line-height:1.35;
-    font-weight:800; font-size:17px; letter-spacing:.04em;
+    font-weight:800; font-size:15px; letter-spacing:.04em;
   }
   /* Earned outright: filled green, the site's own colour for a good number.
-     Bonus: outlined gold, and outlined on purpose. A gold fill at the same
-     low alpha as the green one lands as olive against surface-1 and reads as
-     a dirty green rather than a second colour, and the difference in kind is
-     the point — bonus is the one badge that can still change. */
+     Bonus: the same green, outlined — one family, because both are points on
+     the board, and a different treatment because only one of them can still
+     change. */
   .chip.ret{background:rgba(61,220,122,.14); color:var(--good)}
-  .chip.bon{border-color:rgba(234,209,136,.4); color:var(--accent-2)}
+  .chip.bon{border-color:rgba(61,220,122,.45); color:var(--good)}
   .strip{
     display:flex; gap:8px; border-top:1px solid var(--line-subtle); padding-top:16px;
   }
   .s{flex:1; text-align:center}
   .s b{display:block; font-weight:800; font-size:27px; line-height:1.1; font-variant-numeric:tabular-nums}
   .s b.good{color:var(--good)}
+  .s b.top{color:var(--accent-2)}
   .s i{font-style:normal; display:block; margin-top:5px; font-size:13px; letter-spacing:.09em; color:var(--ink-3)}
-  /* The bar's legend, in the only place it was ever needed. */
-  .s i.g{color:var(--seg-xg)}
-  .s i.a{color:var(--seg-xa)}
   .foot{
     display:flex; align-items:center; justify-content:space-between; gap:24px;
     margin-top:32px; padding-top:22px; border-top:1px solid var(--line-mid);
@@ -467,6 +535,9 @@ const html = `<!doctype html><meta charset="utf-8">
   .foot .sep{color:var(--ink-3); margin:0 12px}
   .site{font-weight:800; color:var(--accent-2); letter-spacing:-.01em}
   .note{font-size:16px; color:var(--ink-3); margin-top:10px; text-align:right}
+  /* Gold in the stat strip means nothing until this says what. */
+  .legend{font-size:16px; color:var(--ink-3); margin-top:10px}
+  .legend b{color:var(--accent-2); font-weight:800}
 </style>
 <div class="top">
   <div>
@@ -477,7 +548,10 @@ const html = `<!doctype html><meta charset="utf-8">
 </div>
 <div class="grid">${picked.map(card).join('')}</div>
 <div class="foot">
-  <div>${xgLine()}</div>
+  <div>
+    ${xgLine()}
+    <div class="legend"><b>Gold</b> marks the best in the ${games.length === 1 ? 'match' : 'gameweek'}</div>
+  </div>
   <div>
     <div class="site">fplanalyser.co.uk</div>
     ${actual.provisional ? '<div class="note">Provisional — bonus not final</div>' : ''}
