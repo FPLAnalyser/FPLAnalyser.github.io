@@ -126,6 +126,48 @@ rendering bug; and toggle state survives between shots, so a shot that wants
 fixture codes has to select `Fix` itself rather than inherit whatever the
 previous one left.
 
+## A results card for a gameweek
+
+```bash
+node tools/social/card.mjs                        # latest GW, top 6 by points
+node tools/social/card.mjs --format wide --top 6
+node tools/social/card.mjs --players Saka,Raya,Thomas
+```
+
+Draws `site_data/<season>/actuals/gw<N>.json` — the file *Pull the actual
+points* writes every fifteen minutes while the football is on — as a picture:
+six players, each with minutes, xG, xA, defensive contribution and BPS, an
+xG/xA bar scaled across the card, and the team xG under the scoreline. Into
+`build/social/cards/`. `--format` is `square` (1200×1200, the default), `wide`
+(1600×900) or `portrait` (1200×1500), all at 2x.
+
+It does not need `npm run build`. The card is its own HTML rather than a
+screenshot of the site, because the site has no page shaped like this and
+adding one to serve a picture would be the tail wagging the dog. Colours, type
+and the Def Con thresholds all come from the real thing, so it cannot drift
+into inventing its own numbers.
+
+**The scoreline is derived, not read.** A team's goals are its players' goals
+plus the opposition's own goals, and the `opp` field is an array of strings
+like `"COV(H)"` — an array because a gameweek can be a double, a string because
+the venue is packed in. Reading it as a plain team code pairs nobody with
+anybody and the card silently captions itself with the season instead of the
+match. Doubles are left unpaired on purpose: two fixtures have no single
+scoreline, so the header counts matches rather than picking one and calling it
+the game.
+
+**What it cannot show is shots.** The FPL API ships expected goals but not the
+shots behind them, and the Understat pull only runs in *Refresh pre-season
+squad data* — every shot map in `site_data` is last season's, first kick to
+last. A shot count printed next to a live xG would be quoting two seasons at
+once. `SHOT_KEYS` in the file is where one would join if in-season Understat
+ever lands; until then the column simply does not render.
+
+Early in a season the card is honest about being thin: with one match played it
+has thirty-one names to choose from and says `Provisional — bonus not final`,
+because `pull-gw.yml` writes that flag until FPL closes the gameweek and a
+score can still be corrected days later.
+
 ## Running it by hand
 
 `workflow_dispatch` on *Draft social posts* takes a candidate count and a
