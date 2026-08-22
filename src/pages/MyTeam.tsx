@@ -300,7 +300,10 @@ function TeamBoard({ picksData, teamId, gw, teamName }: {
     return true
   })
 
-  return <SquadBuilder bare banner={null} />
+  /* `owned` is the whole difference between this board and the Squad Builder's.
+     These fifteen came off your Team ID, so the week on screen is a transfer
+     window, not a free build. */
+  return <SquadBuilder bare banner={null} owned />
 }
 
 /**

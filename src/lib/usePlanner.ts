@@ -89,11 +89,16 @@ export interface Planner {
   store: string
 }
 
-export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey, onBaseChange }: {
+export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey, onBaseChange, owned = false, ft0 }: {
   base: number[]
   byEl: Map<number, RatingRow>
   startGw: number
   fixtureEase: FixtureEaseRow[]
+  /** The fifteen is a squad you already OWN, not one being picked — see the
+   *  note on PlannerState.owned. My Team sets this; the Squad Builder does not. */
+  owned?: boolean
+  /** Free transfers in hand at `startGw` when `owned`. Defaults to one. */
+  ft0?: number
   /** Where these weeks live. One key per plan, so switching plans switches
    *  the whole week history rather than carrying one plan's captain into
    *  another's squad. See lib/plans.ts. */
@@ -123,9 +128,17 @@ export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey, o
   const load = (k: string): PlannerState => {
     try {
       const raw = localStorage.getItem(k)
-      if (raw) { const s = JSON.parse(raw); if (s.base?.join(',') === sig) return s }
+      if (raw) {
+        const s = JSON.parse(raw)
+        /* `owned` comes from the CALLER, not from disk. The same plan can be
+           opened by the Squad Builder and by My Team, and which of those you
+           are looking at decides whether the first week is a build or a
+           transfer window — the stored weeks do not. Plans written before this
+           flag existed have no opinion either. */
+        if (s.base?.join(',') === sig) return { ...s, owned, ft0 }
+      }
     } catch { /* ignore */ }
-    return { base: [...base], startGw, weeks: {} }
+    return { base: [...base], startGw, weeks: {}, owned, ft0 }
   }
   const [state, setState] = useState<PlannerState>(() => load(key))
   const persist = (s: PlannerState) => {
@@ -162,6 +175,13 @@ export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey, o
      stale everywhere the fifteen is read, the comparison tab most of all. Fold
      them in, clear them, and leave the forward weeks alone. */
   useEffect(() => {
+    /* NOT for an owned squad. Its first week is a genuine transfer window, so
+       transfers held there are the real thing and folding them into the
+       fifteen destroys them — the count stays at 0/1, no hit is ever charged,
+       and every move silently becomes a free edit of the squad. Which is
+       exactly the "acts like pre-season" bug this whole change is about, and
+       it survived the first fix because it lives nowhere near the accounting. */
+    if (owned) return
     const first = state.weeks[startGw]
     if (!first?.transfers.length) return
     const next = squadAt(state, startGw)
@@ -174,7 +194,7 @@ export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey, o
     })
     onBaseChange?.(next)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, startGw])
+  }, [state, startGw, owned])
 
   // Materialise the week being viewed: carry the previous lineup forward when
   // those players are all still here, else auto-pick the best legal eleven.
@@ -252,7 +272,9 @@ export function usePlanner({ base, byEl, startGw, fixtureEase, seed, storeKey, o
      from rather than the one on your screen.
      So an opening-week change edits the FIFTEEN, and the forward weeks have
      the same substitution applied so a captain choice in GW4 survives. */
-  const opening = gw <= startGw
+  /* An owned squad has no opening week: you did not pick these fifteen on
+     this page, so removing one is a transfer, not an un-pick. */
+  const opening = !owned && gw <= startGw
 
   const editBase = (next: number[], swap?: { out: number; in: number }) => {
     const keep = new Set(next)

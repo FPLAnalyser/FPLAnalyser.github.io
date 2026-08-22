@@ -266,9 +266,16 @@ export interface SquadBuilderProps {
   banner?: { title: string; subtitle: string } | null
   /** Skip PageShell — the host page is already inside one. */
   bare?: boolean
+  /** The fifteen is a squad the reader already OWNS rather than one being
+   *  picked here. My Team sets this. It turns the first week from a free build
+   *  into a transfer window: removing a player becomes a transfer you can undo,
+   *  and free transfers are counted instead of unlimited. */
+  owned?: boolean
+  /** Free transfers in hand this week when `owned`. Defaults to one. */
+  freeTransfers?: number
 }
 
-export default function SquadBuilder({ banner, bare = false }: SquadBuilderProps = {}) {
+export default function SquadBuilder({ banner, bare = false, owned = false, freeTransfers }: SquadBuilderProps = {}) {
   const { data, error } = useCore()
   const navigate = useNavigate()
   /* The fifteen now belongs to a PLAN, and there can be several. The library
@@ -484,6 +491,7 @@ export default function SquadBuilder({ banner, bare = false }: SquadBuilderProps
 
   const planner = usePlanner({
     base: picked, byEl, startGw: buildGw, fixtureEase, seed: importedXI,
+    owned, ft0: freeTransfers,
     // Each plan keeps its own week decisions; switching plan switches them.
     storeKey: plans.activeId ? weeksKey(plans.activeId) : undefined,
     // Opening-week edits change the fifteen rather than recording a transfer,

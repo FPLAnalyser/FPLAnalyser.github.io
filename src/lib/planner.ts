@@ -32,7 +32,30 @@ export interface PlannerState {
   base: number[]      // the initial 15 (squad at startGw)
   startGw: number
   weeks: Record<number, WeekPlan>
+  /* A SQUAD YOU ALREADY OWN, rather than one being picked.
+   *
+   * The Squad Builder's first week is a build: no squad exists yet, so every
+   * choice is free and FPL charges nothing before the season starts. My Team's
+   * first week is the opposite — the fifteen came off your Team ID, you own it,
+   * and a change to it is a transfer with a price. Without this flag the board
+   * gave a real mid-season squad unlimited free transfers and removed players
+   * outright instead of marking them out with an undo.
+   *
+   * Absent on every plan saved before this existed, and absent means "being
+   * built", which is what those plans were. */
+  owned?: boolean
+  /** Free transfers in hand at `startGw`, for an owned squad. FPL does not
+   *  publish this on any endpoint the site can read without logging in, so it
+   *  is one unless a caller knows better — the amount the game gives you each
+   *  week, and the safe way to be wrong. */
+  ft0?: number
 }
+
+/** The first week that costs something. For a squad being built that is the
+ *  week after the opening one; for a squad you already own it is the opening
+ *  week itself. Everything about transfer accounting hangs off this. */
+const firstPaidGw = (state: PlannerState): number =>
+  state.owned ? state.startGw : state.startGw + 1
 
 /** The 15-man squad in effect at `gw`: base + every transfer up to and
  *  including that gameweek, applied in order. */
@@ -57,9 +80,10 @@ export const isFreeChip = (c: Chip | null) => c === 'wildcard' || c === 'free-hi
  *  free hit freezes the bank: the week after the chip starts with exactly
  *  what the chip week started with. */
 export function bankedTransfers(state: PlannerState, gw: number): number {
-  if (gw <= state.startGw) return Infinity
-  let ft = 1 // available at startGw + 1
-  for (let g = state.startGw + 2; g <= gw; g++) {
+  const first = firstPaidGw(state)
+  if (gw < first) return Infinity
+  let ft = state.owned ? Math.max(0, Math.min(MAX_FT, state.ft0 ?? 1)) : 1 // available at `first`
+  for (let g = first + 1; g <= gw; g++) {
     const prev = state.weeks[g - 1]
     if (prev && isFreeChip(prev.chip)) continue // chip week: bank untouched
     const used = prev ? prev.transfers.filter((t) => t.in != null).length : 0
@@ -71,7 +95,7 @@ export function bankedTransfers(state: PlannerState, gw: number): number {
 /** Transfers you can make in `gw` for free — unlimited on a wildcard or free
  *  hit week, and unlimited while picking the opening squad. */
 export function freeTransfers(state: PlannerState, gw: number): number {
-  if (gw <= state.startGw) return Infinity
+  if (gw < firstPaidGw(state)) return Infinity
   if (isFreeChip(state.weeks[gw]?.chip ?? null)) return Infinity
   return bankedTransfers(state, gw)
 }
@@ -79,7 +103,7 @@ export function freeTransfers(state: PlannerState, gw: number): number {
 /** Points hit for `gw` given the transfers made that week. */
 export function pointsHit(state: PlannerState, gw: number): number {
   const wk = state.weeks[gw]
-  if (!wk || isFreeChip(wk.chip) || gw <= state.startGw) return 0
+  if (!wk || isFreeChip(wk.chip) || gw < firstPaidGw(state)) return 0
   const ft = freeTransfers(state, gw)
   // A sale on its own isn't a transfer yet — FPL only charges once someone
   // comes in, and pricing the hit before that would punish you for looking.
