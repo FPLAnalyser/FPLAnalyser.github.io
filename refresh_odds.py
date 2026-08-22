@@ -154,6 +154,19 @@ def implied(kind, arg, lh, la, ph, pa):
 LAM_TOTAL_MIN = 1.4
 LAM_TOTAL_MAX = 5.5
 LAM_SIDE_MAX = 4.0
+# ...and a floor, because the total can look perfectly ordinary while the split
+# is impossible. Arsenal v Coventry was banked at 2.09 and 0.05 — a total of
+# 2.14, straight through the band above — from a market for a game that had
+# already been played. No Premier League side is priced to score a twentieth of
+# a goal before kick-off.
+LAM_SIDE_MIN = 0.25
+
+
+def plausible(lh, la):
+    """Does this pair describe a fixture nobody has kicked off yet?"""
+    total = lh + la
+    return (LAM_TOTAL_MIN <= total <= LAM_TOTAL_MAX
+            and LAM_SIDE_MIN <= min(lh, la) and max(lh, la) <= LAM_SIDE_MAX)
 
 
 def solve(constraints):
@@ -564,6 +577,17 @@ if __name__ == "__main__":
         if h is None or a is None:
             unmatched.append(f"{home} v {away}")
             continue
+        # A KICKED-OFF GAME IS NOT A FORECAST.
+        # The bulk endpoint keeps returning a fixture while it is in play and
+        # after it has settled, and those prices describe what has already
+        # happened: Arsenal v Coventry came back at 2.09 and 0.05 the morning
+        # after it was played, and because `matches` is keyed on the pairing,
+        # that overwrote the pre-match fit banked days earlier. The site then
+        # showed a 95% clean sheet for a game in the past, and the strength fit
+        # marked Coventry's attack down to 0.17 on the strength of it.
+        if kick <= now:
+            continue
+
         gw = None
         for fx in fixtures:
             if fx.get("team_h") == h and fx.get("team_a") == a and fx.get("event") and fx.get("kickoff_time"):
@@ -596,9 +620,8 @@ if __name__ == "__main__":
         # not lost, it is simply not priced — the projection falls back to the
         # model's own strengths, which is the same path every unpriced gameweek
         # already takes.
-        total = lh + la
-        if not (LAM_TOTAL_MIN <= total <= LAM_TOTAL_MAX) or max(lh, la) > LAM_SIDE_MAX:
-            rejected.append(f"{h}v{a} gw{gw} lh={lh} la={la} total={total:.2f}")
+        if not plausible(lh, la):
+            rejected.append(f"{h}v{a} gw{gw} lh={lh} la={la} total={lh + la:.2f}")
             continue
         matches.append({"gw": gw, "h": h, "a": a, "lh": lh, "la": la, "src": used})
 
@@ -626,6 +649,16 @@ if __name__ == "__main__":
         print("    (left unpriced — the projection falls back to the model's own strengths)")
 
     matches = merge_matches(banked.get("matches", []), matches)
+
+    # The band has to apply to the bank as well as to today's fits, or a bad
+    # one banked before the check existed stays there for the season — nothing
+    # ever revisits a fixture once it has been played.
+    keep = [m for m in matches if plausible(m.get("lh", 0), m.get("la", 0))]
+    if len(keep) < len(matches):
+        dropped = [f"{m['h']}v{m['a']} gw{m['gw']} {m['lh']}/{m['la']}"
+                   for m in matches if not plausible(m.get("lh", 0), m.get("la", 0))]
+        print(f"dropped {len(dropped)} implausible banked fixtures: {dropped}")
+        matches = keep
 
     strength = fit_strength(matches, season,
                             {t["id"]: t["short_name"] for t in boot["teams"]})
@@ -658,7 +691,11 @@ if __name__ == "__main__":
 
     if "--dry-run" in sys.argv or "--compare-legs" in sys.argv:
         print("dry run — not writing " + out_path)
-        for m in sorted(payload["matches"], key=lambda m: (m["gw"], m["h"]))[:12]:
+        gws = {}
+        for m in payload["matches"]:
+            gws[m["gw"]] = gws.get(m["gw"], 0) + 1
+        print(f"  fixtures per gameweek: {dict(sorted(gws.items()))}")
+        for m in sorted(payload["matches"], key=lambda m: (m["gw"], m["h"])):
             print(f"  GW{m['gw']} {m['h']:>2} v {m['a']:<2}  "
                   f"lh {m['lh']:.2f}  la {m['la']:.2f}  [{m['src']}]")
         sys.exit(0)
