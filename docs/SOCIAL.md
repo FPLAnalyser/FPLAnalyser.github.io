@@ -141,6 +141,30 @@ xG/xA bar scaled across the card, and the team xG under the scoreline. Into
 `build/social/cards/`. `--format` is `square` (1200×1200, the default), `wide`
 (1600×900) or `portrait` (1200×1500), all at 2x.
 
+**The badges are what the appearance earned**, not just what it scored: goals,
+assists, a clean sheet, a defensive threshold cleared, and the bonus. Without
+the last three a card credits a 90-minute defender with nothing at all, which
+is both wrong and the least interesting thing it could say. Two rules that are
+easy to get wrong and are enforced in the code rather than left to whoever
+picks the players:
+
+- **A clean sheet only pays a keeper, a defender and a midfielder** (4, 4 and
+  1). The API sets `clean_sheets` on the whole side, so a forward comes back
+  with the flag set and no points from it — `CS_SCORES` filters him out.
+- **The Def Con threshold is 10 for a defender and 12 for everyone else**, from
+  `dc_rules.py`. The badge shows only when it was actually cleared, and the
+  `DC/10` column turns green at the same moment.
+
+Bonus is outlined in gold rather than filled in green because it is the one
+badge that can still change — `pull-gw.yml` keeps writing until FPL closes the
+gameweek, and the footer says `Provisional — bonus not final` until it does.
+
+The xG/xA bar is two golds a value apart, and the `xG` and `xA` labels in the
+stat strip are tinted to match, which is what lets the bar go without a legend
+of its own. The first draft used `--chart-1` and `--chart-2`, the site's series
+colours: correct for a graph inside the product, wrong for a picture meant to
+be recognisable as this brand at thumbnail size on somebody else's timeline.
+
 It does not need `npm run build`. The card is its own HTML rather than a
 screenshot of the site, because the site has no page shaped like this and
 adding one to serve a picture would be the tail wagging the dog. Colours, type

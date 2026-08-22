@@ -44,6 +44,9 @@ const arg = (n, d) => { const i = argv.indexOf(`--${n}`); return i === -1 ? d : 
  */
 const DC_THR = { GKP: 99, DEF: 10, MID: 12, FWD: 12 }
 
+/** Positions a clean sheet actually pays: 4, 4 and 1 point. Not forwards. */
+const CS_SCORES = new Set(['GKP', 'DEF', 'MID'])
+
 /** Where a shot count would come from, if the data ever carried one. */
 const SHOT_KEYS = ['shots', 'shots_total', 'total_shots']
 
@@ -195,8 +198,13 @@ function tile(p) {
     dcHit: (p.defensive_contribution || 0) >= thr,
     dcThr: thr,
     bps: p.bps,
+    bonus: p.bonus || 0,
     saves: p.saves,
-    cs: p.clean_sheets,
+    // A clean sheet only pays a keeper, a defender and — at a quarter of the
+    // rate — a midfielder. The API sets the flag on the whole side, so a
+    // forward comes back with `clean_sheets: 1` and no points from it; showing
+    // him a clean-sheet badge would be crediting him with nothing.
+    cs: p.clean_sheets > 0 && CS_SCORES.has(p.pos),
     shots: shots ?? null,
   }
 }
@@ -245,12 +253,37 @@ function subtitle() {
 /**
  * A statistic in the strip under a player's name.
  *
- * `tone` is the only colour in the block: green when a threshold was actually
- * cleared, so the eye finds the two points that were earned rather than being
- * asked to remember that ten is the number for a defender and twelve is not.
+ * `tone` colours the value — green when a threshold was actually cleared, so
+ * the eye finds the two points that were earned rather than being asked to
+ * remember that ten is the number for a defender and twelve is not. `key`
+ * colours the LABEL to match a segment of the bar above, which is what lets
+ * the bar go without a legend of its own.
  */
-const stat = (label, value, tone = '') =>
-  `<div class="s"><b class="${tone}">${value}</b><i>${label}</i></div>`
+const stat = (label, value, { tone = '', key = '' } = {}) =>
+  `<div class="s"><b class="${tone}">${value}</b><i class="${key}">${label}</i></div>`
+
+/**
+ * Everything this appearance actually earned, as badges.
+ *
+ * The scoreline in the header says who won; the points number says how much;
+ * these say WHY, which is the part a reader is really scanning for. A clean
+ * sheet, a defensive threshold cleared and three bonus are each worth as much
+ * as a goal or more, and a card that showed only goals and assists was
+ * crediting a 90-minute defender with nothing at all.
+ *
+ * Bonus is set apart in gold because it is the one badge that can still
+ * change: `pull-gw.yml` keeps writing until FPL closes the gameweek, and until
+ * then the footer says so.
+ */
+function badges(t) {
+  const out = []
+  if (t.goals) out.push(['ret', `${t.goals}G`])
+  if (t.assists) out.push(['ret', `${t.assists}A`])
+  if (t.cs) out.push(['ret', 'CS'])
+  if (t.dcHit) out.push(['ret', 'DC'])
+  if (t.bonus) out.push(['bon', `+${t.bonus} BONUS`])
+  return out.map(([k, v]) => `<em class="chip ${k}">${esc(v)}</em>`).join('')
+}
 
 /**
  * The tallest expected involvement on the card, which every bar is drawn
@@ -278,31 +311,29 @@ function bar(t) {
         <span class="g" style="width:${pct(t.xg)}"></span>
         <span class="a" style="width:${pct(t.xa)}"></span>
       </div>
-      <div class="key"><em class="g"></em>xG<em class="a"></em>xA<b>${two(t.xg + t.xa)} xGI</b></div>
+      <div class="earned">${badges(t)}<b>${two(t.xg + t.xa)} xGI</b></div>
     </div>`
 }
 
 function card(t) {
-  const gi = [t.goals ? `${t.goals}G` : '', t.assists ? `${t.assists}A` : '']
-    .filter(Boolean).join(' ')
   return `
   <article class="p">
     <header>
       ${t.photo ? `<img class="face" src="${t.photo}" alt="">` : '<div class="face"></div>'}
       <div class="who">
-        <h2><span>${esc(t.name)}</span>${gi ? `<em class="gi">${esc(gi)}</em>` : ''}</h2>
-        <p>${t.badge ? `<img class="crest" src="${t.badge}" alt="">` : ''}${esc(t.pos)}${t.price ? ` · £${t.price}m` : ''} · v ${esc(t.opp)}</p>
+        <h2>${esc(t.name)}</h2>
+        <p>${t.badge ? `<img class="crest" src="${t.badge}" alt="">` : ''}${esc(t.pos)}${t.price ? ` · £${t.price}m` : ''}${games.length === 1 ? '' : ` · v ${esc(t.opp)}`}</p>
       </div>
       <div class="pts"><b>${t.points}</b><i>pts</i></div>
     </header>
     ${bar(t)}
     <div class="strip">
       ${stat('MIN', t.mins)}
-      ${stat('xG', two(t.xg))}
-      ${stat('xA', two(t.xa))}
+      ${stat('xG', two(t.xg), { key: 'g' })}
+      ${stat('xA', two(t.xa), { key: 'a' })}
       ${t.pos === 'GKP'
         ? stat('SAVES', t.saves)
-        : stat(`DC/${t.dcThr}`, t.dc, t.dcHit ? 'good' : '')}
+        : stat(`DC/${t.dcThr}`, t.dc, { tone: t.dcHit ? 'good' : '' })}
       ${stat('BPS', t.bps)}
       ${t.shots === null ? '' : stat('SHOTS', t.shots)}
     </div>
@@ -327,7 +358,16 @@ const html = `<!doctype html><meta charset="utf-8">
     --bg-0:#000; --surface-1:#121316; --surface-2:#1b1c1f;
     --ink-1:#edeff3; --ink-2:#aaacb0; --ink-3:#828386;
     --line-subtle:rgba(255,255,255,.07); --line-mid:rgba(255,255,255,.12);
-    --accent:#c9a227; --accent-2:#ead188; --good:#3ddc7a;
+    --accent:#c9a227; --accent-2:#ead188; --accent-strong:#9a761c; --good:#3ddc7a;
+    /* The bar's two segments. The first draft borrowed --chart-1 and
+       --chart-2, the site's series colours, which put a flat mid-gold beside a
+       cornflower blue: correct for a graph inside the product, wrong for a
+       picture that is meant to be recognisable as this brand at thumbnail size
+       on somebody else's timeline. Both are now golds a value apart, light for
+       xG and bronze for xA, and both are legible as 13px label text as well as
+       12px of bar — which is what lets the same pair do the legend's job in
+       the strip below and the bar go without one. */
+    --seg-xg:#ead188; --seg-xa:#b8933a;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   body{
@@ -368,11 +408,10 @@ const html = `<!doctype html><meta charset="utf-8">
     object-position:top center; background:var(--surface-2);
   }
   .who{flex:1; min-width:0}
-  .who h2{display:flex; align-items:center; gap:10px; font-weight:800; font-size:32px; letter-spacing:-.02em}
-  /* The name gives way before the goal chip does. A tile that elides "1G" to
-     fit "Lewis-Skelly" has dropped the only thing on it a reader was looking
-     for; a tile that shows "Lewis-Skell… 1G" has not. */
-  .who h2 span{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .who h2{
+    font-weight:800; font-size:32px; letter-spacing:-.02em;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
   .who p{
     display:flex; align-items:center; gap:8px; margin-top:4px;
     font-size:19px; color:var(--ink-2); white-space:nowrap;
@@ -381,29 +420,34 @@ const html = `<!doctype html><meta charset="utf-8">
   .pts{text-align:right; flex:0 0 auto}
   .pts b{display:block; font-weight:800; font-size:46px; line-height:1; color:var(--accent-2)}
   .pts i{font-style:normal; font-size:15px; letter-spacing:.1em; color:var(--ink-3); text-transform:uppercase}
-  .gi{
-    flex:0 0 auto; font-style:normal; padding:4px 11px; border-radius:999px;
-    background:rgba(61,220,122,.14); color:var(--good);
-    font-weight:800; font-size:18px; letter-spacing:.04em;
-  }
-  /* --chart-1 and --chart-2, the site's first two series colours, so a reader
-     who has seen a graph on the site reads this bar the same way. */
   .xgi{margin-top:auto}
   .track{
     display:flex; height:12px; border-radius:999px; overflow:hidden;
     background:var(--surface-2);
   }
-  .track .g{background:#c9a227}
-  .track .a{background:#6ea8ff}
-  .key{
-    display:flex; align-items:center; gap:7px; margin-top:11px;
-    font-size:16px; color:var(--ink-3); letter-spacing:.02em;
+  .track .g{background:var(--seg-xg)}
+  .track .a{background:var(--seg-xa)}
+  /* A fixed minimum, so a row of badges and no badges at all produce the same
+     tile height and the six line up. */
+  .earned{
+    display:flex; align-items:center; gap:8px; margin-top:13px; min-height:31px;
   }
-  .key em{width:11px; height:11px; border-radius:3px; margin-left:6px}
-  .key em:first-child{margin-left:0}
-  .key em.g{background:#c9a227}
-  .key em.a{background:#6ea8ff}
-  .key b{margin-left:auto; font-weight:800; color:var(--ink-2); font-variant-numeric:tabular-nums}
+  .earned b{
+    margin-left:auto; font-weight:800; font-size:16px; color:var(--ink-2);
+    letter-spacing:.02em; font-variant-numeric:tabular-nums;
+  }
+  .chip{
+    flex:0 0 auto; font-style:normal; padding:4px 11px; border-radius:999px;
+    border:1.5px solid transparent; line-height:1.35;
+    font-weight:800; font-size:17px; letter-spacing:.04em;
+  }
+  /* Earned outright: filled green, the site's own colour for a good number.
+     Bonus: outlined gold, and outlined on purpose. A gold fill at the same
+     low alpha as the green one lands as olive against surface-1 and reads as
+     a dirty green rather than a second colour, and the difference in kind is
+     the point — bonus is the one badge that can still change. */
+  .chip.ret{background:rgba(61,220,122,.14); color:var(--good)}
+  .chip.bon{border-color:rgba(234,209,136,.4); color:var(--accent-2)}
   .strip{
     display:flex; gap:8px; border-top:1px solid var(--line-subtle); padding-top:16px;
   }
@@ -411,6 +455,9 @@ const html = `<!doctype html><meta charset="utf-8">
   .s b{display:block; font-weight:800; font-size:27px; line-height:1.1; font-variant-numeric:tabular-nums}
   .s b.good{color:var(--good)}
   .s i{font-style:normal; display:block; margin-top:5px; font-size:13px; letter-spacing:.09em; color:var(--ink-3)}
+  /* The bar's legend, in the only place it was ever needed. */
+  .s i.g{color:var(--seg-xg)}
+  .s i.a{color:var(--seg-xa)}
   .foot{
     display:flex; align-items:center; justify-content:space-between; gap:24px;
     margin-top:32px; padding-top:22px; border-top:1px solid var(--line-mid);
