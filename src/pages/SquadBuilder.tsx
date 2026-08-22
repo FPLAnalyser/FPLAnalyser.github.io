@@ -273,9 +273,14 @@ export interface SquadBuilderProps {
   owned?: boolean
   /** Free transfers in hand this week when `owned`. Defaults to one. */
   freeTransfers?: number
+  /** The line-up as the reader actually set it, rather than one picked here.
+   *  My Team passes FPL's own — otherwise the board auto-picks the best legal
+   *  eleven by RATING, which quietly benches anyone you start for a reason the
+   *  season score does not know about. */
+  lineup?: { xi: number[]; bench: number[]; captain: number | null; vice: number | null } | null
 }
 
-export default function SquadBuilder({ banner, bare = false, owned = false, freeTransfers }: SquadBuilderProps = {}) {
+export default function SquadBuilder({ banner, bare = false, owned = false, freeTransfers, lineup }: SquadBuilderProps = {}) {
   const { data, error } = useCore()
   const navigate = useNavigate()
   /* The fifteen now belongs to a PLAN, and there can be several. The library
@@ -490,7 +495,7 @@ export default function SquadBuilder({ banner, bare = false, owned = false, free
   const valid = complete && spent <= BUDGET + 1e-9
 
   const planner = usePlanner({
-    base: picked, byEl, startGw: buildGw, fixtureEase, seed: importedXI,
+    base: picked, byEl, startGw: buildGw, fixtureEase, seed: importedXI ?? lineup ?? null,
     owned, ft0: freeTransfers,
     // Each plan keeps its own week decisions; switching plan switches them.
     storeKey: plans.activeId ? weeksKey(plans.activeId) : undefined,

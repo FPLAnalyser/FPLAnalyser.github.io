@@ -178,6 +178,7 @@ function Squad({ loaded, data }: { loaded: LoadedTeam; data: CoreData }) {
           picksData={picksData}
           teamId={teamId}
           gw={gw}
+          nextGw={data?.meta?.next_gw as number | null | undefined}
           teamName={entryData?.name ? String(entryData.name) : undefined}
         />
       ) : tab === 'squad' ? (
@@ -280,8 +281,31 @@ const SQUAD_TABS = (hasLeagues: boolean): TabDef[] => [
  */
 const SEED_KEY = 'fpl_myteam_seed'
 
-function TeamBoard({ picksData, teamId, gw, teamName }: {
-  picksData: any; teamId: string; gw: number; teamName?: string
+/** FPL's own line-up, out of the picks payload.
+ *
+ *  Positions 1-11 are the eleven in the order they are laid out, 12-15 the
+ *  bench in the order they come on — 12 being the reserve keeper, which is the
+ *  order the planner stores too. Read from `position` rather than `multiplier`
+ *  because a Bench Boost week gives all fifteen a multiplier of 1 and would
+ *  otherwise report a fifteen-man eleven. */
+function lineupFromPicks(picksData: any) {
+  const picks: any[] = picksData?.picks ?? []
+  if (picks.length !== 15) return null
+  const ordered = [...picks].sort((a, b) => Number(a.position) - Number(b.position))
+  const xi = ordered.filter((p) => Number(p.position) <= 11).map((p) => Number(p.element))
+  const bench = ordered.filter((p) => Number(p.position) > 11).map((p) => Number(p.element))
+  if (xi.length !== 11 || bench.length !== 4) return null
+  const cap = picks.find((p) => p.is_captain)
+  const vice = picks.find((p) => p.is_vice_captain)
+  return {
+    xi, bench,
+    captain: cap ? Number(cap.element) : null,
+    vice: vice ? Number(vice.element) : null,
+  }
+}
+
+function TeamBoard({ picksData, teamId, gw, teamName, nextGw }: {
+  picksData: any; teamId: string; gw: number; teamName?: string; nextGw?: number | null
 }) {
   /* Seeded in a lazy initialiser, which runs ONCE and — the point — before
      SquadBuilder mounts and takes its own read of the library. Doing it in an
@@ -300,10 +324,38 @@ function TeamBoard({ picksData, teamId, gw, teamName }: {
     return true
   })
 
-  /* `owned` is the whole difference between this board and the Squad Builder's.
-     These fifteen came off your Team ID, so the week on screen is a transfer
-     window, not a free build. */
-  return <SquadBuilder bare banner={null} owned />
+  /* Your line-up, not one picked for you. Without this the board auto-picks the
+     best legal eleven by season rating and benches whoever you start for a
+     reason the rating does not know — a returning striker, a nailed-on cheap
+     defender. It has to look like the FPL site or it is not your team. */
+  const lineup = useMemo(() => lineupFromPicks(picksData), [picksData])
+
+  /* WHICH TEAM THIS IS, SAID OUT LOUD.
+   *
+   * The board plans the next gameweek; FPL only publishes your team for one
+   * whose deadline has passed. So between a deadline and the next one, what
+   * arrives here is last week's side, and anything you have already changed
+   * for the week ahead is private until it locks. That is not a bug anything
+   * on this site can fix — the endpoint that knows needs your login — but a
+   * board that silently shows the wrong week is worse than one that says so. */
+  const behind = nextGw != null && gw < nextGw
+
+  return (
+    <>
+      {behind && (
+        <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-line bg-surface-1 px-3 py-2 text-[12.5px]">
+          <Icon name="info" size={14} className="shrink-0 text-ink-3" />
+          <span className="font-semibold text-ink">Your team as it stood for GW{gw}.</span>
+          <span className="text-ink-2">
+            FPL only publishes a squad once its deadline has passed, so changes you have
+            already made for GW{nextGw} are not visible here — make them on the board and
+            they will be.
+          </span>
+        </div>
+      )}
+      <SquadBuilder bare banner={null} owned lineup={lineup} />
+    </>
+  )
 }
 
 /**
