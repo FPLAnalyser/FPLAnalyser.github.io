@@ -328,16 +328,6 @@ if __name__ == "__main__":
                 rows[pid]["k"] = round(k, 3)
             print(f"  {club}: {len(ids)} priced, sum xg {xg_total(raw, 1.0):.2f} -> "
                   f"{xg_total(raw, k):.2f} vs lambda {target:.2f} (k={k:.2f})")
-        # Two different quoted names landing on one FPL id means a fallback
-        # reached too far. The same name arriving twice is just the two markets
-        # both quoting him, which is expected. Drop the ambiguous ones rather
-        # than keep whichever was seen last.
-        for pid, names in claims.items():
-            if len(names) > 1:
-                rows.pop(pid, None)
-                unmatched.extend(f"{n} (ambiguous, {ev['home_team']} v {ev['away_team']})"
-                                 for n in sorted(names))
-
         team_of_all = {pl["id"]: pl["team"] for pl in players}
         for pid, row in rows.items():
             mine = team_of_all.get(pid)
