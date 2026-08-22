@@ -276,8 +276,14 @@ if __name__ == "__main__":
         for pid, names in sorted(claims.items()):
             if len(names) > 1 and not one_player(names):
                 pooled.pop(pid, None)
-                unmatched.extend(f"{n} (ambiguous, {ev['home_team']} v {ev['away_team']})"
-                                 for n in sorted(names))
+                # Say which id and how close, because "ambiguous" on its own
+                # cannot be argued with: a pair at 0.91 that still gets dropped
+                # means the guard is not seeing the pair I think it is.
+                ns = sorted(names)
+                worst = min((difflib.SequenceMatcher(None, a, b).ratio()
+                             for a, b in zip(ns, ns[1:])), default=0.0)
+                unmatched.extend(f"{n} (ambiguous with id {pid}, closest {worst:.2f}, "
+                                 f"{ev['home_team']} v {ev['away_team']})" for n in ns)
 
         rows = {}
         for pid, markets in pooled.items():
