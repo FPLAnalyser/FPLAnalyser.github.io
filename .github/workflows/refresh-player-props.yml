@@ -56,7 +56,11 @@ jobs:
           PROPS_STAGE: ${{ inputs.force && 'force' || '' }}
       - name: Commit if changed
         run: |
-          git add site_data/*/player_props.json
+          # -A over a directory, not a glob over a file that may not exist:
+          # `git add site_data/*/player_props.json` is fatal when nothing
+          # matches, which is every wake where no pull was due — fifty-eight
+          # red runs for a job whose correct behaviour is to do nothing.
+          git add -A -- site_data
           if git diff --cached --quiet; then
             echo "No pull was due."
             exit 0

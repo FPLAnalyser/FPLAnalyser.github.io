@@ -130,7 +130,32 @@ PROPS_POST_MIN_HOURS = float(os.environ.get("PROPS_POST_MIN_HOURS", "36"))
 PROPS_MIN_CREDITS = float(os.environ.get("PROPS_MIN_CREDITS", "40"))
 
 
-def decide_stage(events, now, done):
+MATCH_MINUTES = 130          # ninety, plus half time, stoppages and a margin
+
+
+def round_over(event, now, dated, fixtures):
+    """Has the previous round actually been played?
+
+       FPL's `finished` flag is the obvious test and it is not enough: it was
+       still false on the 24th for a GW1 played on the 21st to 23rd, so the
+       post-round pull never fired once in fifty-eight hourly wakes.
+       `data_checked` lags further, waiting on bonus points.
+
+       The fixtures answer it exactly — the round is over when its last kick-off
+       is far enough in the past that the game has ended — so ask them, and keep
+       the flags as a short cut and the clock as a backstop for when the fixture
+       list cannot be had."""
+    if event.get("finished") or event.get("data_checked"):
+        return True
+    kicks = [datetime.datetime.fromisoformat(f["kickoff_time"].replace("Z", "+00:00"))
+             for f in (fixtures or []) if f.get("event") == event["id"] and f.get("kickoff_time")]
+    if kicks:
+        return now > max(kicks) + datetime.timedelta(minutes=MATCH_MINUTES)
+    deadline = next((d for d, e in dated if e["id"] == event["id"]), None)
+    return deadline is not None and (now - deadline) > datetime.timedelta(days=4)
+
+
+def decide_stage(events, now, done, fixtures=None):
     """Which pull, if any, is due — and the gameweek it is for.
 
        `done` is what the last written file recorded, so a second wake inside
@@ -154,8 +179,12 @@ def decide_stage(events, now, done):
         return None, gw, f"GW{gw} deadline in {lead:.1f}h — inside the lead floor, too late to be useful"
 
     prev = [e for d, e in dated if d <= now]
-    if prev and not prev[-1].get("finished"):
-        return None, gw, f"GW{prev[-1]['id']} still playing"
+    if prev and not round_over(prev[-1], now, dated, fixtures):
+        p = prev[-1]
+        return None, gw, (f"GW{p['id']} not finished (finished={p.get('finished')}, "
+                          f"data_checked={p.get('data_checked')}, "
+                          f"{(now - [d for d, e in dated if e['id'] == p['id']][0]).days}d "
+                          f"since its deadline)")
     if lead < PROPS_POST_MIN_HOURS:
         return None, gw, f"GW{gw} deadline in {lead:.1f}h — holding for the pre-deadline pull"
     if "post" in already:
@@ -269,7 +298,8 @@ if __name__ == "__main__":
     banked = ro.read_existing(out_path)
     pulls = banked.get("pulls", {}) if isinstance(banked.get("pulls"), dict) else {}
     now = datetime.datetime.now(datetime.timezone.utc)
-    stage, target_gw, why = decide_stage(boot["events"], now, pulls)
+    fixtures, _ = ro.get(f"{ro.FPL}/fixtures/")          # free, and exact
+    stage, target_gw, why = decide_stage(boot["events"], now, pulls, fixtures)
     if os.environ.get("PROPS_STAGE", "").strip() in ("force", "1"):
         stage, why = stage or "manual", why + " (forced)"
     print(why)
