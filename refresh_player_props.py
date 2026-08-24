@@ -136,15 +136,22 @@ MATCH_MINUTES = 130          # ninety, plus half time, stoppages and a margin
 def round_over(event, now, dated, fixtures):
     """Has the previous round actually been played?
 
-       FPL's `finished` flag is the obvious test and it is not enough: it was
-       still false on the 24th for a GW1 played on the 21st to 23rd, so the
-       post-round pull never fired once in fifty-eight hourly wakes.
-       `data_checked` lags further, waiting on bonus points.
+       Read the history of this function with care, because the story it first
+       told was wrong. Fifty-eight hourly wakes declined to pull and every one
+       of them was RIGHT: GW1 ran to a Monday night game that finished at about
+       nine in the evening on the 24th, and FPL's `finished` flag said so
+       accurately the whole time. What was broken was the commit step failing on
+       an empty `git add`, which painted every correct decision red — and a red
+       run reads as a broken job, so the gate got blamed for the shell's fault.
 
-       The fixtures answer it exactly — the round is over when its last kick-off
-       is far enough in the past that the game has ended — so ask them, and keep
-       the flags as a short cut and the clock as a backstop for when the fixture
-       list cannot be had."""
+       The fixtures are used anyway, because they answer the question directly
+       rather than through a flag whose timing is somebody else's bookkeeping:
+       the round is over once its last kick-off is far enough past for the game
+       to have ended. `finished` and `data_checked` stay as short cuts, and the
+       clock as a backstop when no fixture list can be had. That fires the
+       post-round pull as soon as the football stops rather than whenever the
+       flag is flipped, which is the behaviour worth having — but it is a
+       refinement, not the fix for a bug that was never in here."""
     if event.get("finished") or event.get("data_checked"):
         return True
     kicks = [datetime.datetime.fromisoformat(f["kickoff_time"].replace("Z", "+00:00"))
