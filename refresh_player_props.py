@@ -496,8 +496,17 @@ if __name__ == "__main__":
 
     # Carry forward what is still ahead of us. A gameweek already played is
     # dead weight — the site keys on the gameweek, so it can never match again.
-    kept = {k: v for k, v in (banked.get("players") or {}).items()
-            if isinstance(v, dict) and (v.get("gw") or 0) >= target_gw and k not in out}
+    # Re-key as they are carried, because the first file written was keyed on
+    # the player alone. Mixing the two shapes would leave one player holding
+    # both "208" and "208:3" for the same round, and only luck decides which
+    # the site reads.
+    kept = {}
+    for k, v in (banked.get("players") or {}).items():
+        if not isinstance(v, dict) or not v.get("gw") or v["gw"] < target_gw:
+            continue
+        key = k if ":" in k else f"{k}:{v['gw']}"
+        if key not in out:
+            kept[key] = v
     if kept:
         print(f"carrying {len(kept)} rows forward from earlier pulls")
     out = {**kept, **out}
