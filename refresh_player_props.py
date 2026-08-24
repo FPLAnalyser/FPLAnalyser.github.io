@@ -128,6 +128,26 @@ PROPS_POST_MIN_HOURS = float(os.environ.get("PROPS_POST_MIN_HOURS", "36"))
 # round is worth having — the fixtures it did reach are still priced — so stop
 # pulling rather than refuse to start.
 PROPS_MIN_CREDITS = float(os.environ.get("PROPS_MIN_CREDITS", "40"))
+# How far ahead to hold prices. Bookmakers price two or three rounds out and
+# the planning pages look that far, so hold what they offer rather than the
+# imminent round alone.
+PROPS_HORIZON_GWS = int(os.environ.get("PROPS_HORIZON_GWS", "3"))
+
+
+def gws_to_pull(stage, target_gw, held, horizon=PROPS_HORIZON_GWS):
+    """Which gameweeks this pull should buy.
+
+       The imminent one always: its prices are the ones that have moved, before
+       the deadline for team news and after the previous round for the new
+       fixtures. Beyond that, only gameweeks not already held — the file
+       accumulates, so a round bought last week is still there and re-buying it
+       is spending twice for prices that barely move eleven days out.
+
+       The pre-deadline pull stays on the imminent round alone. It exists for
+       team news, which says nothing about a fixture a fortnight away."""
+    if stage == "pre":
+        return {target_gw}
+    return {target_gw} | {g for g in range(target_gw, target_gw + horizon) if g not in held}
 
 
 MATCH_MINUTES = 130          # ninety, plus half time, stoppages and a margin
@@ -323,6 +343,11 @@ if __name__ == "__main__":
     limit = int(os.environ.get("PROPS_LIMIT", "0") or 0)
     wanted = set(MARKETS.split(","))
 
+    held = {v.get("gw") for v in (banked.get("players") or {}).values()
+            if isinstance(v, dict)}
+    wanted = gws_to_pull(stage, target_gw, held)
+    print(f"pulling gameweeks {sorted(wanted)} (already held: {sorted(g for g in held if g)})")
+
     out, unmatched, remaining = {}, [], "?"
     for i, ev in enumerate(sorted(events, key=lambda e: e.get("commence_time", ""))):
         if limit and i >= limit:
@@ -338,12 +363,9 @@ if __name__ == "__main__":
         if (h, a) not in lam:
             print(f"  not yet priced, skipping: {ev['home_team']} v {ev['away_team']}")
             continue
-        # ONE GAMEWEEK PER PULL. /events returns every upcoming priced fixture,
-        # not the next round, so the first live pull bought GW2 and GW3
-        # together: 441 players, 38 credits against a plan of 20. It gets worse
-        # as the bookmakers price further ahead. A pull is for the gameweek its
-        # stage names, and the round after it will get its own two pulls.
-        if gw_of.get((h, a)) != target_gw:
+        # /events returns every upcoming priced fixture, however far ahead, so
+        # the pull has to say which rounds it is buying — see gws_to_pull.
+        if gw_of.get((h, a)) not in wanted:
             continue
 
         try:
@@ -462,9 +484,23 @@ if __name__ == "__main__":
             row["team"], row["opp"] = mine, (a if mine == h else h)
             if (h, a) in gw_of:
                 row["gw"] = gw_of[(h, a)]
-        out.update({str(k): v for k, v in rows.items()})
+        # KEYED BY PLAYER AND GAMEWEEK, not by player.
+        # Keyed on the id alone, one round overwrote the other: 441 rows across
+        # GW2 and GW3 with not one player in both, though every club plays in
+        # both. GW3 was processed second, so 346 players lost the GW2 prices we
+        # had just paid for — and it read as the bookmakers not having opened
+        # GW2's markets, which they had.
+        out.update({f"{k}:{v['gw']}": v for k, v in rows.items() if v.get("gw")})
         if clashes:
             print(f"  ambiguous names dropped for this fixture: {sorted(clashes)[:4]}")
+
+    # Carry forward what is still ahead of us. A gameweek already played is
+    # dead weight — the site keys on the gameweek, so it can never match again.
+    kept = {k: v for k, v in (banked.get("players") or {}).items()
+            if isinstance(v, dict) and (v.get("gw") or 0) >= target_gw and k not in out}
+    if kept:
+        print(f"carrying {len(kept)} rows forward from earlier pulls")
+    out = {**kept, **out}
 
     payload = {
         "generated_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),

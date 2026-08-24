@@ -175,7 +175,12 @@ export function useMarketOdds(): MarketOdds | null {
       byKey.set(`${as}:${m.gw}:${hs}`, { for: m.la, against: m.lh })
     }
     const props = new Map<string, { xg: number; books: number }>()
-    for (const [id, v] of Object.entries(propsFile.data?.players ?? {})) {
+    for (const [key, v] of Object.entries(propsFile.data?.players ?? {})) {
+      // The file keys on player AND gameweek, because a player has a price in
+      // every round the bookmakers have opened and the file holds three of
+      // them at once. Keyed on the player alone, the later round overwrote the
+      // nearer one and 346 players lost the prices we had paid for.
+      const id = key.split(':')[0]
       const opp = v.opp != null ? shortOf(v.opp) : undefined
       if (v.xg == null || v.gw == null || !opp) continue
       props.set(`${id}:${v.gw}:${opp}`, { xg: v.xg, books: v.books ?? 1 })
