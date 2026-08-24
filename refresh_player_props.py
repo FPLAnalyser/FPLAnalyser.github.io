@@ -331,6 +331,13 @@ if __name__ == "__main__":
         if (h, a) not in lam:
             print(f"  not yet priced, skipping: {ev['home_team']} v {ev['away_team']}")
             continue
+        # ONE GAMEWEEK PER PULL. /events returns every upcoming priced fixture,
+        # not the next round, so the first live pull bought GW2 and GW3
+        # together: 441 players, 38 credits against a plan of 20. It gets worse
+        # as the bookmakers price further ahead. A pull is for the gameweek its
+        # stage names, and the round after it will get its own two pulls.
+        if gw_of.get((h, a)) != target_gw:
+            continue
 
         try:
             if float(remaining) < PROPS_MIN_CREDITS:
