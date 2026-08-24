@@ -1,0 +1,487 @@
+<title>GW Review Visual Directions</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&family=Playfair+Display:ital,wght@0,600;0,800;0,900;1,600&family=Courier+Prime:wght@400;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --bg0:#000; --s1:#101114; --s2:#17181c; --s3:#1f2024; --s4:#282a2e;
+  --ink:#edeff3; --ink2:#aaacb0; --ink3:#7e8084;
+  --line:rgba(255,255,255,.07); --line-mid:rgba(255,255,255,.12); --line-strong:rgba(255,255,255,.22);
+  --acc:#c9a227; --acc2:#ead188;
+  --good:#3ddc7a; --bad:#f0736f; --info:#6ea8ff;
+  --r-md:10px; --r-lg:14px; --r-xl:20px; --gap:14px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg0);color:var(--ink);
+     font:15px/1.55 'Manrope',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 90px}
+:focus-visible{outline:2px solid var(--acc2);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+h1{font-size:26px;margin:0 0 6px;letter-spacing:-.025em;font-weight:800;text-wrap:balance}
+p{margin:0}
+.lede{color:var(--ink2);font-size:14px;max-width:74ch}
+.kicker{font-size:9px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--ink3)}
+.muted{color:var(--ink2);font-size:13px}
+.tiny{font-size:11.5px;color:var(--ink2)}
+.n{font-variant-numeric:tabular-nums}
+.note{background:var(--s1);border:1px solid var(--line);border-left:2px solid var(--line-strong);
+  border-radius:0 var(--r-md) var(--r-md) 0;padding:11px 14px;font-size:13px;color:var(--ink2);max-width:84ch}
+.note b{color:var(--ink)} .note .for{color:var(--good)} .note .against{color:var(--bad)}
+hr{height:1px;background:var(--line);margin:34px 0 20px;border:0}
+.dirs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 4px}
+.dirs button{font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;background:var(--s2);
+  color:var(--ink2);border:1px solid var(--line-mid);border-radius:999px;padding:7px 13px;min-height:36px}
+.dirs button:hover{background:var(--s3);color:var(--ink)}
+.dirs button[aria-selected=true]{background:var(--acc);color:#14100a;border-color:var(--acc)}
+section[hidden]{display:none}
+.head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:18px 0 8px}
+.head .num{font-family:'Barlow Condensed',sans-serif;font-size:29px;font-weight:700;color:var(--acc);line-height:.9}
+.head h2{font-size:19px;margin:0;font-weight:800;letter-spacing:-.018em}
+
+/* ══════════ A · THE SCATTER ══════════════════════════════════════════ */
+.plot{position:relative;background:#08090b;border:1px solid var(--line);border-radius:var(--r-xl);
+  padding:26px 26px 40px 46px}
+.plot svg{display:block;width:100%;height:auto;overflow:visible}
+.axis{font:600 10px 'IBM Plex Mono',monospace;fill:var(--ink3);letter-spacing:.04em}
+.gridline{stroke:rgba(255,255,255,.055);stroke-width:1}
+.truth{stroke:var(--acc);stroke-width:1.25;stroke-dasharray:5 4;opacity:.75}
+.dot{opacity:.55}
+.dot.gk{fill:#7f8ea3} .dot.df{fill:#4bb7d8} .dot.md{fill:#3ddc7a} .dot.fw{fill:#e8b04a}
+.callout{font:700 11px 'Manrope',sans-serif;fill:var(--ink)}
+.callout.sub{font-weight:500;fill:var(--ink3);font-size:10px}
+.leader{stroke:rgba(255,255,255,.32);stroke-width:1}
+.legend-dots{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:11.5px;color:var(--ink2)}
+.legend-dots i{width:9px;height:9px;border-radius:99px;display:inline-block;margin-right:5px;vertical-align:0}
+
+/* ══════════ B · THE BROADSHEET ═══════════════════════════════════════ */
+.paper{background:#f4f1e8;color:#15130f;border-radius:4px;padding:34px 38px 40px;
+  box-shadow:0 30px 70px rgba(0,0,0,.6)}
+@media(max-width:600px){.paper{padding:22px 18px 26px}}
+.paper .masthead{border-bottom:3px double #15130f;padding-bottom:9px;margin-bottom:3px;
+  display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.paper .mast-name{font-family:'Playfair Display',Georgia,serif;font-weight:900;font-size:34px;
+  letter-spacing:-.02em;line-height:1}
+.paper .mast-meta{font:600 10px 'Manrope',sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#5d564a}
+.paper .rule-thin{border-bottom:1px solid #15130f;margin:4px 0 20px}
+.paper h2.hd{font-family:'Playfair Display',Georgia,serif;font-weight:900;font-size:54px;line-height:.95;
+  letter-spacing:-.02em;margin:0 0 6px;text-wrap:balance}
+@media(max-width:600px){.paper h2.hd{font-size:34px}}
+.paper .standfirst{font-family:'Playfair Display',Georgia,serif;font-style:italic;font-size:17px;
+  line-height:1.4;color:#3b352c;max-width:60ch;margin-bottom:16px}
+.cols{column-count:3;column-gap:26px;column-rule:1px solid #cec7b6;
+  font-size:13.5px;line-height:1.62;text-align:justify;hyphens:auto}
+@media(max-width:900px){.cols{column-count:2}}
+@media(max-width:600px){.cols{column-count:1}}
+.cols p{margin:0 0 10px}
+.cols p:first-of-type::first-letter{font-family:'Playfair Display',Georgia,serif;float:left;
+  font-size:52px;line-height:.82;padding:3px 7px 0 0;font-weight:900}
+.byline{font:700 10px 'Manrope',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#5d564a;margin-bottom:10px}
+.agate{margin-top:24px;border-top:3px double #15130f;padding-top:12px}
+.agate h3{font-family:'Playfair Display',serif;font-size:15px;font-weight:800;margin:0 0 8px;
+  letter-spacing:.02em;text-transform:uppercase}
+.agate .grid{column-count:4;column-gap:22px;font:400 11.5px/1.5 'IBM Plex Mono',monospace}
+@media(max-width:900px){.agate .grid{column-count:2}}
+@media(max-width:520px){.agate .grid{column-count:1}}
+.agate .row{display:flex;justify-content:space-between;gap:8px;break-inside:avoid;
+  border-bottom:1px dotted #c3bba8;padding:2px 0}
+.agate .row b{font-weight:600}
+.pull{font-family:'Playfair Display',serif;font-weight:800;font-size:23px;line-height:1.25;
+  border-top:2px solid #15130f;border-bottom:2px solid #15130f;padding:12px 0;margin:6px 0 14px;
+  break-inside:avoid;text-wrap:balance}
+
+/* ══════════ C · THE DISTRIBUTION ═════════════════════════════════════ */
+.dist{background:#08090b;border:1px solid var(--line);border-radius:var(--r-xl);padding:30px 28px 24px}
+.dist .huge{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:96px;line-height:.86;
+  letter-spacing:-.01em;color:var(--acc)}
+@media(max-width:600px){.dist .huge{font-size:62px}}
+.bars{display:flex;align-items:flex-end;gap:3px;height:230px;margin-top:22px}
+.bars .b{flex:1;position:relative;display:flex;flex-direction:column;justify-content:flex-end;min-width:0}
+.bars .b i{display:block;background:var(--s4);border-radius:2px 2px 0 0;transition:background .15s}
+.bars .b.hot i{background:linear-gradient(180deg,var(--acc2),var(--acc))}
+.bars .b.mark i{background:var(--good)}
+.bars .b span{font:600 9px 'IBM Plex Mono',monospace;color:var(--ink3);text-align:center;margin-top:5px}
+.bars .b b{position:absolute;top:-16px;left:50%;transform:translateX(-50%);
+  font:700 10px 'IBM Plex Mono',monospace;color:var(--ink2)}
+.tick{position:absolute;bottom:0;top:0;width:1px;background:rgba(255,255,255,.2)}
+
+/* ══════════ D · THE RECEIPT ══════════════════════════════════════════ */
+.till{max-width:400px;margin:0 auto;background:#f7f5f0;color:#1a1a1a;
+  font:400 13px/1.5 'Courier Prime',ui-monospace,monospace;padding:26px 24px 14px;position:relative;
+  box-shadow:0 24px 60px rgba(0,0,0,.65)}
+.till::before,.till::after{content:'';position:absolute;left:0;right:0;height:11px;
+  background:radial-gradient(circle at 6px 0,transparent 6px,#f7f5f0 6.5px);
+  background-size:12px 11px;background-repeat:repeat-x}
+.till::before{top:-10px;transform:rotate(180deg)}
+.till::after{bottom:-10px}
+.till h3{font-family:'Courier Prime',monospace;font-weight:700;font-size:17px;text-align:center;
+  margin:0 0 2px;letter-spacing:.08em}
+.till .c{text-align:center}
+.till .sep{border-top:1px dashed #7a7a7a;margin:11px 0}
+.till .li{display:flex;justify-content:space-between;gap:10px}
+.till .li .q{color:#5a5a5a}
+.till .tot{display:flex;justify-content:space-between;font-weight:700;font-size:16px}
+.till .barcode{display:flex;gap:1.5px;justify-content:center;margin-top:14px;height:42px;align-items:flex-end}
+.till .barcode i{background:#1a1a1a;width:2px;display:block}
+.till small{font-size:10.5px;color:#5a5a5a}
+</style>
+
+<div class="wrap">
+
+<header>
+  <span class="kicker">Mockups · GW Review, four visual arguments</span>
+  <h1>Four ways the review could look, none of them a card grid</h1>
+  <p class="lede" style="margin-top:6px">
+    Same measured gameweek — 495 players projected, 310 who featured — drawn
+    four different ways. The point of each is the <em>form</em>: what a chart,
+    a page of type, a distribution or a printed slip each make obvious that a
+    row of tiles cannot.
+  </p>
+</header>
+
+<div class="dirs" role="tablist" aria-label="Directions">
+  <button role="tab" aria-selected="true"  aria-controls="dA" id="tA">A · The scatter</button>
+  <button role="tab" aria-selected="false" aria-controls="dB" id="tB">B · The broadsheet</button>
+  <button role="tab" aria-selected="false" aria-controls="dC" id="tC">C · The distribution</button>
+  <button role="tab" aria-selected="false" aria-controls="dD" id="tD">D · The receipt</button>
+</div>
+
+<!-- ═══════════════ A ═══════════════ -->
+<section id="dA" role="tabpanel" aria-labelledby="tA">
+  <div class="head"><span class="num">A</span><h2>The scatter</h2></div>
+  <div class="note">
+    <b>One chart that contains the entire report card.</b> Every player the
+    model projected is a dot: what it said along the bottom, what he scored up
+    the side. The gold diagonal is being exactly right. Everything above it was
+    under-projected, everything below over-projected, and the <em>shape</em> of
+    the cloud is the finding — a dense floor along the bottom because most
+    footballers score one or two, and a thin column of hauls the model had no
+    way to see coming.
+    <span class="for">For:</span> it is the most information per pixel the page
+    could carry, it needs no words, and it is the same chart every week so the
+    cloud tightening over a season <em>is</em> the model improving.
+    <span class="against">Against:</span> a scatter plot on a football site
+    asks something of the reader, and the one thing it cannot show is who any
+    of the dots are without labelling them by hand.
+  </div>
+
+  <div class="plot" style="margin-top:var(--gap)" id="plot"></div>
+  <div class="legend-dots">
+    <span><i style="background:#7f8ea3"></i>Goalkeepers</span>
+    <span><i style="background:#4bb7d8"></i>Defenders</span>
+    <span><i style="background:#3ddc7a"></i>Midfielders</span>
+    <span><i style="background:#e8b04a"></i>Forwards</span>
+    <span style="margin-left:auto;color:var(--ink3)">495 players · gold line = perfect projection</span>
+  </div>
+  <p class="muted" style="margin-top:14px;max-width:82ch">
+    The asymmetry is the whole story. Below the line the error is bounded: the
+    most a projection can overshoot by is the number it named, and the highest
+    number it named all week was 6.59. Above the line there is no ceiling, and
+    gameweek one put six players more than ten points clear of what they were
+    given. A projection names a median; the row of dots along the floor is
+    where most footballers actually live, and the thin column above is what
+    the tail costs. Three players finished below zero, which is why the axis
+    starts at minus three.
+  </p>
+</section>
+
+<!-- ═══════════════ B ═══════════════ -->
+<section id="dB" role="tabpanel" aria-labelledby="tB" hidden>
+  <div class="head"><span class="num">B</span><h2>The broadsheet</h2></div>
+  <div class="note">
+    <b>Set it like a newspaper, because that is what it is.</b> A review is
+    written, not dashboarded: a headline, a standfirst, three columns of type
+    and a block of agate results at the foot — the classified scores a Saturday
+    sports paper ran for a century because it is the densest legible way to
+    print a lot of small numbers.
+    <span class="for">For:</span> it is the only direction with a voice, it
+    reads as authored rather than generated, and it is unmistakably not another
+    dark dashboard.
+    <span class="against">Against:</span> it breaks the site's own visual
+    language on purpose, it needs real editing every week or it reads as
+    filler, and justified type in three columns on a phone is one column of
+    compromises.
+  </div>
+
+  <div class="paper" style="margin-top:var(--gap)">
+    <div class="masthead">
+      <div class="mast-name">The Gameweek</div>
+      <div class="mast-meta">No. 1 · Season 2026/27 · Monday, late</div>
+    </div>
+    <div class="rule-thin"></div>
+
+    <div class="byline">The Review — Gameweek One</div>
+    <h2 class="hd">Two thirds of the game captained Haaland. He scored two.</h2>
+    <p class="standfirst">
+      The best eleven of the opening weekend cost sixty-three million pounds and
+      almost nobody owned a single one of them.
+    </p>
+
+    <div class="cols">
+      <p>
+        The armband is the largest decision in fantasy football and gameweek one
+        settled it against almost everybody. Erling Haaland, owned by 69.4 per
+        cent of the game and captained by the great majority of them, played
+        ninety minutes at home to Bournemouth and returned two points. Doubled,
+        four.
+      </p>
+      <p>
+        The player who should have had it was a £4.5m left back at Brighton.
+        Maxim De Cuyper scored, assisted, kept a clean sheet and took three
+        bonus points for seventeen — thirty-four with the armband, and a
+        thirty-point swing against the pick two thirds of the game made. Nobody
+        was going to captain him. That is not the point. The point is the size
+        of the number one disc was worth.
+      </p>
+      <p class="pull">
+        Six of the best eleven were owned by fewer than two managers in a
+        hundred.
+      </p>
+      <p>
+        Behind him the pattern held. Hull City supplied three of the eleven —
+        Tzolakis, Mendy and Ajayi, twelve and a half million between them and
+        thirty-nine points — and Brentford another two. The whole side comes to
+        sixty-three million against a hundred-million budget, and averages 8.1
+        per cent ownership.
+      </p>
+      <p>
+        This paper's own projections were out by 1.66 points a player across all
+        495 it named, and the direction of the error is worth publishing plainly:
+        it was wrong about who would be on the pitch, not about what they would
+        do once there. Sixteen players it rated three points or better did not
+        appear at all. Forty-one it rated under one and a half played the hour
+        and took a hundred and twenty-two points between them.
+      </p>
+      <p>
+        Goals were the smallest component error of nine. Appearance points were
+        the largest. A model that knows what a footballer does and not whether
+        he is playing has a fixable problem, and a different one from the model
+        that cannot tell a good striker from a bad one.
+      </p>
+    </div>
+
+    <div class="agate">
+      <h3>Gameweek One · Leading Scores</h3>
+      <div class="grid" id="agate"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ C ═══════════════ -->
+<section id="dC" role="tabpanel" aria-labelledby="tC" hidden>
+  <div class="head"><span class="num">C</span><h2>The distribution</h2></div>
+  <div class="note">
+    <b>One number, one chart, one idea per screen.</b> Not a summary of the
+    gameweek — an argument about it. Every player who kicked a ball, sorted by
+    what he scored, and the shape that comes out says more about fantasy
+    football than any table: it is not a bell, it is a cliff with a tail.
+    <span class="for">For:</span> it is instantly legible on a phone, it is the
+    most shareable thing on the list, and it gives the site a way to say
+    something true and slightly counter-intuitive every single week.
+    <span class="against">Against:</span> one idea per screen means a lot of
+    screens, and the idea has to actually be there — some gameweeks the
+    distribution is the same distribution as last week and the page has
+    nothing to say.
+  </div>
+
+  <div class="dist" style="margin-top:var(--gap)">
+    <span class="kicker">Gameweek 1 · every player who featured</span>
+    <div style="display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap;margin-top:6px">
+      <div class="huge">120</div>
+      <p style="font-size:19px;line-height:1.3;font-weight:600;max-width:30ch;padding-bottom:10px">
+        of the 310 players who kicked a ball scored <em>exactly one point</em>.
+      </p>
+    </div>
+    <div class="bars" id="bars"></div>
+    <div style="display:flex;justify-content:space-between;margin-top:9px;font-size:11px;color:var(--ink3)">
+      <span>points scored →</span>
+      <span>bar height = players</span>
+    </div>
+    <p class="muted" style="margin-top:20px;max-width:80ch;border-top:1px solid var(--line);padding-top:16px">
+      Fifty-five per cent of everyone who played managed two points or fewer.
+      Nine per cent reached nine. <b>Eight players in the entire league</b>
+      scored thirteen or more, and one reached seventeen. Every argument about
+      captaincy, differentials and template is really an argument about that
+      tail on the right — which is thin, which is the point, and which is why a
+      projection that names a median will be wrong about it every week.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════ D ═══════════════ -->
+<section id="dD" role="tabpanel" aria-labelledby="tD" hidden>
+  <div class="head"><span class="num">D</span><h2>The receipt</h2></div>
+  <div class="note">
+    <b>Your gameweek, itemised, on a till slip.</b> A review of your own team
+    is a bill: this is what you ordered, this is what each item came to, this
+    is what you paid, here is the total at the bottom. The form does the
+    explaining — nobody needs to be told how to read a receipt, and the two
+    lines reading <em>0.00 — did not play</em> land harder printed on paper
+    than they ever would in a table cell.
+    <span class="for">For:</span> it is the most shareable object the site
+    could produce, it renders identically at any width, and it is a natural
+    export — one image, no cropping.
+    <span class="against">Against:</span> it is a joke that has to stay funny
+    for thirty-eight weeks, it holds about fifteen lines before it stops being
+    a receipt, and there is nowhere to put a chart.
+  </div>
+
+  <div style="margin-top:26px;padding:18px 0 30px">
+    <div class="till">
+      <h3>FPL ANALYSER</h3>
+      <div class="c"><small>gameweek 1 &middot; season 2026/27</small></div>
+      <div class="c" style="margin-top:2px"><small>TEAM 1234567 &middot; MON 24 AUG 22:21</small></div>
+      <div class="sep"></div>
+      <div class="li"><span>QTY  ITEM</span><span>AMT</span></div>
+      <div class="sep"></div>
+      <div id="tillitems"></div>
+      <div class="sep"></div>
+      <div class="li"><span>SUBTOTAL (11)</span><span class="n">44</span></div>
+      <div class="li"><span>CAPTAIN x2 &mdash; HAALAND</span><span class="n">+2</span></div>
+      <div class="li"><span>BENCH (4, NOT CHARGED)</span><span class="n">&mdash;</span></div>
+      <div class="sep"></div>
+      <div class="tot"><span>TOTAL</span><span class="n">46</span></div>
+      <div class="li"><span class="q">projected</span><span class="q n">58.08</span></div>
+      <div class="li"><span class="q">variance</span><span class="q n">-12.08</span></div>
+      <div class="sep"></div>
+      <div class="c"><small>2 ITEMS UNAVAILABLE &middot; NO REFUND</small></div>
+      <div class="c" style="margin-top:5px"><small>MODEL ERROR 1.66 PTS/PLAYER &middot; 495 RATED</small></div>
+      <div class="barcode" id="barcode"></div>
+      <div class="c" style="margin-top:7px"><small>fplanalyser.co.uk</small></div>
+      <div class="c"><small>* * * KEEP THIS RECEIPT * * *</small></div>
+    </div>
+  </div>
+</section>
+
+<hr>
+<div class="note">
+  <b>All four run on the same measured gameweek.</b> The scatter is all 495
+  projections against what each player actually scored; the agate block and the
+  distribution are the 310 who featured; the receipt is the fifteen on a Team
+  ID. Joined on <code>code</code>, never on name. Bonus is provisional until
+  FPL formally closes GW1, so a point or two may still move.
+</div>
+
+</div>
+
+<script>
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* Every player the model projected: [projected, actual, position 0-3].
+   Measured, all 495 of them. */
+const PTS = [[6.59,2,2],[6.34,9,2],[6.16,5,1],[6.09,2,3],[5.3,9,1],[4.99,2,2],[4.75,13,2],[4.66,2,2],[4.6,2,2],[4.58,6,1],[4.56,11,1],[4.52,0,3],[4.5,0,1],[4.43,6,1],[4.4,9,2],[4.37,6,0],[4.37,11,3],[4.31,11,2],[4.25,1,1],[4.24,6,1],[4.16,0,1],[4.14,2,3],[4.13,2,1],[4.1,2,2],[4.08,1,1],[4.08,2,2],[4.07,9,1],[4.05,1,0],[4.04,2,2],[4,8,2],[3.97,2,1],[3.91,3,2],[3.84,2,2],[3.83,13,2],[3.83,10,1],[3.77,16,2],[3.77,0,1],[3.77,2,3],[3.76,1,2],[3.74,2,2],[3.74,3,2],[3.74,0,1],[3.73,1,3],[3.72,6,2],[3.72,1,3],[3.71,0,3],[3.7,6,1],[3.7,6,1],[3.67,2,2],[3.66,1,1],[3.62,9,2],[3.6,1,1],[3.59,1,2],[3.58,0,1],[3.58,3,2],[3.57,2,2],[3.57,2,1],[3.56,1,1],[3.56,3,2],[3.55,8,2],[3.55,0,2],[3.54,1,1],[3.51,2,2],[3.5,10,1],[3.5,5,2],[3.49,4,2],[3.48,17,1],[3.48,0,1],[3.46,4,1],[3.46,12,2],[3.46,0,1],[3.45,2,1],[3.44,10,2],[3.44,0,2],[3.43,3,1],[3.43,3,1],[3.41,4,2],[3.41,6,3],[3.4,1,3],[3.39,0,3],[3.38,0,1],[3.38,2,2],[3.38,1,2],[3.37,2,2],[3.37,3,2],[3.37,1,0],[3.34,6,1],[3.33,8,3],[3.32,8,1],[3.32,0,1],[3.29,2,2],[3.28,1,2],[3.27,7,0],[3.26,2,0],[3.26,0,1],[3.25,11,2],[3.25,7,1],[3.23,5,2],[3.22,0,2],[3.22,2,0],[3.21,7,0],[3.21,2,2],[3.19,2,2],[3.18,3,1],[3.18,2,3],[3.17,5,3],[3.17,1,2],[3.16,0,1],[3.16,0,2],[3.15,0,0],[3.15,0,1],[3.15,2,0],[3.14,1,2],[3.14,3,0],[3.14,1,2],[3.13,6,0],[3.12,3,2],[3.12,0,2],[3.11,6,3],[3.1,0,1],[3.1,0,1],[3.1,1,2],[3.09,1,2],[3.09,2,2],[3.08,2,2],[3.08,9,3],[3.07,0,1],[3.06,6,1],[3.06,8,2],[3.06,2,1],[3.06,1,1],[3.04,6,1],[3.03,4,1],[3.03,2,2],[3.02,10,1],[3.02,5,1],[2.99,2,2],[2.98,0,1],[2.98,9,0],[2.97,3,2],[2.95,13,1],[2.95,1,1],[2.91,0,2],[2.9,1,1],[2.89,4,3],[2.87,2,2],[2.86,2,0],[2.85,1,1],[2.78,2,3],[2.77,2,2],[2.77,2,0],[2.74,3,1],[2.74,3,1],[2.73,0,1],[2.73,1,1],[2.72,1,2],[2.71,1,2],[2.71,0,2],[2.71,0,1],[2.71,2,2],[2.7,0,2],[2.7,0,1],[2.69,1,0],[2.68,2,1],[2.67,2,2],[2.63,0,1],[2.63,14,2],[2.6,6,2],[2.59,2,2],[2.59,1,2],[2.58,1,1],[2.57,1,2],[2.55,2,0],[2.55,3,2],[2.54,2,2],[2.53,2,2],[2.53,1,1],[2.53,2,0],[2.52,-1,1],[2.52,2,2],[2.48,2,2],[2.48,0,3],[2.44,1,2],[2.42,0,2],[2.41,1,1],[2.4,0,1],[2.39,0,2],[2.39,1,2],[2.38,8,1],[2.38,14,1],[2.38,6,1],[2.37,5,3],[2.37,0,2],[2.36,2,3],[2.36,10,0],[2.35,2,1],[2.34,0,2],[2.33,0,2],[2.31,2,1],[2.29,0,1],[2.27,1,2],[2.27,0,2],[2.25,1,0],[2.25,2,0],[2.25,1,2],[2.24,3,2],[2.24,0,2],[2.23,6,1],[2.21,6,1],[2.19,0,2],[2.17,1,1],[2.16,1,1],[2.15,6,1],[2.14,0,2],[2.12,1,2],[2.1,0,2],[2.07,1,1],[2.07,1,1],[2.03,0,1],[2.02,1,2],[2.02,2,2],[2.01,1,3],[1.98,3,1],[1.95,0,2],[1.95,0,1],[1.93,6,2],[1.93,1,2],[1.9,1,2],[1.88,2,3],[1.85,1,3],[1.79,2,1],[1.77,1,1],[1.72,6,2],[1.72,1,2],[1.67,1,2],[1.67,2,1],[1.65,10,2],[1.63,4,3],[1.56,1,1],[1.56,0,2],[1.55,0,1],[1.52,0,2],[1.51,6,1],[1.51,7,2],[1.42,1,2],[1.4,0,2],[1.38,3,2],[1.3,2,3],[1.3,1,1],[1.26,0,1],[1.2,-2,1],[1.2,1,3],[1.18,0,3],[1.18,3,2],[1.17,3,2],[1.16,7,2],[1.13,0,1],[1.11,0,2],[1.1,1,3],[1.09,1,3],[1.06,3,2],[1.05,0,1],[1.05,9,2],[1.04,1,2],[1.01,0,1],[1,3,1],[0.99,1,2],[0.93,4,3],[0.92,1,1],[0.92,1,2],[0.91,3,2],[0.9,1,2],[0.9,6,1],[0.89,0,2],[0.88,0,2],[0.86,0,2],[0.86,1,1],[0.84,5,2],[0.83,2,2],[0.78,1,1],[0.78,2,1],[0.77,4,2],[0.76,0,2],[0.72,0,2],[0.7,0,2],[0.7,0,2],[0.69,1,2],[0.67,1,1],[0.66,1,1],[0.64,1,1],[0.62,0,3],[0.6,9,2],[0.58,1,2],[0.56,0,3],[0.55,0,2],[0.55,1,1],[0.53,3,1],[0.53,0,2],[0.52,0,2],[0.48,0,1],[0.46,3,2],[0.46,0,1],[0.44,0,3],[0.43,1,1],[0.43,1,1],[0.42,0,2],[0.42,0,2],[0.41,1,3],[0.4,1,3],[0.39,1,1],[0.38,0,2],[0.35,0,3],[0.35,1,1],[0.35,0,1],[0.35,0,1],[0.35,1,1],[0.32,1,3],[0.32,1,2],[0.3,1,2],[0.3,0,1],[0.3,0,0],[0.29,0,1],[0.29,0,3],[0.29,0,2],[0.28,2,2],[0.28,1,2],[0.27,0,2],[0.27,2,2],[0.26,1,1],[0.26,0,2],[0.26,1,1],[0.25,1,3],[0.24,0,1],[0.23,0,3],[0.23,0,0],[0.23,0,0],[0.23,0,3],[0.22,0,2],[0.21,1,1],[0.21,0,0],[0.21,0,0],[0.21,0,2],[0.21,0,1],[0.2,0,0],[0.2,3,1],[0.17,0,2],[0.17,0,0],[0.17,0,2],[0.17,0,3],[0.17,1,2],[0.16,0,0],[0.16,0,0],[0.16,0,1],[0.16,0,1],[0.16,6,1],[0.16,0,2],[0.16,0,0],[0.16,6,2],[0.16,0,0],[0.15,0,2],[0.15,0,0],[0.14,0,1],[0.14,0,0],[0.14,0,0],[0.14,0,1],[0.13,1,2],[0.13,0,1],[0.13,0,0],[0.13,1,2],[0.13,0,0],[0.12,1,0],[0.12,0,0],[0.12,0,1],[0.12,0,2],[0.11,0,3],[0.11,0,3],[0.11,0,0],[0.11,1,1],[0.11,0,3],[0.1,0,1],[0.1,0,1],[0.1,0,1],[0.1,0,0],[0.1,3,2],[0.1,1,3],[0.1,0,3],[0.09,1,2],[0.09,2,2],[0.09,0,0],[0.09,0,2],[0.09,0,1],[0.09,0,2],[0.08,0,2],[0.08,1,2],[0.08,0,2],[0.08,0,3],[0.08,0,1],[0.08,1,3],[0.08,0,2],[0.08,0,2],[0.08,0,2],[0.08,0,2],[0.08,0,2],[0.08,0,0],[0.08,1,2],[0.08,8,2],[0.08,1,3],[0.08,0,1],[0.08,0,1],[0.08,0,0],[0.08,0,1],[0.08,0,1],[0.08,0,2],[0.07,0,2],[0.07,0,2],[0.07,0,2],[0.07,0,1],[0.07,0,2],[0.07,2,2],[0.07,1,2],[0.07,0,1],[0.07,1,2],[0.07,0,0],[0.07,0,0],[0.07,1,2],[0.07,5,2],[0.07,0,2],[0.07,1,2],[0.07,0,0],[0.07,0,0],[0.07,0,2],[0.07,1,2],[0.07,1,1],[0.07,0,0],[0.07,0,1],[0.06,0,0],[0.06,0,2],[0.06,0,1],[0.06,0,0],[0.06,0,2],[0.06,0,2],[0.06,0,2],[0.06,1,2],[0.06,1,2],[0.06,0,1],[0.06,0,1],[0.06,0,2],[0.06,3,2],[0.06,0,2],[0.06,0,2],[0.06,0,2],[0.05,0,1],[0.05,0,1],[0.05,0,3],[0.05,0,3],[0.05,0,1],[0.05,1,1],[0.05,0,3],[0.05,0,1],[0.05,0,0],[0.05,0,0],[0.05,0,3],[0.04,0,2],[0.04,0,2],[0.04,0,2],[0.04,0,3],[0.04,0,3],[0.04,0,2],[0.04,0,1],[0.04,0,1],[0.04,1,2],[0.04,0,0],[0.04,0,0],[0.04,0,0],[0.04,0,2],[0.04,1,2],[0.04,0,2],[0.04,1,2],[0.04,1,2],[0.03,0,1],[0.03,0,1],[0.03,0,1],[0.03,0,2],[0.03,0,1],[0.03,0,1],[0.03,0,1],[0.02,1,2],[0.02,0,2],[0.02,0,2],[0.02,0,2],[0.02,0,2],[0.02,2,2],[0.02,0,2],[0.01,1,1],[0.01,15,1]];
+const LABELS = [
+  ['Mendy',0.01,15,'projected 0.01'],['De Cuyper',3.48,17,'best in the week'],
+  ['Hinshelwood',3.77,16,''],['Palmer',4.75,13,''],
+  ['B.Fernandes',6.59,2,'the model’s top pick'],['Haaland',6.09,2,'69.4% owned'],
+  ['Watkins',4.52,0,'did not play'],
+];
+
+/* ══ A · scatter ══ */
+(function () {
+  const W = 900, H = 540, L = 50, R = 26, T = 22, B = 46;
+  const maxX = 7, maxY = 18, minY = -3;   // three players finished on a red card
+  const x = (v) => L + (v / maxX) * (W - L - R);
+  const y = (v) => H - B - ((v - minY) / (maxY - minY)) * (H - T - B);
+  const cls = ['gk', 'df', 'md', 'fw'];
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img"
+    aria-label="Projected points against actual points for 495 players">`;
+  for (let v = minY; v <= maxY; v += 3) {
+    const zero = v === 0;
+    s += `<line class="gridline" x1="${L}" y1="${y(v)}" x2="${W - R}" y2="${y(v)}"
+          ${zero ? 'style="stroke:rgba(255,255,255,.16)"' : ''}/>`;
+    s += `<text class="axis" x="${L - 10}" y="${y(v) + 3.5}" text-anchor="end">${v}</text>`;
+  }
+  for (let v = 0; v <= maxX; v += 1) {
+    s += `<line class="gridline" x1="${x(v)}" y1="${T}" x2="${x(v)}" y2="${H - B}"/>`;
+    s += `<text class="axis" x="${x(v)}" y="${H - B + 18}" text-anchor="middle">${v}</text>`;
+  }
+  s += `<line class="truth" x1="${x(0)}" y1="${y(0)}" x2="${x(maxX)}" y2="${y(maxX)}"/>`;
+  s += `<text class="axis" x="${x(maxX) - 6}" y="${y(maxX) - 10}" text-anchor="end"
+        style="fill:var(--acc);font-weight:700">exactly right</text>`;
+  /* Jitter is deterministic — the same player lands in the same place on every
+     render, so it comes from the index and never from Math.random. */
+  PTS.forEach(([px, py, pos], i) => {
+    const jx = ((i * 37) % 11 - 5) * 0.55, jy = ((i * 53) % 11 - 5) * 0.55;
+    s += `<circle class="dot ${cls[pos]}" cx="${(x(px) + jx).toFixed(1)}"
+          cy="${(y(py) + jy).toFixed(1)}" r="3.4"/>`;
+  });
+  /* Labels flip to the left of their dot in the right-hand third, and stack
+     downwards when two of them would sit on the same line — the first draft
+     printed "69.4% owned" straight through "the model's top pick". */
+  const placed = [];
+  for (const [nm, px, py, note] of LABELS) {
+    const lx = x(px), ly = y(py);
+    const flip = px > maxX * 0.62;
+    const anchor = flip ? 'end' : 'start';
+    let tx = lx + (flip ? -14 : 14);
+    let ty = ly + (py > px ? -12 : 18);
+    while (placed.some((q) => Math.abs(q.ty - ty) < 26 && Math.abs(q.tx - tx) < 150)) ty += 26;
+    placed.push({ tx, ty });
+    s += `<line class="leader" x1="${lx}" y1="${ly}" x2="${tx + (flip ? 4 : -4)}" y2="${ty - 4}"/>`;
+    s += `<text class="callout" x="${tx}" y="${ty}" text-anchor="${anchor}">${esc(nm)}</text>`;
+    if (note) s += `<text class="callout sub" x="${tx}" y="${ty + 12}" text-anchor="${anchor}">${esc(note)}</text>`;
+  }
+  s += `<text class="axis" x="${L + (W - L - R) / 2}" y="${H - 6}" text-anchor="middle"
+        style="letter-spacing:.12em">WHAT THE MODEL SAID</text>`;
+  s += `<text class="axis" transform="translate(15,${T + (H - T - B) / 2}) rotate(-90)"
+        text-anchor="middle" style="letter-spacing:.12em">WHAT HE SCORED</text>`;
+  s += '</svg>';
+  document.getElementById('plot').innerHTML = s;
+})();
+
+/* ══ B · agate ══ */
+const AGATE = [
+  ['De Cuyper','BHA',17],['Hinshelwood','BHA',16],['Mendy','HUL',15],['Ajayi','HUL',14],
+  ['M.Sangaré','BRE',14],['Kayode','BRE',13],['Stach','LEE',13],['Palmer','CHE',13],
+  ['Gakpo','LIV',12],['João Pedro','CHE',11],['Tzolakis','HUL',10],['Szoboszlai','LIV',8],
+  ['Calafiori','ARS',9],['Ndiaye','EVE',9],['Saka','ARS',9],['Raya','ARS',6],
+];
+document.getElementById('agate').innerHTML = AGATE
+  .sort((a, b) => b[2] - a[2])
+  .map(([nm, tm, p]) => `<div class="row"><span>${esc(nm)} <b>${tm}</b></span><span>${p}</span></div>`)
+  .join('');
+
+/* ══ C · distribution ══ */
+const HIST = {'-2':2,'-1':1,'0':15,'1':120,'2':64,'3':27,'4':8,'5':9,'6':24,'7':5,'8':7,
+              '9':9,'10':6,'11':4,'12':1,'13':3,'14':2,'15':1,'16':1,'17':1};
+(function () {
+  const keys = Object.keys(HIST).map(Number).sort((a, b) => a - b);
+  const max = Math.max(...Object.values(HIST));
+  document.getElementById('bars').innerHTML = keys.map((k) => {
+    const v = HIST[k];
+    const h = Math.max(2, (v / max) * 100);
+    const hot = k === 1;
+    const mark = k >= 13;
+    return `<div class="b${hot ? ' hot' : mark ? ' mark' : ''}" title="${v} players scored ${k}">
+      ${v >= 24 || mark ? `<b>${v}</b>` : ''}
+      <i style="height:${h}%"></i><span>${k}</span></div>`;
+  }).join('');
+})();
+
+/* ══ D · receipt ══ */
+const TILL = [
+  ['1','RAYA          ARS GK',6],['1','CALAFIORI     ARS DF',9],['1','MAGUIRE       MUN DF',1],
+  ['1','MARTINEZ      MUN DF',null],['1',"O'SHEA        IPS DF",4],['1','SAKA          ARS MD',9],
+  ['1','WIRTZ         LIV MD',2],['1','NDIAYE        EVE MD',9],['1','LE FEE        SUN MD',2],
+  ['1','HAALAND (C)   MCI FW',2],['1','WATKINS       AVL FW',null],
+];
+document.getElementById('tillitems').innerHTML = TILL.map(([q, nm, v]) => `
+  <div class="li"><span>${q}  ${esc(nm)}</span><span class="n">${
+    v === null ? '<span class="q">0 &mdash; DNP</span>' : v}</span></div>`).join('');
+document.getElementById('barcode').innerHTML =
+  Array.from({ length: 46 }, (_, i) => {
+    /* Deterministic, so the same receipt prints the same barcode twice. */
+    const w = ((i * 29) % 7 < 3) ? 2 : 4;
+    const h = 60 + ((i * 17) % 40);
+    return `<i style="width:${w}px;height:${h}%"></i>`;
+  }).join('');
+
+/* ── switcher ── */
+const tabs = [...document.querySelectorAll('.dirs [role=tab]')];
+tabs.forEach((b) => b.addEventListener('click', () => {
+  tabs.forEach((o) => {
+    const on = o === b;
+    o.setAttribute('aria-selected', String(on));
+    document.getElementById(o.getAttribute('aria-controls')).hidden = !on;
+  });
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}));
+</script>
