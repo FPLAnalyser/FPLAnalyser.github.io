@@ -1,0 +1,442 @@
+<title>GW Review As Preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&display=swap">
+<style>
+/* The Preview page's own furniture, rebuilt from the running page: the banner
+   with its bar underneath, the four glance cards, the three captain cards, the
+   fixture card with its xG split bar and clean-sheet percentages, the ranked
+   top ten, the helps/hurts columns and the team-news list. Nothing here is a
+   new component. The Review is that page, one week later, in past tense. */
+:root{
+  --bg0:#000; --s1:#0f1013; --s2:#16171b; --s3:#1e1f23; --s4:#282a2e;
+  --ink:#edeff3; --ink2:#a9abb0; --ink3:#7c7e82;
+  --line:rgba(255,255,255,.07); --line-mid:rgba(255,255,255,.12); --line-strong:rgba(255,255,255,.22);
+  --acc:#c9a227; --acc2:#ead188; --acc-soft:rgba(201,162,39,.12);
+  --good:#3ddc7a; --bad:#f0736f; --warn:#e8b04a; --info:#6ea8ff;
+  --home:#d1544f; --away:#e9e6df;
+  --r-md:10px; --r-lg:14px; --r-xl:18px; --gap:12px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg0);color:var(--ink);
+     font:15px/1.55 'Manrope',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+.cond{font-family:'Barlow Condensed',sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 16px 90px}
+:focus-visible{outline:2px solid var(--acc2);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+h1{font-size:25px;margin:0 0 6px;letter-spacing:-.025em;font-weight:800;text-wrap:balance}
+p{margin:0}
+.lede{color:var(--ink2);font-size:14px;max-width:76ch}
+.n{font-variant-numeric:tabular-nums}
+.muted{color:var(--ink2);font-size:13px}
+.tiny{font-size:11.5px;color:var(--ink2)}
+.note{background:var(--s1);border:1px solid var(--line);border-left:2px solid var(--line-strong);
+  border-radius:0 var(--r-md) var(--r-md) 0;padding:11px 14px;font-size:13px;color:var(--ink2);max-width:86ch}
+.note b{color:var(--ink)}
+hr{height:1px;background:var(--line);margin:30px 0 18px;border:0}
+
+/* section headers, as the Preview sets them */
+.sect{display:flex;align-items:center;gap:10px;margin:30px 0 10px}
+.sect h2{font-size:10.5px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--ink2);margin:0}
+.sect .line{flex:1;height:1px;background:var(--line)}
+.share{font:inherit;font-size:11px;font-weight:700;color:var(--ink3);background:none;
+  border:1px solid var(--line-mid);border-radius:999px;padding:3px 10px;cursor:pointer;white-space:nowrap}
+.share:hover{color:var(--ink);border-color:var(--line-strong)}
+
+/* banner + status bar */
+.banner{position:relative;overflow:hidden;border-radius:var(--r-lg) var(--r-lg) 0 0;border:1px solid var(--line);
+  border-bottom:0;padding:14px 18px 16px;background:linear-gradient(100deg,#101a14,#0b0f0c 45%,#0a0a0c)}
+.banner .crumb{font-size:8.5px;font-weight:800;letter-spacing:.13em;color:var(--acc);text-transform:uppercase}
+.banner .ttl{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:700;line-height:1.02;margin-top:2px}
+.banner .sub{font-size:12.5px;color:var(--ink2);margin-top:2px}
+.statusbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+  border:1px solid var(--line);border-radius:0 0 var(--r-lg) var(--r-lg);
+  background:var(--s1);padding:9px 16px;font-size:12.5px}
+.statusbar .dot{width:7px;height:7px;border-radius:99px;background:var(--good)}
+.statusbar b{font-weight:700}
+.statusbar .r{margin-left:auto;color:var(--ink3);font-size:11.5px}
+
+/* four glance cards */
+.glance{display:grid;grid-template-columns:repeat(auto-fit,minmax(206px,1fr));gap:var(--gap)}
+.gcard{position:relative;overflow:hidden;background:var(--s1);border:1px solid var(--line);
+  border-radius:var(--r-lg);padding:11px 13px 12px;min-height:98px}
+.gcard .k{font-size:8.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+.gcard .v{font-size:27px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-top:3px}
+.gcard .s{font-size:11.5px;color:var(--ink2);margin-top:3px;max-width:26ch}
+.gcard .badge{position:absolute;right:10px;top:10px;width:30px;height:30px;border-radius:7px;
+  display:grid;place-items:center;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;
+  background:var(--s3);color:var(--ink2);border:1px solid var(--line-mid)}
+
+/* three captain cards */
+.caps{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:var(--gap)}
+.cap{position:relative;overflow:hidden;border-radius:var(--r-lg);border:1px solid var(--line);
+  background:linear-gradient(120deg,var(--s2),var(--s1) 62%);padding:11px 13px 12px;min-height:118px}
+.cap.win{border-color:rgba(61,220,122,.4);background:linear-gradient(120deg,rgba(61,220,122,.10),var(--s1) 62%)}
+.cap.lose{border-color:rgba(240,115,111,.38);background:linear-gradient(120deg,rgba(240,115,111,.09),var(--s1) 62%)}
+.cap .k{font-size:8.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+.cap .nm{font-size:14.5px;font-weight:700;margin-top:4px}
+.cap .meta{font-size:11px;color:var(--ink3)}
+.cap .big{font-family:'Barlow Condensed',sans-serif;font-size:38px;font-weight:700;line-height:.95;margin-top:6px}
+.cap .foot{font-size:11.5px;color:var(--ink2);margin-top:3px}
+
+/* fixture card — the Preview's, with the score where the kickoff was */
+.fixgrid{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
+@media(max-width:820px){.fixgrid{grid-template-columns:1fr}}
+.fixgrid>*{min-width:0}
+.fix{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg);padding:11px 13px 10px}
+.fix.big{border-color:var(--line-mid);background:linear-gradient(160deg,var(--s2),var(--s1))}
+.fix .top{display:flex;align-items:center;gap:10px}
+.fix .club{display:flex;align-items:center;gap:7px;min-width:0;flex:1}
+.fix .club.a{justify-content:flex-end}
+.fix .code{font-family:'Barlow Condensed',sans-serif;font-size:21px;font-weight:700;letter-spacing:.01em}
+.fix .crest{width:20px;height:20px;border-radius:5px;background:var(--s3);border:1px solid var(--line-mid);
+  display:grid;place-items:center;font-size:8px;font-weight:800;color:var(--ink3);flex:none}
+.fix .score{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;
+  letter-spacing:.02em;padding:0 4px;white-space:nowrap}
+.fix .xgv{font-size:12.5px;font-weight:700;color:var(--ink2);font-variant-numeric:tabular-nums}
+.fix .bar{display:flex;height:7px;border-radius:99px;overflow:hidden;margin-top:8px;background:var(--s3)}
+.fix .bar i{display:block;height:100%}
+.fix .bar i.h{background:var(--home)}
+.fix .bar i.a{background:var(--away)}
+.fix .under{display:flex;justify-content:space-between;gap:8px;margin-top:6px;font-size:10.5px;color:var(--ink3)}
+.fix .cs{display:inline-flex;align-items:center;gap:3px}
+.fix .cs.on{color:var(--good);font-weight:700}
+.fix .line{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink2)}
+.fix .line b{color:var(--ink)}
+.fix .verdict{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  border-radius:4px;padding:1.5px 6px;margin-left:6px}
+.fix .verdict.against{background:rgba(232,176,74,.14);color:var(--warn)}
+.fix .verdict.with{background:rgba(61,220,122,.12);color:var(--good)}
+.daylabel{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);
+  margin:18px 0 8px;padding-left:8px;border-left:2px solid var(--acc)}
+
+/* ranked top ten */
+.rank{display:flex;flex-direction:column;gap:1px}
+.rrow{display:grid;grid-template-columns:20px 1fr auto;gap:10px;align-items:center;
+  padding:8px 4px;border-top:1px solid var(--line)}
+.rrow:first-child{border-top:0}
+.rrow .i{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--ink3);text-align:right}
+.rrow .nm{font-size:13.5px;font-weight:700}
+.rrow .mt{font-size:10.5px;color:var(--ink3)}
+.rrow .v{font-size:15px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
+.rrow .track{grid-column:2/4;height:4px;border-radius:99px;background:var(--s3);overflow:hidden;margin-top:4px}
+.rrow .track i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2))}
+
+/* helps / hurts */
+.hh{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
+@media(max-width:760px){.hh{grid-template-columns:1fr}}
+.hh>*{min-width:0}
+.hcol{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.hcol>header{padding:9px 13px;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  border-bottom:1px solid var(--line)}
+.hcol.good>header{color:var(--good);background:rgba(61,220,122,.07)}
+.hcol.bad>header{color:var(--bad);background:rgba(240,115,111,.07)}
+.hrow{display:flex;gap:10px;align-items:baseline;padding:8px 13px;border-top:1px solid var(--line)}
+.hrow:first-of-type{border-top:0}
+.hrow .nm{font-size:13px;font-weight:700}
+.hrow .why{font-size:11px;color:var(--ink3)}
+.hrow .d{margin-left:auto;font-size:13px;font-weight:800;white-space:nowrap}
+
+/* casualties */
+.news{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
+.nrow{display:flex;align-items:center;gap:9px;background:var(--s1);border:1px solid var(--line);
+  border-radius:var(--r-md);padding:8px 11px}
+.nrow .tag{font-size:8.5px;font-weight:800;letter-spacing:.06em;border-radius:4px;padding:2px 5px;
+  background:rgba(232,176,74,.14);color:var(--warn);flex:none}
+.nrow .nm{font-size:13px;font-weight:700}
+.nrow .why{font-size:10.5px;color:var(--ink3)}
+.nrow .r{margin-left:auto;font-size:11px;color:var(--ink3);white-space:nowrap}
+</style>
+
+<div class="wrap">
+
+<header>
+  <span style="font-size:9px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--ink3)">
+    Mockup · GW Review</span>
+  <h1 style="margin-top:5px">The Review is the Preview, one week later</h1>
+  <p class="lede" style="margin-top:6px">
+    Four sets of mockups invented a new page. The site already has the page —
+    it just points the other way. GW Preview opens on <em>the round at a
+    glance</em>, then <em>Captain</em>, then every fixture as an xG bar with
+    clean-sheet percentages, then expected points, then who the fixture suits,
+    then team news. The Review is that, in past tense, section for section, on
+    the same components. Everything below is measured GW1.
+  </p>
+</header>
+
+<div class="note" style="margin-top:14px">
+  <b>Why this rather than another four directions.</b> The Preview is the most
+  finished page on the site and readers already know how to read it. A Review
+  that shares its skeleton needs no learning, reuses its components, and makes
+  the pair legible as a pair — you looked at the bar before the round and you
+  look at the same bar after it. The one section with no honest past tense is
+  <em>Into the next one</em>, and it is a link rather than a panel.
+</div>
+
+<!-- ═════════ banner ═════════ -->
+<div class="banner" style="margin-top:20px"><span></span>
+  <div class="crumb">Home / GW Review</div>
+  <div class="ttl">GW1 REVIEW</div>
+  <div class="sub">What the gameweek actually did — hauls, captain calls and where the model missed</div>
+</div>
+<div class="statusbar">
+  <span class="dot"></span>
+  <span><b>All ten fixtures played.</b></span>
+  <span class="muted">Bonus provisional until FPL closes the gameweek</span>
+  <span class="r">actuals pulled Mon 24 Aug, 21:48</span>
+</div>
+
+<!-- ═════════ the round, as it happened ═════════ -->
+<div class="sect"><h2>The round, as it happened</h2><span class="line"></span>
+  <button class="share">Share</button></div>
+<div class="glance" id="glance"></div>
+
+<!-- ═════════ the armband ═════════ -->
+<div class="sect"><h2>The armband</h2><span class="line"></span>
+  <button class="share">Share</button></div>
+<div class="caps" id="caps"></div>
+
+<!-- ═════════ every fixture ═════════ -->
+<div class="sect"><h2>Every fixture</h2><span class="line"></span>
+  <button class="share">Share</button></div>
+<p class="muted" style="margin-bottom:10px;max-width:80ch">
+  The same bar the Preview drew, with the score on top of it. The bar is the
+  expected goals each side actually created — so where the score and the bar
+  disagree, somebody got away with one.
+</p>
+<div id="fixtures"></div>
+
+<!-- ═════════ points top ten ═════════ -->
+<div class="sect"><h2>Points · top 10</h2><span class="line"></span>
+  <button class="share">Share</button></div>
+<div class="fixgrid">
+  <div style="background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg);padding:6px 13px 10px">
+    <div class="rank" id="top10"></div>
+  </div>
+  <div style="background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg);padding:13px 15px">
+    <div style="font-size:8.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)">
+      What the model said about them</div>
+    <div style="display:flex;align-items:baseline;gap:11px;margin-top:6px">
+      <span class="n" style="font-size:32px;font-weight:800;letter-spacing:-.03em">3.16</span>
+      <span class="muted">average projection across the ten</span>
+    </div>
+    <p class="muted" style="margin-top:10px;max-width:44ch">
+      They averaged <b>13.8</b>, on mean ownership of <b>2.9%</b>. The model
+      had ranked them 7th, 18th, 34th, 36th, 67th, 70th, 141st, 167th, 190th —
+      and <b>495th of 495</b>. It had four of the ten in its own top forty and
+      put Mendy dead last in the league. That is less a bad model than the
+      shape of the game: a projection names a median, and the players who win a
+      gameweek are the ones who beat theirs.
+    </p>
+    <div style="border-top:1px solid var(--line);margin-top:12px;padding-top:11px">
+      <div style="font-size:8.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)">
+        Where the model missed</div>
+      <div style="display:flex;align-items:baseline;gap:11px;margin-top:5px">
+        <span class="n" style="font-size:22px;font-weight:800">1.66</span>
+        <span class="tiny">mean absolute error over all 495 it projected · mean error +0.22</span>
+      </div>
+      <p class="tiny" style="margin-top:8px">
+        Sixteen players it rated 3+ did not play at all. Forty-one it rated
+        under 1.5 played the hour and took 122 points between them. It missed
+        on minutes, not on goals.
+        <a href="#" style="color:var(--acc)">The full report card →</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════ who the fixture suited ═════════ -->
+<div class="sect"><h2>Who the fixture suited</h2><span class="line"></span>
+  <button class="share">Share</button></div>
+<p class="muted" style="margin-bottom:10px;max-width:80ch">
+  The Preview names who a fixture helps and who it hurts. This is the same
+  list, marked: did the matchup it promised actually arrive?
+</p>
+<div class="hh">
+  <div class="hcol good"><header>The fixture helped — and it showed</header><div id="helped"></div></div>
+  <div class="hcol bad"><header>It should have, and did not</header><div id="hurt"></div></div>
+</div>
+
+<!-- ═════════ what it cost ═════════ -->
+<div class="sect"><h2>What it cost</h2><span class="line"></span>
+  <button class="share">Share</button></div>
+<p class="muted" style="margin-bottom:10px;max-width:80ch">
+  The Preview's Team News, after the fact: players the model expected who came
+  off early or never got on. This is the list that changes next week's
+  projection, so it is the one section that feeds straight back into the
+  Preview.
+</p>
+<div class="news" id="news"></div>
+
+<div style="margin-top:22px;background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg);
+     padding:13px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+  <div>
+    <div style="font-size:8.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)">
+      Into the next one</div>
+    <div style="font-size:14px;font-weight:700;margin-top:3px">GW2 · deadline Friday 28 August, 17:30</div>
+  </div>
+  <a href="#" style="margin-left:auto;font-size:12.5px;font-weight:700;color:var(--acc);text-decoration:none">
+    Open the GW2 Preview →</a>
+</div>
+
+<hr>
+<div class="note">
+  <b>Measured.</b> Ten fixtures rebuilt from <code>actuals/gw1.json</code>,
+  scored against the projection frozen before the deadline. Joined on
+  <code>code</code>, never on name — fourteen surnames are shared this season.
+  One correction worth recording: an earlier pass counted eight clean sheets by
+  reading FPL's per-player <code>clean_sheets</code> flag as a team fact. It is
+  not — a player substituted before his side concedes keeps his, which is why
+  Bournemouth and Forest both had players flagged in matches they lost. Six
+  teams kept one.
+</div>
+
+</div>
+
+<script>
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ── measured GW1 ────────────────────────────────────────────────────── */
+/* Days and kick-off times from availability.json, not from memory. Five of
+   the ten were on the wrong day in the first draft — Chelsea in particular,
+   who played Monday evening and were filed under Saturday. */
+const FIX = [
+  {d:'Friday 21 August',   t:'19:00', h:'ARS',a:'COV',hs:3,as:0,hxg:1.88,axg:0.21,cs:'h',
+   best:['White','ARS',11],line:'Arsenal needed 1.88 expected goals to win by three. Ben White took 11 from right back.'},
+  {d:'Saturday 22 August', t:'11:30', h:'HUL',a:'MUN',hs:2,as:0,hxg:1.08,axg:1.82,cs:'h',
+   best:['Mendy','HUL',15],line:'United created more and lost by two. Mendy was projected <b>0.01</b> and scored 15.',v:'against'},
+  {d:'Saturday 22 August', t:'14:00', h:'EVE',a:'CRY',hs:2,as:0,hxg:1.12,axg:1.97,cs:'h',
+   best:['Dewsbury-Hall','EVE',11],line:'Palace had nearly two goals of chances and none of the goals.',v:'against'},
+  {d:'Saturday 22 August', t:'14:00', h:'IPS',a:'SUN',hs:2,as:1,hxg:1.79,axg:0.67,
+   best:['Emersonn','IPS',9],line:'Ipswich created two and a half times what Sunderland did, and won by the odd goal.'},
+  {d:'Saturday 22 August', t:'14:00', h:'NFO',a:'LEE',hs:0,as:1,hxg:0.65,axg:0.47,cs:'a',
+   best:['Stach','LEE',13],line:'The lowest-scoring fixture of the round, and the only away clean sheet in it.'},
+  {d:'Saturday 22 August', t:'16:30', h:'BRE',a:'TOT',hs:3,as:0,hxg:3.91,axg:0.57,cs:'h',
+   best:['M.Sangaré','BRE',14],line:'Brentford created more than any side all weekend and converted all of it.',v:'with'},
+  {d:'Sunday 23 August',   t:'13:00', h:'BHA',a:'AVL',hs:3,as:0,hxg:3.77,axg:0.30,cs:'h',
+   best:['De Cuyper','BHA',17],line:'The most one-sided ninety minutes of the round, and the highest score in it.',v:'with'},
+  {d:'Sunday 23 August',   t:'13:00', h:'MCI',a:'BOU',hs:2,as:1,hxg:2.24,axg:0.65,
+   best:['Guéhi','MCI',10],line:'City won it, and Haaland — owned by 69.4% — took two points from 0.76 expected goals.'},
+  {d:'Sunday 23 August',   t:'15:30', h:'NEW',a:'LIV',hs:2,as:2,hxg:1.58,axg:3.01,
+   best:['Gakpo','LIV',12],line:'Liverpool created three goals worth of chances and took a point.',v:'against'},
+  {d:'Monday 24 August',   t:'19:00', h:'FUL',a:'CHE',hs:2,as:3,hxg:1.45,axg:1.69,
+   best:['Palmer','CHE',13],line:'Five goals from 3.14 expected between them, and the round’s last word.'},
+];
+const GLANCE = [
+  {k:'Biggest win',        v:'3–0', s:'Three of them — Arsenal, Brighton and Brentford all won by three', b:'×3'},
+  {k:'Clean sheets kept',  v:'6',   s:'ARS, BHA, BRE, EVE, HUL, LEE — of twenty sides', b:'CS'},
+  {k:'The differential',   v:'17',  s:'De Cuyper, £4.5m, owned by 1.7% of the game', b:'BHA'},
+  {k:'Goals in the round', v:'29',  s:'from 30.8 expected — the week landed almost exactly on its numbers', b:'xG'},
+];
+const CAPS = [
+  {k:'What the game took', nm:'Haaland', meta:'FWD · MCI · £15.5m · 69.4% owned',
+   big:'4', foot:'2 points, doubled. 90 minutes, 0.76 xG, no return.', cls:'lose'},
+  {k:'What it should have been', nm:'De Cuyper', meta:'DEF · BHA · £4.5m · 1.7% owned',
+   big:'34', foot:'Goal, assist, clean sheet, three bonus. Nobody captained him.', cls:'win'},
+  {k:'The one that was gettable', nm:'Palmer', meta:'MID · CHE · £9.5m · 10.5% owned',
+   big:'26', foot:'The best return by anyone the model rated above 4.5 xP.', cls:''},
+];
+const TOP10 = [
+  ['De Cuyper','BHA DEF · £4.5m',17,3.48,1.7],['Hinshelwood','BHA MID · £6.0m',16,3.77,0.4],
+  ['Mendy','HUL DEF · £4.0m',15,0.01,0.9],['Ajayi','HUL DEF · £4.0m',14,2.38,0.9],
+  ['M.Sangaré','BRE MID · £5.5m',14,2.63,3.1],['Kayode','BRE DEF · £4.5m',13,2.95,3.3],
+  ['Palmer','CHE MID · £9.5m',13,4.75,10.5],['Stach','LEE MID · £6.0m',13,3.83,1.0],
+  ['Gakpo','LIV MID · £7.0m',12,3.46,3.6],['Dewsbury-Hall','EVE MID · £6.5m',11,4.31,3.4],
+];
+const HELPED = [
+  ['Mendy','HUL','Hull at home to United — the model gave him 0.01','+15.0'],
+  ['De Cuyper','BHA','Brighton at home to Villa','+13.5'],
+  ['Hinshelwood','BHA','same fixture, two goals','+12.2'],
+  ['Stach','LEE','Leeds away at Forest, the round’s lowest-scoring game','+9.2'],
+];
+const MISSED = [
+  ['B.Fernandes','MUN','the model’s highest projection of the week','−4.6'],
+  ['Haaland','MCI','90 minutes, 0.76 xG, two points','−4.1'],
+  ['Ballard','SUN','90 minutes, nothing','−4.2'],
+  ['James','CHE','90 minutes at Fulham, nothing','−3.8'],
+];
+const NEWS = [
+  ['Dalot','MUN',4.08,10],['Schlager','NFO',3.17,16],['Eze','ARS',3.09,14],
+  ['Garnacho','AVL',2.72,4],['Neto','CHE',2.71,14],['Millar','HUL',2.71,19],
+];
+
+/* ── glance ── */
+document.getElementById('glance').innerHTML = GLANCE.map((g) => `
+  <div class="gcard"><span class="badge cond">${esc(g.b)}</span>
+    <div class="k">${esc(g.k)}</div><div class="v n">${esc(g.v)}</div>
+    <div class="s">${esc(g.s)}</div></div>`).join('');
+
+/* ── captain ── */
+document.getElementById('caps').innerHTML = CAPS.map((c) => `
+  <div class="cap ${c.cls}">
+    <div class="k">${esc(c.k)}</div>
+    <div class="nm">${esc(c.nm)}</div>
+    <div class="meta">${esc(c.meta)}</div>
+    <div class="big n">${esc(c.big)}</div>
+    <div class="foot">${esc(c.foot)}</div>
+  </div>`).join('');
+
+/* ── fixtures, grouped by day exactly as the Preview groups them ── */
+(function () {
+  const days = [...new Set(FIX.map((f) => f.d))];
+  document.getElementById('fixtures').innerHTML = days.map((d, di) => {
+    const rows = FIX.filter((f) => f.d === d);
+    const cards = rows.map((f, i) => {
+      const tot = f.hxg + f.axg;
+      const hw = tot ? (f.hxg / tot) * 100 : 50;
+      const feature = di === 0 && i === 0;
+      return `<div class="fix${feature ? ' big' : ''}">
+        <div class="top">
+          <span class="club"><span class="crest">${esc(f.h)}</span>
+            <span class="code">${esc(f.h)}</span>
+            <span class="xgv">${f.hxg.toFixed(2)}</span></span>
+          <span class="score n" title="${esc(f.t)}">${f.hs}–${f.as}</span>
+          <span class="club a"><span class="xgv">${f.axg.toFixed(2)}</span>
+            <span class="code">${esc(f.a)}</span>
+            <span class="crest">${esc(f.a)}</span></span>
+        </div>
+        <div class="bar"><i class="h" style="width:${hw.toFixed(1)}%"></i>
+          <i class="a" style="width:${(100 - hw).toFixed(1)}%"></i></div>
+        <div class="under">
+          <span class="cs${f.cs === 'h' ? ' on' : ''}">${f.cs === 'h' ? '● clean sheet' : `conceded ${f.as}`}</span>
+          <span>${esc(f.t)} · ${tot.toFixed(2)} xG · ${f.hs + f.as} scored</span>
+          <span class="cs${f.cs === 'a' ? ' on' : ''}">${f.cs === 'a' ? 'clean sheet ●' : `conceded ${f.hs}`}</span>
+        </div>
+        <div class="line">
+          <b>${esc(f.best[0])}</b> ${esc(f.best[1])} · ${f.best[2]} pts
+          ${f.v ? `<span class="verdict ${f.v}">${f.v === 'against' ? 'against the numbers' : 'as the numbers said'}</span>` : ''}
+          <div style="margin-top:4px">${f.line}</div>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="daylabel">${esc(d)}</div><div class="fixgrid">${cards}</div>`;
+  }).join('');
+})();
+
+/* ── top ten ── */
+document.getElementById('top10').innerHTML = TOP10.map(([nm, meta, pts, said, own], i) => `
+  <div class="rrow">
+    <span class="i">${i + 1}</span>
+    <span><span class="nm">${esc(nm)}</span>
+      <span class="mt">${esc(meta)} · ${own}% owned · said ${said.toFixed(2)}</span></span>
+    <span class="v">${pts}</span>
+    <span class="track"><i style="width:${(pts / 17 * 100).toFixed(0)}%"></i></span>
+  </div>`).join('');
+
+/* ── helped / missed ── */
+const hrow = ([nm, tm, why, d], good) => `
+  <div class="hrow">
+    <span><span class="nm">${esc(nm)}</span> <span class="why">${tm}</span>
+      <div class="why">${esc(why)}</div></span>
+    <span class="d" style="color:${good ? 'var(--good)' : 'var(--bad)'}">${esc(d)}</span>
+  </div>`;
+document.getElementById('helped').innerHTML = HELPED.map((r) => hrow(r, true)).join('');
+document.getElementById('hurt').innerHTML = MISSED.map((r) => hrow(r, false)).join('');
+
+/* ── casualties ── */
+document.getElementById('news').innerHTML = NEWS.map(([nm, tm, said, mins]) => `
+  <div class="nrow">
+    <span class="tag">OFF EARLY</span>
+    <span><span class="nm">${esc(nm)}</span> <span class="why">${tm} · projected ${said.toFixed(2)}</span></span>
+    <span class="r">${mins}'</span>
+  </div>`).join('');
+</script>
