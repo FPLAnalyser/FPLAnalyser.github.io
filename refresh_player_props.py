@@ -132,6 +132,8 @@ PROPS_MIN_CREDITS = float(os.environ.get("PROPS_MIN_CREDITS", "40"))
 # the planning pages look that far, so hold what they offer rather than the
 # imminent round alone.
 PROPS_HORIZON_GWS = int(os.environ.get("PROPS_HORIZON_GWS", "3"))
+# Empty fixtures in a row before concluding a round simply is not quoted yet.
+EMPTY_GW_GIVE_UP = int(os.environ.get("PROPS_EMPTY_GIVE_UP", "2"))
 
 
 def gws_to_pull(stage, target_gw, held, horizon=PROPS_HORIZON_GWS):
@@ -341,7 +343,7 @@ if __name__ == "__main__":
 
     events, _ = ro.get(f"{ro.ODDS_HOST}/events?apiKey={key}")     # free
     limit = int(os.environ.get("PROPS_LIMIT", "0") or 0)
-    wanted = set(MARKETS.split(","))
+    wanted_markets = set(MARKETS.split(","))
 
     held = {v.get("gw") for v in (banked.get("players") or {}).values()
             if isinstance(v, dict)}
@@ -349,6 +351,7 @@ if __name__ == "__main__":
     print(f"pulling gameweeks {sorted(wanted)} (already held: {sorted(g for g in held if g)})")
 
     out, unmatched, remaining = {}, [], "?"
+    empty, skip_gw = {}, set()
     for i, ev in enumerate(sorted(events, key=lambda e: e.get("commence_time", ""))):
         if limit and i >= limit:
             break
@@ -365,7 +368,8 @@ if __name__ == "__main__":
             continue
         # /events returns every upcoming priced fixture, however far ahead, so
         # the pull has to say which rounds it is buying — see gws_to_pull.
-        if gw_of.get((h, a)) not in wanted:
+        this_gw = gw_of.get((h, a))
+        if this_gw not in wanted or this_gw in skip_gw:
             continue
 
         try:
@@ -381,9 +385,17 @@ if __name__ == "__main__":
             full, remaining = ro.event_markets(key, ev["id"], region, MARKETS)
             if full:
                 merged["bookmakers"] += full.get("bookmakers", [])
-        quotes = prices_for(merged, wanted)
+        quotes = prices_for(merged, wanted_markets)
         if not quotes:
+            # A round the books have not opened yet answers the same way for
+            # every fixture in it, and each answer costs two credits. Twenty
+            # went on asking ten GW2 games the same question four days out.
+            # Two empties in a row is enough to conclude it and move on.
             print(f"  no props quoted: {ev['home_team']} v {ev['away_team']}")
+            empty[this_gw] = empty.get(this_gw, 0) + 1
+            if empty[this_gw] >= EMPTY_GW_GIVE_UP:
+                print(f"  GW{this_gw} is not quoted yet — skipping its remaining fixtures")
+                skip_gw.add(this_gw)
             continue
 
         idx, clashes = squad_index(players, {h, a})
