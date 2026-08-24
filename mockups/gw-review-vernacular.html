@@ -1,0 +1,434 @@
+<title>GW Review Vernacular</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700&family=VT323&family=Archivo+Black&family=Anton&display=swap">
+<style>
+:root{
+  --bg0:#000; --s1:#0f1013; --s2:#16171b; --s3:#1e1f23; --s4:#282a2e;
+  --ink:#edeff3; --ink2:#a9abb0; --ink3:#7c7e82;
+  --line:rgba(255,255,255,.07); --line-mid:rgba(255,255,255,.12); --line-strong:rgba(255,255,255,.22);
+  --acc:#c9a227; --acc2:#ead188;
+  --good:#3ddc7a; --bad:#f0736f; --warn:#e8b04a;
+  --r-md:10px; --r-lg:14px; --gap:14px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg0);color:var(--ink);
+     font:15px/1.55 'Manrope',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 90px}
+:focus-visible{outline:2px solid var(--acc2);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+h1{font-size:26px;margin:0 0 6px;letter-spacing:-.025em;font-weight:800;text-wrap:balance}
+p{margin:0}
+.lede{color:var(--ink2);font-size:14px;max-width:76ch}
+.kicker{font-size:9px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--ink3)}
+.muted{color:var(--ink2);font-size:13px}
+.tiny{font-size:11.5px;color:var(--ink2)}
+.n{font-variant-numeric:tabular-nums}
+.note{background:var(--s1);border:1px solid var(--line);border-left:2px solid var(--line-strong);
+  border-radius:0 var(--r-md) var(--r-md) 0;padding:11px 14px;font-size:13px;color:var(--ink2);max-width:84ch}
+.note b{color:var(--ink)} .note .for{color:var(--good)} .note .against{color:var(--bad)}
+hr{height:1px;background:var(--line);margin:34px 0 20px;border:0}
+.dirs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 4px}
+.dirs button{font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;background:var(--s2);
+  color:var(--ink2);border:1px solid var(--line-mid);border-radius:999px;padding:7px 13px;min-height:36px}
+.dirs button:hover{background:var(--s3);color:var(--ink)}
+.dirs button[aria-selected=true]{background:var(--acc);color:#14100a;border-color:var(--acc)}
+section[hidden]{display:none}
+.head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:18px 0 8px}
+.head .num{font-family:'Barlow Condensed',sans-serif;font-size:29px;font-weight:700;color:var(--acc);line-height:.9}
+.head h2{font-size:19px;margin:0;font-weight:800;letter-spacing:-.018em}
+
+/* ══════════ A · THE BOARD ════════════════════════════════════════════ */
+.board{background:#0a0a0a;border:1px solid #262626;border-radius:6px;padding:20px 18px 22px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.board .bhead{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+  border-bottom:1px solid #2c2c2c;padding-bottom:11px;margin-bottom:4px}
+.board .btitle{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;
+  letter-spacing:.26em;color:#f0b429;text-transform:uppercase}
+.board .bmeta{font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:.18em;color:#6e6e6e;
+  text-transform:uppercase;margin-left:auto}
+/* The last column sizes to its content — "Dewsbury-Hall 11" is 127px and a
+   fixed 74px column with nowrap simply pushed the page sideways. The 1fr
+   columns either side absorb the difference, and they need min-width:0 or they
+   refuse to give it up. */
+.flaprow{display:grid;grid-template-columns:78px minmax(0,1fr) auto minmax(0,1fr) max-content;
+  gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid #1b1b1b}
+@media(max-width:640px){.flaprow{grid-template-columns:60px minmax(0,1fr) auto minmax(0,1fr);row-gap:4px}
+  .flaprow .last{grid-column:1/-1;text-align:right}}
+.flap{display:inline-flex;gap:2px}
+.flap span{position:relative;display:grid;place-items:center;min-width:20px;height:28px;padding:0 3px;
+  background:linear-gradient(180deg,#242424 0 50%,#171717 50% 100%);
+  color:#f2f2f2;font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;
+  border-radius:2px;box-shadow:0 1px 0 rgba(0,0,0,.6)}
+.flap span::after{content:'';position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(0,0,0,.55)}
+.flap.amber span{color:#f0b429}
+.flap.dim span{color:#8a8a8a}
+.flaprow .t{font-family:'Barlow Condensed',sans-serif;font-size:15px;letter-spacing:.14em;color:#6e6e6e}
+.flaprow .last{font-family:'Barlow Condensed',sans-serif;font-size:13.5px;letter-spacing:.1em;
+  color:#8a8a8a;text-align:right;white-space:nowrap}
+.flaprow .last b{color:#f0b429;font-weight:700}
+.board .foot{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid #2c2c2c;
+  font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:.14em;color:#6e6e6e;text-transform:uppercase}
+.board .foot b{color:#f0b429}
+
+/* ══════════ B · TELETEXT ═════════════════════════════════════════════ */
+.ttx{background:#000;padding:16px 14px 22px;border-radius:4px;overflow-x:auto;
+  font-family:'VT323',ui-monospace,monospace;font-size:22px;line-height:1.16;letter-spacing:.02em}
+.ttx .grid{min-width:560px}
+.ttx .row{white-space:pre}
+.ttx .w{color:#fff} .ttx .y{color:#ff0} .ttx .c{color:#0ff} .ttx .g{color:#0f0}
+.ttx .m{color:#f0f} .ttx .r{color:#f00} .ttx .b{color:#00f}
+.ttx .hdr{background:#00f;color:#fff}
+.ttx .dbl{font-size:40px;line-height:1.02;letter-spacing:.01em}
+.ttx .inv{background:#fff;color:#000}
+.ttx .inv-y{background:#ff0;color:#000}
+.ttx .inv-c{background:#0ff;color:#000}
+
+/* ══════════ C · THE ALBUM ════════════════════════════════════════════ */
+.album{background:
+   repeating-linear-gradient(90deg,rgba(255,255,255,.014) 0 2px,transparent 2px 4px),
+   linear-gradient(165deg,#1b2a44,#0d1626 55%,#0a0f19);
+  border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:22px 20px 24px}
+.album .ahead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.album .aname{font-family:'Anton',sans-serif;font-size:30px;letter-spacing:.02em;line-height:1;
+  text-transform:uppercase;color:#fff}
+.album .apage{font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:.22em;
+  color:rgba(255,255,255,.5);text-transform:uppercase;margin-left:auto}
+.stickers{display:grid;grid-template-columns:repeat(auto-fill,minmax(126px,1fr));gap:11px}
+.stk{position:relative;border-radius:9px;padding:9px 8px 8px;overflow:hidden;
+  background:linear-gradient(170deg,#22314f,#141d33);border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 5px 16px rgba(0,0,0,.4)}
+.stk .club{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.2em;
+  color:rgba(255,255,255,.55);text-transform:uppercase}
+.stk .pts{font-family:'Anton',sans-serif;font-size:40px;line-height:.9;color:#fff;margin:3px 0 1px}
+.stk .nm{font-family:'Barlow Condensed',sans-serif;font-size:14.5px;font-weight:600;letter-spacing:.01em;
+  color:#fff;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stk .own{font-size:10px;color:rgba(255,255,255,.45);margin-top:2px}
+.stk .pos{position:absolute;top:8px;right:8px;font-family:'Barlow Condensed',sans-serif;font-size:10px;
+  font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.5)}
+/* the shiny — the one everybody wanted and nobody had */
+.stk.foil{border-color:rgba(255,215,120,.7)}
+.stk.foil::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background:linear-gradient(115deg,transparent 18%,rgba(255,255,255,.42) 30%,rgba(255,180,80,.5) 38%,
+    rgba(120,220,255,.42) 46%,transparent 60%)}
+.stk.foil .pts{color:#ffe6a6}
+.stk.swap{opacity:.45}
+.stk.swap::after{content:'GOT';position:absolute;bottom:7px;right:8px;font-family:'Barlow Condensed',sans-serif;
+  font-size:10px;letter-spacing:.18em;color:rgba(255,255,255,.5)}
+.album .caption{margin-top:15px;padding-top:13px;border-top:1px solid rgba(255,255,255,.1);
+  font-size:12.5px;color:rgba(255,255,255,.62);max-width:70ch}
+
+/* ══════════ D · THE WEEKEND ══════════════════════════════════════════ */
+.wk{background:#08090b;border:1px solid var(--line);border-radius:16px;padding:24px 22px 18px;overflow-x:auto}
+.wk svg{display:block;min-width:760px;width:100%;height:auto;overflow:visible}
+.wk .ax{font:600 10px 'Barlow Condensed',sans-serif;fill:var(--ink3);letter-spacing:.16em;text-transform:uppercase}
+.wk .day{stroke:rgba(255,255,255,.07);stroke-width:1}
+.wk .dayl{font:700 11px 'Barlow Condensed',sans-serif;fill:var(--ink3);letter-spacing:.2em;text-transform:uppercase}
+.wk .stem{stroke:rgba(255,255,255,.16);stroke-width:1}
+.wk .fx{font:700 13px 'Barlow Condensed',sans-serif;fill:var(--ink);letter-spacing:.06em}
+.wk .sc{font:700 15px 'Barlow Condensed',sans-serif;fill:var(--acc2);letter-spacing:.04em}
+.wk .who{font:600 10px 'Manrope',sans-serif;fill:var(--ink3)}
+</style>
+
+<div class="wrap">
+
+<header>
+  <span class="kicker">Mockups · GW Review, football's own visual language</span>
+  <h1>Four more, and none of them from a design system</h1>
+  <p class="lede" style="margin-top:6px">
+    The last set reached for charts and newspapers. This one reaches for the
+    places football results have actually been printed and displayed — the
+    board at the ground, the telly on a Saturday, the album in the playground,
+    and the weekend itself as a shape in time. Same measured gameweek behind
+    every one.
+  </p>
+</header>
+
+<div class="dirs" role="tablist" aria-label="Directions">
+  <button role="tab" aria-selected="true"  aria-controls="dA" id="tA">A · The board</button>
+  <button role="tab" aria-selected="false" aria-controls="dB" id="tB">B · Teletext</button>
+  <button role="tab" aria-selected="false" aria-controls="dC" id="tC">C · The album</button>
+  <button role="tab" aria-selected="false" aria-controls="dD" id="tD">D · The weekend</button>
+</div>
+
+<!-- ═══════════════ A ═══════════════ -->
+<section id="dA" role="tabpanel" aria-labelledby="tA">
+  <div class="head"><span class="num">A</span><h2>The board</h2></div>
+  <div class="note">
+    <b>A split-flap departure board, which is what a results board is.</b>
+    Amber on black, condensed caps, every character in its own cell with the
+    hinge line through it. It is the single most legible way anyone has found
+    to show a column of scores at a distance, which is exactly the job — and
+    it makes an ordinary results list feel like standing in a ground.
+    <span class="for">For:</span> unmistakable at a glance, works at any size,
+    and carries the one thing a review must not bury, which is the scores.
+    <span class="against">Against:</span> a board shows results and nothing
+    else. Every analytical thing this site does well has to live somewhere
+    underneath it, so it is a masthead rather than a page.
+  </div>
+
+  <div class="board" style="margin-top:var(--gap)">
+    <div class="bhead">
+      <span class="btitle">Gameweek 01</span>
+      <span class="bmeta">Final · 29 goals · 6 clean sheets</span>
+    </div>
+    <div id="flaps"></div>
+    <div class="foot">
+      <span>Top score <b>De Cuyper 17</b></span>
+      <span>Most owned <b>Haaland 2</b></span>
+      <span>Model error <b>1.66</b></span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ B ═══════════════ -->
+<section id="dB" role="tabpanel" aria-labelledby="tB" hidden>
+  <div class="head"><span class="num">B</span><h2>Teletext</h2></div>
+  <div class="note">
+    <b>Page 302, where a generation actually read the football results.</b>
+    Forty columns, seven colours, double-height headers, and not one pixel
+    spent on decoration — a constraint so tight it forces the writing to be
+    good. Everything on this page is a real GW1 number set in a grid that
+    cannot hold a chart, a photograph or an excuse.
+    <span class="for">For:</span> nobody else in fantasy football looks remotely
+    like this, it is free to render, and the format's own discipline is the
+    best editor a weekly page could have.
+    <span class="against">Against:</span> it is a joke to anyone under thirty
+    five, the colour palette fails contrast in at least two of its seven, and
+    forty columns is a hard ceiling on how much can ever be said.
+  </div>
+
+  <div class="ttx" style="margin-top:var(--gap)"><div class="grid" id="ttx"></div></div>
+</section>
+
+<!-- ═══════════════ C ═══════════════ -->
+<section id="dC" role="tabpanel" aria-labelledby="tC" hidden>
+  <div class="head"><span class="num">C</span><h2>The album</h2></div>
+  <div class="note">
+    <b>The team of the week as a sticker page.</b> Football's own native
+    visual language, and the one metaphor that already encodes ownership: the
+    eleven that returned are stickers, the ones most of the game owned are
+    marked <em>got</em>, and the best player in the gameweek is the shiny — the
+    foil one everybody wanted and almost nobody had. De Cuyper was owned by
+    1.7%, which is exactly what a rare sticker is.
+    <span class="for">For:</span> the metaphor does the analysis for you, it is
+    the most shareable object on any of these lists, and it is warm in a way a
+    dashboard never is.
+    <span class="against">Against:</span> it flatters rarity, which is not the
+    same as being right, and a page that treats a bad gameweek as a fun sticker
+    page will read as tone-deaf about eleven times a season.
+  </div>
+
+  <div class="album" style="margin-top:var(--gap)">
+    <div class="ahead">
+      <span class="aname">Team of the Week</span>
+      <span class="apage">Gameweek 01 · 148 pts · £63.0m</span>
+    </div>
+    <div class="stickers" id="stickers"></div>
+    <p class="caption">
+      Six of the eleven were owned by under two per cent of the game. The foil
+      is the highest score in the gameweek; the faded ones are the players most
+      managers already had, which in gameweek one was exactly two of the eleven.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════ D ═══════════════ -->
+<section id="dD" role="tabpanel" aria-labelledby="tD" hidden>
+  <div class="head"><span class="num">D</span><h2>The weekend</h2></div>
+  <div class="note">
+    <b>A gameweek is four days long and nobody ever draws it that way.</b>
+    Friday teatime to Monday night on one axis, every fixture pinned where it
+    actually kicked off, the stem's height being the points the best player in
+    it took. It reads as a shape: a single fixture on Friday, the Saturday
+    wall, a Sunday pair and then one game alone on Monday holding everybody's
+    week open.
+    <span class="for">For:</span> it is the only view that answers "when did my
+    gameweek happen", it makes a Monday-night differential visible as a
+    structural fact, and it is the natural home for a live version — the line
+    fills up as the weekend runs.
+    <span class="against">Against:</span> without goal times it is fixtures on
+    a timeline rather than events on one, and the honest version of that needs
+    a data source the site does not have.
+  </div>
+
+  <div class="wk" style="margin-top:var(--gap)" id="weekend"></div>
+  <p class="muted" style="margin-top:12px;max-width:80ch">
+    The stems are the best individual return in each fixture. Saturday
+    afternoon carried five games and three of the week's four biggest hauls;
+    Monday carried one fixture and Chelsea's Palmer, which is why the review
+    could not be written until Tuesday morning.
+  </p>
+</section>
+
+<hr>
+<div class="note">
+  <b>Measured.</b> Scores, expected goals and best players rebuilt from
+  <code>actuals/gw1.json</code>; kick-off times from
+  <code>availability.json</code>; ownership and projections from the file
+  frozen before the deadline. Joined on <code>code</code>, never on name.
+</div>
+
+</div>
+
+<script>
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* Ten fixtures, in kick-off order. Days and times from availability.json. */
+const FIX = [
+  {d:'FRI', t:'19:00', h:'ARS', a:'COV', hs:3, as:0, best:['White',11]},
+  {d:'SAT', t:'11:30', h:'HUL', a:'MUN', hs:2, as:0, best:['Mendy',15]},
+  {d:'SAT', t:'14:00', h:'EVE', a:'CRY', hs:2, as:0, best:['Dewsbury-Hall',11]},
+  {d:'SAT', t:'14:00', h:'IPS', a:'SUN', hs:2, as:1, best:['Emersonn',9]},
+  {d:'SAT', t:'14:00', h:'NFO', a:'LEE', hs:0, as:1, best:['Stach',13]},
+  {d:'SAT', t:'16:30', h:'BRE', a:'TOT', hs:3, as:0, best:['M.Sangaré',14]},
+  {d:'SUN', t:'13:00', h:'BHA', a:'AVL', hs:3, as:0, best:['De Cuyper',17]},
+  {d:'SUN', t:'13:00', h:'MCI', a:'BOU', hs:2, as:1, best:['Guéhi',10]},
+  {d:'SUN', t:'15:30', h:'NEW', a:'LIV', hs:2, as:2, best:['Gakpo',12]},
+  {d:'MON', t:'19:00', h:'FUL', a:'CHE', hs:2, as:3, best:['Palmer',13]},
+];
+const TOTW = [
+  {pos:'GKP',nm:'Tzolakis',   tm:'HUL',pts:10,own:0.5},
+  {pos:'DEF',nm:'De Cuyper',  tm:'BHA',pts:17,own:1.7,foil:1},
+  {pos:'DEF',nm:'Mendy',      tm:'HUL',pts:15,own:0.9},
+  {pos:'DEF',nm:'Ajayi',      tm:'HUL',pts:14,own:0.9},
+  {pos:'DEF',nm:'Kayode',     tm:'BRE',pts:13,own:3.3},
+  {pos:'MID',nm:'Hinshelwood',tm:'BHA',pts:16,own:0.4},
+  {pos:'MID',nm:'M.Sangaré',  tm:'BRE',pts:14,own:3.1},
+  {pos:'MID',nm:'Palmer',     tm:'CHE',pts:13,own:10.5,swap:1},
+  {pos:'MID',nm:'Stach',      tm:'LEE',pts:13,own:1.0},
+  {pos:'MID',nm:'Gakpo',      tm:'LIV',pts:12,own:3.6},
+  {pos:'FWD',nm:'João Pedro', tm:'CHE',pts:11,own:63.1,swap:1},
+];
+
+/* ══ A · the board ══ */
+const flap = (txt, cls = '') =>
+  `<span class="flap ${cls}">${[...String(txt)].map((c) =>
+    `<span>${c === ' ' ? '&nbsp;' : esc(c)}</span>`).join('')}</span>`;
+document.getElementById('flaps').innerHTML = FIX.map((f) => `
+  <div class="flaprow">
+    <span class="t">${f.d} ${f.t}</span>
+    ${flap(f.h)}
+    ${flap(`${f.hs}-${f.as}`, 'amber')}
+    ${flap(f.a)}
+    <span class="last">${esc(f.best[0])} <b>${f.best[1]}</b></span>
+  </div>`).join('');
+
+/* ══ B · teletext ══
+   Forty columns, and the grid is the point — every line is padded to width so
+   the columns line up the way a real page does. */
+(function () {
+  const W = 40;
+  const pad = (s, n) => (s + ' '.repeat(n)).slice(0, n);
+  const rpad = (s, n) => (' '.repeat(n) + s).slice(-n);
+  const L = [];
+  const row = (html, cls = '') => L.push(`<div class="row ${cls}">${html}</div>`);
+  const span = (t, c) => `<span class="${c}">${esc(t)}</span>`;
+
+  row(span(pad('  FPL ANALYSER', 26) + rpad('P302 Tue 25 Aug', 14), 'hdr'));
+  row('&nbsp;');
+  row(span('GAMEWEEK 1 REVIEW', 'y dbl'), 'dbl');
+  row('&nbsp;');
+  row(span(pad('FRI 21 AUG', 14), 'c') + span(pad('ARS  3-0  COV', 26), 'w'));
+  row(span(pad('SAT 22 AUG', 14), 'c') + span(pad('HUL  2-0  MUN', 26), 'w'));
+  row(span(pad('', 14), 'c') + span(pad('EVE  2-0  CRY', 26), 'w'));
+  row(span(pad('', 14), 'c') + span(pad('IPS  2-1  SUN', 26), 'w'));
+  row(span(pad('', 14), 'c') + span(pad('NFO  0-1  LEE', 26), 'w'));
+  row(span(pad('', 14), 'c') + span(pad('BRE  3-0  TOT', 26), 'w'));
+  row(span(pad('SUN 23 AUG', 14), 'c') + span(pad('BHA  3-0  AVL', 26), 'w'));
+  row(span(pad('', 14), 'c') + span(pad('MCI  2-1  BOU', 26), 'w'));
+  row(span(pad('', 14), 'c') + span(pad('NEW  2-2  LIV', 26), 'w'));
+  row(span(pad('MON 24 AUG', 14), 'c') + span(pad('FUL  2-3  CHE', 26), 'w'));
+  row('&nbsp;');
+  row(span(pad(' LEADING SCORERS ', W), 'inv-y'));
+  const lead = [['DE CUYPER','BHA',17],['HINSHELWOOD','BHA',16],['MENDY','HUL',15],
+                ['AJAYI','HUL',14],['SANGARE','BRE',14],['KAYODE','BRE',13]];
+  for (const [nm, tm, p] of lead)
+    row(span(pad(nm, 18), 'g') + span(pad(tm, 6), 'w') + span(rpad(String(p), 5), 'y'));
+  row('&nbsp;');
+  row(span(pad(' THE ARMBAND ', W), 'inv-c'));
+  row(span(pad('HAALAND', 18), 'w') + span(pad('69.4% OWNED', 14), 'r') + span(rpad('4', 8), 'r'));
+  row(span(pad('DE CUYPER', 18), 'w') + span(pad('1.7% OWNED', 14), 'g') + span(rpad('34', 8), 'g'));
+  row('&nbsp;');
+  row(span(pad(' THE MODEL ', W), 'inv'));
+  row(span(pad('495 RATED   ERROR 1.66/PLAYER', W), 'w'));
+  row(span(pad('MISSED ON MINUTES, NOT ON GOALS', W), 'y'));
+  row('&nbsp;');
+  row(span(pad('GW2 PREVIEW', 20), 'g') + span(pad('FRI 17:30', 20), 'c'));
+  row(span(pad('303 FIXTURES  304 MY TEAM  305 XI', W), 'm'));
+  document.getElementById('ttx').innerHTML = L.join('');
+})();
+
+/* ══ C · the album ══ */
+document.getElementById('stickers').innerHTML = TOTW.map((p) => `
+  <div class="stk${p.foil ? ' foil' : ''}${p.swap ? ' swap' : ''}">
+    <span class="pos">${p.pos}</span>
+    <div class="club">${esc(p.tm)}</div>
+    <div class="pts">${p.pts}</div>
+    <div class="nm">${esc(p.nm)}</div>
+    <div class="own">${p.own}% owned</div>
+  </div>`).join('');
+
+/* ══ D · the weekend ══
+   Two versions were wrong before this one, both for reasons worth recording.
+   The first pinned every fixture to its kick-off on one baseline and nudged
+   simultaneous games apart by 26px, which is nowhere near enough for an
+   eighty-pixel label: Saturday's three o'clock kick-offs printed through each
+   other. The second gave each fixture a lane and drew the points as a bar
+   starting at kick-off — which fixed the collisions and introduced a lie,
+   because a bar growing rightwards from a start time reads as DURATION. It
+   also ran off the right-hand edge for the Monday game.
+   So: the timeline owns the left of the frame and says WHEN, and the points
+   live in their own column on the right and say HOW MUCH. Nothing about one
+   can be mistaken for the other. */
+(function () {
+  const rowH = 30, LEFT = 88, TOP = 40, GUT = 26;
+  const W = 980, AXIS_END = 520;              // the timeline stops here
+  const NAME = AXIS_END + GUT;                 // fixed columns begin
+  const BARX = NAME + 168;
+  const H = TOP + FIX.length * rowH + 34;
+  const hrs = { FRI: 0, SAT: 24, SUN: 48, MON: 72 };
+  const at = (d, t) => { const [hh, mm] = t.split(':').map(Number); return hrs[d] + (hh - 19) + mm / 60 };
+  const x = (h) => LEFT + (h / 74) * (AXIS_END - LEFT);
+  /* 104px reserved to the right of the longest bar, because the longest bar
+     belongs to De Cuyper and "De Cuyper 17" is the longest label — the two
+     coincide, which is exactly the case a smaller reserve gets wrong. */
+  const maxP = 17, BARW = W - BARX - 104;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img"
+    aria-label="Every gameweek 1 fixture on a Friday to Monday timeline, with the best return in each">`;
+  for (const [d, h] of Object.entries(hrs)) {
+    const px = x(h);
+    s += `<line class="day" x1="${px}" y1="${TOP - 18}" x2="${px}" y2="${H - 30}"/>`;
+    s += `<text class="dayl" x="${px + 7}" y="${H - 16}">${d}</text>`;
+  }
+  s += `<line class="day" x1="${AXIS_END + 12}" y1="${TOP - 18}" x2="${AXIS_END + 12}" y2="${H - 30}"
+        style="stroke:rgba(255,255,255,.12)"/>`;
+  FIX.forEach((f, i) => {
+    const y = TOP + i * rowH + 14;
+    const px = x(at(f.d, f.t));
+    s += `<line class="stem" x1="${LEFT}" y1="${y}" x2="${AXIS_END}" y2="${y}"
+          style="stroke:rgba(255,255,255,.05)"/>`;
+    s += `<text class="who" x="${LEFT - 12}" y="${y + 4}" text-anchor="end">${esc(f.d)} ${esc(f.t)}</text>`;
+    s += `<circle cx="${px}" cy="${y}" r="4.5" fill="var(--acc)"/>`;
+    s += `<text class="fx" x="${NAME}" y="${y + 5}">${esc(f.h)} ${f.hs}–${f.as} ${esc(f.a)}</text>`;
+    const w = Math.max(3, (f.best[1] / maxP) * BARW);
+    s += `<rect x="${BARX}" y="${y - 6}" width="${w.toFixed(1)}" height="12" rx="3"
+          fill="rgba(201,162,39,.30)"/>`;
+    s += `<text class="who" x="${BARX + w + 8}" y="${y + 4}"
+          style="fill:var(--ink2)">${esc(f.best[0])} ${f.best[1]}</text>`;
+  });
+  s += `<text class="ax" x="${LEFT}" y="${TOP - 24}">when it kicked off</text>`;
+  s += `<text class="ax" x="${BARX}" y="${TOP - 24}">best return in it</text>`;
+  s += '</svg>';
+  document.getElementById('weekend').innerHTML = s;
+})();
+
+/* ── switcher ── */
+const tabs = [...document.querySelectorAll('.dirs [role=tab]')];
+tabs.forEach((b) => b.addEventListener('click', () => {
+  tabs.forEach((o) => {
+    const on = o === b;
+    o.setAttribute('aria-selected', String(on));
+    document.getElementById(o.getAttribute('aria-controls')).hidden = !on;
+  });
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}));
+</script>
