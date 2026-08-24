@@ -25,6 +25,10 @@ const ALLOW = [
   /^\/api\/entry\/\d+\/history\/$/,
   /^\/api\/entry\/\d+\/event\/\d+\/picks\/$/,
   /^\/api\/leagues-classic\/\d+\/standings\/$/,
+  // Live scores for a gameweek in progress. The scheduled job stores the same
+  // endpoint's answer as the durable record; this is so the page can show it
+  // while the football is on rather than waiting for the next commit.
+  /^\/api\/event\/\d+\/live\/$/,
 ]
 
 /** The preview site, if one exists — set this to the Pages origin you created
@@ -60,7 +64,13 @@ const ORIGINS = [
 
 /** How long the edge may reuse a response. Manager picks change at most once a
  *  gameweek; a minute of cache turns a viral spike into a handful of origin
- *  hits and keeps us politely quiet against the FPL API. */
+ *  hits and keeps us politely quiet against the FPL API.
+ *
+ *  Live scores get the same minute, and should. Points appear on the FPL
+ *  endpoint within a minute or two of the thing that caused them, so a
+ *  sixty-second edge cache costs the reader nothing they could perceive and is
+ *  the difference between one origin request a minute and one per viewer per
+ *  poll on a Saturday afternoon. */
 const EDGE_TTL = 60
 
 function cors(origin) {

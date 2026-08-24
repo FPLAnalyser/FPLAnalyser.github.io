@@ -22,6 +22,7 @@ import type { CoreData, FixtureEaseRow, RatingRow, Row } from '../lib/types'
 import { useAvailability, availBadge, availFor } from '../lib/availability'
 import { readTeamId, saveTeamId } from '../lib/teamId'
 import { ensurePlan } from '../lib/plans'
+import { LiveStrip } from '../components/LiveStrip'
 import SquadBuilder from './SquadBuilder'
 
 
@@ -342,6 +343,9 @@ function TeamBoard({ picksData, teamId, gw, teamName, nextGw }: {
 
   return (
     <>
+      {/* Live first, because during a gameweek it is the only thing on the
+          page that is not half an hour old. */}
+      <LiveStrip picksData={picksData} gw={gw} />
       {behind && (
         <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-line bg-surface-1 px-3 py-2 text-[12.5px]">
           <Icon name="info" size={14} className="shrink-0 text-ink-3" />
