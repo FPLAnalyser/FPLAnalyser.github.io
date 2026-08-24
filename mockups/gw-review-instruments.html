@@ -1,0 +1,739 @@
+<title>GW Review Instruments</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=JetBrains+Mono:wght@400;500;700&family=Courier+Prime:wght@400;700&family=Caveat:wght@500;600&family=Jost:wght@400;500;700&display=swap">
+<style>
+/* ═══════════════════════════════════════════════════════════════════════
+   GW REVIEW — four instruments of record.
+
+   The eleven directions before this one were all, underneath, someone
+   PRESENTING the gameweek: an editor laying out a page, a designer drawing a
+   chart, a broadcaster building a graphic. This set stops presenting. Each of
+   these four is a document produced by someone whose job is to check whether a
+   prediction held — a forecast verification office, a pathology lab, a
+   mainframe operator with a red pen, an Isotype draughtsman counting people.
+
+   That framing is not decoration. A model that publishes probabilities has an
+   obligation the other treatments kept letting it dodge: it has to be MARKED.
+   These four mark it.
+
+   Every figure is computed from site_data/2026-27/{projections,actuals}/gw1.json
+   — 495 projections, all 495 joined to actuals on `code`, never on name.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── the frame ─────────────────────────────────────────────────────────
+   Deliberately quiet, and light rather than dark like the earlier sets:
+   three of these four artefacts are pieces of paper, and paper wants a wall,
+   not a screen. In dark mode the wall dims; the documents stay paper, because
+   a document does not change colour when the lights go off. */
+:root{
+  --wall:#e7eaef; --wall2:#f4f6f9; --card:#fdfdfe;
+  --ink:#12161c; --ink2:#555d6b; --ink3:#7d8494;
+  --rule:#c6ccd6; --rule2:#dde1e8;
+  --blue:#1f4fd8; --blue-soft:#dfe6fb;
+  --red:#c8102e;
+  --maxw:1180px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme=light]){
+    --wall:#15171c; --wall2:#1c1f26; --card:#22262e;
+    --ink:#e9ecf2; --ink2:#a2a9b6; --ink3:#7b8290;
+    --rule:#333944; --rule2:#2a2f38;
+    --blue:#7ea0ff; --blue-soft:#22304f;
+    --red:#f0736f;
+  }
+}
+:root[data-theme=dark]{
+  --wall:#15171c; --wall2:#1c1f26; --card:#22262e;
+  --ink:#e9ecf2; --ink2:#a2a9b6; --ink3:#7b8290;
+  --rule:#333944; --rule2:#2a2f38;
+  --blue:#7ea0ff; --blue-soft:#22304f;
+  --red:#f0736f;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--wall);color:var(--ink);
+  font:400 16px/1.6 'Newsreader',Georgia,serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:30px 18px 96px}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:3px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.eyebrow{font:700 10px/1 'Archivo Narrow',system-ui,sans-serif;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--ink3)}
+h1{font:700 34px/1.05 'Archivo Narrow',system-ui,sans-serif;letter-spacing:-.01em;
+  margin:8px 0 10px;text-wrap:balance}
+.lede{color:var(--ink2);font-size:16.5px;max-width:66ch;margin:0}
+.lede em{font-style:italic;color:var(--ink)}
+
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:26px 0 0;
+  border-bottom:1px solid var(--rule);padding-bottom:0}
+.tabs button{font:600 13px/1 'Archivo Narrow',system-ui,sans-serif;letter-spacing:.06em;
+  text-transform:uppercase;cursor:pointer;background:none;color:var(--ink3);
+  border:1px solid transparent;border-bottom:0;border-radius:5px 5px 0 0;
+  padding:11px 15px;min-height:40px;margin-bottom:-1px}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-selected=true]{background:var(--card);color:var(--ink);
+  border-color:var(--rule);box-shadow:inset 0 2px 0 var(--blue)}
+section[hidden]{display:none}
+
+.dirhead{display:grid;grid-template-columns:auto minmax(0,1fr);gap:0 16px;
+  align-items:start;margin:28px 0 18px}
+.dirhead .n{font:700 46px/.8 'Archivo Narrow',system-ui,sans-serif;color:var(--blue);
+  font-variant-numeric:tabular-nums}
+.dirhead h2{font:700 24px/1.15 'Archivo Narrow',system-ui,sans-serif;margin:0 0 4px;
+  letter-spacing:-.005em}
+.dirhead .q{margin:0;color:var(--ink2);font-size:15.5px;max-width:60ch}
+.dirhead .q b{color:var(--ink);font-weight:500}
+
+.note{margin:22px 0 0;padding:16px 18px;background:var(--wall2);
+  border:1px solid var(--rule2);border-left:3px solid var(--blue);border-radius:0 8px 8px 0;
+  font-size:15px;color:var(--ink2);max-width:74ch}
+.note h3{font:700 10px/1 'Archivo Narrow',system-ui,sans-serif;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--ink3);margin:0 0 8px}
+.note p{margin:0 0 10px} .note p:last-child{margin:0}
+.note b{color:var(--ink);font-weight:500}
+.paper{background:var(--card);border:1px solid var(--rule);border-radius:3px;
+  box-shadow:0 1px 2px rgba(10,20,40,.06),0 10px 26px rgba(10,20,40,.07);overflow:hidden}
+
+/* ═════ A · VERIFICATION BULLETIN ══════════════════════════════════════
+   A weather office does not say "the forecast was good". It publishes the
+   forecast, publishes what happened, and marks the difference — and it does so
+   in a house style so plain that nobody can accuse it of dressing up a bust.
+   That is exactly the register a model that publishes p60 should be writing in.
+   Committed palette: this document is a document in both themes. */
+.bul{background:#f3f5f8;color:#14181f;padding:0}
+.bul .top{border-top:7px solid #14181f;padding:16px 22px 13px;
+  border-bottom:1px solid #b9c0cb;display:flex;flex-wrap:wrap;
+  align-items:baseline;gap:6px 20px}
+.bul .mast{font:700 20px/1 'Archivo Narrow',sans-serif;letter-spacing:.22em;text-transform:uppercase}
+.bul .sub{font:400 11px/1 'JetBrains Mono',monospace;color:#5c6473;letter-spacing:.04em}
+.bul .stamp{margin-left:auto;font:700 10px/1 'JetBrains Mono',monospace;letter-spacing:.14em;
+  color:#c8102e;border:1.5px solid #c8102e;border-radius:2px;padding:5px 8px;
+  transform:rotate(-1.2deg)}
+.bul .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:1px;background:#b9c0cb;border-bottom:1px solid #b9c0cb}
+.bul .fields div{background:#f3f5f8;padding:9px 22px;min-width:0}
+.bul .fields dt{font:400 9px/1 'JetBrains Mono',monospace;letter-spacing:.12em;
+  text-transform:uppercase;color:#6b7280;margin:0 0 4px}
+.bul .fields dd{margin:0;font:500 13px/1.3 'JetBrains Mono',monospace;
+  font-variant-numeric:tabular-nums;word-break:break-word}
+.bul .body{padding:20px 22px 24px}
+.bul h3{font:700 11px/1 'Archivo Narrow',sans-serif;letter-spacing:.2em;text-transform:uppercase;
+  color:#5c6473;margin:0 0 12px;padding-bottom:7px;border-bottom:1px solid #ccd2db}
+.bul .summ{font:400 15px/1.6 'Newsreader',Georgia,serif;color:#2b3240;max-width:70ch;margin:0 0 24px}
+.bul .summ b{font-weight:500;color:#14181f}
+
+.rel{display:grid;grid-template-columns:70px minmax(0,1fr) 62px;
+  gap:0 12px;align-items:center}
+.rel .hd{font:400 9px/1.2 'JetBrains Mono',monospace;letter-spacing:.1em;text-transform:uppercase;
+  color:#6b7280;padding-bottom:7px;border-bottom:1px solid #ccd2db;margin-bottom:8px}
+.rel .hd.r{text-align:right}
+.rel .band{font:500 12px/1 'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;
+  color:#2b3240;text-align:right;padding:7px 0}
+.rel .track{position:relative;height:19px;background:#e3e7ed;border-radius:1px;min-width:0;
+  overflow:hidden}
+/* First version drew the forecast as a hollow outline and the outcome as a
+   solid fill of the SAME grey. Measured on screen: the outline was invisible
+   in every row, because the fill sat on top of it and the hatch covered its
+   right edge — and the three bands that over-delivered had no forecast mark at
+   all, so 31% against a forecast of 15% read as a short bar and nothing else.
+   So: the outcome is a mid-tone bar, the forecast is a near-black RULE, and
+   the rule stays legible whether the bar has reached it or run past it. */
+.rel .dl{position:absolute;inset:0 auto 0 0;background:#8b93a3}
+.rel .fc{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:#14181f}
+.rel .miss{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(
+  -45deg,#c8102e 0 2px,transparent 2px 5px)}
+.rel .out{font:500 12px/1 'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;
+  text-align:right;padding:7px 0}
+.rel .out.bust{color:#c8102e;font-weight:700}
+.rel .n{font:400 11px/1 'JetBrains Mono',monospace;color:#6b7280;
+  font-variant-numeric:tabular-nums;text-align:right;padding:7px 0}
+.bul .key{display:flex;gap:18px;flex-wrap:wrap;margin-top:16px;
+  font:400 10.5px/1.4 'JetBrains Mono',monospace;color:#5c6473}
+.bul .key span{display:flex;align-items:center;gap:6px}
+.bul .key i{display:block;width:20px;height:10px;border-radius:1px}
+.bul .foot{margin-top:22px;padding-top:12px;border-top:1px solid #ccd2db;
+  font:400 11px/1.7 'JetBrains Mono',monospace;color:#6b7280;columns:2 330px;column-gap:36px}
+
+/* ═════ B · LABORATORY REPORT ══════════════════════════════════════════
+   The reference-range table is the most under-used chart in existence: it puts
+   a measurement, a normal band and a flag on one line, and a clinician reads a
+   whole page of them in seconds. It is also the only layout that makes the
+   model's real shape visible — the error band is ASYMMETRIC, because points
+   have a floor at zero and no ceiling. */
+.lab{background:#fcfcfa;color:#161616;font-family:'JetBrains Mono',monospace}
+.lab .top{padding:16px 20px 12px;border-bottom:2px solid #161616}
+.lab .mast{font:700 15px/1.2 'JetBrains Mono',monospace;letter-spacing:.16em;text-transform:uppercase}
+.lab .who{font-size:10.5px;color:#6a6a68;margin-top:3px;letter-spacing:.03em}
+.lab .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:10px 22px;padding:13px 20px;border-bottom:1px solid #d8d8d2;background:#f6f6f2}
+.lab .fields div{min-width:0}
+.lab .fields dt{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8a8a86;margin-bottom:3px}
+.lab .fields dd{margin:0;font-size:12px;font-weight:500;font-variant-numeric:tabular-nums;
+  word-break:break-word}
+.lab .body{padding:14px 20px 20px}
+.lab .grp{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:#8a8a86;
+  margin:16px 0 6px;padding-bottom:5px;border-bottom:1px solid #d8d8d2}
+.lab .grp:first-child{margin-top:0}
+.labrow{display:grid;grid-template-columns:minmax(0,1.35fr) 52px 26px minmax(120px,1.5fr) 92px;
+  gap:0 10px;align-items:center;padding:6px 0;border-bottom:1px solid #ecece7;font-size:12px}
+.labrow.hd{font-size:8.5px;letter-spacing:.11em;text-transform:uppercase;color:#8a8a86;
+  border-bottom:1px solid #d8d8d2;padding-bottom:6px}
+.labrow .nm{min-width:0;overflow-wrap:anywhere}
+.labrow .nm b{font-weight:700}
+.labrow .nm i{font-style:normal;color:#8a8a86;font-size:10.5px}
+.labrow .val{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+.labrow .flag{text-align:center;font-weight:700;font-size:11px}
+.labrow .flag.h{color:#c8102e} .labrow .flag.l{color:#1d4ed8}
+.labrow .ref{text-align:right;font-variant-numeric:tabular-nums;color:#6a6a68;font-size:10.5px;
+  white-space:nowrap}
+.labrow.out .val{color:#c8102e}
+.labrow.out.low .val{color:#1d4ed8}
+/* the range strip: one shared scale across every row, so the eye reads the
+   whole page as a single measurement */
+/* overflow:hidden because the highest tick sits at 99.95% of the scale and a
+   3px mark there pushes two pixels past the track — measured at 471 in a 469
+   box. Clipping half a mark is invisible; a sideways-scrolling row is not. */
+.strip{position:relative;height:15px;min-width:0;overflow:hidden}
+.strip .zone{position:absolute;top:3px;bottom:3px;background:#dfe4d9;border-radius:1px}
+.strip .zero{position:absolute;top:0;bottom:0;width:1px;background:#b6b6b0}
+.strip .tick{position:absolute;top:0;bottom:0;width:2px;background:#161616;border-radius:1px}
+.strip .tick.h{background:#c8102e;width:3px}
+.strip .tick.l{background:#1d4ed8;width:3px}
+.labrow.axis{border-bottom:0;padding-top:2px}
+/* On a phone the five tracks want 330px of a 312px row — measured. The strip is
+   the one thing that must keep full width, so it drops to its own line and the
+   label row closes up above it. */
+@media(max-width:640px){
+  .labrow{grid-template-columns:minmax(0,1fr) 52px 26px;row-gap:5px}
+  .labrow .strip{grid-column:1/-1}
+  .labrow .ref{grid-column:1/-1;text-align:left}
+  .labrow.hd .ref,.labrow.hd>div:nth-child(4){display:none}
+  .labrow.axis>div:nth-child(2),.labrow.axis>div:nth-child(3),
+  .labrow.axis>div:nth-child(5){display:none}
+  .labrow.axis .scale{grid-column:1/-1}
+}
+.lab .scale{position:relative;height:13px;min-width:0;font-size:8.5px;color:#8a8a86}
+.lab .scale b{position:absolute;transform:translateX(-50%);font-weight:400;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.lab .scale b:first-child{transform:none}
+.lab .scale b:last-child{transform:translateX(-100%)}
+.lab .foot{margin-top:16px;padding-top:11px;border-top:2px solid #161616;
+  font-size:10.5px;line-height:1.7;color:#5a5a58;columns:2 330px;column-gap:36px}
+.lab .foot b{color:#161616}
+
+/* ═════ C · THE LISTING ════════════════════════════════════════════════
+   Continuous-form paper, 132 columns, and a human with a biro in the margin.
+   The tension is the design: the machine's output is fixed and printed and
+   cannot answer back, and everything that actually happened is handwritten
+   over the top of it. No other treatment in these eleven made the model look
+   like something that gets MARKED rather than something that gets displayed. */
+.list{background:#dfe6da;padding:0;font-family:'Courier Prime',monospace;color:#1b2118}
+.list .perf{height:11px;border-bottom:1px dashed #9fae98;background:#d3ddcd}
+.list .perf.b{border-bottom:0;border-top:1px dashed #9fae98}
+.listbody{display:grid;grid-template-columns:22px minmax(0,1fr) 22px;background:#c9d5c3}
+/* A fixed dozen <b> holes ran out two thirds of the way down the sheet —
+   measured. A repeating gradient tracks whatever height the listing ends up. */
+.sprocket{background:#c9d5c3;
+  background-image:radial-gradient(circle at 50% 8px,#eef2ec 4px,transparent 4.5px);
+  background-size:100% 22px;background-repeat:repeat-y}
+/* A listing cannot reflow. At 390px the machine column was breaking
+   "FPLA/GW01/PROJ" across seven lines of seven characters — measured. So the
+   sheet scrolls sideways inside its own frame, which is what you do with real
+   continuous-form paper, and the sprocket margins stay put either side. */
+.sheet{padding:10px 0;min-width:0;background:#eef2ec;overflow-x:auto}
+/* max-content on the pen column, and width:max-content on the row, so a row is
+   exactly as wide as its own two columns. Fixing the pen at 110px instead made
+   "2 — played all 90" wrap to two lines off the right-hand edge of a phone,
+   which showed up as unexplained blank bands in the paper. */
+.lp{display:grid;grid-template-columns:370px minmax(170px,max-content);
+  gap:0 16px;align-items:start;padding:3px 14px;min-height:27px;font-size:12.5px;
+  line-height:1.5;width:max-content;min-width:100%}
+.lp .pen{overflow-wrap:anywhere}
+.lp:nth-child(odd){background:#dde9d6}
+.lp .m{min-width:0;font-variant-numeric:tabular-nums;letter-spacing:-.01em;white-space:pre}
+.lp .m.hdr{font-weight:700;border-bottom:1px solid #9fae98;padding-bottom:2px}
+.lp .m.strike{color:#5d6a58;text-decoration:line-through;text-decoration-color:#c8102e;
+  text-decoration-thickness:1.5px}
+.lp .m.title{font-weight:700;letter-spacing:.08em}
+/* the pen lives in its own column — an absolutely-positioned scrawl over a
+   monospace grid collides the moment a name runs long, and this one has
+   Dewsbury-Hall in it */
+.pen{font:600 19px/1.05 'Caveat',cursive;color:#c8102e;transform:rotate(-1.4deg);
+  transform-origin:left center;padding-top:1px;min-width:0;overflow-wrap:anywhere}
+.pen.big{font-size:25px;line-height:1}
+.pen .circ{border:2px solid #c8102e;border-radius:46% 54% 50% 50%/56% 44% 56% 44%;
+  padding:0 7px;display:inline-block}
+.list .caption{padding:13px 22px 17px;background:#d3ddcd;border-top:1px dashed #9fae98;
+  font:400 11px/1.65 'Courier Prime',monospace;color:#48543f;
+  columns:2 300px;column-gap:34px;text-align:justify}
+
+/* ═════ D · ISOTYPE ════════════════════════════════════════════════════
+   Otto Neurath's rule, and the reason this is not just "a chart with icons":
+   a greater quantity is shown by MORE SIGNS, never by a bigger sign. Which is
+   precisely the honest way to draw a gameweek, because the unit is a person.
+   Gerd Arntz drew these in Futura; Jost is the closest thing on a font host. */
+.iso{background:#efe9dc;color:#1c1c1c;font-family:'Jost',system-ui,sans-serif;padding:22px 22px 26px}
+.iso .mast{font:700 13px/1 'Jost',sans-serif;letter-spacing:.3em;text-transform:uppercase;
+  color:#1c1c1c;padding-bottom:11px;border-bottom:3px solid #1c1c1c}
+.iso .isorow{padding:17px 0;border-bottom:1px solid #cdc4b3}
+.iso .isorow:last-of-type{border-bottom:0}
+.iso .lab2{font:500 12px/1.3 'Jost',sans-serif;letter-spacing:.19em;text-transform:uppercase;
+  color:#5c5446;margin-bottom:3px}
+.iso .big{font:700 17px/1.35 'Jost',sans-serif;letter-spacing:.005em;margin-bottom:11px;
+  max-width:62ch;color:#1c1c1c}
+.iso .big em{font-style:normal;border-bottom:3px solid #c8102e;padding-bottom:1px}
+.iso .unit{font:400 11px/1.4 'Jost',sans-serif;letter-spacing:.14em;text-transform:uppercase;
+  color:#7a7263;margin-top:9px}
+/* Each cohort is its own flex group, so a narrow screen breaks BETWEEN the
+   grey and the ochre rather than through the middle of one. On a phone the
+   second row wrapped so that grey's half-figure landed at the head of the next
+   line ahead of the ochre, which read as a drawing mistake. */
+.figs{display:flex;flex-wrap:wrap;gap:8px 6px;align-items:flex-start}
+.figs .cohort{display:flex;flex-wrap:wrap;gap:4px 3px}
+.figs svg{display:block;flex:0 0 auto}
+/* ten by ten exactly — the unit is one manager in a hundred, and a block that
+   wraps to a ragged 18 across says nothing about hundreds at all */
+.sq{display:grid;grid-template-columns:repeat(10,13px);gap:3px;width:min-content}
+.sq b{display:block;width:13px;height:13px;background:#cdc4b3}
+.sq b.on{background:#c8102e}
+.iso .foot{margin-top:20px;padding-top:13px;border-top:3px solid #1c1c1c;
+  font:400 12.5px/1.6 'Jost',sans-serif;color:#5c5446;columns:2 320px;column-gap:38px}
+.iso .foot b{color:#1c1c1c;font-weight:500}
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">FPL Analyser · GW Review · mockup set five</div>
+  <h1>Four instruments of record</h1>
+  <p class="lede">The eleven directions before these were all, underneath, someone <em>presenting</em> the
+  gameweek. These four stop presenting. Each is a document made by somebody whose job is to check
+  whether a prediction held — a forecast office, a pathology lab, an operator with a red pen, an
+  Isotype draughtsman counting people. Every number is computed from the 495 GW1 projections joined
+  to actuals on player code.</p>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="t-a" aria-controls="s-a" aria-selected="true">A · The verification</button>
+    <button role="tab" id="t-b" aria-controls="s-b" aria-selected="false">B · The reference range</button>
+    <button role="tab" id="t-c" aria-controls="s-c" aria-selected="false">C · The listing</button>
+    <button role="tab" id="t-d" aria-controls="s-d" aria-selected="false">D · Isotype</button>
+  </div>
+
+  <!-- ══════════════════ A ══════════════════ -->
+  <section id="s-a" role="tabpanel" aria-labelledby="t-a">
+    <div class="dirhead">
+      <div class="n">A</div>
+      <div>
+        <h2>The verification</h2>
+        <p class="q"><b>Was the forecast any good?</b> A weather office never claims its forecast was
+        good — it publishes the forecast, publishes the outcome and marks the gap in a house style so
+        plain nobody can accuse it of dressing up a bust. A site that publishes p60 owes the reader
+        the same page.</p>
+      </div>
+    </div>
+
+    <div class="paper bul">
+      <div class="top">
+        <div>
+          <div class="mast">Verification</div>
+          <div class="sub">Gameweek 1 · 2026&#8209;27 · bulletin 01</div>
+        </div>
+        <div class="stamp">WARM BIAS AT THE TOP OF THE SCALE</div>
+      </div>
+      <div class="fields">
+        <div><dt>Forecast issued</dt><dd>21 Aug 20:55Z</dd></div>
+        <div><dt>Outcome pulled</dt><dd>24 Aug 21:48Z</dd></div>
+        <div><dt>Population</dt><dd>495 players</dd></div>
+        <div><dt>Quantity verified</dt><dd>p60 · starts 60&#8242;+</dd></div>
+        <div><dt>Mean abs. error, xP</dt><dd>1.66 pts</dd></div>
+      </div>
+      <div class="body">
+        <h3>Summary</h3>
+        <p class="summ">The forecast held at the bottom of the scale and drifted warm at the top.
+        Of the 95 players given a 90%&#8202;+ chance of an hour, <b>82% played one</b>; of the 40 given
+        80–90%, <b>78%</b> did. The worst band is 70–80%, where <b>58%</b> started — seventeen points
+        below the middle of its own band, and the only band flagged bust. Below 50% the forecast is
+        well behaved, and the 185 players written off at under 10% are close to exact: <b>10%</b> of
+        them played the hour.</p>
+
+        <h3>Reliability · forecast probability against outcome</h3>
+        <div class="rel">
+          <div class="hd r">Forecast</div><div class="hd">Outcome against forecast</div><div class="hd r">Played</div>
+          <div class="band">90–100%</div>
+          <div class="track"><div class="dl" style="width:82%"></div><div class="miss" style="left:82%;width:13%"></div><div class="fc" style="left:95%"></div></div>
+          <div class="out bust">82%</div>
+          <div class="band">80–90%</div>
+          <div class="track"><div class="dl" style="width:78%"></div><div class="miss" style="left:78%;width:7%"></div><div class="fc" style="left:85%"></div></div>
+          <div class="out">78%</div>
+          <div class="band">70–80%</div>
+          <div class="track"><div class="dl" style="width:58%"></div><div class="miss" style="left:58%;width:17%"></div><div class="fc" style="left:75%"></div></div>
+          <div class="out bust">58%</div>
+          <div class="band">60–70%</div>
+          <div class="track"><div class="dl" style="width:68%"></div><div class="fc" style="left:65%"></div></div>
+          <div class="out">68%</div>
+          <div class="band">50–60%</div>
+          <div class="track"><div class="dl" style="width:52%"></div><div class="miss" style="left:52%;width:3%"></div><div class="fc" style="left:55%"></div></div>
+          <div class="out">52%</div>
+          <div class="band">40–50%</div>
+          <div class="track"><div class="dl" style="width:41%"></div><div class="miss" style="left:41%;width:4%"></div><div class="fc" style="left:45%"></div></div>
+          <div class="out">41%</div>
+          <div class="band">30–40%</div>
+          <div class="track"><div class="dl" style="width:33%"></div><div class="miss" style="left:33%;width:2%"></div><div class="fc" style="left:35%"></div></div>
+          <div class="out">33%</div>
+          <div class="band">20–30%</div>
+          <div class="track"><div class="dl" style="width:35%"></div><div class="fc" style="left:25%"></div></div>
+          <div class="out">35%</div>
+          <div class="band">10–20%</div>
+          <div class="track"><div class="dl" style="width:31%"></div><div class="fc" style="left:15%"></div></div>
+          <div class="out">31%</div>
+          <div class="band">0–10%</div>
+          <div class="track"><div class="dl" style="width:10%"></div><div class="fc" style="left:5%"></div></div>
+          <div class="out">10%</div>
+        </div>
+        <div class="key">
+          <span><i style="background:#8b93a3"></i> share who played the hour</span>
+          <span><i style="width:2px;background:#14181f"></i> forecast probability</span>
+          <span><i style="background:repeating-linear-gradient(-45deg,#c8102e 0 2px,transparent 2px 5px)"></i> shortfall</span>
+        </div>
+        <div class="foot">POPULATION BY BAND &nbsp; 90–100%&nbsp;n=95 &nbsp; 80–90%&nbsp;n=40 &nbsp;
+        70–80%&nbsp;n=40 &nbsp; 60–70%&nbsp;n=22 &nbsp; 50–60%&nbsp;n=21 &nbsp; 40–50%&nbsp;n=17 &nbsp;
+        30–40%&nbsp;n=15 &nbsp; 20–30%&nbsp;n=34 &nbsp; 10–20%&nbsp;n=26 &nbsp; 0–10%&nbsp;n=185.
+        Bands under 50 players carry wide sampling error over a single gameweek and are published
+        for completeness, not as a finding.</div>
+      </div>
+    </div>
+
+    <div class="note">
+      <h3>What it is</h3>
+      <p>The reliability diagram, in the only register that suits it. Bars over 45° lines are how
+      forecasters have marked their own homework since the 1950s; the design work here is the
+      restraint — one grey for both bars, and the <b>only colour on the page is the shortfall</b>,
+      because the shortfall is the story.</p>
+      <p><b>The risk.</b> Ten bands over one gameweek is thin. Six of them have fewer than forty
+      players in them, and a single postponed fixture would move the 30–40% band by ten points. The
+      footer says so rather than hiding it, and by GW6 the same layout is reading a real sample.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════ B ══════════════════ -->
+  <section id="s-b" role="tabpanel" aria-labelledby="t-b" hidden>
+    <div class="dirhead">
+      <div class="n">B</div>
+      <div>
+        <h2>The reference range</h2>
+        <p class="q"><b>Which calls were abnormal?</b> A blood panel puts a measurement, a normal band
+        and a flag on one line, and a clinician reads forty of them in seconds. It also happens to be
+        the only layout that reveals the model's real shape: the error band is <b>asymmetric</b>,
+        because points have a floor at zero and no ceiling at all.</p>
+      </div>
+    </div>
+
+    <div class="paper lab">
+      <div class="top">
+        <div class="mast">Projection Panel · GW1</div>
+        <div class="who">FPL Analyser model output, verified against final FPL scores</div>
+      </div>
+      <div class="fields">
+        <div><dt>Specimen</dt><dd>495 projections</dd></div>
+        <div><dt>Collected</dt><dd>21 Aug 2026 20:55Z</dd></div>
+        <div><dt>Reported</dt><dd>24 Aug 2026 21:48Z</dd></div>
+        <div><dt>Analyte</dt><dd>points &minus; xP</dd></div>
+        <div><dt>Reference interval</dt><dd>&minus;2.55 to +3.71</dd></div>
+        <div><dt>Within interval</dt><dd>397 / 495 &nbsp;(80%)</dd></div>
+      </div>
+      <div class="body">
+        <div class="labrow hd">
+          <div class="nm">Result</div><div class="val">Value</div><div class="flag">Fl</div>
+          <div>Reference interval &minus;5 &nbsp;·&nbsp; 0 &nbsp;·&nbsp; +15</div><div class="ref">Projected</div>
+        </div>
+
+        <div class="grp">Flagged high — above the interval</div>
+        <div class="labrow out"><div class="nm"><b>Mendy</b> <i>HUL · DEF</i></div><div class="val">+14.99</div><div class="flag h">H</div>
+          <div class="strip"><div class="zone"></div><div class="zero"></div><div class="tick h" data-v="14.99"></div></div>
+          <div class="ref">0.01 &rarr; 15</div></div>
+        <div class="labrow out"><div class="nm"><b>De Cuyper</b> <i>BHA · DEF</i></div><div class="val">+13.52</div><div class="flag h">H</div>
+          <div class="strip"><div class="zone"></div><div class="zero"></div><div class="tick h" data-v="13.52"></div></div>
+          <div class="ref">3.48 &rarr; 17</div></div>
+        <div class="labrow out"><div class="nm"><b>Hinshelwood</b> <i>BHA · MID</i></div><div class="val">+12.23</div><div class="flag h">H</div>
+          <div class="strip"><div class="zone"></div><div class="zero"></div><div class="tick h" data-v="12.23"></div></div>
+          <div class="ref">3.77 &rarr; 16</div></div>
+        <div class="labrow out"><div class="nm"><b>Ajayi</b> <i>HUL · DEF</i></div><div class="val">+11.62</div><div class="flag h">H</div>
+          <div class="strip"><div class="zone"></div><div class="zero"></div><div class="tick h" data-v="11.62"></div></div>
+          <div class="ref">2.38 &rarr; 14</div></div>
+        <div class="labrow out"><div class="nm"><b>Sangar&eacute;</b> <i>BRE · MID</i></div><div class="val">+11.37</div><div class="flag h">H</div>
+          <div class="strip"><div class="zone"></div><div class="zero"></div><div class="tick h" data-v="11.37"></div></div>
+          <div class="ref">2.63 &rarr; 14</div></div>
+
+        <div class="grp">Flagged low — below the interval</div>
+        <div class="labrow out low"><div class="nm"><b>B.Fernandes</b> <i>MUN · MID</i></div><div class="val">&minus;4.59</div><div class="flag l">L</div>
+          <div class="strip"><div class="zone"></div><div class="zero"></div><div class="tick l" data-v="-4.59"></div></div>
+          <div class="ref">6.59 &rarr; 2</div></div>
+        <div class="labrow out low"><div class="nm"><b>Watkins</b> <i>AVL · FWD</i></div><div class="val">&minus;4.52</div><div class="flag l">L</div>
+          <div class="strip"><div class="zone"></div><div class="zero"></div><div class="tick l" data-v="-4.52"></div></div>
+          <div class="ref">4.52 &rarr; 0</div></div>
+        <div class="labrow out low"><div class="nm"><b>L.Martinez</b> <i>MUN · DEF</i></div><div class="val">&minus;4.50</div><div class="flag l">L</div>
+          <div class="strip"><div class="zone"></div><div class="zero"></div><div class="tick l" data-v="-4.50"></div></div>
+          <div class="ref">4.50 &rarr; 0</div></div>
+        <div class="labrow out low"><div class="nm"><b>Ballard</b> <i>SUN · DEF</i></div><div class="val">&minus;4.16</div><div class="flag l">L</div>
+          <div class="strip"><div class="zone"></div><div class="zero"></div><div class="tick l" data-v="-4.16"></div></div>
+          <div class="ref">4.16 &rarr; 0</div></div>
+        <div class="labrow out low"><div class="nm"><b>Haaland</b> <i>MCI · FWD</i></div><div class="val">&minus;4.09</div><div class="flag l">L</div>
+          <div class="strip"><div class="zone"></div><div class="zero"></div><div class="tick l" data-v="-4.09"></div></div>
+          <div class="ref">6.09 &rarr; 2</div></div>
+
+        <div class="grp">Within interval — representative</div>
+        <div class="labrow"><div class="nm">Palmer <i>CHE · MID</i></div><div class="val">+8.25</div><div class="flag"></div>
+          <div class="strip"><div class="zone"></div><div class="zero"></div><div class="tick" data-v="8.25"></div></div>
+          <div class="ref">4.75 &rarr; 13</div></div>
+        <div class="labrow"><div class="nm">Jo&atilde;o Pedro <i>CHE · FWD</i></div><div class="val">+6.63</div><div class="flag"></div>
+          <div class="strip"><div class="zone"></div><div class="zero"></div><div class="tick" data-v="6.63"></div></div>
+          <div class="ref">4.37 &rarr; 11</div></div>
+        <div class="labrow"><div class="nm">Raya <i>ARS · GKP</i></div><div class="val">+1.61</div><div class="flag"></div>
+          <div class="strip"><div class="zone"></div><div class="zero"></div><div class="tick" data-v="1.61"></div></div>
+          <div class="ref">4.39 &rarr; 6</div></div>
+        <div class="labrow"><div class="nm">Pedro Porro <i>TOT · DEF</i></div><div class="val">&minus;3.46</div><div class="flag"></div>
+          <div class="strip"><div class="zone"></div><div class="zero"></div><div class="tick" data-v="-3.46"></div></div>
+          <div class="ref">3.46 &rarr; 0</div></div>
+        <!-- the axis is a .labrow so it inherits the same track sizes as every
+             result line — computing its offset by hand would drift the moment
+             a name column changes -->
+        <div class="labrow axis"><div></div><div></div><div></div>
+          <div class="scale" id="labscale"></div><div></div></div>
+
+        <div class="foot">
+          <b>Interval derivation.</b> Empirical, not theoretical: the central 80% of this gameweek's
+          own 495 errors, so 397 results fall inside it by construction. It is quoted to show the
+          <b>asymmetry</b> — the band runs 2.55 points below the projection and 3.71 above, and the
+          extremes are wider still. The worst overshoot was <b>+14.99</b>; the worst undershoot,
+          <b>&minus;4.59</b>. A projection cannot be wrong by more than it forecast on the downside,
+          and can be wrong without limit on the up.<br><br>
+          <b>Not a diagnosis.</b> A flag marks a result outside the interval, not a fault. Mendy was
+          ranked 495th of 495 and scored 15; nothing in the underlying data made that findable.
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <h3>What it is</h3>
+      <p>Every row on one shared scale from &minus;5 to +15, so the page reads as a single
+      measurement rather than fourteen little bars. The pale band is the reference interval; it sits
+      off to the left, which is the finding — <b>the model's misses are not symmetrical and no
+      symmetric error bar would have said so</b>.</p>
+      <p><b>The risk.</b> Clinical framing can read as cold, or worse, as a claim to medical
+      authority the numbers do not have. The footer does the work: it says the interval is drawn from
+      this gameweek's own errors and that a flag is not a fault.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════ C ══════════════════ -->
+  <section id="s-c" role="tabpanel" aria-labelledby="t-c" hidden>
+    <div class="dirhead">
+      <div class="n">C</div>
+      <div>
+        <h2>The listing</h2>
+        <p class="q"><b>What did the machine say, and who corrected it?</b> Continuous-form paper,
+        132 columns, and somebody with a biro. The machine's output is printed and cannot answer
+        back; everything that actually happened is written over the top of it in red.</p>
+      </div>
+    </div>
+
+    <div class="paper list">
+      <div class="perf"></div>
+      <div class="listbody">
+        <div class="sprocket" aria-hidden="true"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div>
+        <div class="sheet">
+          <div class="lp"><div class="m title">FPLA/GW01/PROJ&nbsp;&nbsp;RUN 26-08-21 20:55:13Z&nbsp;&nbsp;PAGE 001</div><div class="pen"></div></div>
+          <div class="lp"><div class="m hdr">PLAYER&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TM&nbsp;&nbsp;POS&nbsp;&nbsp;&nbsp;&nbsp;XP&nbsp;&nbsp;&nbsp;OWN</div><div class="pen">actual</div></div>
+          <div class="lp"><div class="m">HAALAND&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MCI&nbsp;&nbsp;FWD&nbsp;&nbsp;6.09&nbsp;&nbsp;69.4</div><div class="pen big"><span class="circ">2</span></div></div>
+          <div class="lp"><div class="m">B.FERNANDES&nbsp;MUN&nbsp;&nbsp;MID&nbsp;&nbsp;6.59&nbsp;&nbsp;50.8</div><div class="pen">2 — played all 90</div></div>
+          <div class="lp"><div class="m">SALAH&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LIV&nbsp;&nbsp;MID&nbsp;&nbsp;5.72&nbsp;&nbsp;41.2</div><div class="pen"></div></div>
+          <div class="lp"><div class="m">PALMER&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CHE&nbsp;&nbsp;MID&nbsp;&nbsp;4.75&nbsp;&nbsp;10.5</div><div class="pen">13 ✓ Mon night</div></div>
+          <div class="lp"><div class="m">WATKINS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AVL&nbsp;&nbsp;FWD&nbsp;&nbsp;4.52&nbsp;&nbsp;11.0</div><div class="pen">didn't play</div></div>
+          <div class="lp"><div class="m strike">L.MARTINEZ&nbsp;&nbsp;MUN&nbsp;&nbsp;DEF&nbsp;&nbsp;4.50&nbsp;&nbsp;&nbsp;1.1</div><div class="pen">0 mins</div></div>
+          <div class="lp"><div class="m strike">PEDRO PORRO&nbsp;TOT&nbsp;&nbsp;DEF&nbsp;&nbsp;3.46&nbsp;&nbsp;22.6</div><div class="pen">0 mins</div></div>
+          <div class="lp"><div class="m">&nbsp;</div><div class="pen"></div></div>
+          <div class="lp"><div class="m title">...484 LINES OMITTED...</div><div class="pen"></div></div>
+          <div class="lp"><div class="m">&nbsp;</div><div class="pen"></div></div>
+          <div class="lp"><div class="m">DEWSBURY-HALL&nbsp;EVE&nbsp;MID&nbsp;&nbsp;1.91&nbsp;&nbsp;&nbsp;3.4</div><div class="pen">11</div></div>
+          <div class="lp"><div class="m">SANGARE&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BRE&nbsp;&nbsp;MID&nbsp;&nbsp;2.63&nbsp;&nbsp;&nbsp;3.1</div><div class="pen">14</div></div>
+          <div class="lp"><div class="m">AJAYI&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HUL&nbsp;&nbsp;DEF&nbsp;&nbsp;2.38&nbsp;&nbsp;&nbsp;0.9</div><div class="pen">14</div></div>
+          <div class="lp"><div class="m">MENDY&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HUL&nbsp;&nbsp;DEF&nbsp;&nbsp;0.01&nbsp;&nbsp;&nbsp;0.9</div><div class="pen big"><span class="circ">15</span> — last of 495</div></div>
+          <div class="lp"><div class="m">&nbsp;</div><div class="pen"></div></div>
+          <div class="lp"><div class="m title">END OF LISTING&nbsp;&nbsp;495 RECORDS&nbsp;&nbsp;MAE 1.66</div><div class="pen">not the goals. the minutes.</div></div>
+        </div>
+        <div class="sprocket" aria-hidden="true"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div>
+      </div>
+      <div class="perf b"></div>
+      <div class="caption">FOOTNOTE. THE TWO STRUCK LINES ARE THE PATTERN: 16 PLAYERS PROJECTED AT
+      3 POINTS OR MORE NEVER LEFT THE BENCH, WRITING OFF 55.3 EXPECTED POINTS. GOING THE OTHER WAY,
+      41 PLAYERS PROJECTED UNDER 1.5 PLAYED THE HOUR AND RETURNED 122. AMONG THE 196 WHO DID NOT
+      PLAY AT ALL THE MODEL'S ERROR IS 0.69; AMONG THE 208 WHO PLAYED SIXTY MINUTES IT IS 2.69, AND
+      IT UNDERSHOOTS THEM BY 1.24 EACH.</div>
+    </div>
+
+    <div class="note">
+      <h3>What it is</h3>
+      <p>The only one of the eleven directions in which the model gets <b>marked</b> rather than
+      displayed. That is the argument for it: a site that publishes numbers every week needs a page
+      where the numbers are visibly answerable to something, and a red pen says that faster than any
+      amount of copy about accuracy.</p>
+      <p><b>The risk.</b> Nostalgia is a one-week joke unless the format carries information, so the
+      pen only ever writes what happened and the strike-through only ever means nought minutes.
+      <b>The pen lives in its own grid column, not floated over the type</b> — an earlier attempt
+      absolutely-positioned the annotations and Dewsbury-Hall's line ran straight underneath one.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════ D ══════════════════ -->
+  <section id="s-d" role="tabpanel" aria-labelledby="t-d" hidden>
+    <div class="dirhead">
+      <div class="n">D</div>
+      <div>
+        <h2>Isotype</h2>
+        <p class="q"><b>How many, of what?</b> Otto Neurath's rule, and the reason this is not simply
+        a chart with icons on it: a greater quantity is shown by <b>more signs, never a bigger
+        sign</b>. Which is the honest way to draw a gameweek, because the unit being counted is a
+        person.</p>
+      </div>
+    </div>
+
+    <div class="paper iso">
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+        <!-- Arntz proportions: a wide shouldered block and two square legs.
+             The first draft was 12 wide by 26 tall and a row of them read as a
+             picket fence rather than as people. -->
+        <symbol id="fig" viewBox="0 0 14 24">
+          <circle cx="7" cy="3.4" r="3.2"/>
+          <path d="M2 8h10v7H2z"/>
+          <path d="M3 15h3.4v9H3zM7.6 15H11v9H7.6z"/>
+        </symbol>
+      </defs></svg>
+
+      <div class="mast">Gameweek One · counted</div>
+
+      <div class="isorow">
+        <div class="lab2">The population</div>
+        <div class="big">495 players carried a projection into the gameweek.</div>
+        <div class="figs" id="iso-all" aria-label="495 players, one figure per ten"></div>
+        <div class="unit">One figure = ten players</div>
+      </div>
+
+      <div class="isorow">
+        <div class="lab2">What they did with it</div>
+        <div class="big">Two in five never got on the pitch. <em>The gameweek is a minutes
+        problem before it is a football problem.</em></div>
+        <div class="figs" id="iso-mins" aria-label="196 did not play, 91 played under an hour, 208 played the hour"></div>
+        <div class="unit">One figure = ten players &nbsp;·&nbsp; grey, no minutes 196 &nbsp;·&nbsp;
+          ochre, under the hour 91 &nbsp;·&nbsp; black, the hour or more 208</div>
+      </div>
+
+      <div class="isorow">
+        <div class="lab2">Expected, absent</div>
+        <div class="big">16 players projected at three points or better never left the bench —
+        55.3 expected points written off before a ball was kicked.</div>
+        <div class="figs" id="iso-ghost" aria-label="16 players"></div>
+        <div class="unit">One figure = one player</div>
+      </div>
+
+      <div class="isorow">
+        <div class="lab2">Unexpected, present</div>
+        <div class="big">41 players projected under a point and a half played the hour, and returned
+        122 points between them.</div>
+        <div class="figs" id="iso-sleep" aria-label="41 players"></div>
+        <div class="unit">One figure = one player</div>
+      </div>
+
+      <div class="isorow">
+        <div class="lab2">Who owned the best eleven</div>
+        <div class="big">The highest-scoring legal side of the week cost &pound;63.0m and made 148
+        points. Its average owner was <em>eight people in a hundred</em>.</div>
+        <div class="sq" id="iso-own" aria-label="8 of every 100 managers"></div>
+        <div class="unit">One square = one manager in a hundred &nbsp;·&nbsp; mean ownership 8.1%</div>
+      </div>
+
+      <div class="foot"><b>Why this and not a bar chart.</b> A bar says 495 and 196 are lengths. A
+      row of figures says they are people, which is what makes the second row land — you can see the
+      grey block, and the grey block is the reason the model's average error among players who did
+      not appear is 0.69 and among players who played an hour is <b>2.69</b>. Counting in people
+      also forbids the trick this page most wanted to pull: there is no way to make Mendy's fifteen
+      points look bigger than anybody else's fifteen.</div>
+    </div>
+
+    <div class="note">
+      <h3>What it is</h3>
+      <p>1930s Vienna, drawn by Gerd Arntz in Futura — <b>Jost</b> here, being the nearest face on a
+      font host. Flat colour, no gradient, no perspective, no scaled pictogram anywhere. It is the
+      most <em>legible</em> of these four on a phone, which is where most of this will be read on a
+      Sunday night.</p>
+      <p><b>The risk.</b> Isotype only works on counts. It cannot draw xP, or a captain call, or a
+      fixture, so it can never be the whole review — it is the opening spread, and A or B does the
+      accounting underneath it.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ── tabs ── */
+const tabs = [...document.querySelectorAll('.tabs button')]
+tabs.forEach(t => t.addEventListener('click', () => {
+  tabs.forEach(o => {
+    const sec = document.getElementById(o.getAttribute('aria-controls'))
+    const on = o === t
+    o.setAttribute('aria-selected', String(on))
+    sec.hidden = !on
+  })
+  window.scrollTo({top: 0, behavior: 'instant'})
+}))
+
+/* ── B · put every tick on one shared scale ──
+   Doing this in JS rather than by hand because fourteen hand-computed
+   percentages is fourteen chances to be quietly wrong, and the whole point of
+   the layout is that the rows share a scale exactly. */
+const LO = -5, HI = 15
+const pct = v => ((v - LO) / (HI - LO)) * 100
+document.querySelectorAll('.strip').forEach(s => {
+  s.querySelector('.zone').style.left  = pct(-2.55) + '%'
+  s.querySelector('.zone').style.width = (pct(3.71) - pct(-2.55)) + '%'
+  s.querySelector('.zero').style.left  = pct(0) + '%'
+  const t = s.querySelector('.tick')
+  t.style.left = `calc(${pct(Number(t.dataset.v))}% - 1px)`
+})
+const sc = document.getElementById('labscale')
+;[-5, 0, 5, 10, 15].forEach(v => {
+  const b = document.createElement('b')
+  b.textContent = (v > 0 ? '+' : '') + v
+  b.style.left = pct(v) + '%'
+  sc.appendChild(b)
+})
+
+/* ── D · draw the figures ── */
+function figs(el, spec, size) {
+  const h = size, w = Math.round(size * 14 / 24)
+  const one = (parent, width, box, fill) => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    svg.setAttribute('width', width); svg.setAttribute('height', h)
+    svg.setAttribute('viewBox', box); svg.setAttribute('fill', fill)
+    const u = document.createElementNS('http://www.w3.org/2000/svg', 'use')
+    u.setAttribute('href', '#fig')
+    svg.appendChild(u)
+    parent.appendChild(svg)
+  }
+  spec.forEach(([n, fill, half]) => {
+    const g = document.createElement('span')
+    g.className = 'cohort'
+    el.appendChild(g)
+    for (let i = 0; i < n; i++) one(g, w, '0 0 14 24', fill)
+    /* Neurath's half-sign: the figure cut vertically, never shrunk. */
+    if (half) one(g, Math.round(w / 2), '0 0 7 24', fill)
+  })
+}
+const BLACK = '#1c1c1c', GREY = '#b3ab9c', OCHRE = '#d9a441', RED = '#c8102e', BLUE = '#2f5d8a'
+figs(document.getElementById('iso-all'),   [[49, BLACK, true]], 24)
+/* rounded to the nearest half-figure, which is as fine as Isotype goes:
+   196→19.5, 91→9, 208→21. They still sum to the 49.5 above. */
+figs(document.getElementById('iso-mins'),  [[19, GREY, true], [9, OCHRE, false], [21, BLACK, false]], 24)
+figs(document.getElementById('iso-ghost'), [[16, RED, false]], 30)
+figs(document.getElementById('iso-sleep'), [[41, BLUE, false]], 24)
+const own = document.getElementById('iso-own')
+for (let i = 0; i < 100; i++) {
+  const b = document.createElement('b')
+  if (i < 8) b.className = 'on'
+  own.appendChild(b)
+}
+</script>
