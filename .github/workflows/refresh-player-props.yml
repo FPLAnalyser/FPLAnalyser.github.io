@@ -30,6 +30,10 @@ on:
         description: 'Cap fixtures (2 credits each; 0 = all)'
         type: string
         default: '0'
+      horizon:
+        description: 'Gameweeks to hold prices for (each new one is ~20 credits)'
+        type: string
+        default: '3'
 
 permissions:
   contents: write
@@ -54,6 +58,7 @@ jobs:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           PROPS_LIMIT: ${{ inputs.limit || '0' }}
           PROPS_STAGE: ${{ inputs.force && 'force' || '' }}
+          PROPS_HORIZON_GWS: ${{ inputs.horizon || '3' }}
           PROPS_HORIZON_GWS: ${{ inputs.horizon || '3' }}
       - name: Commit if changed
         run: |
