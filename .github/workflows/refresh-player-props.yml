@@ -59,7 +59,6 @@ jobs:
           PROPS_LIMIT: ${{ inputs.limit || '0' }}
           PROPS_STAGE: ${{ inputs.force && 'force' || '' }}
           PROPS_HORIZON_GWS: ${{ inputs.horizon || '3' }}
-          PROPS_HORIZON_GWS: ${{ inputs.horizon || '3' }}
       - name: Commit if changed
         run: |
           # -A over a directory, not a glob over a file that may not exist:
