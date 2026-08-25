@@ -49,6 +49,9 @@ section[hidden]{display:none}
    fixed 74px column with nowrap simply pushed the page sideways. The 1fr
    columns either side absorb the difference, and they need min-width:0 or they
    refuse to give it up. */
+/* The home side is right-aligned so it sits against the score; left-aligned in
+   a 1fr track it floated four hundred pixels away from its own result. */
+.flaprow>.home{justify-self:end}
 .flaprow{display:grid;grid-template-columns:78px minmax(0,1fr) auto minmax(0,1fr) max-content;
   gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid #1b1b1b}
 @media(max-width:640px){.flaprow{grid-template-columns:60px minmax(0,1fr) auto minmax(0,1fr);row-gap:4px}
@@ -70,14 +73,24 @@ section[hidden]{display:none}
 .board .foot b{color:#f0b429}
 
 /* ══════════ B · TELETEXT ═════════════════════════════════════════════ */
-.ttx{background:#000;padding:16px 14px 22px;border-radius:4px;overflow-x:auto;
-  font-family:'VT323',ui-monospace,monospace;font-size:22px;line-height:1.16;letter-spacing:.02em}
-.ttx .grid{min-width:560px}
+/* The page was a fixed 22px, which put a 40-column grid 368px wide inside an
+   1140px frame — measured. Ceefax filled the television; a strip pinned to the
+   left of a black void is not the format, it is a screenshot of the format.
+   So the type scales with the container: 40 characters of VT323 measure about
+   16.8em wide, so the type runs at 4.05cqw and the padding shrinks with it,
+   capped at 48px where the grid fills an 1180px frame exactly. A Ceefax page is
+   forty columns or it is not a Ceefax page, so on a phone it gets small rather
+   than getting scrolled sideways. */
+.ttxframe{container-type:inline-size}
+.ttx{background:#000;padding:18px clamp(8px,1.7cqw,20px) 26px;border-radius:4px;overflow-x:auto;
+  font-family:'VT323',ui-monospace,monospace;line-height:1.16;letter-spacing:.02em;
+  font-size:clamp(11px,4.05cqw,48px)}
+.ttx .grid{min-width:0;width:max-content}
 .ttx .row{white-space:pre}
 .ttx .w{color:#fff} .ttx .y{color:#ff0} .ttx .c{color:#0ff} .ttx .g{color:#0f0}
 .ttx .m{color:#f0f} .ttx .r{color:#f00} .ttx .b{color:#00f}
 .ttx .hdr{background:#00f;color:#fff}
-.ttx .dbl{font-size:40px;line-height:1.02;letter-spacing:.01em}
+.ttx .dbl{font-size:1.82em;line-height:1.02;letter-spacing:.01em}
 .ttx .inv{background:#fff;color:#000}
 .ttx .inv-y{background:#ff0;color:#000}
 .ttx .inv-c{background:#0ff;color:#000}
@@ -92,7 +105,9 @@ section[hidden]{display:none}
   text-transform:uppercase;color:#fff}
 .album .apage{font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:.22em;
   color:rgba(255,255,255,.5);text-transform:uppercase;margin-left:auto}
-.stickers{display:grid;grid-template-columns:repeat(auto-fill,minmax(126px,1fr));gap:11px}
+/* six across on a desktop, so eleven stickers read as a full row and a part
+   row rather than eight and a straggling three */
+.stickers{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:11px}
 .stk{position:relative;border-radius:9px;padding:9px 8px 8px;overflow:hidden;
   background:linear-gradient(170deg,#22314f,#141d33);border:1px solid rgba(255,255,255,.14);
   box-shadow:0 5px 16px rgba(0,0,0,.4)}
@@ -168,7 +183,7 @@ section[hidden]{display:none}
   <div class="board" style="margin-top:var(--gap)">
     <div class="bhead">
       <span class="btitle">Gameweek 01</span>
-      <span class="bmeta">Final · 29 goals · 6 clean sheets</span>
+      <span class="bmeta">Final · 30 goals · 6 clean sheets</span>
     </div>
     <div id="flaps"></div>
     <div class="foot">
@@ -196,7 +211,7 @@ section[hidden]{display:none}
     forty columns is a hard ceiling on how much can ever be said.
   </div>
 
-  <div class="ttx" style="margin-top:var(--gap)"><div class="grid" id="ttx"></div></div>
+  <div class="ttxframe" style="margin-top:var(--gap)"><div class="ttx"><div class="grid" id="ttx"></div></div></div>
 </section>
 
 <!-- ═══════════════ C ═══════════════ -->
@@ -225,8 +240,9 @@ section[hidden]{display:none}
     <div class="stickers" id="stickers"></div>
     <p class="caption">
       Six of the eleven were owned by under two per cent of the game. The foil
-      is the highest score in the gameweek; the faded ones are the players most
-      managers already had, which in gameweek one was exactly two of the eleven.
+      is the highest score in the gameweek; the two faded ones are the only
+      names anybody could reasonably have had already — João Pedro in six
+      squads out of ten, Palmer in one.
     </p>
   </div>
 </section>
@@ -236,11 +252,11 @@ section[hidden]{display:none}
   <div class="head"><span class="num">D</span><h2>The weekend</h2></div>
   <div class="note">
     <b>A gameweek is four days long and nobody ever draws it that way.</b>
-    Friday teatime to Monday night on one axis, every fixture pinned where it
-    actually kicked off, the stem's height being the points the best player in
-    it took. It reads as a shape: a single fixture on Friday, the Saturday
-    wall, a Sunday pair and then one game alone on Monday holding everybody's
-    week open.
+    Friday teatime to Monday night down the left, every fixture pinned at the
+    hour it actually kicked off, and the points its best player took reading
+    across on the right. It is a shape before it is a chart: one fixture on
+    Friday, the Saturday wall, a Sunday pair and then a single game on Monday
+    holding everybody's week open.
     <span class="for">For:</span> it is the only view that answers "when did my
     gameweek happen", it makes a Monday-night differential visible as a
     structural fact, and it is the natural home for a live version — the line
@@ -252,10 +268,10 @@ section[hidden]{display:none}
 
   <div class="wk" style="margin-top:var(--gap)" id="weekend"></div>
   <p class="muted" style="margin-top:12px;max-width:80ch">
-    The stems are the best individual return in each fixture. Saturday
-    afternoon carried five games and three of the week's four biggest hauls;
-    Monday carried one fixture and Chelsea's Palmer, which is why the review
-    could not be written until Tuesday morning.
+    Each bar is the best individual return inside that fixture. Saturday
+    carried five of the ten games and three of the four biggest of those
+    returns; Monday carried one fixture and Chelsea's Palmer, which is why the
+    review could not be written until Tuesday morning.
   </p>
 </section>
 
@@ -280,7 +296,7 @@ const FIX = [
   {d:'SAT', t:'14:00', h:'IPS', a:'SUN', hs:2, as:1, best:['Emersonn',9]},
   {d:'SAT', t:'14:00', h:'NFO', a:'LEE', hs:0, as:1, best:['Stach',13]},
   {d:'SAT', t:'16:30', h:'BRE', a:'TOT', hs:3, as:0, best:['M.Sangaré',14]},
-  {d:'SUN', t:'13:00', h:'BHA', a:'AVL', hs:3, as:0, best:['De Cuyper',17]},
+  {d:'SUN', t:'13:00', h:'BHA', a:'AVL', hs:4, as:0, best:['De Cuyper',17]},
   {d:'SUN', t:'13:00', h:'MCI', a:'BOU', hs:2, as:1, best:['Guéhi',10]},
   {d:'SUN', t:'15:30', h:'NEW', a:'LIV', hs:2, as:2, best:['Gakpo',12]},
   {d:'MON', t:'19:00', h:'FUL', a:'CHE', hs:2, as:3, best:['Palmer',13]},
@@ -306,7 +322,7 @@ const flap = (txt, cls = '') =>
 document.getElementById('flaps').innerHTML = FIX.map((f) => `
   <div class="flaprow">
     <span class="t">${f.d} ${f.t}</span>
-    ${flap(f.h)}
+    ${flap(f.h, 'home')}
     ${flap(`${f.hs}-${f.as}`, 'amber')}
     ${flap(f.a)}
     <span class="last">${esc(f.best[0])} <b>${f.best[1]}</b></span>
@@ -333,7 +349,7 @@ document.getElementById('flaps').innerHTML = FIX.map((f) => `
   row(span(pad('', 14), 'c') + span(pad('IPS  2-1  SUN', 26), 'w'));
   row(span(pad('', 14), 'c') + span(pad('NFO  0-1  LEE', 26), 'w'));
   row(span(pad('', 14), 'c') + span(pad('BRE  3-0  TOT', 26), 'w'));
-  row(span(pad('SUN 23 AUG', 14), 'c') + span(pad('BHA  3-0  AVL', 26), 'w'));
+  row(span(pad('SUN 23 AUG', 14), 'c') + span(pad('BHA  4-0  AVL', 26), 'w'));
   row(span(pad('', 14), 'c') + span(pad('MCI  2-1  BOU', 26), 'w'));
   row(span(pad('', 14), 'c') + span(pad('NEW  2-2  LIV', 26), 'w'));
   row(span(pad('MON 24 AUG', 14), 'c') + span(pad('FUL  2-3  CHE', 26), 'w'));
