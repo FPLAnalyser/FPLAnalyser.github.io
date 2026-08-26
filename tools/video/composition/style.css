@@ -1,0 +1,132 @@
+/* Palette lifted from the site's own dark-mode tokens in src/index.css, so the
+   film and the product are literally the same colours. */
+:root {
+  --bg-0: #000000;
+  --ink-1: #edeff3;
+  --ink-2: #aaacb0;
+  --ink-3: #828386;
+  --accent: #c9a227;
+  --accent-2: #ead188;
+  --accent-contrast: #14100a;
+}
+
+@font-face { font-family:'Archivo Black'; src:url('/src/fonts/archivo-black-400.woff2') format('woff2'); font-weight:400; font-display:block; }
+@font-face { font-family:'Manrope'; src:url('/src/fonts/manrope-400.woff2') format('woff2'); font-weight:400; font-display:block; }
+@font-face { font-family:'Manrope'; src:url('/src/fonts/manrope-600.woff2') format('woff2'); font-weight:600; font-display:block; }
+@font-face { font-family:'Manrope'; src:url('/src/fonts/manrope-800.woff2') format('woff2'); font-weight:800; font-display:block; }
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
+  width:1920px; height:1080px; overflow:hidden;
+  background:var(--bg-0); color:var(--ink-1);
+  font-family:'Manrope', system-ui, sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+
+#stage { position:relative; width:1920px; height:1080px; overflow:hidden; background:var(--bg-0); }
+
+.beat { position:absolute; inset:0; opacity:0; will-change:opacity, transform; }
+
+.centre {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center;
+}
+
+/* ---- 1 · cold open ------------------------------------------------------ */
+.kicker {
+  font-size:22px; font-weight:600; letter-spacing:.42em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:38px;
+}
+.hero-num {
+  font-family:'Archivo Black', sans-serif; font-size:400px; line-height:.86;
+  letter-spacing:-.02em;
+  background:linear-gradient(178deg, var(--accent-2) 4%, var(--accent) 62%, #8f6f19 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.hero-sub {
+  margin-top:44px; font-size:34px; font-weight:600; letter-spacing:.06em;
+  color:var(--ink-2);
+}
+.hero-sub em { font-style:normal; color:var(--ink-3); }
+
+/* ---- 2, 8 · kinetic type ------------------------------------------------ */
+.type-block { gap:.14em; }
+.line {
+  font-family:'Archivo Black', sans-serif; font-size:104px; line-height:1.14;
+  letter-spacing:-.022em; color:var(--ink-1); white-space:nowrap;
+}
+.line .w { display:inline-block; will-change:transform, opacity, filter; }
+.hl { position:relative; display:inline-block; }
+.hl i {
+  position:absolute; left:-.08em; right:-.08em; top:.06em; bottom:.02em;
+  background:var(--accent); transform-origin:left center; transform:scaleX(0);
+  border-radius:6px;
+}
+.hl b { position:relative; font-weight:inherit; }
+
+/* ---- 3, 5, 6, 7 · plates ------------------------------------------------ */
+.plate-wrap { position:absolute; inset:0; overflow:hidden; }
+.plate-inner { position:absolute; top:0; left:0; width:1440px; transform-origin:0 0; will-change:transform; }
+.plate-inner img { display:block; width:1440px; height:auto; }
+
+/* One opaque panel per table row; they fade out in sequence so the ranking
+   appears to fill in. Sized from rects measured on the real DOM. */
+.rowmask { position:absolute; background:var(--bg-0); will-change:opacity; }
+
+/* Left-to-right reveal across the fixture grid, with a warm leading edge. */
+.sweep { position:absolute; background:var(--bg-0); will-change:transform; }
+.sweep::before {
+  content:''; position:absolute; left:0; top:0; bottom:0; width:5px;
+  background:linear-gradient(90deg, rgba(201,162,39,.85), rgba(201,162,39,0));
+  box-shadow:0 0 42px 12px rgba(201,162,39,.30);
+}
+
+.chip {
+  position:absolute; left:96px; bottom:88px;
+  font-size:21px; font-weight:700; letter-spacing:.30em; text-transform:uppercase;
+  color:var(--ink-1); padding:15px 26px;
+  background:rgba(10,11,14,.72); border:1px solid rgba(255,255,255,.12);
+  border-radius:999px; backdrop-filter:blur(8px); will-change:opacity, transform;
+}
+
+/* ---- 4 · the inputs ----------------------------------------------------- */
+.inputs { gap:0; }
+.in-row {
+  display:flex; align-items:center; gap:34px;
+  font-family:'Archivo Black', sans-serif; font-size:78px; letter-spacing:-.02em;
+  line-height:1.34; color:var(--ink-1); will-change:opacity, transform;
+}
+.in-row .rule { display:block; width:78px; height:7px; background:var(--accent); border-radius:4px; }
+.in-sum {
+  margin-top:46px; font-family:'Archivo Black', sans-serif; font-size:78px;
+  letter-spacing:-.02em; color:var(--accent); will-change:opacity, transform;
+}
+
+/* ---- 7 · cursor --------------------------------------------------------- */
+#cursor { position:absolute; left:0; top:0; will-change:transform; }
+#cursor svg { display:block; filter:drop-shadow(0 3px 10px rgba(0,0,0,.75)); }
+#cursor svg path { fill:#fff; stroke:rgba(0,0,0,.55); stroke-width:1.1; }
+#cursor .ring {
+  position:absolute; left:2px; top:2px; width:22px; height:22px; margin:-11px 0 0 -11px;
+  border:3px solid var(--accent-2); border-radius:50%; opacity:0;
+}
+
+/* ---- 9 · end card ------------------------------------------------------- */
+.wordmark { font-family:'Archivo Black', sans-serif; font-size:132px; letter-spacing:-.02em; }
+.wm-a { color:var(--accent); }
+.wm-b { color:var(--ink-1); }
+.wm-kick {
+  margin-top:26px; font-size:24px; font-weight:700; letter-spacing:.52em;
+  text-transform:uppercase; color:var(--ink-3);
+}
+.wm-kick i { font-style:normal; color:var(--accent); }
+.wm-url { margin-top:78px; font-size:40px; font-weight:600; letter-spacing:.06em; color:var(--ink-1); }
+.wm-legal { margin-top:30px; font-size:19px; font-weight:500; letter-spacing:.04em; color:var(--ink-3); }
+
+/* ---- grade -------------------------------------------------------------- */
+#vignette {
+  position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(120% 88% at 50% 46%, rgba(0,0,0,0) 46%, rgba(0,0,0,.42) 82%, rgba(0,0,0,.72) 100%);
+}

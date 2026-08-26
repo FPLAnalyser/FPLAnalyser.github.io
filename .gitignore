@@ -23,3 +23,9 @@ _*.mjs
 
 # Seeded design canvases — 2MB+ each, regenerable from mockups/<name>/*.dc.html
 expected-xi.html
+
+# Launch film: both the captured plates and the encoded output are derived
+# artefacts, re-made by `npm run video` and stale the moment the data refreshes.
+# The 60s master is ~25MB and belongs on a CDN, not in this history.
+tools/video/plates/
+tools/video/out/

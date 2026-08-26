@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FPL Analyser — launch film</title>
+<link rel="stylesheet" href="/tools/video/composition/style.css">
+</head>
+<body>
+<div id="stage">
+
+  <!-- 1 · cold open ------------------------------------------------------ -->
+  <section class="beat" id="b-open">
+    <div class="centre">
+      <div class="kicker" id="open-kicker">Season rating</div>
+      <div class="hero-num" id="open-num">0</div>
+      <div class="hero-sub" id="open-sub"></div>
+    </div>
+  </section>
+
+  <!-- 2 · type ------------------------------------------------------------ -->
+  <section class="beat" id="b-type1">
+    <div class="centre type-block">
+      <div class="line" data-line="1">Every Premier League player.</div>
+      <div class="line" data-line="2">Rated <span class="hl"><i></i><b>0&ndash;100</b></span>.</div>
+    </div>
+  </section>
+
+  <!-- 3 · ratings table --------------------------------------------------- -->
+  <section class="beat" id="b-table">
+    <div class="plate-wrap"><div class="plate-inner" data-plate="players">
+      <img src="/tools/video/plates/players.png" alt="">
+    </div></div>
+    <div class="chip">Every player, ranked</div>
+  </section>
+
+  <!-- 4 · the inputs ------------------------------------------------------ -->
+  <section class="beat" id="b-inputs">
+    <div class="centre inputs">
+      <div class="in-row" data-i="0"><span class="rule"></span>Expected goals</div>
+      <div class="in-row" data-i="1"><span class="rule"></span>Minutes</div>
+      <div class="in-row" data-i="2"><span class="rule"></span>Form</div>
+      <div class="in-row" data-i="3"><span class="rule"></span>Fixtures</div>
+      <div class="in-sum">One number.</div>
+    </div>
+  </section>
+
+  <!-- 5 · fixture difficulty ---------------------------------------------- -->
+  <section class="beat" id="b-fixtures">
+    <div class="plate-wrap"><div class="plate-inner" data-plate="fixtures">
+      <img src="/tools/video/plates/fixtures.png" alt="">
+      <div class="sweep"></div>
+    </div></div>
+    <div class="chip" id="fx-chip">Six weeks of difficulty</div>
+  </section>
+
+  <!-- 6 · captain call ----------------------------------------------------- -->
+  <section class="beat" id="b-captain">
+    <div class="plate-wrap"><div class="plate-inner" data-plate="preview">
+      <img src="/tools/video/plates/preview.png" alt="">
+    </div></div>
+    <div class="chip">The captain call</div>
+  </section>
+
+  <!-- 7a · squad pitch ----------------------------------------------------- -->
+  <section class="beat" id="b-squad">
+    <div class="plate-wrap"><div class="plate-inner" data-plate="squad">
+      <img src="/tools/video/plates/squad.png" alt="">
+    </div></div>
+    <div class="chip">Fifteen, inside £100m</div>
+    <div id="cursor"><svg viewBox="0 0 24 24" width="34" height="34"><path d="M4 2 L4 20 L9 15.4 L12.2 22 L15.6 20.4 L12.4 14 L19 14 Z"/></svg><span class="ring"></span></div>
+  </section>
+
+  <!-- 7b · season plan ----------------------------------------------------- -->
+  <section class="beat" id="b-plan">
+    <div class="plate-wrap"><div class="plate-inner" data-plate="squad2">
+      <img src="/tools/video/plates/squad.png" alt="">
+    </div></div>
+    <div class="chip">Projected, week by week</div>
+  </section>
+
+  <!-- 8 · type ------------------------------------------------------------- -->
+  <section class="beat" id="b-type2">
+    <div class="centre type-block">
+      <div class="line" data-line="1">Then it tells you</div>
+      <div class="line" data-line="2"><span class="hl"><i></i><b>who to transfer</b></span>.</div>
+    </div>
+  </section>
+
+  <!-- 9 · end card --------------------------------------------------------- -->
+  <section class="beat" id="b-end">
+    <div class="centre">
+      <div class="wordmark"><span class="wm-a">FPL</span> <span class="wm-b">Analyser</span></div>
+      <div class="wm-kick">Data <i>·</i> Insight <i>·</i> Points</div>
+      <div class="wm-url">fplanalyser.co.uk</div>
+      <div class="wm-legal">Not affiliated with or endorsed by the Premier League.</div>
+    </div>
+  </section>
+
+  <div id="vignette"></div>
+</div>
+<script src="/tools/video/composition/timeline.js"></script>
+</body>
+</html>
