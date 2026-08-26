@@ -113,6 +113,50 @@ ACTUAL_KEYS = [
     "expected_goals_conceded",
 ]
 
+# What the WHOLE GAME did, which is nowhere in the per-player numbers above.
+# The Review promises a captain section, and captaincy is not a player stat —
+# FPL publishes it once per gameweek, on the event, and nothing here was
+# reading it. Without this the best the page can do is infer the armband from
+# ownership, which is a guess dressed up as a fact.
+EVENT_KEYS = [
+    "average_entry_score", "highest_score", "transfers_made", "chip_plays",
+]
+# Fields that name a player by element id. Ids are reissued every summer, so
+# each one is stored with the player's permanent `code` beside it — a review
+# reading last season's file must not resolve id 1 against this season's list.
+EVENT_ELEMENT_KEYS = [
+    "most_captained", "most_vice_captained", "most_selected",
+    "most_transferred_in",
+]
+
+
+def event_summary(ev, elements, teams):
+    """The gameweek's own row: what the game as a whole did with it.
+
+    Everything is optional. FPL leaves these null until a gameweek is under
+    way, and a missing field has to leave the key out rather than write a zero
+    that reads as a real measurement of nought.
+    """
+    out = {}
+    for k in EVENT_KEYS:
+        v = ev.get(k)
+        if v is not None:
+            out[k] = v
+    for k in EVENT_ELEMENT_KEYS:
+        eid = ev.get(k)
+        if eid is None:
+            continue
+        meta = elements.get(eid)
+        if not meta:
+            continue
+        out[k] = {
+            "element": eid,
+            "code": meta.get("code"),
+            "name": meta.get("web_name", ""),
+            "team": teams.get(meta.get("team"), ""),
+        }
+    return out
+
 
 def actuals(args, boot, elements, teams, fx, events):
     """Write what happened, next to where the projection for it already lives.
@@ -186,6 +230,7 @@ def actuals(args, boot, elements, teams, fx, events):
             continue
 
         players.sort(key=lambda r: (-r["total_points"], r["name"]))
+        event = event_summary(ev, elements, teams)
         payload = {
             "gw": gw, "season": season,
             "pulled": datetime.datetime.now(datetime.timezone.utc)
@@ -193,6 +238,7 @@ def actuals(args, boot, elements, teams, fx, events):
             # Bonus is not final until FPL says the gameweek is, so a review
             # built on a provisional pull has to be able to say so.
             "provisional": provisional,
+            "event": event,
             "players": players,
         }
         top = ", ".join(f"{p['name']} {p['total_points']}" for p in players[:5])
@@ -210,7 +256,13 @@ def actuals(args, boot, elements, teams, fx, events):
             try:
                 with open(dest, encoding="utf-8") as f:
                     was = json.load(f)
-                if was.get("players") == players and was.get("provisional") == provisional:
+                # `event` joins this test rather than sitting outside it. Left
+                # out, `transfers_made` ticking over would make every field
+                # below look unchanged while the file on disk differed, and the
+                # scheduled job would commit that difference nightly until May.
+                if (was.get("players") == players
+                        and was.get("provisional") == provisional
+                        and was.get("event", {}) == event):
                     print("    unchanged since the last pull — left alone")
                     continue
             except (json.JSONDecodeError, OSError):
