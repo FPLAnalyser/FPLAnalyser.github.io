@@ -27,6 +27,11 @@
    files has to accept `true` as "all of them" for GW1 alone.
 
    Run:  node snapshot_projections.mjs <gw> [--data DIR] [--out DIR]
+                                            [--data-ref REF]
+
+   --data-ref only labels a recovery: it records which commit's site_data was
+   read, for the case where the freeze is being reconstructed after the fact
+   rather than taken live at the deadline.
 */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
 import { join } from 'path'
@@ -37,7 +42,7 @@ const args = process.argv.slice(2)
 const gw = Number(args[0])
 const argOf = (f, d) => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : d }
 if (!Number.isFinite(gw)) {
-  console.error('usage: node snapshot_projections.mjs <gw> [--data DIR] [--out DIR]')
+  console.error('usage: node snapshot_projections.mjs <gw> [--data DIR] [--out DIR] [--data-ref REF]')
   process.exit(2)
 }
 const SEASON = JSON.parse(readFileSync('site_data/seasons.json', 'utf8')).seasons[0].id
@@ -158,6 +163,15 @@ const payload = {
   fixtures: [...new Set(fe.filter((f) => f.gw === gw).map((f) => f.team))].length / 2,
   players: out,
 }
+// Where the data came from, when it was not simply "the working tree, now".
+//
+// A recovery run reads an old commit's site_data, so `captured` is the moment
+// somebody noticed rather than the moment the projection was true — and left
+// on its own that reads as a projection frozen mid-match. `data_generated`
+// already carries the honest timestamp; this names the commit it was taken
+// from so nobody has to infer it. Absent on a normal run at the deadline.
+const dataRef = argOf('--data-ref', null)
+if (dataRef) payload.recovered_from = dataRef
 writeFileSync(dest, JSON.stringify(payload, null, 0))
 const top = out.slice(0, 5).map((p) => `${p.name} ${p.xp}`).join(', ')
 console.log(`${dest} — GW${gw}, ${out.length} players projected`)

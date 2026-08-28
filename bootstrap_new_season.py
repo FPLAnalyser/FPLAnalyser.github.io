@@ -133,10 +133,48 @@ print(f"  ratings.json — {len(new_ratings)} players ({carried} carried, {len(n
 #    working on. advance_gameweek.py trims them out within the quarter hour,
 #    but this job runs at 05:40 and would have put them all back every morning
 #    until the next trim, so the two now agree on the rule.
-locked_gws = {gw for gw, d in
-              ((int(e["id"]), e.get("deadline_time")) for e in events)
-              if d and datetime.datetime.fromisoformat(str(d).replace("Z", "+00:00"))
-              <= datetime.datetime.now(datetime.timezone.utc)}
+#
+#    WITH ONE EXCEPTION, AND IT COST A GAMEWEEK TO LEARN. Agreeing on the rule
+#    is exactly what made the two jobs race. snapshot_projections.mjs needs the
+#    just-locked gameweek to still be in this file — it is the only place the
+#    fixtures come from — and advance_gameweek.py freezes the projection before
+#    it trims. This job does not freeze anything. On 2026-08-28 the GW2
+#    deadline passed at 17:30, this job ran at 17:41 and took GW2 out, and
+#    advance_gameweek.py had not had a cron slot yet. GitHub cron is best
+#    effort: the week before it arrived three hours late.
+#
+#    So a gameweek that locked in the last day and has not been frozen is left
+#    alone. The Squad Builder shows a locked week for a few hours longer, which
+#    is untidy; a projection missed at the deadline is not recoverable from
+#    this file at all once the rows are gone.
+#
+#    BOUNDED AT A DAY on purpose. Without a bound, a freeze that fails for good
+#    would pin a dead gameweek in the grid for the rest of the season. A day is
+#    four times the worst cron delay seen so far, and past it the live capture
+#    is a lost cause regardless: odds and availability have moved, so the
+#    honest reconstruction is to read an older commit's site_data and pass
+#    `snapshot_projections.mjs --data-ref` — which does not need these rows,
+#    because it gets its own copy of this file out of git.
+GRACE = datetime.timedelta(days=1)
+now_utc = datetime.datetime.now(datetime.timezone.utc)
+proj_dir = os.path.join(OUT_DIR, "projections")
+deadline_of = {}
+for e in events:
+    d = e.get("deadline_time")
+    if not d:
+        continue
+    try:
+        deadline_of[int(e["id"])] = datetime.datetime.fromisoformat(str(d).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        continue
+locked_gws = {gw for gw, d in deadline_of.items() if d <= now_utc}
+held = {gw for gw in locked_gws
+        if now_utc - deadline_of[gw] < GRACE
+        and not os.path.exists(os.path.join(proj_dir, f"gw{gw}.json"))}
+if held:
+    print(f"  GW{sorted(held)} locked but not yet frozen — keeping the fixture rows")
+    print("    so snapshot_projections.mjs can still capture them.")
+    locked_gws -= held
 fe = []
 for fx in fixtures:
     if fx.get("event") is None or fx["event"] in locked_gws:
