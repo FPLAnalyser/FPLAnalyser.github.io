@@ -41,8 +41,31 @@ import requests
 
 from source_join.teams import resolve_team
 
+def _season_from_seasons_json(fmt):
+    """The season the site is on, in the format this scraper needs.
+
+    Hardcoded here until 2026-09-02, when the pipeline quietly reprocessed the
+    whole of last season because this constant still said 2025 and nobody had
+    a reason to look at it. seasons.json is already the authority everywhere
+    else — pull_fpl_gw.py, advance_gameweek.py, build_fixtures_enriched.py all
+    read the newest entry from it — so it is the authority here too, and next
+    August takes care of itself.
+
+    fmt "start" -> "2026"      (Understat labels 2026-27 as 2026)
+    fmt "label" -> "2026/27"   (the Premier League's own compseason label)
+    """
+    import json as _json
+    import os as _os
+    _root = _os.path.dirname(_os.path.abspath(__file__))
+    with open(_os.path.join(_root, "site_data", "seasons.json"), encoding="utf-8") as _f:
+        _s = _json.load(_f)["seasons"][0]
+    if fmt == "start":
+        return _s["id"].split("-")[0]
+    return _s["label"]
+
+
 BASE = "https://footballapi.pulselive.com/football"
-SEASON_LABEL = "2025/26"
+SEASON_LABEL = _season_from_seasons_json("label")
 CACHE = Path("cache/pl")
 FIX_CACHE = CACHE / "fixtures"
 MANIFEST = CACHE / "manifest.json"

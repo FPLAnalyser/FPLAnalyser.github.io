@@ -30,6 +30,7 @@ Output:  site_data/*.json
 import json
 import math
 import os
+import sys
 from datetime import datetime, timedelta, timezone
 
 import numpy as np
@@ -374,8 +375,43 @@ if not upcoming.empty:
             })
     print(f"  fixture ease over GWs {list(next_gws)}")
 else:
-    print("  no upcoming fixtures — fixture_ease.json will be empty "
+    print("  no upcoming fixtures — fixture_ease.json would be empty "
           "(expected between seasons; populates when the new fixture list lands)")
+
+# NEVER REPLACE A POPULATED FIXTURE GRID WITH AN EMPTY ONE.
+#
+# An empty fixture_ease.json is not a small regression. Every projection on the
+# site is computed by matching a player to a fixture in this file, so an empty
+# one returns nothing for everybody: the Fixtures page, the Squad Builder and
+# every xP on the site go blank together. advance_gameweek.py already refuses
+# to cause this; so does snapshot_projections.mjs. This was the one path left
+# that would do it silently.
+#
+# HOW IT HAPPENS, measured on 2026-09-02. fixtures_enriched.csv still held
+# 2025-26's 380 fixtures, all of them played, so every gameweek read as locked,
+# `upcoming` came back empty and the grid was written as 0 records. The site
+# was fine only because nobody pushed the run. The existing fallback above
+# guards a MISSING availability.json; this guards a stale fixture list, which
+# looks entirely healthy right up to the moment the grid is emptied.
+_ease_path = os.path.join(OUTPUT_DIR, "fixture_ease.json")
+if not ease_rows and os.path.exists(_ease_path):
+    try:
+        with open(_ease_path, encoding="utf-8") as f:
+            _had = json.load(f)
+        _had = _had.get("rows", _had) if isinstance(_had, dict) else _had
+    except (json.JSONDecodeError, OSError):
+        _had = []
+    if _had:
+        print(f"\nGATE FAIL: fixture_ease.json holds {len(_had)} rows and this run "
+              f"would write 0.")
+        print("  Every projection on the site is a player matched to a fixture in")
+        print("  that file, so emptying it blanks the Fixtures page, the Squad")
+        print("  Builder and every xP at once.")
+        print(f"  fixtures_enriched.csv covers GW{int(_gw.min())}–GW{int(_gw.max())} "
+              f"and every one of them reads as locked, which means it is last")
+        print("  season's fixture list. Rebuild it for the current season first:")
+        print("      python3 build_fixtures_enriched.py")
+        sys.exit(1)
 row_counts["fixture_ease"] = write_json(
     "fixture_ease", [{k: v for k, v in r.items() if v is not None} for r in ease_rows])
 

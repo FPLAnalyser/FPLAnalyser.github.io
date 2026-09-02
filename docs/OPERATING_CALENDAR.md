@@ -61,6 +61,56 @@ throws up ambiguous name joins that have to be resolved by eye.
 | **Mon 24 Aug** | **Disable "Refresh pre-season squad data"** in the Actions tab. It would otherwise overwrite the real ratings with carried-over ones the next morning. |
 | **Mon 24 Aug**, after that run | `git rm automation/apply_conceded_and_saves.py`. It back-fills the goals-conceded deduction and floored save points into published ratings, which `fpl_analyser_rating.py` now models itself — so the first full pipeline run makes it dead weight, and leaving it invites someone to apply the correction twice. |
 
+## The season rollover — do this before GW4 (Sat 12 Sep)
+
+Four things were pinned to 2025-26 and had to move together. Three are now
+derived rather than hardcoded; the fourth is a deliberate call.
+
+| What | Where it was pinned | Now |
+|---|---|---|
+| Understat season | `pull_understat_data.py` `SEASON = "2025"` | read from `seasons.json` |
+| Premier League season | `pull_pl_stats.py` `SEASON_LABEL = "2025/26"` | read from `seasons.json` |
+| The fixture list | `fixtures_enriched.csv` — **nothing wrote it** | `build_fixtures_enriched.py`, now step two of the pipeline |
+| The ratings evidence | `player_gw_history.csv`, 38 rounds of 2025-26 | `pull_fpl_gw.py --reset`, when you decide (see below) |
+
+**Run it once, in this order:**
+
+```bash
+export FPL_DATA_DIR=.                      # the CSVs live at the repo root
+python3 build_fixtures_enriched.py --dry-run
+./automation/run_pipeline.sh --no-push
+```
+
+The dry run should report the current season with fixtures still to come. If it
+says every fixture has been played, the API is serving the wrong season and
+nothing downstream is worth running.
+
+**`--reset` is separate, and it is a judgement call.** It archives
+`player_gw_history.csv` and starts the new season's, which rebuilds every
+rating from however many gameweeks exist. Two is not enough — 38 gameweeks of
+evidence beats one afternoon, which is why the weekly run deliberately does
+*not* touch that file. Do it when the new season has enough behind it to rate
+players on; the windows below are the guide.
+
+### What went wrong the first time, so it does not go wrong the next
+
+On 2026-09-02 the pipeline was run with all four still on 2025-26. It completed
+without an error and reprocessed the whole of last season, then
+`build_site_data.py` read every gameweek as locked, found no upcoming fixtures
+and wrote **an empty `fixture_ease.json`**. That file is where every projection
+gets its fixture, so an empty one blanks the Fixtures page, the Squad Builder
+and every xP on the site together. It reached nothing only because the run used
+`--no-push`.
+
+`build_site_data.py` now refuses: if the grid on disk has rows and the run would
+write none, it stops with `GATE FAIL` and says to rebuild the fixture list.
+
+Also note the two jobs that were fighting over this. *Refresh pre-season squad
+data* was the only thing keeping `fixture_ease.json` correct, by rebuilding it
+from the API — so it could not be disabled on its off date without leaving the
+grid with no source at all. Once the rollover above has run, the pipeline owns
+that file again and the job can be turned off as originally planned.
+
 ## Each gameweek after that
 
 | When | Job |

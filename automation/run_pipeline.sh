@@ -57,6 +57,11 @@ if [ "$DO_PULL" -eq 1 ]; then
   # season is a call for the owner to make with --reset once there is enough
   # of it to rate players on, not something a weekly run should decide.
   run_step pull_fpl_gw.py --actuals
+  # Before anything reads fixtures_enriched.csv. Nothing in the repo used to
+  # write it, so it sat at last season's fixture list until somebody noticed —
+  # and a stale one makes build_site_data.py read the whole season as played
+  # and empty the fixture grid, which blanks every projection on the site.
+  run_step build_fixtures_enriched.py
   run_step pull_understat_data.py
   run_step pull_pl_stats.py
 fi
